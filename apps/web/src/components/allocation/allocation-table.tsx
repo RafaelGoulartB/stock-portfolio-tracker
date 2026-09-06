@@ -219,6 +219,8 @@ export type AllocationTableProps = {
   rows: AllocationRow[];
   quarters: Quarter[];
   summary: AllocationSummary | undefined;
+  /** Columns the user chose to display; `ticker` is always included. */
+  visibleColumns: Set<AllocationColumn>;
   sort: AllocationSort;
   onSort: (id: AllocationColumn) => void;
   /** Free order replaces sorting with the stored manual rank. */
@@ -245,6 +247,7 @@ export function AllocationTable({
   rows,
   quarters,
   summary,
+  visibleColumns,
   sort,
   onSort,
   freeOrder,
@@ -261,6 +264,7 @@ export function AllocationTable({
 }: AllocationTableProps) {
   const { i18n } = useLingui();
   const labels = columnLabels(i18n);
+  const visible = ALLOCATION_COLUMNS.filter((id) => visibleColumns.has(id));
   const [dragging, setDragging] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   const highestScore = rows.reduce(
@@ -299,8 +303,8 @@ export function AllocationTable({
         <Table className="text-xs">
           <TableHeader className="bg-muted/60">
             <TableRow className="hover:bg-transparent">
-              {freeOrder ? <TableHead className="h-9 w-8 px-1" /> : null}
-              {ALLOCATION_COLUMNS.map((id) => (
+              <TableHead className="h-9 w-8 px-1" />
+              {visible.map((id) => (
                 <TableHead
                   key={id}
                   className={cn(
@@ -357,7 +361,7 @@ export function AllocationTable({
           </TableHeader>
 
           <TableBody>
-            {rows.map((row) => {
+            {rows.map((row, index) => {
               const reviewByPeriod = new Map<string, AssetReview>(
                 row.reviews.map((review) => [review.period, review]),
               );
@@ -367,7 +371,7 @@ export function AllocationTable({
                 <TableRow
                   key={row.ticker}
                   className={cn(
-                    "h-9",
+                    "h-12",
                     dragging === row.ticker && "opacity-50",
                     dropTarget === row.ticker && "border-t-2 border-t-ring",
                   )}
@@ -402,8 +406,8 @@ export function AllocationTable({
                       : undefined
                   }
                 >
-                  {freeOrder ? (
-                    <TableCell className="px-1">
+                  <TableCell className="px-1 py-2">
+                    {freeOrder ? (
                       <button
                         type="button"
                         draggable
@@ -433,173 +437,201 @@ export function AllocationTable({
                       >
                         <GripVertical className="size-3.5" aria-hidden="true" />
                       </button>
-                    </TableCell>
-                  ) : null}
-
-                  <TableCell className="sticky left-0 z-10 bg-card px-2 py-1">
-                    <div className="flex items-center gap-1.5">
-                      <span className="font-semibold">{row.ticker}</span>
-                      {row.hasPosition ? null : (
-                        <Badge
-                          variant="outline"
-                          className="h-4 px-1 text-[10px] font-normal"
-                        >
-                          <Trans id="allocation.watchBadge">Watch</Trans>
-                        </Badge>
-                      )}
-                      {missing.includes(row.ticker) ? (
-                        <TriangleAlert
-                          className="size-3 text-amber-600 dark:text-amber-400"
-                          aria-label={i18n._(
-                            t({
-                              id: "allocation.quoteMissing",
-                              message: "No market quote for this ticker",
-                            }),
-                          )}
-                        />
-                      ) : null}
-                    </div>
-                  </TableCell>
-
-                  <TableCell className="px-2 py-1">
-                    <InlineEditCell
-                      display={
-                        row.targetWeight === null
-                          ? null
-                          : formatWeightPrecise(row.targetWeight)
-                      }
-                      text={formatPercentInput(row.targetWeight, i18n.locale)}
-                      label={i18n._(
-                        t({
-                          id: "allocation.editTarget",
-                          message: `Target weight of ${row.ticker}, in percent`,
-                        }),
-                      )}
-                      onCommit={(text) => onEditTarget(row.ticker, text)}
-                    />
-                  </TableCell>
-
-                  <TableCell className="px-2 py-1 text-right tabular-nums">
-                    {formatWeightPrecise(row.currentWeight)}
-                  </TableCell>
-
-                  <TableCell className="px-2 py-1 text-right tabular-nums">
-                    {row.gapWeight === null ? (
-                      <span className="text-muted-foreground">—</span>
                     ) : (
-                      <span className={pnlClassName(row.gapWeight)}>
-                        {formatSignedWeightPrecise(row.gapWeight)}
+                      <span className="flex size-6 items-center justify-center text-xs tabular-nums text-muted-foreground">
+                        {index + 1}
                       </span>
                     )}
                   </TableCell>
 
-                  <TableCell
-                    className="px-2 py-1 text-right tabular-nums"
-                    title={scoreReason(row, i18n)}
-                  >
-                    <ScoreCell
-                      value={row.score.value}
-                      blocked={row.score.blocked}
-                      share={
-                        highestScore > 0 && scoreValue > 0
-                          ? scoreValue / highestScore
-                          : 0
-                      }
-                    />
-                  </TableCell>
-
-                  <TableCell className="px-2 py-1 text-right tabular-nums">
-                    {row.averageGrade === null ? (
-                      <span className="text-muted-foreground">—</span>
-                    ) : (
-                      <span
-                        title={i18n._(
-                          t({
-                            id: "allocation.gradeTooltip",
-                            message: `Average of ${row.gradedQuarters} graded quarters`,
-                          }),
+                  {visibleColumns.has("ticker") ? (
+                    <TableCell className="sticky left-0 z-10 bg-card px-2 py-2">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-semibold">{row.ticker}</span>
+                        {row.hasPosition ? null : (
+                          <Badge
+                            variant="outline"
+                            className="h-4 px-1 text-[10px] font-normal"
+                          >
+                            <Trans id="allocation.watchBadge">Watch</Trans>
+                          </Badge>
                         )}
-                      >
-                        {formatDecimalInput(row.averageGrade, i18n.locale)}
-                      </span>
-                    )}
-                  </TableCell>
-
-                  <TableCell className="px-2 py-1">
-                    <InlineEditCell
-                      display={
-                        row.discount === null
-                          ? null
-                          : formatSignedWeightPrecise(row.discount)
-                      }
-                      text={formatPercentInput(row.discount, i18n.locale)}
-                      label={i18n._(
-                        t({
-                          id: "allocation.editDiscount",
-                          message: `Discount to fair value of ${row.ticker}, in percent`,
-                        }),
-                      )}
-                      className={
-                        row.discount === null ? "" : pnlClassName(row.discount)
-                      }
-                      onCommit={(text) => onEditDiscount(row.ticker, text)}
-                    />
-                  </TableCell>
-
-                  <TableCell className="px-2 py-1 text-right whitespace-nowrap tabular-nums">
-                    {row.lastContributionAt === null ? (
-                      <span className="text-muted-foreground">—</span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1">
-                        {row.score.cooldownUntil === null ? null : (
-                          <Timer
-                            className="size-3 text-muted-foreground"
+                        {missing.includes(row.ticker) ? (
+                          <TriangleAlert
+                            className="size-3 text-amber-600 dark:text-amber-400"
                             aria-label={i18n._(
                               t({
-                                id: "allocation.cooldownIcon",
-                                message: `In cooldown until ${row.score.cooldownUntil}`,
+                                id: "allocation.quoteMissing",
+                                message: "No market quote for this ticker",
                               }),
                             )}
                           />
+                        ) : null}
+                      </div>
+                    </TableCell>
+                  ) : null}
+
+                  {visibleColumns.has("targetWeight") ? (
+                    <TableCell className="px-2 py-2">
+                      <InlineEditCell
+                        display={
+                          row.targetWeight === null
+                            ? null
+                            : formatWeightPrecise(row.targetWeight)
+                        }
+                        text={formatPercentInput(row.targetWeight, i18n.locale)}
+                        label={i18n._(
+                          t({
+                            id: "allocation.editTarget",
+                            message: `Target weight of ${row.ticker}, in percent`,
+                          }),
                         )}
-                        {formatTradeDate(row.lastContributionAt)}
-                      </span>
-                    )}
-                  </TableCell>
+                        onCommit={(text) => onEditTarget(row.ticker, text)}
+                      />
+                    </TableCell>
+                  ) : null}
 
-                  <TableCell className="px-2 py-1 text-right tabular-nums">
-                    {row.hasPosition ? (
-                      formatQuantity(row.quantity)
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
+                  {visibleColumns.has("currentWeight") ? (
+                    <TableCell className="px-2 py-2 text-right tabular-nums">
+                      {formatWeightPrecise(row.currentWeight)}
+                    </TableCell>
+                  ) : null}
 
-                  <TableCell className="px-2 py-1 text-right tabular-nums">
-                    {row.marketValue === null ? (
-                      <span className="text-muted-foreground">—</span>
-                    ) : (
-                      formatMoney(row.marketValue, row.displayCurrency)
-                    )}
-                  </TableCell>
-
-                  <TableCell className="px-2 py-1">
-                    <InlineEditCell
-                      display={row.valuationRef}
-                      text={row.valuationRef ?? ""}
-                      inputMode="text"
-                      label={i18n._(
-                        t({
-                          id: "allocation.editValuation",
-                          message: `Valuation reference of ${row.ticker}`,
-                        }),
+                  {visibleColumns.has("gapWeight") ? (
+                    <TableCell className="px-2 py-2 text-right tabular-nums">
+                      {row.gapWeight === null ? (
+                        <span className="text-muted-foreground">—</span>
+                      ) : (
+                        <span className={pnlClassName(row.gapWeight)}>
+                          {formatSignedWeightPrecise(row.gapWeight)}
+                        </span>
                       )}
-                      onCommit={(text) => onEditValuation(row.ticker, text)}
-                    />
-                  </TableCell>
+                    </TableCell>
+                  ) : null}
+
+                  {visibleColumns.has("score") ? (
+                    <TableCell
+                      className="px-2 py-2 text-right tabular-nums"
+                      title={scoreReason(row, i18n)}
+                    >
+                      <ScoreCell
+                        value={row.score.value}
+                        blocked={row.score.blocked}
+                        share={
+                          highestScore > 0 && scoreValue > 0
+                            ? scoreValue / highestScore
+                            : 0
+                        }
+                      />
+                    </TableCell>
+                  ) : null}
+
+                  {visibleColumns.has("averageGrade") ? (
+                    <TableCell className="px-2 py-2 text-right tabular-nums">
+                      {row.averageGrade === null ? (
+                        <span className="text-muted-foreground">—</span>
+                      ) : (
+                        <span
+                          title={i18n._(
+                            t({
+                              id: "allocation.gradeTooltip",
+                              message: `Average of ${row.gradedQuarters} graded quarters`,
+                            }),
+                          )}
+                        >
+                          {formatDecimalInput(row.averageGrade, i18n.locale)}
+                        </span>
+                      )}
+                    </TableCell>
+                  ) : null}
+
+                  {visibleColumns.has("discount") ? (
+                    <TableCell className="px-2 py-2">
+                      <InlineEditCell
+                        display={
+                          row.discount === null
+                            ? null
+                            : formatSignedWeightPrecise(row.discount)
+                        }
+                        text={formatPercentInput(row.discount, i18n.locale)}
+                        label={i18n._(
+                          t({
+                            id: "allocation.editDiscount",
+                            message: `Discount to fair value of ${row.ticker}, in percent`,
+                          }),
+                        )}
+                        className={
+                          row.discount === null
+                            ? ""
+                            : pnlClassName(row.discount)
+                        }
+                        onCommit={(text) => onEditDiscount(row.ticker, text)}
+                      />
+                    </TableCell>
+                  ) : null}
+
+                  {visibleColumns.has("lastContributionAt") ? (
+                    <TableCell className="px-2 py-2 text-right whitespace-nowrap tabular-nums">
+                      {row.lastContributionAt === null ? (
+                        <span className="text-muted-foreground">—</span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1">
+                          {row.score.cooldownUntil === null ? null : (
+                            <Timer
+                              className="size-3 text-muted-foreground"
+                              aria-label={i18n._(
+                                t({
+                                  id: "allocation.cooldownIcon",
+                                  message: `In cooldown until ${row.score.cooldownUntil}`,
+                                }),
+                              )}
+                            />
+                          )}
+                          {formatTradeDate(row.lastContributionAt)}
+                        </span>
+                      )}
+                    </TableCell>
+                  ) : null}
+
+                  {visibleColumns.has("quantity") ? (
+                    <TableCell className="px-2 py-2 text-right tabular-nums">
+                      {row.hasPosition ? (
+                        formatQuantity(row.quantity)
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                  ) : null}
+
+                  {visibleColumns.has("marketValue") ? (
+                    <TableCell className="px-2 py-2 text-right tabular-nums">
+                      {row.marketValue === null ? (
+                        <span className="text-muted-foreground">—</span>
+                      ) : (
+                        formatMoney(row.marketValue, row.displayCurrency)
+                      )}
+                    </TableCell>
+                  ) : null}
+
+                  {visibleColumns.has("valuationRef") ? (
+                    <TableCell className="px-2 py-2">
+                      <InlineEditCell
+                        display={row.valuationRef}
+                        text={row.valuationRef ?? ""}
+                        inputMode="text"
+                        label={i18n._(
+                          t({
+                            id: "allocation.editValuation",
+                            message: `Valuation reference of ${row.ticker}`,
+                          }),
+                        )}
+                        onCommit={(text) => onEditValuation(row.ticker, text)}
+                      />
+                    </TableCell>
+                  ) : null}
 
                   {quarters.map((quarter) => (
-                    <TableCell key={quarter.key} className="px-1 py-1">
+                    <TableCell key={quarter.key} className="px-1 py-2">
                       <QuarterReviewCell
                         ticker={row.ticker}
                         quarter={quarter}
@@ -611,7 +643,7 @@ export function AllocationTable({
                     </TableCell>
                   ))}
 
-                  <TableCell className="px-1 py-1">
+                  <TableCell className="px-1 py-2">
                     <RowMenu
                       row={row}
                       freeOrder={freeOrder}
@@ -627,7 +659,7 @@ export function AllocationTable({
             {rows.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={ALLOCATION_COLUMNS.length + quarters.length + 2}
+                  colSpan={visible.length + quarters.length + 2}
                   className="h-28 text-center text-sm text-muted-foreground"
                 >
                   <Trans id="allocation.empty">
@@ -642,24 +674,61 @@ export function AllocationTable({
           {rows.length > 0 && summary ? (
             <TableFooter>
               <TableRow>
-                {freeOrder ? <TableCell className="px-1" /> : null}
-                <TableCell className="sticky left-0 z-10 bg-muted px-2 py-2 font-medium">
-                  <Trans id="allocation.total">Total</Trans>
-                </TableCell>
-                <TableCell className="px-2 py-2 text-right tabular-nums">
-                  {formatWeightPrecise(summary.totalTargetWeight)}
-                </TableCell>
-                <TableCell className="px-2 py-2 text-right tabular-nums">
-                  {formatWeightPrecise(summary.totalCurrentWeight)}
-                </TableCell>
-                <TableCell colSpan={6} />
-                <TableCell className="px-2 py-2 text-right tabular-nums">
-                  {formatMoney(
-                    summary.totalMarketValue,
-                    summary.displayCurrency,
-                  )}
-                </TableCell>
-                <TableCell colSpan={quarters.length + 2} />
+                <TableCell className="px-1 py-2" />
+                {visible.map((id) => {
+                  if (id === "ticker") {
+                    return (
+                      <TableCell
+                        key={id}
+                        className="sticky left-0 z-10 bg-muted px-2 py-2 font-medium"
+                      >
+                        <Trans id="allocation.total">Total</Trans>
+                      </TableCell>
+                    );
+                  }
+
+                  if (id === "targetWeight") {
+                    return (
+                      <TableCell
+                        key={id}
+                        className="px-2 py-2 text-right tabular-nums"
+                      >
+                        {formatWeightPrecise(summary.totalTargetWeight)}
+                      </TableCell>
+                    );
+                  }
+
+                  if (id === "currentWeight") {
+                    return (
+                      <TableCell
+                        key={id}
+                        className="px-2 py-2 text-right tabular-nums"
+                      >
+                        {formatWeightPrecise(summary.totalCurrentWeight)}
+                      </TableCell>
+                    );
+                  }
+
+                  if (id === "marketValue") {
+                    return (
+                      <TableCell
+                        key={id}
+                        className="px-2 py-2 text-right tabular-nums"
+                      >
+                        {formatMoney(
+                          summary.totalMarketValue,
+                          summary.displayCurrency,
+                        )}
+                      </TableCell>
+                    );
+                  }
+
+                  return <TableCell key={id} />;
+                })}
+                {quarters.map((quarter) => (
+                  <TableCell key={quarter.key} />
+                ))}
+                <TableCell />
               </TableRow>
             </TableFooter>
           ) : null}

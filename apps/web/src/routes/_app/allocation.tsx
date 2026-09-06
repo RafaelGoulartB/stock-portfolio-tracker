@@ -9,7 +9,14 @@ import {
   weightRatio,
 } from "@portifolio-tracker/shared";
 import { createFileRoute } from "@tanstack/react-router";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Columns3,
+  RotateCcw,
+  Search,
+} from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -17,15 +24,26 @@ import {
   type AddAssetValues,
 } from "@/components/allocation/add-asset-dialog";
 import {
+  ALLOCATION_COLUMNS,
   type AllocationColumn,
   type AllocationSort,
   AllocationTable,
+  columnLabels,
   compareRows,
   defaultSortDirection,
 } from "@/components/allocation/allocation-table";
 import { ContributionPlanner } from "@/components/allocation/contribution-planner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -59,6 +77,49 @@ const FREE_ORDER_KEY = "portfolio.allocation.freeOrder";
 const QUARTER_COUNT_KEY = "portfolio.allocation.quarters";
 const QUARTER_COUNTS = [3, 5, 8] as const;
 const DEFAULT_QUARTER_COUNT = 5;
+const COLUMN_STORAGE_KEY = "portfolio.allocation.columns";
+
+const COLUMN_PRESETS: Record<
+  "compact" | "standard" | "all",
+  AllocationColumn[]
+> = {
+  compact: [
+    "ticker",
+    "targetWeight",
+    "currentWeight",
+    "gapWeight",
+    "score",
+    "marketValue",
+  ],
+  standard: [
+    "ticker",
+    "targetWeight",
+    "currentWeight",
+    "gapWeight",
+    "score",
+    "averageGrade",
+    "discount",
+    "marketValue",
+  ],
+  all: [...ALLOCATION_COLUMNS],
+};
+
+function initialColumns(): Set<AllocationColumn> {
+  try {
+    const parsed: unknown = JSON.parse(
+      localStorage.getItem(COLUMN_STORAGE_KEY) ?? "null",
+    );
+    if (Array.isArray(parsed)) {
+      const valid = parsed.filter((value): value is AllocationColumn =>
+        ALLOCATION_COLUMNS.includes(value as AllocationColumn),
+      );
+      if (valid.includes("ticker")) return new Set(valid);
+    }
+  } catch {
+    // Storage is only a convenience; the standard preset remains available.
+  }
+  return new Set(COLUMN_PRESETS.standard);
+}
 
 function storedNumber(key: string, allowed: readonly number[]): number | null {
   try {
@@ -123,6 +184,8 @@ function AllocationPage() {
       storedNumber(QUARTER_COUNT_KEY, QUARTER_COUNTS) ?? DEFAULT_QUARTER_COUNT,
   );
   const [quarterEndKey, setQuarterEndKey] = useState<string | null>(null);
+  const [visibleColumns, setVisibleColumns] =
+    useState<Set<AllocationColumn>>(initialColumns);
 
   const sanitizedManualPrices = useMemo(
     () =>
@@ -158,6 +221,27 @@ function AllocationPage() {
 
   function reportError(error: unknown) {
     toast.error(queryErrorMessage(error));
+  }
+
+  function updateColumns(next: Set<AllocationColumn>) {
+    setVisibleColumns(next);
+    try {
+      localStorage.setItem(COLUMN_STORAGE_KEY, JSON.stringify([...next]));
+    } catch {
+      // The preference still applies for the current session.
+    }
+  }
+
+  function applyPreset(preset: keyof typeof COLUMN_PRESETS) {
+    updateColumns(new Set(COLUMN_PRESETS[preset]));
+  }
+
+  function toggleColumn(id: AllocationColumn) {
+    if (id === "ticker") return;
+    const next = new Set(visibleColumns);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    updateColumns(next);
   }
 
   const upsertAsset = trpc.allocation.upsertAsset.useMutation({
@@ -219,6 +303,7 @@ function AllocationPage() {
     ? toQuarter(quarterEndKey)
     : defaultQuarterEnd(allRows);
   const quarters = quarterWindow(quarterEnd, quarterCount);
+  const labels = columnLabels(i18n);
 
   /** Percent cell edits: an empty value clears the field. */
   function editPercent(
@@ -400,6 +485,50 @@ function AllocationPage() {
           </SelectContent>
         </Select>
 
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button type="button" size="sm" variant="outline">
+              <Columns3 aria-hidden="true" />
+              <Trans id="allocation.columns">Columns</Trans>
+              <ChevronDown aria-hidden="true" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel>
+              <Trans id="allocation.presets">View presets</Trans>
+            </DropdownMenuLabel>
+            <DropdownMenuItem onSelect={() => applyPreset("compact")}>
+              <Trans id="allocation.compact">Compact</Trans>
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => applyPreset("standard")}>
+              <Trans id="allocation.standard">Standard</Trans>
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => applyPreset("all")}>
+              <Trans id="allocation.all">All data</Trans>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>
+              <Trans id="allocation.customize">Customize columns</Trans>
+            </DropdownMenuLabel>
+            {ALLOCATION_COLUMNS.map((id) => (
+              <DropdownMenuCheckboxItem
+                key={id}
+                checked={visibleColumns.has(id)}
+                disabled={id === "ticker"}
+                onSelect={(event) => event.preventDefault()}
+                onCheckedChange={() => toggleColumn(id)}
+              >
+                {labels[id]}
+              </DropdownMenuCheckboxItem>
+            ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => applyPreset("standard")}>
+              <RotateCcw aria-hidden="true" />
+              <Trans id="allocation.reset">Reset to standard</Trans>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
         <div className="ml-auto flex items-center gap-2">
           <Label htmlFor="allocation-free-order" className="text-xs">
             <Trans id="allocation.freeOrder">Free order</Trans>
@@ -414,15 +543,6 @@ function AllocationPage() {
           />
         </div>
       </div>
-
-      {freeOrder ? (
-        <p className="text-xs text-muted-foreground">
-          <Trans id="allocation.freeOrderHint">
-            Sorting is off. Drag the handle to move a row, or use the arrow keys
-            once it has focus.
-          </Trans>
-        </p>
-      ) : null}
 
       {allocation.isPending || waitingForRate ? <TableSkeleton /> : null}
       {fxFailed ? (
@@ -442,6 +562,7 @@ function AllocationPage() {
           rows={rows}
           quarters={quarters}
           summary={allocation.data.summary}
+          visibleColumns={visibleColumns}
           sort={sort}
           onSort={(id: AllocationColumn) =>
             setSort((current) =>
