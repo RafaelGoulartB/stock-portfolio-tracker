@@ -6,6 +6,7 @@ export * from "./decimal";
 export * from "./deep-finder";
 export * from "./dividends";
 export * from "./fx";
+export * from "./holdings-import";
 export * from "./performance";
 export * from "./quotes";
 export * from "./score";

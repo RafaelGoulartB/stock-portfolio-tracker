@@ -1,5 +1,6 @@
 import {
   type AssetClass,
+  bookHoldingsInput,
   createTransactionInput,
   deleteTransactionInput,
   type Transaction,
@@ -143,6 +144,74 @@ export const transactionsRouter = router({
       }
 
       return toDto(row);
+    }),
+
+  /**
+   * Books opening lots as synthetic buys (quantity × average cost, fees 0).
+   * Validates every currency lock first, then inserts all-or-nothing.
+   */
+  bookHoldings: protectedProcedure
+    .input(bookHoldingsInput)
+    .mutation(async ({ ctx, input }) => {
+      const history = await loadTransactions(ctx.user.id);
+      const tickers = new Set<string>();
+
+      for (const holding of input.holdings) {
+        if (tickers.has(holding.ticker)) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Duplicate ticker ${holding.ticker} in this batch`,
+          });
+        }
+
+        tickers.add(holding.ticker);
+
+        const used = tickerCurrencies(history, holding.ticker);
+
+        if (used.length > 0 && !used.includes(holding.currency)) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: `Ticker ${holding.ticker} is tracked in ${used.join(", ")}. Register this trade in the same currency.`,
+          });
+        }
+      }
+
+      const note =
+        input.notes && input.notes.length > 0
+          ? input.notes
+          : "Opening position";
+
+      const inserted = await db.transaction(async (tx) => {
+        const rows = [];
+
+        for (const holding of input.holdings) {
+          const [row] = await tx
+            .insert(transactions)
+            .values({
+              userId: ctx.user.id,
+              ticker: holding.ticker,
+              assetClass: holding.assetClass,
+              currency: holding.currency,
+              side: "buy",
+              quantity: holding.quantity,
+              price: holding.price,
+              fees: "0",
+              tradedAt: input.tradedAt,
+              notes: note,
+            })
+            .returning(columns);
+
+          if (!row) {
+            throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+          }
+
+          rows.push(row);
+        }
+
+        return rows;
+      });
+
+      return inserted.map(toDto);
     }),
 
   remove: protectedProcedure

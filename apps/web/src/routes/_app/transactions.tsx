@@ -4,6 +4,7 @@ import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import {
   ASSET_CLASSES,
+  type BookHoldingRow,
   CURRENCIES,
   CURRENCY_LABELS,
   createTransactionInput,
@@ -12,6 +13,7 @@ import {
 } from "@portifolio-tracker/shared";
 import { createFileRoute } from "@tanstack/react-router";
 import { Loader2, Trash2 } from "lucide-react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import type { z } from "zod";
@@ -20,6 +22,7 @@ import {
   CurrencyBadge,
   SideLabel,
 } from "@/components/asset-labels";
+import { BookHoldingsPanel } from "@/components/transactions/book-holdings-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -58,16 +61,19 @@ import {
 import { trpc } from "@/lib/api";
 import { formatMoney, formatQuantity, formatTradeDate } from "@/lib/format";
 import {
+  bookHoldingsErrorMessage,
   createTradeErrorMessage,
   queryErrorMessage,
   removeTradeErrorMessage,
 } from "@/lib/trpcErrors";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/transactions")({
   component: TransactionsPage,
 });
 
 type FormValues = z.input<typeof createTransactionInput>;
+type EntryMode = "trade" | "book";
 
 function today(): string {
   const now = new Date();
@@ -92,6 +98,9 @@ function TransactionsPage() {
   const { i18n } = useLingui();
   const utils = trpc.useUtils();
   const list = trpc.transactions.list.useQuery();
+  const [mode, setMode] = useState<EntryMode>("trade");
+  const [openingDate, setOpeningDate] = useState(today);
+  const [bookEpoch, setBookEpoch] = useState(0);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(createTransactionInput),
@@ -126,6 +135,21 @@ function TransactionsPage() {
     onError: (error) => toast.error(createTradeErrorMessage(error)),
   });
 
+  const book = trpc.transactions.bookHoldings.useMutation({
+    onSuccess: async (created) => {
+      const count = created.length;
+      toast.success(
+        t({
+          id: "transactions.booked",
+          message: `${count} holdings booked as buys`,
+        }),
+      );
+      setBookEpoch((value) => value + 1);
+      await refresh();
+    },
+    onError: (error) => toast.error(bookHoldingsErrorMessage(error)),
+  });
+
   const remove = trpc.transactions.remove.useMutation({
     onSuccess: async () => {
       toast.success(
@@ -141,144 +165,135 @@ function TransactionsPage() {
     onError: (error) => toast.error(removeTradeErrorMessage(error)),
   });
 
+  function bookHoldings(holdings: BookHoldingRow[], tradedAt: string) {
+    book.mutate({
+      tradedAt,
+      holdings,
+      notes: "Opening position",
+    });
+  }
+
+  const history = (
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          <Trans id="transactions.history">History</Trans>
+        </CardTitle>
+        <CardDescription>
+          <Trans id="transactions.historyHint">Most recent trades first.</Trans>
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {list.isPending ? <Skeleton className="h-64" /> : null}
+
+        {list.error ? (
+          <p className="py-6 text-sm text-destructive">
+            {queryErrorMessage(list.error)}
+          </p>
+        ) : null}
+
+        {list.data?.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">
+            <Trans id="transactions.empty">Nothing registered yet.</Trans>
+          </p>
+        ) : null}
+
+        {list.data && list.data.length > 0 ? (
+          <HistoryTable
+            transactions={list.data}
+            onRemove={(id) => remove.mutate({ id })}
+            removingId={remove.isPending ? remove.variables?.id : undefined}
+          />
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl font-semibold tracking-tight">
-          <Trans id="transactions.title">Transactions</Trans>
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          <Trans id="transactions.subtitle">
-            Register every buy and sell. Positions are consolidated from this
-            log.
-          </Trans>
-        </p>
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            <Trans id="transactions.title">Transactions</Trans>
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            <Trans id="transactions.subtitle">
+              Register every buy and sell. Positions are consolidated from this
+              log.
+            </Trans>
+          </p>
+        </div>
+
+        <div
+          className="inline-flex rounded-lg border bg-muted/40 p-1"
+          role="tablist"
+          aria-label={i18n._(
+            msg({
+              id: "transactions.entryMode",
+              message: "Entry mode",
+            }),
+          )}
+        >
+          <Button
+            type="button"
+            size="sm"
+            role="tab"
+            aria-selected={mode === "trade"}
+            variant={mode === "trade" ? "default" : "ghost"}
+            className={cn(mode !== "trade" && "text-muted-foreground")}
+            onClick={() => setMode("trade")}
+          >
+            <Trans id="transactions.modeTrade">New trade</Trans>
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            role="tab"
+            aria-selected={mode === "book"}
+            variant={mode === "book" ? "default" : "ghost"}
+            className={cn(mode !== "book" && "text-muted-foreground")}
+            onClick={() => setMode("book")}
+          >
+            <Trans id="transactions.modeBook">Book holdings</Trans>
+          </Button>
+        </div>
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
-        <Card className="h-fit">
-          <CardHeader>
-            <CardTitle>
-              <Trans id="transactions.newTrade">New trade</Trans>
-            </CardTitle>
-            <CardDescription>
-              <Trans id="transactions.feesHint">
-                Fees are added to a buy and subtracted from a sell.
-              </Trans>
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form
-                className="space-y-4"
-                onSubmit={form.handleSubmit((values) => create.mutate(values))}
-                noValidate
-              >
-                <FormField
-                  control={form.control}
-                  name="ticker"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        <Trans id="transactions.ticker">Ticker</Trans>
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="PETR4"
-                          autoComplete="off"
-                          className="uppercase"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+      {mode === "trade" ? (
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
+          <Card className="h-fit">
+            <CardHeader>
+              <CardTitle>
+                <Trans id="transactions.newTrade">New trade</Trans>
+              </CardTitle>
+              <CardDescription>
+                <Trans id="transactions.feesHint">
+                  Fees are added to a buy and subtracted from a sell.
+                </Trans>
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Form {...form}>
+                <form
+                  className="space-y-4"
+                  onSubmit={form.handleSubmit((values) =>
+                    create.mutate(values),
                   )}
-                />
-
-                <div className="grid grid-cols-2 gap-4">
+                  noValidate
+                >
                   <FormField
                     control={form.control}
-                    name="side"
+                    name="ticker"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>
-                          <Trans id="transactions.side">Side</Trans>
-                        </FormLabel>
-                        <Select
-                          value={field.value}
-                          onValueChange={field.onChange}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="w-full">
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {TRANSACTION_SIDES.map((side) => (
-                              <SelectItem key={side} value={side}>
-                                <SideLabel side={side} />
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="assetClass"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>
-                          <Trans id="transactions.class">Class</Trans>
-                        </FormLabel>
-                        <Select
-                          value={field.value}
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                            // Stocks imply their home currency; the user can
-                            // still override it below.
-                            if (value === "stock_us") {
-                              form.setValue("currency", "USD");
-                            } else if (value === "stock_br") {
-                              form.setValue("currency", "BRL");
-                            }
-                          }}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="w-full">
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {ASSET_CLASSES.map((assetClass) => (
-                              <SelectItem key={assetClass} value={assetClass}>
-                                <AssetClassLabel assetClass={assetClass} />
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="quantity"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>
-                          <Trans id="transactions.quantity">Quantity</Trans>
+                          <Trans id="transactions.ticker">Ticker</Trans>
                         </FormLabel>
                         <FormControl>
                           <Input
-                            inputMode="decimal"
-                            placeholder="100"
+                            placeholder="PETR4"
+                            autoComplete="off"
+                            className="uppercase"
                             {...field}
                           />
                         </FormControl>
@@ -287,57 +302,218 @@ function TransactionsPage() {
                     )}
                   />
 
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="side"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            <Trans id="transactions.side">Side</Trans>
+                          </FormLabel>
+                          <Select
+                            value={field.value}
+                            onValueChange={field.onChange}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="w-full">
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {TRANSACTION_SIDES.map((side) => (
+                                <SelectItem key={side} value={side}>
+                                  <SideLabel side={side} />
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="assetClass"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            <Trans id="transactions.class">Class</Trans>
+                          </FormLabel>
+                          <Select
+                            value={field.value}
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              // Stocks imply their home currency; the user can
+                              // still override it below.
+                              if (value === "stock_us") {
+                                form.setValue("currency", "USD");
+                              } else if (value === "stock_br") {
+                                form.setValue("currency", "BRL");
+                              }
+                            }}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="w-full">
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {ASSET_CLASSES.map((assetClass) => (
+                                <SelectItem key={assetClass} value={assetClass}>
+                                  <AssetClassLabel assetClass={assetClass} />
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="quantity"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            <Trans id="transactions.quantity">Quantity</Trans>
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              inputMode="decimal"
+                              placeholder="100"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="price"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            <Trans id="transactions.unitPrice">
+                              Unit price
+                            </Trans>
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              inputMode="decimal"
+                              placeholder="32.15"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="currency"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            <Trans id="transactions.currency">Currency</Trans>
+                          </FormLabel>
+                          <Select
+                            value={field.value ?? "BRL"}
+                            onValueChange={field.onChange}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="w-full">
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {CURRENCIES.map((currency) => (
+                                <SelectItem key={currency} value={currency}>
+                                  {CURRENCY_LABELS[currency]}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            <Trans id="transactions.currencyLockHint">
+                              A ticker always uses the currency of its first
+                              trade.
+                            </Trans>
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="fees"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            <Trans id="transactions.fees">Fees</Trans>
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              inputMode="decimal"
+                              placeholder="0"
+                              {...field}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
                   <FormField
                     control={form.control}
-                    name="price"
+                    name="tradedAt"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>
-                          <Trans id="transactions.unitPrice">Unit price</Trans>
+                          <Trans id="transactions.tradeDate">Trade date</Trans>
                         </FormLabel>
                         <FormControl>
-                          <Input
-                            inputMode="decimal"
-                            placeholder="32.15"
-                            {...field}
-                          />
+                          <Input type="date" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                </div>
 
-                <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
-                    name="currency"
+                    name="notes"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>
-                          <Trans id="transactions.currency">Currency</Trans>
+                          <Trans id="transactions.notes">Notes</Trans>
                         </FormLabel>
-                        <Select
-                          value={field.value ?? "BRL"}
-                          onValueChange={field.onChange}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="w-full">
-                              <SelectValue />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {CURRENCIES.map((currency) => (
-                              <SelectItem key={currency} value={currency}>
-                                {CURRENCY_LABELS[currency]}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        <FormControl>
+                          <Input
+                            placeholder={i18n._(
+                              msg({
+                                id: "transactions.notesHint",
+                                message: "Optional",
+                              }),
+                            )}
+                            {...field}
+                            value={field.value ?? ""}
+                          />
+                        </FormControl>
                         <FormDescription>
-                          <Trans id="transactions.currencyLockHint">
-                            A ticker always uses the currency of its first
-                            trade.
+                          <Trans id="transactions.notesDescription">
+                            Broker, strategy or anything worth remembering.
                           </Trans>
                         </FormDescription>
                         <FormMessage />
@@ -345,127 +521,54 @@ function TransactionsPage() {
                     )}
                   />
 
-                  <FormField
-                    control={form.control}
-                    name="fees"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>
-                          <Trans id="transactions.fees">Fees</Trans>
-                        </FormLabel>
-                        <FormControl>
-                          <Input
-                            inputMode="decimal"
-                            placeholder="0"
-                            {...field}
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </div>
+                  <Button
+                    type="submit"
+                    className="w-full"
+                    disabled={create.isPending}
+                  >
+                    {create.isPending ? (
+                      <Loader2
+                        className="size-4 animate-spin"
+                        aria-hidden="true"
+                      />
+                    ) : null}
+                    <Trans id="transactions.register">Register trade</Trans>
+                  </Button>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
 
-                <FormField
-                  control={form.control}
-                  name="tradedAt"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        <Trans id="transactions.tradeDate">Trade date</Trans>
-                      </FormLabel>
-                      <FormControl>
-                        <Input type="date" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="notes"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        <Trans id="transactions.notes">Notes</Trans>
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder={i18n._(
-                            msg({
-                              id: "transactions.notesHint",
-                              message: "Optional",
-                            }),
-                          )}
-                          {...field}
-                          value={field.value ?? ""}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        <Trans id="transactions.notesDescription">
-                          Broker, strategy or anything worth remembering.
-                        </Trans>
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={create.isPending}
-                >
-                  {create.isPending ? (
-                    <Loader2
-                      className="size-4 animate-spin"
-                      aria-hidden="true"
-                    />
-                  ) : null}
-                  <Trans id="transactions.register">Register trade</Trans>
-                </Button>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              <Trans id="transactions.history">History</Trans>
-            </CardTitle>
-            <CardDescription>
-              <Trans id="transactions.historyHint">
-                Most recent trades first.
-              </Trans>
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {list.isPending ? <Skeleton className="h-64" /> : null}
-
-            {list.error ? (
-              <p className="py-6 text-sm text-destructive">
-                {queryErrorMessage(list.error)}
-              </p>
-            ) : null}
-
-            {list.data?.length === 0 ? (
-              <p className="py-6 text-center text-sm text-muted-foreground">
-                <Trans id="transactions.empty">Nothing registered yet.</Trans>
-              </p>
-            ) : null}
-
-            {list.data && list.data.length > 0 ? (
-              <HistoryTable
-                transactions={list.data}
-                onRemove={(id) => remove.mutate({ id })}
-                removingId={remove.isPending ? remove.variables?.id : undefined}
+          {history}
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                <Trans id="transactions.bookTitle">Book holdings</Trans>
+              </CardTitle>
+              <CardDescription>
+                <Trans id="transactions.bookHint">
+                  Enter average cost and quantity for many tickers at once, or
+                  import a CSV/TXT. Each row becomes a buy on the opening date.
+                </Trans>
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <BookHoldingsPanel
+                key={bookEpoch}
+                tradedAt={openingDate}
+                onTradedAtChange={setOpeningDate}
+                saving={book.isPending}
+                onSubmit={bookHoldings}
               />
-            ) : null}
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+
+          {history}
+        </div>
+      )}
     </div>
   );
 }

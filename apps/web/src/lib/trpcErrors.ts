@@ -46,6 +46,11 @@ const currencyMismatch = msg({
   message: "This ticker is already tracked in another currency.",
 });
 
+const bookBatchInvalid = msg({
+  id: "transactions.bookBatchInvalid",
+  message: "Could not book these holdings. Check for duplicates or bad rows.",
+});
+
 const transactionMissing = msg({
   id: "transactions.notFound",
   message: "Transaction not found.",
@@ -103,6 +108,22 @@ export function createTradeErrorMessage(error: unknown): string {
 
   if (codeOf(error) === "BAD_REQUEST") {
     return i18n._(holdingsShort);
+  }
+
+  if (isAuthCode(codeOf(error))) {
+    return i18n._(sessionExpired);
+  }
+
+  return i18n._(unknownError);
+}
+
+export function bookHoldingsErrorMessage(error: unknown): string {
+  if (codeOf(error) === "PRECONDITION_FAILED") {
+    return i18n._(currencyMismatch);
+  }
+
+  if (codeOf(error) === "BAD_REQUEST") {
+    return i18n._(bookBatchInvalid);
   }
 
   if (isAuthCode(codeOf(error))) {

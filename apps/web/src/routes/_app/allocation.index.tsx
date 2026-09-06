@@ -70,8 +70,8 @@ export const Route = createFileRoute("/_app/allocation/")({
 
 const FREE_ORDER_KEY = "portfolio.allocation.freeOrder";
 const QUARTER_COUNT_KEY = "portfolio.allocation.quarters";
-const QUARTER_COUNTS = [3, 5, 8] as const;
-const DEFAULT_QUARTER_COUNT = 5;
+const QUARTER_COUNTS = [3, 4, 5, 8] as const;
+const DEFAULT_QUARTER_COUNT = 4;
 const COLUMN_STORAGE_KEY = "portfolio.allocation.columns";
 
 const COLUMN_PRESETS: Record<
