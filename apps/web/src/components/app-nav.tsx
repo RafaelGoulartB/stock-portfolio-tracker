@@ -7,6 +7,7 @@ import {
   ChevronDown,
   type LucideIcon,
   PieChart,
+  ScanSearch,
   TableProperties,
   Tags,
   Target,
@@ -77,6 +78,11 @@ const NAV_GROUPS: NavGroup[] = [
         to: "/daily",
         icon: Activity,
         label: <Trans id="nav.daily">Daily</Trans>,
+      },
+      {
+        to: "/deep-finder",
+        icon: ScanSearch,
+        label: <Trans id="nav.deepFinder">Deep Finder</Trans>,
       },
       {
         to: "/dividends",

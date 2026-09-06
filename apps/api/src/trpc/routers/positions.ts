@@ -29,6 +29,7 @@ import {
 } from "../../lib/quotes";
 import { protectedProcedure, router } from "../trpc";
 import { loadValuedPortfolio } from "../valuation";
+import { finder } from "./deep-finder";
 import { loadTransactions } from "./transactions";
 
 const API_TIME_ZONE = "America/Sao_Paulo";
@@ -279,4 +280,10 @@ export const positionsRouter = router({
         },
       };
     }),
+
+  /**
+   * Open holdings ranked by a chosen window: cost basis, or a past close.
+   * The crowded bar chart on Positions lives here so every ticker has room.
+   */
+  finder,
 });

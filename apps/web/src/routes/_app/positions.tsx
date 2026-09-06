@@ -8,25 +8,23 @@ import {
   type ValuedPosition,
 } from "@portifolio-tracker/shared";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowDown, ArrowUp, ArrowUpDown, Plus, Wallet } from "lucide-react";
-import { type ReactNode, useMemo, useState } from "react";
 import {
-  Bar,
-  BarChart,
-  Cell,
-  Pie,
-  PieChart,
-  ReferenceLine,
-  Sector,
-  XAxis,
-  YAxis,
-} from "recharts";
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  Plus,
+  ScanSearch,
+  Wallet,
+} from "lucide-react";
+import { type ReactNode, useMemo, useState } from "react";
+import { Cell, Pie, PieChart, Sector } from "recharts";
 import { AssetClassLabel } from "@/components/asset-labels";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -57,7 +55,6 @@ import {
 } from "@/components/ui/table";
 import { trpc } from "@/lib/api";
 import {
-  formatCompactMoney,
   formatMoney,
   formatQuantity,
   formatSignedMoney,
@@ -70,6 +67,7 @@ import { useFxQuote } from "@/lib/fx";
 import { formatMonthLabel, lastTwelveMonths } from "@/lib/months";
 import { useSettings } from "@/lib/settings";
 import { isFxRateRequired, queryErrorMessage } from "@/lib/trpcErrors";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/positions")({
   component: PositionsPage,
@@ -223,14 +221,14 @@ function PositionsPage() {
             <>
               <div className="grid gap-5 lg:grid-cols-5">
                 <AllocationCard
-                  className="lg:col-span-2"
+                  className="h-full lg:col-span-3"
                   positions={open}
                   summary={data.summary}
                   colorByTicker={colorByTicker}
                   snapshotLabel={snapshotLabel}
                 />
-                <OpenResultCard
-                  className="lg:col-span-3"
+                <DeepFinderTeaser
+                  className="h-full lg:col-span-2"
                   positions={open}
                   summary={data.summary}
                 />
@@ -554,7 +552,7 @@ function AllocationCard({
   const active = activeIndex == null ? undefined : slices[activeIndex];
 
   return (
-    <Card className={className}>
+    <Card className={cn("h-full", className)}>
       <CardHeader>
         <CardTitle>
           <Trans id="positions.allocation">Allocation</Trans>
@@ -662,7 +660,7 @@ function AllocationCard({
               </div>
             </div>
 
-            <ul className="grid gap-x-4 gap-y-1.5 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+            <ul className="grid gap-x-4 gap-y-1.5 sm:grid-cols-2">
               {slices.map((slice, index) => (
                 <li key={slice.ticker}>
                   <button
@@ -702,17 +700,30 @@ function AllocationCard({
 }
 
 /* -------------------------------------------------------------------------- */
-/* Open result bars                                                           */
+/* Summary teaser (top movers → Deep Finder)                                  */
 /* -------------------------------------------------------------------------- */
 
-type ResultDatum = {
+type MoverRow = {
   ticker: string;
-  value: number;
-  display: string;
-  percentLabel: string | null;
+  change: string | null;
+  changePercent: string | null;
 };
 
-function OpenResultCard({
+function pickTopMovers(rows: MoverRow[], limit = 3) {
+  const comparable = rows.filter((row) => row.changePercent != null);
+  const gainers = comparable
+    .filter((row) => Number(row.changePercent) > 0)
+    .sort((a, b) => Number(b.changePercent) - Number(a.changePercent))
+    .slice(0, limit);
+  const losers = comparable
+    .filter((row) => Number(row.changePercent) < 0)
+    .sort((a, b) => Number(a.changePercent) - Number(b.changePercent))
+    .slice(0, limit);
+
+  return { gainers, losers };
+}
+
+function DeepFinderTeaser({
   className,
   positions,
   summary,
@@ -721,141 +732,183 @@ function OpenResultCard({
   positions: ValuedPosition[];
   summary: PortfolioSummary;
 }) {
-  useLingui();
-
-  const rows: ResultDatum[] = useMemo(
+  const { displayCurrency, quoteSource, manualPrices } = useSettings();
+  const fx = useFxQuote();
+  const sanitizedManualPrices = useMemo(
     () =>
-      positions
-        .filter((position) => position.convertedUnrealizedPnl != null)
-        .map((position) => ({
-          ticker: position.ticker,
-          value: Number(position.convertedUnrealizedPnl ?? 0),
-          display: signedOrZero(
-            position.convertedUnrealizedPnl ?? "0.00",
-            summary.displayCurrency,
-          ),
-          percentLabel:
-            position.unrealizedPnlPercent == null
-              ? null
-              : formatSignedPercent(position.unrealizedPnlPercent),
-        }))
-        .sort((a, b) => b.value - a.value),
-    [positions, summary.displayCurrency],
+      Object.fromEntries(
+        Object.entries(manualPrices).filter(
+          ([, price]) => positiveDecimal.safeParse(price).success,
+        ),
+      ),
+    [manualPrices],
+  );
+  const month = trpc.positions.finder.useQuery({
+    displayCurrency,
+    usdBrlRate: fx.effectiveRate,
+    quoteSource,
+    window: "1m",
+    manualPrices:
+      quoteSource === "manual" && Object.keys(sanitizedManualPrices).length > 0
+        ? sanitizedManualPrices
+        : undefined,
+  });
+
+  const fallbackRows = useMemo<MoverRow[]>(
+    () =>
+      positions.map((position) => ({
+        ticker: position.ticker,
+        change: position.convertedUnrealizedPnl,
+        changePercent: position.unrealizedPnlPercent,
+      })),
+    [positions],
   );
 
-  const chartConfig: ChartConfig = {
-    value: {
-      label: t({ id: "positions.unrealizedPnl", message: "Open result" }),
-    },
-  };
-
-  const bound = useMemo(() => {
-    const values = rows.map((row) => row.value);
-
-    return {
-      min: Math.min(0, ...values) * 1.15,
-      max: Math.max(0, ...values) * 1.15,
-    };
-  }, [rows]);
+  const showSkeleton = month.isPending && !month.data;
+  const movers = pickTopMovers(
+    month.data?.positions ?? (month.isError ? fallbackRows : []),
+  );
+  const totalChange =
+    month.data?.summary.totalChange ?? summary.totalUnrealizedPnl;
+  const currency =
+    month.data?.summary.displayCurrency ?? summary.displayCurrency;
+  const rising =
+    month.data?.summary.advancing ??
+    fallbackRows.filter((row) => Number(row.changePercent) > 0).length;
+  const falling =
+    month.data?.summary.declining ??
+    fallbackRows.filter((row) => Number(row.changePercent) < 0).length;
 
   return (
-    <Card className={className}>
+    <Card className={cn("h-full", className)}>
       <CardHeader>
         <CardTitle>
-          <Trans id="positions.openResult">Open result by asset</Trans>
+          <Trans id="positions.teaserTitle">Summary</Trans>
         </CardTitle>
         <CardDescription>
-          <Trans id="positions.openResultHint">
-            Market value minus the moving average cost, in{" "}
-            {summary.displayCurrency}.
+          <Trans id="positions.teaserHint">
+            Biggest percent moves over the last month. Open Deep Finder for
+            every ticker and lookback window.
           </Trans>
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        {rows.length === 0 ? (
-          <p className="py-10 text-center text-sm text-muted-foreground">
-            <Trans id="positions.noQuotes">
-              No market quotes for this snapshot yet.
-            </Trans>
-          </p>
+      <CardContent className="flex flex-1 flex-col gap-5">
+        {showSkeleton ? (
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-44" />
+            <Skeleton className="h-4 w-36" />
+          </div>
         ) : (
-          <ChartContainer
-            config={chartConfig}
-            className="aspect-auto h-[264px] w-full"
-          >
-            <BarChart
-              accessibilityLayer
-              data={rows}
-              layout="vertical"
-              margin={{ left: 0, right: 12, top: 4, bottom: 0 }}
-              barCategoryGap="22%"
+          <div>
+            <p
+              className={`text-2xl font-semibold tabular-nums ${pnlClassName(totalChange)}`}
             >
-              <XAxis
-                type="number"
-                domain={[bound.min, bound.max]}
-                tickLine={false}
-                axisLine={false}
-                tickCount={5}
-                tickFormatter={(value: number) =>
-                  formatCompactMoney(value, summary.displayCurrency)
-                }
-              />
-              <YAxis
-                type="category"
-                dataKey="ticker"
-                width={62}
-                tickLine={false}
-                axisLine={false}
-                tickMargin={4}
-              />
-              <ReferenceLine x={0} stroke="var(--border)" />
-              <ChartTooltip
-                cursor={{ fill: "var(--muted)", fillOpacity: 0.4 }}
-                content={
-                  <ChartTooltipContent
-                    formatter={(_value, _name, item) => {
-                      const row = item.payload as ResultDatum | undefined;
-
-                      if (!row) {
-                        return null;
-                      }
-
-                      return (
-                        <div className="flex w-full items-center gap-3">
-                          <span className="text-muted-foreground">
-                            <Trans id="positions.unrealizedPnl">
-                              Open result
-                            </Trans>
-                          </span>
-                          <span
-                            className={`ml-auto font-medium tabular-nums ${pnlClassName(String(row.value))}`}
-                          >
-                            {row.display}
-                          </span>
-                          {row.percentLabel ? (
-                            <span className="text-muted-foreground tabular-nums">
-                              {row.percentLabel}
-                            </span>
-                          ) : null}
-                        </div>
-                      );
-                    }}
-                  />
-                }
-              />
-              <Bar dataKey="value" radius={3} maxBarSize={18}>
-                {rows.map((row) => (
-                  <Cell
-                    key={row.ticker}
-                    fill={row.value < 0 ? "var(--loss)" : "var(--gain)"}
-                  />
-                ))}
-              </Bar>
-            </BarChart>
-          </ChartContainer>
+              {signedOrZero(totalChange, currency)}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              <span className="text-foreground tabular-nums">{rising}</span>{" "}
+              <Trans id="positions.teaserRising">rising</Trans>
+              <span aria-hidden="true"> · </span>
+              <span className="text-foreground tabular-nums">{falling}</span>{" "}
+              <Trans id="positions.teaserFalling">falling</Trans>
+            </p>
+          </div>
         )}
+        <div className="flex min-h-0 flex-1 flex-col gap-5">
+          <MoverList
+            title={<Trans id="positions.teaserGainers">Top gainers</Trans>}
+            empty={
+              <Trans id="positions.teaserEmptyUp">
+                No rising holdings this month.
+              </Trans>
+            }
+            rows={movers.gainers}
+            currency={currency}
+            loading={showSkeleton}
+          />
+          <MoverList
+            title={<Trans id="positions.teaserLosers">Top losers</Trans>}
+            empty={
+              <Trans id="positions.teaserEmptyDown">
+                No falling holdings this month.
+              </Trans>
+            }
+            rows={movers.losers}
+            currency={currency}
+            loading={showSkeleton}
+          />
+        </div>
       </CardContent>
+      <CardFooter className="mt-auto">
+        <Button asChild className="w-full">
+          <Link to="/deep-finder">
+            <ScanSearch className="size-4" aria-hidden="true" />
+            <Trans id="positions.openDeepFinder">Open Deep Finder</Trans>
+          </Link>
+        </Button>
+      </CardFooter>
     </Card>
+  );
+}
+
+function MoverList({
+  title,
+  empty,
+  rows,
+  currency,
+  loading,
+}: {
+  title: ReactNode;
+  empty: ReactNode;
+  rows: MoverRow[];
+  currency: Currency;
+  loading: boolean;
+}) {
+  return (
+    <section>
+      <h3 className="text-xs font-medium text-muted-foreground">{title}</h3>
+      {loading ? (
+        <ul className="mt-2 space-y-2">
+          <li>
+            <Skeleton className="h-5 w-full" />
+          </li>
+          <li>
+            <Skeleton className="h-5 w-full" />
+          </li>
+          <li>
+            <Skeleton className="h-5 w-full" />
+          </li>
+        </ul>
+      ) : rows.length === 0 ? (
+        <p className="mt-2 text-sm text-muted-foreground">{empty}</p>
+      ) : (
+        <ul className="mt-2 space-y-2">
+          {rows.map((row) => (
+            <li key={row.ticker} className="flex items-baseline gap-3 text-sm">
+              <span className="font-medium">{row.ticker}</span>
+              <span
+                className={cn(
+                  "ml-auto tabular-nums",
+                  row.changePercent ? pnlClassName(row.changePercent) : "",
+                )}
+              >
+                {row.changePercent
+                  ? formatSignedPercent(row.changePercent)
+                  : "—"}
+              </span>
+              <span
+                className={cn(
+                  "w-[7.25rem] text-right tabular-nums",
+                  row.change ? pnlClassName(row.change) : "",
+                )}
+              >
+                {row.change ? signedOrZero(row.change, currency) : "—"}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 

@@ -221,6 +221,8 @@ export type AllocationTableProps = {
   onReorder: (tickers: string[]) => void;
   /** Raw cell text; the page owns parsing and validation. */
   onEditTarget: (ticker: string, text: string) => void;
+  /** Display-currency market value for an unquoted position. Empty clears. */
+  onEditValue: (ticker: string, text: string) => void;
   onClearAnalysis: (ticker: string) => void;
   onRemoveAsset: (row: AllocationRow) => void;
   onSaveReview: (input: {
@@ -236,6 +238,25 @@ export type AllocationTableProps = {
   saving?: boolean;
 };
 
+const FOCUS_QUARTERS_KEY = "portfolio.allocation.focusQuarters";
+const FOCUS_QUARTER_COL = "bg-blue-400/[0.04]";
+
+function initialFocusQuarters(): Set<string> {
+  try {
+    const parsed: unknown = JSON.parse(
+      localStorage.getItem(FOCUS_QUARTERS_KEY) ?? "null",
+    );
+
+    if (Array.isArray(parsed)) {
+      return new Set(parsed.filter((value) => typeof value === "string"));
+    }
+  } catch {
+    // Storage is only a convenience; nothing is focused by default.
+  }
+
+  return new Set();
+}
+
 export function AllocationTable({
   rows,
   quarters,
@@ -246,6 +267,7 @@ export function AllocationTable({
   freeOrder,
   onReorder,
   onEditTarget,
+  onEditValue,
   onClearAnalysis,
   onRemoveAsset,
   onSaveReview,
@@ -258,6 +280,8 @@ export function AllocationTable({
   const visible = ALLOCATION_COLUMNS.filter((id) => visibleColumns.has(id));
   const [dragging, setDragging] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
+  const [focusQuarters, setFocusQuarters] =
+    useState<Set<string>>(initialFocusQuarters);
   const highestScore = rows.reduce(
     (highest, row) => Math.max(highest, Number(row.score.value)),
     0,
@@ -286,6 +310,26 @@ export function AllocationTable({
     if (target !== undefined) {
       move(ticker, target);
     }
+  }
+
+  function toggleFocusQuarter(key: string) {
+    setFocusQuarters((current) => {
+      const next = new Set(current);
+
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+      }
+
+      try {
+        localStorage.setItem(FOCUS_QUARTERS_KEY, JSON.stringify([...next]));
+      } catch {
+        // The mark still applies for this session.
+      }
+
+      return next;
+    });
   }
 
   return (
@@ -339,14 +383,42 @@ export function AllocationTable({
                   )}
                 </TableHead>
               ))}
-              {quarters.map((quarter) => (
-                <TableHead
-                  key={quarter.key}
-                  className="h-10 w-14 px-1 text-center font-medium whitespace-nowrap"
-                >
-                  {formatQuarterLabel(quarter)}
-                </TableHead>
-              ))}
+              {quarters.map((quarter) => {
+                const focused = focusQuarters.has(quarter.key);
+
+                return (
+                  <TableHead
+                    key={quarter.key}
+                    className={cn(
+                      "h-10 w-14 px-1 text-center whitespace-nowrap",
+                      focused && FOCUS_QUARTER_COL,
+                    )}
+                  >
+                    <button
+                      type="button"
+                      aria-pressed={focused}
+                      onClick={() => toggleFocusQuarter(quarter.key)}
+                      title={i18n._(
+                        focused
+                          ? t({
+                              id: "allocation.unfocusQuarter",
+                              message: `Stop marking ${formatQuarterLabel(quarter)} as the quarter you are working on`,
+                            })
+                          : t({
+                              id: "allocation.focusQuarter",
+                              message: `Mark ${formatQuarterLabel(quarter)} as the quarter you are working on`,
+                            }),
+                      )}
+                      className={cn(
+                        "w-full rounded-sm py-1 font-medium hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                        focused && "text-blue-400",
+                      )}
+                    >
+                      {formatQuarterLabel(quarter)}
+                    </button>
+                  </TableHead>
+                );
+              })}
               <TableHead className="h-10 w-8 px-1" />
             </TableRow>
           </TableHeader>
@@ -362,7 +434,7 @@ export function AllocationTable({
                 <TableRow
                   key={row.ticker}
                   className={cn(
-                    "h-12",
+                    "group h-12",
                     dragging === row.ticker && "opacity-50",
                     dropTarget === row.ticker && "border-t-2 border-t-ring",
                   )}
@@ -436,7 +508,7 @@ export function AllocationTable({
                   </TableCell>
 
                   {visibleColumns.has("ticker") ? (
-                    <TableCell className="sticky left-0 z-10 bg-card px-2.5 py-2.5">
+                    <TableCell className="sticky left-0 z-10 bg-card px-2.5 py-2.5 group-hover:bg-[color-mix(in_oklab,var(--muted)_50%,var(--card))]">
                       <div className="flex items-center gap-1.5">
                         <Link
                           to="/allocation/$ticker"
@@ -619,11 +691,69 @@ export function AllocationTable({
                   ) : null}
 
                   {visibleColumns.has("marketValue") ? (
-                    <TableCell className="px-2.5 py-2.5 text-right tabular-nums">
-                      {row.marketValue === null ? (
-                        <span className="text-muted-foreground">—</span>
+                    <TableCell className="px-2.5 py-2.5">
+                      {row.valueSource === "quote" &&
+                      row.marketValue !== null ? (
+                        <span
+                          className="block h-8 px-1.5 text-right text-sm tabular-nums leading-8"
+                          title={i18n._(
+                            t({
+                              id: "allocation.valueQuotedTooltip",
+                              message: "Quantity × market price",
+                            }),
+                          )}
+                        >
+                          {formatMoney(row.marketValue, row.displayCurrency)}
+                        </span>
+                      ) : row.hasPosition ? (
+                        <InlineEditCell
+                          display={
+                            row.marketValue === null
+                              ? null
+                              : formatMoney(
+                                  row.marketValue,
+                                  row.displayCurrency,
+                                )
+                          }
+                          text={formatDecimalInput(
+                            row.marketValue,
+                            i18n.locale,
+                          )}
+                          label={i18n._(
+                            t({
+                              id: "allocation.editValue",
+                              message: `Market value of ${row.ticker}`,
+                            }),
+                          )}
+                          title={
+                            row.valueSource === "manual"
+                              ? i18n._(
+                                  t({
+                                    id: "allocation.valueManualTooltip",
+                                    message:
+                                      "No public quote. This value is set by you. Clear the cell to remove it.",
+                                  }),
+                                )
+                              : i18n._(
+                                  t({
+                                    id: "allocation.valueMissingTooltip",
+                                    message:
+                                      "No public quote. Enter the position's market value.",
+                                  }),
+                                )
+                          }
+                          placeholder={i18n._(
+                            t({
+                              id: "allocation.valuePlaceholder",
+                              message: "Set value",
+                            }),
+                          )}
+                          onCommit={(text) => onEditValue(row.ticker, text)}
+                        />
                       ) : (
-                        formatMoney(row.marketValue, row.displayCurrency)
+                        <span className="block h-8 px-1.5 text-right text-sm leading-8 text-muted-foreground">
+                          —
+                        </span>
                       )}
                     </TableCell>
                   ) : null}
@@ -648,7 +778,13 @@ export function AllocationTable({
                   ) : null}
 
                   {quarters.map((quarter) => (
-                    <TableCell key={quarter.key} className="px-1.5 py-2.5">
+                    <TableCell
+                      key={quarter.key}
+                      className={cn(
+                        "px-1.5 py-2.5",
+                        focusQuarters.has(quarter.key) && FOCUS_QUARTER_COL,
+                      )}
+                    >
                       <QuarterReviewCell
                         ticker={row.ticker}
                         quarter={quarter}
@@ -743,7 +879,14 @@ export function AllocationTable({
                   return <TableCell key={id} />;
                 })}
                 {quarters.map((quarter) => (
-                  <TableCell key={quarter.key} />
+                  <TableCell
+                    key={quarter.key}
+                    className={
+                      focusQuarters.has(quarter.key)
+                        ? FOCUS_QUARTER_COL
+                        : undefined
+                    }
+                  />
                 ))}
                 <TableCell />
               </TableRow>

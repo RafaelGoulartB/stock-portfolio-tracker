@@ -3,6 +3,7 @@ export * from "./auth";
 export * from "./categories";
 export * from "./currency";
 export * from "./decimal";
+export * from "./deep-finder";
 export * from "./dividends";
 export * from "./fx";
 export * from "./performance";

@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppAllocationRouteImport } from './routes/_app/allocation'
 import { Route as AppCategoriesRouteImport } from './routes/_app/categories'
 import { Route as AppDailyRouteImport } from './routes/_app/daily'
+import { Route as AppDeepFinderRouteImport } from './routes/_app/deep-finder'
 import { Route as AppDetailedPositionsRouteImport } from './routes/_app/detailed-positions'
 import { Route as AppDividendsRouteImport } from './routes/_app/dividends'
 import { Route as AppPerformanceRouteImport } from './routes/_app/performance'
@@ -50,6 +51,11 @@ const AppCategoriesRoute = AppCategoriesRouteImport.update({
 const AppDailyRoute = AppDailyRouteImport.update({
   id: '/daily',
   path: '/daily',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDeepFinderRoute = AppDeepFinderRouteImport.update({
+  id: '/deep-finder',
+  path: '/deep-finder',
   getParentRoute: () => AppRoute,
 } as any)
 const AppDetailedPositionsRoute = AppDetailedPositionsRouteImport.update({
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/allocation': typeof AppAllocationRouteWithChildren
   '/categories': typeof AppCategoriesRoute
   '/daily': typeof AppDailyRoute
+  '/deep-finder': typeof AppDeepFinderRoute
   '/detailed-positions': typeof AppDetailedPositionsRoute
   '/dividends': typeof AppDividendsRoute
   '/performance': typeof AppPerformanceRoute
@@ -107,6 +114,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/categories': typeof AppCategoriesRoute
   '/daily': typeof AppDailyRoute
+  '/deep-finder': typeof AppDeepFinderRoute
   '/detailed-positions': typeof AppDetailedPositionsRoute
   '/dividends': typeof AppDividendsRoute
   '/performance': typeof AppPerformanceRoute
@@ -123,6 +131,7 @@ export interface FileRoutesById {
   '/_app/allocation': typeof AppAllocationRouteWithChildren
   '/_app/categories': typeof AppCategoriesRoute
   '/_app/daily': typeof AppDailyRoute
+  '/_app/deep-finder': typeof AppDeepFinderRoute
   '/_app/detailed-positions': typeof AppDetailedPositionsRoute
   '/_app/dividends': typeof AppDividendsRoute
   '/_app/performance': typeof AppPerformanceRoute
@@ -139,6 +148,7 @@ export interface FileRouteTypes {
     | '/allocation'
     | '/categories'
     | '/daily'
+    | '/deep-finder'
     | '/detailed-positions'
     | '/dividends'
     | '/performance'
@@ -152,6 +162,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/categories'
     | '/daily'
+    | '/deep-finder'
     | '/detailed-positions'
     | '/dividends'
     | '/performance'
@@ -167,6 +178,7 @@ export interface FileRouteTypes {
     | '/_app/allocation'
     | '/_app/categories'
     | '/_app/daily'
+    | '/_app/deep-finder'
     | '/_app/detailed-positions'
     | '/_app/dividends'
     | '/_app/performance'
@@ -224,6 +236,13 @@ declare module '@tanstack/react-router' {
       path: '/daily'
       fullPath: '/daily'
       preLoaderRoute: typeof AppDailyRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/deep-finder': {
+      id: '/_app/deep-finder'
+      path: '/deep-finder'
+      fullPath: '/deep-finder'
+      preLoaderRoute: typeof AppDeepFinderRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/detailed-positions': {
@@ -296,6 +315,7 @@ interface AppRouteChildren {
   AppAllocationRoute: typeof AppAllocationRouteWithChildren
   AppCategoriesRoute: typeof AppCategoriesRoute
   AppDailyRoute: typeof AppDailyRoute
+  AppDeepFinderRoute: typeof AppDeepFinderRoute
   AppDetailedPositionsRoute: typeof AppDetailedPositionsRoute
   AppDividendsRoute: typeof AppDividendsRoute
   AppPerformanceRoute: typeof AppPerformanceRoute
@@ -307,6 +327,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAllocationRoute: AppAllocationRouteWithChildren,
   AppCategoriesRoute: AppCategoriesRoute,
   AppDailyRoute: AppDailyRoute,
+  AppDeepFinderRoute: AppDeepFinderRoute,
   AppDetailedPositionsRoute: AppDetailedPositionsRoute,
   AppDividendsRoute: AppDividendsRoute,
   AppPerformanceRoute: AppPerformanceRoute,
