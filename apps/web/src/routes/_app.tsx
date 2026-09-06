@@ -8,11 +8,11 @@ import {
   redirect,
   useNavigate,
 } from "@tanstack/react-router";
-import { LineChart, LogOut, PieChart, Receipt } from "lucide-react";
+import { LineChart, PieChart, Receipt } from "lucide-react";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { ThemeSwitcher } from "@/components/theme-switcher";
-import { Button } from "@/components/ui/button";
+import { UserMenu } from "@/components/user-menu";
 import { trpc } from "@/lib/api";
 import { clearSession, sessionQueryOptions } from "@/lib/session";
 import { SettingsProvider } from "@/lib/settings";
@@ -91,22 +91,14 @@ function AppLayout() {
             </nav>
 
             <div className="ml-auto flex items-center gap-3">
-              <span className="hidden text-sm text-muted-foreground sm:inline">
-                {user.email}
-              </span>
               <LanguageSwitcher />
               <ThemeSwitcher />
               <SettingsDialog />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => logout.mutate()}
-                disabled={logout.isPending}
-              >
-                <LogOut className="size-4" aria-hidden="true" />
-                <Trans id="shell.signOut">Sign out</Trans>
-              </Button>
+              <UserMenu
+                email={user.email}
+                signingOut={logout.isPending}
+                onSignOut={() => logout.mutate()}
+              />
             </div>
           </div>
         </header>
