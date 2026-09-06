@@ -3,6 +3,7 @@ import { trpcServer } from "@hono/trpc-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { sql } from "./db";
+import { deleteExpiredSessions } from "./lib/session";
 import { createContext } from "./trpc/context";
 import { appRouter } from "./trpc/router";
 
@@ -12,6 +13,7 @@ app.use(
   "*",
   cors({
     origin: ["http://127.0.0.1:5173", "http://localhost:5173"],
+    credentials: true,
   }),
 );
 
@@ -28,9 +30,13 @@ app.use(
   "/trpc/*",
   trpcServer({
     router: appRouter,
-    createContext: () => createContext(),
+    createContext: (_opts, c) => createContext(c),
   }),
 );
+
+deleteExpiredSessions().catch((error) => {
+  console.error("Failed to prune expired sessions", error);
+});
 
 serve({ fetch: app.fetch, port: 3001 }, (info) => {
   console.log(`API listening on http://127.0.0.1:${info.port}`);
