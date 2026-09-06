@@ -14,6 +14,7 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppDailyRouteImport } from './routes/_app/daily'
 import { Route as AppDetailedPositionsRouteImport } from './routes/_app/detailed-positions'
+import { Route as AppDividendsRouteImport } from './routes/_app/dividends'
 import { Route as AppPerformanceRouteImport } from './routes/_app/performance'
 import { Route as AppPositionsRouteImport } from './routes/_app/positions'
 import { Route as AppTransactionsRouteImport } from './routes/_app/transactions'
@@ -42,6 +43,11 @@ const AppDetailedPositionsRoute = AppDetailedPositionsRouteImport.update({
   path: '/detailed-positions',
   getParentRoute: () => AppRoute,
 } as any)
+const AppDividendsRoute = AppDividendsRouteImport.update({
+  id: '/dividends',
+  path: '/dividends',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppPerformanceRoute = AppPerformanceRouteImport.update({
   id: '/performance',
   path: '/performance',
@@ -63,6 +69,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/daily': typeof AppDailyRoute
   '/detailed-positions': typeof AppDetailedPositionsRoute
+  '/dividends': typeof AppDividendsRoute
   '/performance': typeof AppPerformanceRoute
   '/positions': typeof AppPositionsRoute
   '/transactions': typeof AppTransactionsRoute
@@ -72,6 +79,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/daily': typeof AppDailyRoute
   '/detailed-positions': typeof AppDetailedPositionsRoute
+  '/dividends': typeof AppDividendsRoute
   '/performance': typeof AppPerformanceRoute
   '/positions': typeof AppPositionsRoute
   '/transactions': typeof AppTransactionsRoute
@@ -83,6 +91,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_app/daily': typeof AppDailyRoute
   '/_app/detailed-positions': typeof AppDetailedPositionsRoute
+  '/_app/dividends': typeof AppDividendsRoute
   '/_app/performance': typeof AppPerformanceRoute
   '/_app/positions': typeof AppPositionsRoute
   '/_app/transactions': typeof AppTransactionsRoute
@@ -94,6 +103,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/daily'
     | '/detailed-positions'
+    | '/dividends'
     | '/performance'
     | '/positions'
     | '/transactions'
@@ -103,6 +113,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/daily'
     | '/detailed-positions'
+    | '/dividends'
     | '/performance'
     | '/positions'
     | '/transactions'
@@ -113,6 +124,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/_app/daily'
     | '/_app/detailed-positions'
+    | '/_app/dividends'
     | '/_app/performance'
     | '/_app/positions'
     | '/_app/transactions'
@@ -161,6 +173,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDetailedPositionsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/dividends': {
+      id: '/_app/dividends'
+      path: '/dividends'
+      fullPath: '/dividends'
+      preLoaderRoute: typeof AppDividendsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/performance': {
       id: '/_app/performance'
       path: '/performance'
@@ -188,6 +207,7 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppDailyRoute: typeof AppDailyRoute
   AppDetailedPositionsRoute: typeof AppDetailedPositionsRoute
+  AppDividendsRoute: typeof AppDividendsRoute
   AppPerformanceRoute: typeof AppPerformanceRoute
   AppPositionsRoute: typeof AppPositionsRoute
   AppTransactionsRoute: typeof AppTransactionsRoute
@@ -196,6 +216,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppDailyRoute: AppDailyRoute,
   AppDetailedPositionsRoute: AppDetailedPositionsRoute,
+  AppDividendsRoute: AppDividendsRoute,
   AppPerformanceRoute: AppPerformanceRoute,
   AppPositionsRoute: AppPositionsRoute,
   AppTransactionsRoute: AppTransactionsRoute,

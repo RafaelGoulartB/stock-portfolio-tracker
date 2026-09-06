@@ -1,5 +1,6 @@
 import { authRouter } from "./routers/auth";
 import { devSeedRouter } from "./routers/dev-seed";
+import { dividendsRouter } from "./routers/dividends";
 import { fxRouter } from "./routers/fx";
 import { performanceRouter } from "./routers/performance";
 import { positionsRouter } from "./routers/positions";
@@ -10,6 +11,7 @@ import { publicProcedure, router } from "./trpc";
 export const appRouter = router({
   health: publicProcedure.query(() => ({ ok: true as const })),
   auth: authRouter,
+  dividends: dividendsRouter,
   fx: fxRouter,
   quotes: quotesRouter,
   transactions: transactionsRouter,

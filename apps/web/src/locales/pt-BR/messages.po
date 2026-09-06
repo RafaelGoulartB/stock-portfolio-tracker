@@ -84,6 +84,18 @@ msgid "settings.devSeed.success"
 msgstr "{0} operações de demonstração adicionadas"
 
 #. js-lingui-explicit-id
+#. placeholder {0}: summary.upcomingCount
+#: src/routes/_app/dividends.tsx:254
+msgid "dividends.eventCount"
+msgstr "{0} eventos"
+
+#. js-lingui-explicit-id
+#. placeholder {0}: data.summary.unconvertedEvents
+#: src/routes/_app/dividends.tsx:679
+msgid "dividends.unconverted"
+msgstr "Não foi possível converter {0} eventos."
+
+#. js-lingui-explicit-id
 #. placeholder {0}: formatSignedPercent(summary.annualizedReturn)
 #: src/routes/_app/performance.tsx:487
 msgid "performance.annualized"
@@ -163,9 +175,29 @@ msgid "positions.allocation"
 msgstr "Alocação"
 
 #. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:185
+msgid "dividends.sourceAlpha"
+msgstr "Alpha Vantage (chave de API gratuita)"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:664
+msgid "dividends.alphaNotConfigured"
+msgstr "A Alpha Vantage não está configurada. Defina ALPHA_VANTAGE_API_KEY na API ou selecione Automático para usar o fallback do Yahoo."
+
+#. js-lingui-explicit-id
 #: src/routes/login.tsx:211
 msgid "login.hasAccount"
 msgstr "Já tem uma conta?"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:626
+msgid "dividends.announced"
+msgstr "Anunciado"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:374
+msgid "dividends.upcomingDescription"
+msgstr "Eventos anunciados para posições que parecem elegíveis."
 
 #. js-lingui-explicit-id
 #: src/routes/_app/daily.tsx:305
@@ -192,6 +224,16 @@ msgstr "Ativos com o maior resultado em aberto e quanto cada um soma à rentabil
 #: src/routes/login.tsx:166
 msgid "login.passwordHint"
 msgstr "Pelo menos 8 caracteres"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:178
+msgid "dividends.sourceAuto"
+msgstr "Automático (Alpha Vantage + fallback do Yahoo)"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:654
+msgid "dividends.alphaHint"
+msgstr "O modo automático está usando apenas o Yahoo. Defina ALPHA_VANTAGE_API_KEY na API para complementar eventos dos EUA com datas de pagamento e anúncios futuros."
 
 #. js-lingui-explicit-id
 #: src/routes/_app/positions.tsx:1004
@@ -386,7 +428,7 @@ msgid "detailedPositions.customize"
 msgstr "Personalizar colunas"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:60
+#: src/routes/_app.tsx:66
 msgid "nav.daily"
 msgstr "Diário"
 
@@ -425,7 +467,7 @@ msgid "daily.colDayChange"
 msgstr "Variação no dia"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:68
+#: src/routes/_app.tsx:74
 msgid "nav.detailedPositions"
 msgstr "Posições detalhadas"
 
@@ -460,10 +502,42 @@ msgid "login.email"
 msgstr "E-mail"
 
 #. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:580
+msgid "dividends.estimated"
+msgstr "Estimado"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:103
+msgid "dividends.subtitle"
+msgstr "Proventos estimados com base nas ações mantidas antes de cada data-ex. As datas de pagamento aparecem quando o provedor as publica."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:321
+msgid "dividends.chartDescription"
+msgstr "Proventos brutos estimados na moeda de exibição da carteira."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:242
+msgid "dividends.total"
+msgstr "Proventos estimados"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:637
+msgid "dividends.estimatedPaid"
+msgstr "Pagamento estimado"
+
+#. js-lingui-explicit-id
 #: src/components/asset-labels.tsx:30
 #: src/components/asset-labels.tsx:66
 msgid "assetClass.etf"
 msgstr "ETF"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:407
+#: src/routes/_app/dividends.tsx:532
+#: src/routes/_app/dividends.tsx:568
+msgid "dividends.exDate"
+msgstr "Data-ex"
 
 #. js-lingui-explicit-id
 #: src/components/settings-dialog.tsx:112
@@ -502,6 +576,11 @@ msgid "positions.quoteSourceHint"
 msgstr "Cotações gratuitas com atraso para valor de mercado e alocação."
 
 #. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:557
+msgid "dividends.historyDescription"
+msgstr "Estimativas brutas. Confirme os créditos líquidos no extrato da corretora."
+
+#. js-lingui-explicit-id
 #: src/routes/_app/transactions.tsx:436
 msgid "transactions.history"
 msgstr "Histórico"
@@ -525,6 +604,36 @@ msgstr "Como cada mês foi por si só, com os aportes ponderados pelos dias em q
 #: src/routes/_app/performance.tsx:1039
 msgid "performance.compositionHint"
 msgstr "Como a composição por categoria evoluiu, em {currency}."
+
+#. js-lingui-explicit-id
+#: src/routes/_app.tsx:78
+msgid "nav.dividends"
+msgstr "Proventos"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:100
+msgid "dividends.title"
+msgstr "Proventos"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:318
+msgid "dividends.chartTitle"
+msgstr "Proventos por mês"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:443
+msgid "dividends.calendarTitle"
+msgstr "Calendário de proventos"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:273
+msgid "dividends.events"
+msgstr "Eventos de proventos"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:554
+msgid "dividends.historyTitle"
+msgstr "Histórico de proventos"
 
 #. js-lingui-explicit-id
 #: src/routes/_app/detailed-positions.tsx:240
@@ -580,7 +689,7 @@ msgid "positions.live"
 msgstr "Ao vivo"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:99
+#: src/routes/_app.tsx:109
 msgid "nav.main"
 msgstr "Principal"
 
@@ -697,6 +806,21 @@ msgid "transactions.newTrade"
 msgstr "Nova operação"
 
 #. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:261
+msgid "dividends.nextDate"
+msgstr "Próxima data relevante"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:517
+msgid "dividends.calendarEmpty"
+msgstr "Nenhum evento neste mês."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:200
+msgid "dividends.emptyTitle"
+msgstr "Nenhum provento encontrado"
+
+#. js-lingui-explicit-id
 #: src/routes/_app/daily.tsx:175
 msgid "daily.noQuoteDate"
 msgstr "Nenhuma cotação ao vivo disponível."
@@ -728,6 +852,11 @@ msgstr "Sem histórico de preço para {0}. Esses ativos ficam avaliados a custo,
 #: src/routes/_app/positions.tsx:1191
 msgid "positions.missingQuotes"
 msgstr "Sem cotação para {0}. Valores e participações cobrem apenas ativos cotados."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:382
+msgid "dividends.noUpcoming"
+msgstr "A fonte selecionada não publicou eventos futuros."
 
 #. js-lingui-explicit-id
 #: src/routes/_app/performance.tsx:1515
@@ -815,7 +944,33 @@ msgid "login.password"
 msgstr "Senha"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:64
+#: src/routes/_app/dividends.tsx:530
+#: src/routes/_app/dividends.tsx:571
+msgid "dividends.payment"
+msgstr "Pagamento"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:405
+msgid "dividends.paymentDate"
+msgstr "Data de pagamento"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:446
+msgid "dividends.calendarDescription"
+msgstr "Data de pagamento quando conhecida; caso contrário, a data-ex."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:268
+msgid "dividends.paymentOrExDate"
+msgstr "Pagamento ou data-ex"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:577
+msgid "dividends.perShare"
+msgstr "Por ação"
+
+#. js-lingui-explicit-id
+#: src/routes/_app.tsx:70
 msgid "nav.performance"
 msgstr "Rentabilidade"
 
@@ -835,7 +990,7 @@ msgid "detailedPositions.colWeight"
 msgstr "% do patrimônio"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:94
+#: src/routes/_app.tsx:104
 #: src/routes/login.tsx:96
 msgid "shell.brand"
 msgstr "Portfolio Tracker"
@@ -857,7 +1012,7 @@ msgid "performance.value"
 msgstr "Valor da carteira"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:56
+#: src/routes/_app.tsx:62
 msgid "nav.positions"
 msgstr "Posições"
 
@@ -885,6 +1040,11 @@ msgstr "Preço"
 #: src/routes/_app/daily.tsx:309
 msgid "daily.assetsHint"
 msgstr "Variação do preço desde o fechamento anterior e o impacto na sua posição atual."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:646
+msgid "dividends.disclaimer"
+msgstr "Eventos do provedor não confirmam o crédito da corretora. Os valores não incluem impostos nem ajustes da corretora."
 
 #. js-lingui-explicit-id
 #: src/routes/_app/daily.tsx:329
@@ -932,6 +1092,11 @@ msgid "positions.realizedPnl"
 msgstr "P&L realizado"
 
 #. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:157
+msgid "dividends.refresh"
+msgstr "Atualizar"
+
+#. js-lingui-explicit-id
 #: src/routes/_app/performance.tsx:265
 msgid "performance.refresh"
 msgstr "Atualizar"
@@ -949,6 +1114,11 @@ msgid "positions.registerTrade"
 msgstr "Registrar operação"
 
 #. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:211
+msgid "dividends.addTrade"
+msgstr "Registrar operação"
+
+#. js-lingui-explicit-id
 #: src/routes/_app/performance.tsx:404
 msgid "performance.registerTrade"
 msgstr "Registrar operação"
@@ -962,6 +1132,11 @@ msgstr "Registre uma negociação para começar a acompanhar a variação diári
 #: src/routes/_app/transactions.tsx:151
 msgid "transactions.subtitle"
 msgstr "Registre cada compra e venda. As posições são consolidadas deste histórico."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:203
+msgid "dividends.emptyDescription"
+msgstr "Registre operações de ações ou ETFs, ou tente um período maior."
 
 #. js-lingui-explicit-id
 #: src/routes/_app/transactions.tsx:426
@@ -1025,6 +1200,11 @@ msgid "positions.savePrices"
 msgstr "Salvar preços"
 
 #. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:632
+msgid "dividends.scheduled"
+msgstr "Agendado"
+
+#. js-lingui-explicit-id
 #: src/routes/_app/detailed-positions.tsx:272
 msgid "detailedPositions.searchLabel"
 msgstr "Buscar nas posições detalhadas"
@@ -1033,6 +1213,11 @@ msgstr "Buscar nas posições detalhadas"
 #: src/routes/_app/detailed-positions.tsx:278
 msgid "detailedPositions.search"
 msgstr "Buscar ticker ou classe…"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:244
+msgid "dividends.selectedPeriod"
+msgstr "Período selecionado"
 
 #. js-lingui-explicit-id
 #: src/components/asset-labels.tsx:17
@@ -1064,6 +1249,11 @@ msgstr "Configurações"
 #: src/routes/_app/positions.tsx:1070
 msgid "positions.colShare"
 msgstr "Participação"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:574
+msgid "dividends.shares"
+msgstr "Ações"
 
 #. js-lingui-explicit-id
 #: src/routes/_app/detailed-positions.tsx:293
@@ -1123,9 +1313,19 @@ msgid "daily.sortColumn"
 msgstr "Ordenar por esta coluna"
 
 #. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:586
+msgid "dividends.source"
+msgstr "Fonte"
+
+#. js-lingui-explicit-id
 #: src/routes/_app/detailed-positions.tsx:316
 msgid "detailedPositions.standard"
 msgstr "Padrão"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:583
+msgid "dividends.status"
+msgstr "Status"
 
 #. js-lingui-explicit-id
 #: src/components/theme-switcher.tsx:62
@@ -1238,7 +1438,7 @@ msgid "transactions.removed"
 msgstr "Operação removida"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:71
+#: src/routes/_app.tsx:81
 msgid "nav.transactions"
 msgstr "Operações"
 
@@ -1248,9 +1448,25 @@ msgid "transactions.title"
 msgstr "Operações"
 
 #. js-lingui-explicit-id
+#. placeholder {0}: data.provider.missing.join(", ")
+#: src/routes/_app/dividends.tsx:672
+msgid "dividends.unavailable"
+msgstr "Tickers indisponíveis: {0}."
+
+#. js-lingui-explicit-id
 #: src/routes/_app/transactions.tsx:296
 msgid "transactions.unitPrice"
 msgstr "Preço unitário"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:248
+msgid "dividends.upcoming"
+msgstr "A receber"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:371
+msgid "dividends.upcomingTitle"
+msgstr "Próximos eventos"
 
 #. js-lingui-explicit-id
 #: src/components/asset-labels.tsx:26
@@ -1309,6 +1525,21 @@ msgstr "O que move o resultado"
 #: src/routes/_app/performance.tsx:530
 msgid "performance.worstMonth"
 msgstr "Pior mês {0}."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:188
+msgid "dividends.sourceYahoo"
+msgstr "Yahoo Finance (gratuito)"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:122
+msgid "dividends.year"
+msgstr "ano"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:124
+msgid "dividends.years"
+msgstr "anos"
 
 #. js-lingui-explicit-id
 #: src/lib/trpcErrors.ts:39

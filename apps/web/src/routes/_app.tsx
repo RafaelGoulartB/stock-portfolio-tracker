@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-router";
 import {
   Activity,
+  CalendarDays,
   LineChart,
   PieChart,
   Receipt,
@@ -44,6 +45,11 @@ const NAV_ITEMS = [
   },
   { to: "/performance", labelId: "nav.performance" as const, icon: TrendingUp },
   { to: "/daily", labelId: "nav.daily" as const, icon: Activity },
+  {
+    to: "/dividends",
+    labelId: "nav.dividends" as const,
+    icon: CalendarDays,
+  },
   { to: "/transactions", labelId: "nav.transactions" as const, icon: Receipt },
 ] as const;
 
@@ -68,6 +74,10 @@ function NavLabel({
     return <Trans id="nav.detailedPositions">Detailed positions</Trans>;
   }
 
+  if (labelId === "nav.dividends") {
+    return <Trans id="nav.dividends">Income</Trans>;
+  }
+
   return <Trans id="nav.transactions">Transactions</Trans>;
 }
 
@@ -87,8 +97,8 @@ function AppLayout() {
     <SettingsProvider>
       <div className="min-h-svh bg-muted/30">
         <header className="border-b bg-background">
-          <div className="mx-auto flex h-14 w-full max-w-6xl items-center gap-6 px-6">
-            <Link to="/positions" className="flex items-center gap-2">
+          <div className="mx-auto flex min-h-14 w-full max-w-6xl flex-wrap items-center gap-2 px-4 py-2 lg:h-14 lg:flex-nowrap lg:gap-6 lg:px-6 lg:py-0">
+            <Link to="/positions" className="flex shrink-0 items-center gap-2">
               <LineChart className="size-5" aria-hidden="true" />
               <span className="font-semibold tracking-tight">
                 <Trans id="shell.brand">Portfolio Tracker</Trans>
@@ -97,13 +107,13 @@ function AppLayout() {
 
             <nav
               aria-label={i18n._(msg({ id: "nav.main", message: "Main" }))}
-              className="flex items-center gap-1"
+              className="order-3 flex w-full items-center gap-1 overflow-x-auto lg:order-none lg:w-auto"
             >
               {NAV_ITEMS.map((item) => (
                 <Link
                   key={item.to}
                   to={item.to}
-                  className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                  className="flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                   activeProps={{
                     className: "bg-accent text-accent-foreground",
                   }}
@@ -125,7 +135,7 @@ function AppLayout() {
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-6xl px-6 py-8">
+        <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
           <Outlet />
         </main>
       </div>
