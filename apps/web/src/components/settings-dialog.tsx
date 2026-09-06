@@ -10,9 +10,10 @@ import {
   QUOTE_SOURCE_LABELS,
   type QuoteSource,
 } from "@portifolio-tracker/shared";
-import { RefreshCw, Settings } from "lucide-react";
-import { useState } from "react";
+import { Palette, RefreshCw, Settings, SlidersHorizontal } from "lucide-react";
+import { type ReactNode, useState } from "react";
 import { DevSeedSection } from "@/components/dev-seed-section";
+import { SettingsAppearance } from "@/components/settings-appearance";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -35,14 +36,35 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { formatQuantity, formatTradeDate } from "@/lib/format";
 import { useFxQuote } from "@/lib/fx";
 import { useSettings } from "@/lib/settings";
+import { cn } from "@/lib/utils";
+
+type SettingsSection = "general" | "appearance";
+
+const SECTIONS: {
+  id: SettingsSection;
+  icon: typeof Settings;
+}[] = [
+  { id: "general", icon: SlidersHorizontal },
+  { id: "appearance", icon: Palette },
+];
 
 /** Header shortcut that opens the portfolio settings modal. */
 export function SettingsDialog() {
   const { i18n } = useLingui();
   const [open, setOpen] = useState(false);
+  const [section, setSection] = useState<SettingsSection>("general");
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        setOpen(nextOpen);
+
+        if (!nextOpen) {
+          setSection("general");
+        }
+      }}
+    >
       <DialogTrigger asChild>
         <Button
           type="button"
@@ -53,25 +75,120 @@ export function SettingsDialog() {
           <Settings className="size-4" aria-hidden="true" />
         </Button>
       </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
-            <Trans id="settings.title">Settings</Trans>
-          </DialogTitle>
-          <DialogDescription>
-            <Trans id="settings.description">
-              Display currency, exchange-rate source, and market-quote source
-              used to consolidate the portfolio.
-            </Trans>
-          </DialogDescription>
-        </DialogHeader>
-        <SettingsForm />
+      <DialogContent className="flex h-[min(42rem,calc(100svh-2rem))] max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl sm:flex-row">
+        <SettingsSidebar section={section} onSectionChange={setSection} />
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <DialogHeader className="gap-1 border-b px-6 py-4 pr-12 text-left">
+            <DialogTitle>
+              <Trans id="settings.title">Settings</Trans>
+              <span className="text-muted-foreground"> / </span>
+              <SettingsSectionLabel section={section} />
+            </DialogTitle>
+            <DialogDescription>
+              {section === "appearance" ? (
+                <Trans id="settings.appearance.description">
+                  Color scheme and palette used across the dashboard.
+                </Trans>
+              ) : (
+                <Trans id="settings.description">
+                  Display currency, exchange-rate source, and market-quote
+                  source used to consolidate the portfolio.
+                </Trans>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto p-6">
+            {section === "appearance" ? (
+              <SettingsAppearance />
+            ) : (
+              <GeneralSettings />
+            )}
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );
 }
 
-function SettingsForm() {
+function SettingsSidebar({
+  section,
+  onSectionChange,
+}: {
+  section: SettingsSection;
+  onSectionChange: (section: SettingsSection) => void;
+}) {
+  const { i18n } = useLingui();
+  const navLabel = i18n._(msg({ id: "settings.title", message: "Settings" }));
+
+  return (
+    <>
+      <nav
+        className="flex shrink-0 gap-1 overflow-x-auto border-b p-2 pr-12 sm:hidden"
+        aria-label={navLabel}
+      >
+        {SECTIONS.map((item) => (
+          <SectionButton
+            key={item.id}
+            section={item.id}
+            icon={item.icon}
+            active={section === item.id}
+            onSelect={() => onSectionChange(item.id)}
+          />
+        ))}
+      </nav>
+      <aside className="hidden w-48 shrink-0 flex-col gap-1 border-r bg-muted/30 p-3 sm:flex">
+        <nav className="flex flex-col gap-1" aria-label={navLabel}>
+          {SECTIONS.map((item) => (
+            <SectionButton
+              key={item.id}
+              section={item.id}
+              icon={item.icon}
+              active={section === item.id}
+              onSelect={() => onSectionChange(item.id)}
+            />
+          ))}
+        </nav>
+      </aside>
+    </>
+  );
+}
+
+function SectionButton({
+  section,
+  icon: Icon,
+  active,
+  onSelect,
+}: {
+  section: SettingsSection;
+  icon: typeof Settings;
+  active: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      aria-current={active ? "page" : undefined}
+      className={cn(
+        "flex items-center gap-2 rounded-md px-2.5 py-2 text-sm font-medium text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring",
+        active && "bg-accent text-accent-foreground",
+      )}
+    >
+      <Icon className="size-4" aria-hidden="true" />
+      <SettingsSectionLabel section={section} />
+    </button>
+  );
+}
+
+function SettingsSectionLabel({ section }: { section: SettingsSection }) {
+  return section === "appearance" ? (
+    <Trans id="settings.section.appearance">Appearance</Trans>
+  ) : (
+    <Trans id="settings.section.general">General</Trans>
+  );
+}
+
+function GeneralSettings() {
   const {
     displayCurrency,
     setDisplayCurrency,
@@ -85,11 +202,14 @@ function SettingsForm() {
   const fx = useFxQuote();
 
   return (
-    <div className="grid gap-5">
-      <div className="grid gap-2">
-        <Label htmlFor="settings-display-currency">
-          <Trans id="positions.displayCurrency">Display currency</Trans>
-        </Label>
+    <div className="grid max-w-lg gap-5">
+      <Field
+        label={
+          <Label htmlFor="settings-display-currency">
+            <Trans id="positions.displayCurrency">Display currency</Trans>
+          </Label>
+        }
+      >
         <Select
           value={displayCurrency}
           onValueChange={(value) => setDisplayCurrency(value as Currency)}
@@ -105,12 +225,15 @@ function SettingsForm() {
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </Field>
 
-      <div className="grid gap-2">
-        <Label htmlFor="settings-fx-source">
-          <Trans id="positions.fxSource">Exchange-rate source</Trans>
-        </Label>
+      <Field
+        label={
+          <Label htmlFor="settings-fx-source">
+            <Trans id="positions.fxSource">Exchange-rate source</Trans>
+          </Label>
+        }
+      >
         <Select
           value={fxSource}
           onValueChange={(value) => setFxSource(value as FxSource)}
@@ -126,13 +249,16 @@ function SettingsForm() {
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </Field>
 
       {fxSource === "manual" ? (
-        <div className="grid gap-2">
-          <Label htmlFor="settings-fx-rate">
-            <Trans id="positions.fxRate">USD/BRL rate</Trans>
-          </Label>
+        <Field
+          label={
+            <Label htmlFor="settings-fx-rate">
+              <Trans id="positions.fxRate">USD/BRL rate</Trans>
+            </Label>
+          }
+        >
           <Input
             id="settings-fx-rate"
             inputMode="decimal"
@@ -141,12 +267,15 @@ function SettingsForm() {
             onChange={(event) => setManualRate(event.target.value)}
             aria-invalid={!fx.manualRateValid}
           />
-        </div>
+        </Field>
       ) : (
-        <div className="grid gap-2">
-          <span className="text-sm font-medium">
-            <Trans id="positions.fxRate">USD/BRL rate</Trans>
-          </span>
+        <Field
+          label={
+            <span className="text-sm font-medium">
+              <Trans id="positions.fxRate">USD/BRL rate</Trans>
+            </span>
+          }
+        >
           <div className="flex h-9 items-center gap-2 rounded-md border border-input bg-muted/40 px-3 text-sm tabular-nums">
             {fx.isPending ? (
               <Skeleton className="h-4 w-40" />
@@ -169,13 +298,16 @@ function SettingsForm() {
               <RefreshCw className="size-4" aria-hidden="true" />
             </Button>
           </div>
-        </div>
+        </Field>
       )}
 
-      <div className="grid gap-2">
-        <Label htmlFor="settings-quote-source">
-          <Trans id="positions.quoteSource">Market-quote source</Trans>
-        </Label>
+      <Field
+        label={
+          <Label htmlFor="settings-quote-source">
+            <Trans id="positions.quoteSource">Market-quote source</Trans>
+          </Label>
+        }
+      >
         <Select
           value={quoteSource}
           onValueChange={(value) => setQuoteSource(value as QuoteSource)}
@@ -204,9 +336,18 @@ function SettingsForm() {
             </Trans>
           )}
         </p>
-      </div>
+      </Field>
       {/* DEV-ONLY test-data seeder; renders nothing in production builds. */}
       {import.meta.env.DEV ? <DevSeedSection /> : null}
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: ReactNode; children: ReactNode }) {
+  return (
+    <div className="grid gap-2">
+      {label}
+      {children}
     </div>
   );
 }
