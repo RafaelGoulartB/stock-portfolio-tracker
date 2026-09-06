@@ -7,7 +7,9 @@ import {
   ChevronDown,
   type LucideIcon,
   PieChart,
+  ScanSearch,
   TableProperties,
+  Tags,
   Target,
   TrendingUp,
   Wrench,
@@ -78,6 +80,11 @@ const NAV_GROUPS: NavGroup[] = [
         label: <Trans id="nav.daily">Daily</Trans>,
       },
       {
+        to: "/deep-finder",
+        icon: ScanSearch,
+        label: <Trans id="nav.deepFinder">Deep Finder</Trans>,
+      },
+      {
         to: "/dividends",
         icon: CalendarDays,
         label: <Trans id="nav.dividends">Income</Trans>,
@@ -88,7 +95,13 @@ const NAV_GROUPS: NavGroup[] = [
     id: "tools",
     icon: Wrench,
     label: <Trans id="nav.tools">Tools</Trans>,
-    items: [],
+    items: [
+      {
+        to: "/categories",
+        icon: Tags,
+        label: <Trans id="nav.categories">My categories</Trans>,
+      },
+    ],
   },
 ];
 

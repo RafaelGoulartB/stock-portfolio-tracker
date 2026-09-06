@@ -1,6 +1,6 @@
 {
-  "id": "946bec32-2985-4020-a691-2906e93679b6",
-  "prevId": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+  "id": "e70ee5a4-d6f8-4458-886e-680ad454ca0f",
+  "prevId": "946bec32-2985-4020-a691-2906e93679b6",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -52,6 +52,12 @@
         "valuation_ref": {
           "name": "valuation_ref",
           "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "manual_price": {
+          "name": "manual_price",
+          "type": "numeric(22, 8)",
           "primaryKey": false,
           "notNull": false
         },

@@ -1,5 +1,6 @@
 import { allocationRouter } from "./routers/allocation";
 import { authRouter } from "./routers/auth";
+import { categoriesRouter } from "./routers/categories";
 import { devSeedRouter } from "./routers/dev-seed";
 import { dividendsRouter } from "./routers/dividends";
 import { fxRouter } from "./routers/fx";
@@ -13,6 +14,7 @@ export const appRouter = router({
   health: publicProcedure.query(() => ({ ok: true as const })),
   auth: authRouter,
   allocation: allocationRouter,
+  categories: categoriesRouter,
   dividends: dividendsRouter,
   fx: fxRouter,
   quotes: quotesRouter,

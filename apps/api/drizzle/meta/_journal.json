@@ -47,8 +47,15 @@
     {
       "idx": 6,
       "version": "7",
+      "when": 1788727543038,
+      "tag": "0006_tired_talon",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
       "when": 1788729000000,
-      "tag": "0006_manual_price",
+      "tag": "0007_manual_price",
       "breakpoints": true
     }
   ]

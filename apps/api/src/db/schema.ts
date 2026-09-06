@@ -157,8 +157,68 @@ export const assetReviews = pgTable(
   ],
 );
 
+/**
+ * User-defined labels for grouping tickers. One ticker belongs to at most
+ * one category; uncategorized assets simply have no assignment row.
+ */
+export const categories = pgTable(
+  "categories",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    /** Key of a `--chart-n` token, never a raw color. */
+    color: text("color").notNull().default("chart-1"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("categories_user_name_key").on(table.userId, table.name),
+    index("categories_user_id_idx").on(table.userId),
+  ],
+);
+
+export const assetCategories = pgTable(
+  "asset_categories",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    ticker: text("ticker").notNull(),
+    categoryId: uuid("category_id")
+      .notNull()
+      .references(() => categories.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("asset_categories_user_ticker_key").on(
+      table.userId,
+      table.ticker,
+    ),
+    index("asset_categories_user_category_idx").on(
+      table.userId,
+      table.categoryId,
+    ),
+  ],
+);
+
 export type UserRow = typeof users.$inferSelect;
 export type SessionRow = typeof sessions.$inferSelect;
 export type TransactionRow = typeof transactions.$inferSelect;
 export type AllocationAssetRow = typeof allocationAssets.$inferSelect;
 export type AssetReviewRow = typeof assetReviews.$inferSelect;
+export type CategoryRow = typeof categories.$inferSelect;
+export type AssetCategoryRow = typeof assetCategories.$inferSelect;
