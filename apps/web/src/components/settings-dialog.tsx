@@ -10,6 +10,7 @@ import {
 } from "@portifolio-tracker/shared";
 import { RefreshCw, Settings } from "lucide-react";
 import { useState } from "react";
+import { DevSeedSection } from "@/components/dev-seed-section";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -166,6 +167,8 @@ function SettingsForm() {
           </div>
         </div>
       )}
+      {/* DEV-ONLY test-data seeder; renders nothing in production builds. */}
+      {import.meta.env.DEV ? <DevSeedSection /> : null}
     </div>
   );
 }
