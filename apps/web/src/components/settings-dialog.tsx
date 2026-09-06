@@ -7,6 +7,8 @@ import {
   type Currency,
   FX_SOURCE_LABELS,
   type FxSource,
+  QUOTE_SOURCE_LABELS,
+  type QuoteSource,
 } from "@portifolio-tracker/shared";
 import { RefreshCw, Settings } from "lucide-react";
 import { useState } from "react";
@@ -58,8 +60,8 @@ export function SettingsDialog() {
           </DialogTitle>
           <DialogDescription>
             <Trans id="settings.description">
-              Display currency and exchange-rate source used to consolidate the
-              portfolio.
+              Display currency, exchange-rate source, and market-quote source
+              used to consolidate the portfolio.
             </Trans>
           </DialogDescription>
         </DialogHeader>
@@ -77,6 +79,8 @@ function SettingsForm() {
     setFxSource,
     manualRate,
     setManualRate,
+    quoteSource,
+    setQuoteSource,
   } = useSettings();
   const fx = useFxQuote();
 
@@ -167,6 +171,40 @@ function SettingsForm() {
           </div>
         </div>
       )}
+
+      <div className="grid gap-2">
+        <Label htmlFor="settings-quote-source">
+          <Trans id="positions.quoteSource">Market-quote source</Trans>
+        </Label>
+        <Select
+          value={quoteSource}
+          onValueChange={(value) => setQuoteSource(value as QuoteSource)}
+        >
+          <SelectTrigger id="settings-quote-source" className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {(Object.keys(QUOTE_SOURCE_LABELS) as QuoteSource[]).map(
+              (source) => (
+                <SelectItem key={source} value={source}>
+                  {QUOTE_SOURCE_LABELS[source]}
+                </SelectItem>
+              ),
+            )}
+          </SelectContent>
+        </Select>
+        <p className="text-xs text-muted-foreground">
+          {quoteSource === "manual" ? (
+            <Trans id="positions.quoteSourceManualHint">
+              Manual prices are entered per ticker on the Positions page.
+            </Trans>
+          ) : (
+            <Trans id="positions.quoteSourceHint">
+              Free delayed quotes used for market values and allocation.
+            </Trans>
+          )}
+        </p>
+      </div>
       {/* DEV-ONLY test-data seeder; renders nothing in production builds. */}
       {import.meta.env.DEV ? <DevSeedSection /> : null}
     </div>

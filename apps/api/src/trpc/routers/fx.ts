@@ -23,7 +23,7 @@ export const fxRouter = router({
           from: input.from,
           to: input.to,
           rate: "1",
-          asOf: todayUtc(),
+          asOf: input.asOf ?? todayUtc(),
           source: input.source,
         };
       }
@@ -36,11 +36,13 @@ export const fxRouter = router({
           });
         }
 
+        // A manual rate has no history; the current input applies to the
+        // requested snapshot day so past months still consolidate.
         return {
           from: input.from,
           to: input.to,
           rate: input.manualRate,
-          asOf: todayUtc(),
+          asOf: input.asOf ?? todayUtc(),
           source: input.source,
         };
       }
@@ -55,7 +57,11 @@ export const fxRouter = router({
       }
 
       try {
-        return await provider.getQuote({ from: input.from, to: input.to });
+        return await provider.getQuote({
+          from: input.from,
+          to: input.to,
+          asOf: input.asOf,
+        });
       } catch (error) {
         throw new TRPCError({
           code: "BAD_GATEWAY",

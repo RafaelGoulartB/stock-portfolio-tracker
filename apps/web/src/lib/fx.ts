@@ -4,10 +4,12 @@ import { useSettings } from "@/lib/settings";
 
 /**
  * USD/BRL quote for the portfolio display currency. Manual mode validates
- * the user's own rate; external sources are fetched once and shared through
- * the query cache (same key in the modal and the positions page).
+ * the user's own rate; external sources are fetched once per snapshot day
+ * and shared through the query cache (same key in the modal and the
+ * positions page). `asOf` is a `YYYY-MM-DD` month-end close; omitted means
+ * the live spot quote.
  */
-export function useFxQuote() {
+export function useFxQuote(asOf?: string | null) {
   const { fxSource, manualRate } = useSettings();
   const manualRateValid = positiveDecimal.safeParse(manualRate).success;
 
@@ -17,6 +19,7 @@ export function useFxQuote() {
       to: "BRL",
       source: fxSource,
       manualRate: manualRateValid ? manualRate : undefined,
+      asOf: asOf ?? undefined,
     },
     {
       enabled: fxSource === "manual" ? manualRateValid : true,

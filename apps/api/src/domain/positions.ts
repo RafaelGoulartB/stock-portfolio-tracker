@@ -5,6 +5,7 @@ import type {
   PortfolioSummary,
   Position,
   TransactionSide,
+  ValuedPosition,
 } from "@portifolio-tracker/shared";
 import {
   add,
@@ -228,13 +229,17 @@ export function convertPositions(
 }
 
 export function summarizePositions(
-  positions: readonly Position[],
+  positions: readonly (Position | ValuedPosition)[],
   displayCurrency: Currency,
   usdBrlRate: UsdBrlRate | null,
+  asOf: string | null = null,
 ): PortfolioSummary {
   let totalInvested = ZERO;
   let totalRealizedPnl = ZERO;
+  let totalMarketValue = ZERO;
   let openPositions = 0;
+  let quotedPositions = 0;
+  let unquotedPositions = 0;
   const byCurrency = new Map<Currency, { invested: Decimal; pnl: Decimal }>();
 
   for (const position of positions) {
@@ -255,8 +260,22 @@ export function summarizePositions(
     native.pnl = add(native.pnl, toDecimal(position.realizedPnl));
     byCurrency.set(position.currency, native);
 
-    if (!isZero(toDecimal(position.quantity))) {
+    const isOpen = !isZero(toDecimal(position.quantity));
+
+    if (isOpen) {
       openPositions += 1;
+
+      const marketValue =
+        "convertedMarketValue" in position
+          ? position.convertedMarketValue
+          : null;
+
+      if (marketValue != null) {
+        totalMarketValue = add(totalMarketValue, toDecimal(marketValue));
+        quotedPositions += 1;
+      } else {
+        unquotedPositions += 1;
+      }
     }
   }
 
@@ -276,7 +295,121 @@ export function summarizePositions(
     totalInvested: formatDecimal(totalInvested, MONEY_PLACES),
     totalRealizedPnl: formatDecimal(totalRealizedPnl, MONEY_PLACES),
     totalsByCurrency,
+    asOf,
+    totalMarketValue: formatDecimal(totalMarketValue, MONEY_PLACES),
+    quotedPositions,
+    unquotedPositions,
   };
+}
+
+/** One resolved market price used to value a ticker. */
+export type ValuationQuote = {
+  ticker: string;
+  /** Native-currency price per unit, as a decimal string. */
+  price: string;
+  /** Calendar day the quote refers to, `YYYY-MM-DD`. */
+  asOf: string;
+};
+
+/**
+ * Keeps only trades on or before `asOf` (`YYYY-MM-DD`), so consolidating the
+ * result yields the portfolio snapshot at that day's close. A `null` date
+ * keeps everything (the live portfolio).
+ */
+export function filterTransactionsByAsOf(
+  input: readonly ConsolidationInput[],
+  asOf: string | null | undefined,
+): ConsolidationInput[] {
+  if (asOf == null) {
+    return [...input];
+  }
+
+  return input.filter((entry) => entry.tradedAt <= asOf);
+}
+
+const WEIGHT_PLACES = 8;
+
+/**
+ * Attaches market values and allocation weights to converted positions.
+ * Tickers without a quote keep `null` market fields and `quoteMissing` so
+ * the UI can flag the gap; closed positions carry no market value by
+ * definition. Weights are shares of quoted equity (`0`–`1`).
+ */
+export function valuePositions(
+  positions: readonly Position[],
+  quotes: ReadonlyMap<string, ValuationQuote>,
+  displayCurrency: Currency,
+  usdBrlRate: UsdBrlRate | null,
+): ValuedPosition[] {
+  const valued = positions.map((position): ValuedPosition => {
+    if (isZero(toDecimal(position.quantity))) {
+      return {
+        ...position,
+        marketPrice: null,
+        marketValue: null,
+        convertedMarketValue: null,
+        weight: null,
+        quoteAsOf: null,
+        quoteMissing: false,
+      };
+    }
+
+    const quote = quotes.get(position.ticker);
+
+    if (!quote) {
+      return {
+        ...position,
+        marketPrice: null,
+        marketValue: null,
+        convertedMarketValue: null,
+        weight: null,
+        quoteAsOf: null,
+        quoteMissing: true,
+      };
+    }
+
+    const marketValue = formatDecimal(
+      mul(toDecimal(position.quantity), toDecimal(quote.price)),
+      MONEY_PLACES,
+    );
+
+    return {
+      ...position,
+      marketPrice: formatDecimal(toDecimal(quote.price), MONEY_PLACES),
+      marketValue,
+      convertedMarketValue: convertMoney(
+        marketValue,
+        position.currency,
+        displayCurrency,
+        usdBrlRate ?? "1",
+      ),
+      // Weights need the portfolio total first; filled in below.
+      weight: null,
+      quoteAsOf: quote.asOf,
+      quoteMissing: false,
+    };
+  });
+
+  let total = ZERO;
+
+  for (const position of valued) {
+    if (position.convertedMarketValue != null) {
+      total = add(total, toDecimal(position.convertedMarketValue));
+    }
+  }
+
+  if (!isZero(total)) {
+    for (const position of valued) {
+      if (position.convertedMarketValue != null) {
+        position.weight = formatDecimal(
+          div(toDecimal(position.convertedMarketValue), total),
+          WEIGHT_PLACES,
+        );
+      }
+    }
+  }
+
+  return valued;
 }
 
 /** Quantity available to sell for a ticker, as a decimal string. */

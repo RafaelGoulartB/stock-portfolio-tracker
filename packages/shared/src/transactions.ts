@@ -96,6 +96,28 @@ export const positionSchema = z.object({
 
 export type Position = z.infer<typeof positionSchema>;
 
+/**
+ * A position enriched with its market valuation for the snapshot date.
+ * Quote-backed fields are `null` when no quote exists for the ticker, so
+ * the UI can fall back to cost basis and flag the gap instead of guessing.
+ */
+export const valuedPositionSchema = positionSchema.extend({
+  /** Native-currency market price per unit at the snapshot close. */
+  marketPrice: z.string().nullable(),
+  /** Native-currency market value (`quantity * marketPrice`). */
+  marketValue: z.string().nullable(),
+  /** Market value converted to the display currency. */
+  convertedMarketValue: z.string().nullable(),
+  /** Share of quoted equity, `0`–`1` as a decimal string. */
+  weight: z.string().nullable(),
+  /** Calendar day the quote refers to, `YYYY-MM-DD`. */
+  quoteAsOf: z.string().nullable(),
+  /** True when the quote provider had no price for this ticker. */
+  quoteMissing: z.boolean(),
+});
+
+export type ValuedPosition = z.infer<typeof valuedPositionSchema>;
+
 export const currencyTotalSchema = z.object({
   currency: currencySchema,
   investedCost: z.string(),
@@ -114,6 +136,13 @@ export const portfolioSummarySchema = z.object({
   totalRealizedPnl: z.string(),
   /** Native-currency subtotals before conversion. */
   totalsByCurrency: z.array(currencyTotalSchema),
+  /** Snapshot date (`YYYY-MM-DD`) or `null` for the live portfolio. */
+  asOf: z.string().nullable(),
+  /** Converted market value of every quoted position. */
+  totalMarketValue: z.string(),
+  /** Open positions with a quote vs without one. */
+  quotedPositions: z.number(),
+  unquotedPositions: z.number(),
 });
 
 export type PortfolioSummary = z.infer<typeof portfolioSummarySchema>;

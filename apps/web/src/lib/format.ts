@@ -136,6 +136,18 @@ export function formatQuantity(
     : wholeText;
 }
 
+/** Share of equity (`0`–`1` decimal string) rendered as a percent. */
+export function formatWeight(
+  value: string,
+  locale: string = activeLocale(),
+): string {
+  return new Intl.NumberFormat(locale, {
+    style: "percent",
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  }).format(Number(value));
+}
+
 export function formatTradeDate(
   value: string,
   locale: string = activeLocale(),

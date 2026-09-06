@@ -13,6 +13,8 @@ export type FxQuote = {
 export type FxQuoteRequest = {
   from: Currency;
   to: Currency;
+  /** `YYYY-MM-DD` close; omitted means the latest spot quote. */
+  asOf?: string;
 };
 
 /**

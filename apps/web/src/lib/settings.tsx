@@ -3,6 +3,8 @@ import {
   type Currency,
   FX_SOURCE_LABELS,
   type FxSource,
+  QUOTE_SOURCE_LABELS,
+  type QuoteSource,
 } from "@portifolio-tracker/shared";
 import {
   createContext,
@@ -16,8 +18,11 @@ import {
 const DISPLAY_CURRENCY_KEY = "portfolio.displayCurrency";
 const FX_SOURCE_KEY = "portfolio.fxSource";
 const FX_MANUAL_RATE_KEY = "portfolio.fxManualRate";
+const QUOTE_SOURCE_KEY = "portfolio.quoteSource";
+const QUOTE_MANUAL_PRICES_KEY = "portfolio.quoteManualPrices";
 
 const FX_SOURCES = Object.keys(FX_SOURCE_LABELS) as FxSource[];
+const QUOTE_SOURCES = Object.keys(QUOTE_SOURCE_LABELS) as QuoteSource[];
 
 function storedValue<T extends string>(
   key: string,
@@ -49,6 +54,33 @@ function storeValue(key: string, value: string): void {
   }
 }
 
+function storedJsonRecord(key: string): Record<string, string> {
+  try {
+    const raw = localStorage.getItem(key);
+
+    if (!raw) {
+      return {};
+    }
+
+    const parsed: unknown = JSON.parse(raw);
+
+    if (typeof parsed !== "object" || parsed === null) {
+      return {};
+    }
+
+    return Object.fromEntries(
+      Object.entries(parsed as Record<string, unknown>)
+        .filter(
+          (entry): entry is [string, string] =>
+            typeof entry[1] === "string" && entry[1].length > 0,
+        )
+        .map(([ticker, price]) => [ticker.toUpperCase(), price]),
+    );
+  } catch {
+    return {};
+  }
+}
+
 export type PortfolioSettings = {
   displayCurrency: Currency;
   setDisplayCurrency: (currency: Currency) => void;
@@ -56,6 +88,11 @@ export type PortfolioSettings = {
   setFxSource: (source: FxSource) => void;
   manualRate: string;
   setManualRate: (rate: string) => void;
+  quoteSource: QuoteSource;
+  setQuoteSource: (source: QuoteSource) => void;
+  /** Per-ticker native-currency prices for the manual quote source. */
+  manualPrices: Record<string, string>;
+  setManualPrice: (ticker: string, price: string) => void;
 };
 
 const SettingsContext = createContext<PortfolioSettings | null>(null);
@@ -75,6 +112,12 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [manualRate, setManualRateState] = useState(() =>
     storedText(FX_MANUAL_RATE_KEY),
   );
+  const [quoteSource, setQuoteSourceState] = useState<QuoteSource>(() =>
+    storedValue(QUOTE_SOURCE_KEY, QUOTE_SOURCES, "yahoo"),
+  );
+  const [manualPrices, setManualPricesState] = useState<Record<string, string>>(
+    () => storedJsonRecord(QUOTE_MANUAL_PRICES_KEY),
+  );
 
   const setDisplayCurrency = useCallback((currency: Currency) => {
     setDisplayCurrencyState(currency);
@@ -91,6 +134,32 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     storeValue(FX_MANUAL_RATE_KEY, rate);
   }, []);
 
+  const setQuoteSource = useCallback((source: QuoteSource) => {
+    setQuoteSourceState(source);
+    storeValue(QUOTE_SOURCE_KEY, source);
+  }, []);
+
+  const setManualPrice = useCallback((ticker: string, price: string) => {
+    setManualPricesState((current) => {
+      const next = { ...current };
+      const key = ticker.toUpperCase();
+
+      if (price.trim().length === 0) {
+        delete next[key];
+      } else {
+        next[key] = price;
+      }
+
+      try {
+        localStorage.setItem(QUOTE_MANUAL_PRICES_KEY, JSON.stringify(next));
+      } catch {
+        // Private mode or disabled storage: preferences do not persist.
+      }
+
+      return next;
+    });
+  }, []);
+
   const value = useMemo(
     () => ({
       displayCurrency,
@@ -99,6 +168,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setFxSource,
       manualRate,
       setManualRate,
+      quoteSource,
+      setQuoteSource,
+      manualPrices,
+      setManualPrice,
     }),
     [
       displayCurrency,
@@ -107,6 +180,10 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setFxSource,
       manualRate,
       setManualRate,
+      quoteSource,
+      setQuoteSource,
+      manualPrices,
+      setManualPrice,
     ],
   );
 

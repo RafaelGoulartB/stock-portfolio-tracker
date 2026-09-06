@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { currencySchema } from "./currency";
-import { positiveDecimal } from "./decimal";
+import { isoDate, positiveDecimal } from "./decimal";
+import { quoteSourceSchema } from "./quotes";
 
 /**
  * FX rate providers. Implementations live in the API (`lib/fx`) behind the
@@ -34,6 +35,8 @@ export const getFxRateInput = z.object({
   source: fxSourceSchema.default("frankfurter"),
   /** Required when `source` is `manual`. Ignored by external providers. */
   manualRate: positiveDecimal.optional(),
+  /** `YYYY-MM-DD` close for month snapshots; omitted means latest spot. */
+  asOf: isoDate.optional(),
 });
 
 export type GetFxRateInput = z.input<typeof getFxRateInput>;
@@ -43,6 +46,19 @@ export const positionsListInput = z.object({
   displayCurrency: currencySchema.default("BRL"),
   /** BRL per 1 USD. Required when holdings span both currencies. */
   usdBrlRate: positiveDecimal.optional(),
+  /**
+   * Snapshot date (`YYYY-MM-DD`, month-end for past months). Only trades on
+   * or before this day consolidate; quotes resolve at its close. Omitted
+   * means the live portfolio today.
+   */
+  asOf: isoDate.optional(),
+  /** Market-quote source used for financial values and allocation. */
+  quoteSource: quoteSourceSchema.default("yahoo"),
+  /**
+   * Per-ticker native-currency prices for `manual` quotes, keyed by
+   * upper-case ticker. Owned by the frontend until a server table lands.
+   */
+  manualPrices: z.record(z.string(), positiveDecimal).optional(),
 });
 
 export type PositionsListInput = z.input<typeof positionsListInput>;

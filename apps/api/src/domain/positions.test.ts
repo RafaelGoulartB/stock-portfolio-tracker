@@ -5,8 +5,10 @@ import {
   consolidatePositions,
   convertMoney,
   convertPositions,
+  filterTransactionsByAsOf,
   summarizePositions,
   tickerCurrencies,
+  valuePositions,
 } from "./positions";
 
 let sequence = 0;
@@ -139,6 +141,10 @@ describe("summarizePositions", () => {
       totalsByCurrency: [
         { currency: "BRL", investedCost: "2000.00", realizedPnl: "100.00" },
       ],
+      asOf: null,
+      totalMarketValue: "0.00",
+      quotedPositions: 0,
+      unquotedPositions: 1,
     });
   });
 
@@ -235,5 +241,82 @@ describe("tickerCurrencies", () => {
 
     expect(tickerCurrencies(log, "PETR4")).toEqual(["BRL"]);
     expect(tickerCurrencies(log, "AAPL")).toEqual([]);
+  });
+});
+
+describe("filterTransactionsByAsOf", () => {
+  it("keeps only trades on or before the snapshot day", () => {
+    const log = [
+      tx({ side: "buy", quantity: "10", tradedAt: "2024-03-04" }),
+      tx({ side: "buy", quantity: "5", tradedAt: "2024-11-18" }),
+    ];
+
+    expect(filterTransactionsByAsOf(log, null)).toHaveLength(2);
+    expect(filterTransactionsByAsOf(log, "2024-06-30")).toHaveLength(1);
+    expect(filterTransactionsByAsOf(log, "2024-03-04")).toHaveLength(1);
+  });
+});
+
+describe("valuePositions", () => {
+  it("values open positions and weights them by quoted equity", () => {
+    const native = consolidatePositions([
+      tx({ ticker: "ITUB4", side: "buy", quantity: "100", price: "20" }),
+      tx({ ticker: "VALE3", side: "buy", quantity: "10", price: "60" }),
+    ]);
+    const positions = convertPositions(native, "BRL", null);
+    const valued = valuePositions(
+      positions,
+      new Map(
+        [
+          { ticker: "ITUB4", price: "30", asOf: "2024-06-28" },
+          { ticker: "VALE3", price: "70", asOf: "2024-06-28" },
+        ].map((quote) => [quote.ticker, quote]),
+      ),
+      "BRL",
+      null,
+    );
+
+    expect(valued.find((p) => p.ticker === "ITUB4")).toMatchObject({
+      marketPrice: "30.00",
+      marketValue: "3000.00",
+      convertedMarketValue: "3000.00",
+      quoteMissing: false,
+    });
+
+    const weights = valued.reduce((sum, p) => sum + Number(p.weight ?? 0), 0);
+    expect(weights).toBeCloseTo(1, 6);
+    expect(summarizePositions(valued, "BRL", null, "2024-06-30")).toMatchObject(
+      {
+        asOf: "2024-06-30",
+        totalMarketValue: "3700.00",
+        quotedPositions: 2,
+        unquotedPositions: 0,
+      },
+    );
+  });
+
+  it("flags tickers without a quote instead of guessing", () => {
+    const native = consolidatePositions([
+      tx({ ticker: "ITUB4", side: "buy", quantity: "100", price: "20" }),
+    ]);
+    const [valued] = valuePositions(
+      convertPositions(native, "BRL", null),
+      new Map(),
+      "BRL",
+      null,
+    );
+
+    expect(valued).toMatchObject({
+      marketValue: null,
+      weight: null,
+      quoteMissing: true,
+    });
+    expect(
+      summarizePositions([valued], "BRL", null, "2024-06-30"),
+    ).toMatchObject({
+      totalMarketValue: "0.00",
+      quotedPositions: 0,
+      unquotedPositions: 1,
+    });
   });
 });
