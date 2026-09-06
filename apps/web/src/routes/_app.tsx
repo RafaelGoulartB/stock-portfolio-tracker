@@ -8,15 +8,9 @@ import {
   redirect,
   useNavigate,
 } from "@tanstack/react-router";
-import {
-  Activity,
-  CalendarDays,
-  LineChart,
-  PieChart,
-  Receipt,
-  TableProperties,
-  TrendingUp,
-} from "lucide-react";
+import { LineChart } from "lucide-react";
+import { AddTransactionButton } from "@/components/add-transaction-button";
+import { AppNav } from "@/components/app-nav";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { UserMenu } from "@/components/user-menu";
 import { trpc } from "@/lib/api";
@@ -35,51 +29,6 @@ export const Route = createFileRoute("/_app")({
   },
   component: AppLayout,
 });
-
-const NAV_ITEMS = [
-  { to: "/positions", labelId: "nav.positions" as const, icon: PieChart },
-  {
-    to: "/detailed-positions",
-    labelId: "nav.detailedPositions" as const,
-    icon: TableProperties,
-  },
-  { to: "/performance", labelId: "nav.performance" as const, icon: TrendingUp },
-  { to: "/daily", labelId: "nav.daily" as const, icon: Activity },
-  {
-    to: "/dividends",
-    labelId: "nav.dividends" as const,
-    icon: CalendarDays,
-  },
-  { to: "/transactions", labelId: "nav.transactions" as const, icon: Receipt },
-] as const;
-
-function NavLabel({
-  labelId,
-}: {
-  labelId: (typeof NAV_ITEMS)[number]["labelId"];
-}) {
-  if (labelId === "nav.positions") {
-    return <Trans id="nav.positions">Positions</Trans>;
-  }
-
-  if (labelId === "nav.daily") {
-    return <Trans id="nav.daily">Daily</Trans>;
-  }
-
-  if (labelId === "nav.performance") {
-    return <Trans id="nav.performance">Performance</Trans>;
-  }
-
-  if (labelId === "nav.detailedPositions") {
-    return <Trans id="nav.detailedPositions">Detailed positions</Trans>;
-  }
-
-  if (labelId === "nav.dividends") {
-    return <Trans id="nav.dividends">Income</Trans>;
-  }
-
-  return <Trans id="nav.transactions">Transactions</Trans>;
-}
 
 function AppLayout() {
   const { i18n } = useLingui();
@@ -109,22 +58,11 @@ function AppLayout() {
               aria-label={i18n._(msg({ id: "nav.main", message: "Main" }))}
               className="order-3 flex w-full items-center gap-1 overflow-x-auto lg:order-none lg:w-auto"
             >
-              {NAV_ITEMS.map((item) => (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className="flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                  activeProps={{
-                    className: "bg-accent text-accent-foreground",
-                  }}
-                >
-                  <item.icon className="size-4" aria-hidden="true" />
-                  <NavLabel labelId={item.labelId} />
-                </Link>
-              ))}
+              <AppNav />
             </nav>
 
-            <div className="ml-auto flex items-center gap-3">
+            <div className="ml-auto flex items-center gap-2">
+              <AddTransactionButton />
               <SettingsDialog />
               <UserMenu
                 email={user.email}

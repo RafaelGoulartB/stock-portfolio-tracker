@@ -65,6 +65,11 @@ msgstr ""
 #~ msgstr "Native totals: {breakdown}."
 
 #. js-lingui-explicit-id
+#: src/routes/_app.tsx:81
+#~ msgid "nav.transactions"
+#~ msgstr "Transactions"
+
+#. js-lingui-explicit-id
 #. placeholder {0}: formatMonthLabel(month, locale)
 #: src/routes/_app/detailed-positions.tsx:828
 #: src/routes/_app/positions.tsx:288
@@ -158,6 +163,11 @@ msgstr "A ticker always uses the currency of its first trade."
 #: src/components/dev-seed-section.tsx:97
 msgid "settings.devSeed.action"
 msgstr "Add demo test data"
+
+#. js-lingui-explicit-id
+#: src/components/add-transaction-button.tsx:11
+msgid "nav.addTransaction"
+msgstr "Add transaction"
 
 #. js-lingui-explicit-id
 #: src/components/dev-seed-section.tsx:79
@@ -428,7 +438,7 @@ msgid "detailedPositions.customize"
 msgstr "Customize columns"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:66
+#: src/components/app-nav.tsx:72
 msgid "nav.daily"
 msgstr "Daily"
 
@@ -472,13 +482,13 @@ msgid "dividends.declarationDate"
 msgstr "Declaration"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:74
-msgid "nav.detailedPositions"
+#: src/routes/_app/detailed-positions.tsx:237
+msgid "detailedPositions.title"
 msgstr "Detailed positions"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/detailed-positions.tsx:237
-msgid "detailedPositions.title"
+#: src/components/app-nav.tsx:55
+msgid "nav.detailedPositions"
 msgstr "Detailed positions"
 
 #. js-lingui-explicit-id
@@ -618,13 +628,13 @@ msgid "performance.compositionHint"
 msgstr "How the mix of categories evolved, in {currency}."
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:78
-msgid "nav.dividends"
+#: src/routes/_app/dividends.tsx:108
+msgid "dividends.title"
 msgstr "Income"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/dividends.tsx:108
-msgid "dividends.title"
+#: src/components/app-nav.tsx:77
+msgid "nav.dividends"
 msgstr "Income"
 
 #. js-lingui-explicit-id
@@ -706,7 +716,7 @@ msgid "positions.live"
 msgstr "Live"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:109
+#: src/routes/_app.tsx:58
 msgid "nav.main"
 msgstr "Main"
 
@@ -1005,14 +1015,19 @@ msgid "dividends.perShare"
 msgstr "Per share"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:70
+#: src/routes/_app/performance.tsx:243
+msgid "performance.title"
+msgstr "Performance"
+
+#. js-lingui-explicit-id
+#: src/components/app-nav.tsx:67
 msgid "nav.performance"
 msgstr "Performance"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/performance.tsx:243
-msgid "performance.title"
-msgstr "Performance"
+#: src/components/app-nav.tsx:45
+msgid "nav.portfolio"
+msgstr "Portfolio"
 
 #. js-lingui-explicit-id
 #: src/routes/_app/performance.tsx:1415
@@ -1025,7 +1040,7 @@ msgid "detailedPositions.colWeight"
 msgstr "Portfolio share"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:104
+#: src/routes/_app.tsx:53
 #: src/routes/login.tsx:96
 msgid "shell.brand"
 msgstr "Portfolio Tracker"
@@ -1047,13 +1062,13 @@ msgid "performance.value"
 msgstr "Portfolio value"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:62
-msgid "nav.positions"
+#: src/routes/_app/positions.tsx:170
+msgid "positions.title"
 msgstr "Positions"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:170
-msgid "positions.title"
+#: src/components/app-nav.tsx:50
+msgid "nav.positions"
 msgstr "Positions"
 
 #. js-lingui-explicit-id
@@ -1218,6 +1233,11 @@ msgstr "Reset to standard"
 #: src/routes/_app/positions.tsx:426
 msgid "positions.realizedPnlHint"
 msgstr "Result already locked in by your sells."
+
+#. js-lingui-explicit-id
+#: src/components/app-nav.tsx:62
+msgid "nav.results"
+msgstr "Results"
 
 #. js-lingui-explicit-id
 #: src/routes/_app/detailed-positions.tsx:424
@@ -1462,6 +1482,11 @@ msgid "performance.timeWeighted"
 msgstr "Time-weighted, contributions removed."
 
 #. js-lingui-explicit-id
+#: src/components/app-nav.tsx:84
+msgid "nav.tools"
+msgstr "Tools"
+
+#. js-lingui-explicit-id
 #: src/routes/_app/performance.tsx:1487
 msgid "performance.topGains"
 msgstr "Top gains"
@@ -1502,11 +1527,6 @@ msgstr "Transaction not found."
 #: src/routes/_app/transactions.tsx:133
 msgid "transactions.removed"
 msgstr "Transaction removed"
-
-#. js-lingui-explicit-id
-#: src/routes/_app.tsx:81
-msgid "nav.transactions"
-msgstr "Transactions"
 
 #. js-lingui-explicit-id
 #: src/routes/_app/transactions.tsx:148
