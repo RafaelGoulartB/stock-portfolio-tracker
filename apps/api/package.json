@@ -1,0 +1,29 @@
+{
+  "name": "@portifolio-tracker/api",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --env-file=../../.env src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.1",
+    "drizzle-kit": "^0.31.10",
+    "tsx": "^4.23.13",
+    "vitest": "^5.0.0"
+  },
+  "dependencies": {
+    "@portifolio-tracker/shared": "workspace:*",
+    "@hono/node-server": "^2.1.1",
+    "@hono/trpc-server": "^0.4.2",
+    "@trpc/server": "^11.18.0",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.13.7",
+    "postgres": "^3.4.9",
+    "zod": "^4.5.4"
+  }
+}
