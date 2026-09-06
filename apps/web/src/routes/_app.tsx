@@ -9,9 +9,7 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 import { LineChart, PieChart, Receipt } from "lucide-react";
-import { LanguageSwitcher } from "@/components/language-switcher";
 import { SettingsDialog } from "@/components/settings-dialog";
-import { ThemeSwitcher } from "@/components/theme-switcher";
 import { UserMenu } from "@/components/user-menu";
 import { trpc } from "@/lib/api";
 import { clearSession, sessionQueryOptions } from "@/lib/session";
@@ -91,8 +89,6 @@ function AppLayout() {
             </nav>
 
             <div className="ml-auto flex items-center gap-3">
-              <LanguageSwitcher />
-              <ThemeSwitcher />
               <SettingsDialog />
               <UserMenu
                 email={user.email}

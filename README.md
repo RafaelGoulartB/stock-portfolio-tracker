@@ -5,6 +5,7 @@ Browser-only portfolio dashboard. Requires Node 24, pnpm, and Docker.
 ```bash
 pnpm i
 docker compose up -d
+pnpm db:migrate
 pnpm dev
 ```
 
