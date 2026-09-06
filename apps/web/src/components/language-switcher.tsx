@@ -29,7 +29,9 @@ export function LanguageSwitcher() {
           type="button"
           variant="outline"
           size="icon-sm"
-          aria-label={i18n._(msg({ id: "shell.language", message: "Language" }))}
+          aria-label={i18n._(
+            msg({ id: "shell.language", message: "Language" }),
+          )}
         >
           <Languages className="size-4" aria-hidden="true" />
           <span className="sr-only">

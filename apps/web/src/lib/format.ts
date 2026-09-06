@@ -148,6 +148,33 @@ export function formatWeight(
   }).format(Number(value));
 }
 
+/** Return ratio (`0.1` decimal string) rendered as a signed percent. */
+export function formatSignedPercent(
+  value: string,
+  locale: string = activeLocale(),
+): string {
+  return new Intl.NumberFormat(locale, {
+    style: "percent",
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+    signDisplay: "exceptZero",
+  }).format(Number(value));
+}
+
+/** Short money for chart axes and labels, e.g. `R$23.6K`. */
+export function formatCompactMoney(
+  value: number,
+  currency: CurrencyCode = DEFAULT_CURRENCY,
+  locale: string = activeLocale(),
+): string {
+  return new Intl.NumberFormat(locale, {
+    style: "currency",
+    currency,
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(value);
+}
+
 export function formatTradeDate(
   value: string,
   locale: string = activeLocale(),

@@ -108,6 +108,12 @@ export const valuedPositionSchema = positionSchema.extend({
   marketValue: z.string().nullable(),
   /** Market value converted to the display currency. */
   convertedMarketValue: z.string().nullable(),
+  /** Native-currency open result (`marketValue - investedCost`). */
+  unrealizedPnl: z.string().nullable(),
+  /** Open result converted to the display currency. */
+  convertedUnrealizedPnl: z.string().nullable(),
+  /** Open result over invested cost, as a decimal string (`0.1` = +10%). */
+  unrealizedPnlPercent: z.string().nullable(),
   /** Share of quoted equity, `0`–`1` as a decimal string. */
   weight: z.string().nullable(),
   /** Calendar day the quote refers to, `YYYY-MM-DD`. */
@@ -140,6 +146,12 @@ export const portfolioSummarySchema = z.object({
   asOf: z.string().nullable(),
   /** Converted market value of every quoted position. */
   totalMarketValue: z.string(),
+  /** Converted cost basis behind `totalMarketValue`, quoted positions only. */
+  quotedInvestedCost: z.string(),
+  /** `totalMarketValue - quotedInvestedCost`, in the display currency. */
+  totalUnrealizedPnl: z.string(),
+  /** Open result over the quoted cost basis, `null` when there is no cost. */
+  totalUnrealizedPnlPercent: z.string().nullable(),
   /** Open positions with a quote vs without one. */
   quotedPositions: z.number(),
   unquotedPositions: z.number(),

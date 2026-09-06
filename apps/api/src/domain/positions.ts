@@ -45,6 +45,8 @@ type Accumulator = {
 
 const QUANTITY_PLACES = 8;
 const MONEY_PLACES = 2;
+/** Ratios (returns, weights) keep more digits than money. */
+const RATE_PLACES = 6;
 
 /** Chronological order; `createdAt` breaks ties inside the same trade day. */
 function byTradeOrder(a: ConsolidationInput, b: ConsolidationInput): number {
@@ -237,6 +239,7 @@ export function summarizePositions(
   let totalInvested = ZERO;
   let totalRealizedPnl = ZERO;
   let totalMarketValue = ZERO;
+  let quotedInvestedCost = ZERO;
   let openPositions = 0;
   let quotedPositions = 0;
   let unquotedPositions = 0;
@@ -272,6 +275,10 @@ export function summarizePositions(
 
       if (marketValue != null) {
         totalMarketValue = add(totalMarketValue, toDecimal(marketValue));
+        quotedInvestedCost = add(
+          quotedInvestedCost,
+          toDecimal(position.convertedInvestedCost),
+        );
         quotedPositions += 1;
       } else {
         unquotedPositions += 1;
@@ -287,6 +294,8 @@ export function summarizePositions(
     }))
     .sort((a, b) => a.currency.localeCompare(b.currency));
 
+  const totalUnrealizedPnl = sub(totalMarketValue, quotedInvestedCost);
+
   return {
     openPositions,
     closedPositions: positions.length - openPositions,
@@ -297,6 +306,11 @@ export function summarizePositions(
     totalsByCurrency,
     asOf,
     totalMarketValue: formatDecimal(totalMarketValue, MONEY_PLACES),
+    quotedInvestedCost: formatDecimal(quotedInvestedCost, MONEY_PLACES),
+    totalUnrealizedPnl: formatDecimal(totalUnrealizedPnl, MONEY_PLACES),
+    totalUnrealizedPnlPercent: isZero(quotedInvestedCost)
+      ? null
+      : formatDecimal(div(totalUnrealizedPnl, quotedInvestedCost), RATE_PLACES),
     quotedPositions,
     unquotedPositions,
   };
@@ -348,6 +362,9 @@ export function valuePositions(
         marketPrice: null,
         marketValue: null,
         convertedMarketValue: null,
+        unrealizedPnl: null,
+        convertedUnrealizedPnl: null,
+        unrealizedPnlPercent: null,
         weight: null,
         quoteAsOf: null,
         quoteMissing: false,
@@ -362,6 +379,9 @@ export function valuePositions(
         marketPrice: null,
         marketValue: null,
         convertedMarketValue: null,
+        unrealizedPnl: null,
+        convertedUnrealizedPnl: null,
+        unrealizedPnlPercent: null,
         weight: null,
         quoteAsOf: null,
         quoteMissing: true,
@@ -372,6 +392,8 @@ export function valuePositions(
       mul(toDecimal(position.quantity), toDecimal(quote.price)),
       MONEY_PLACES,
     );
+    const investedCost = toDecimal(position.investedCost);
+    const unrealizedPnl = sub(toDecimal(marketValue), investedCost);
 
     return {
       ...position,
@@ -383,6 +405,17 @@ export function valuePositions(
         displayCurrency,
         usdBrlRate ?? "1",
       ),
+      unrealizedPnl: formatDecimal(unrealizedPnl, MONEY_PLACES),
+      convertedUnrealizedPnl: convertMoney(
+        formatDecimal(unrealizedPnl, MONEY_PLACES),
+        position.currency,
+        displayCurrency,
+        usdBrlRate ?? "1",
+      ),
+      // Both amounts share the native currency, so the ratio needs no rate.
+      unrealizedPnlPercent: isZero(investedCost)
+        ? null
+        : formatDecimal(div(unrealizedPnl, investedCost), RATE_PLACES),
       // Weights need the portfolio total first; filled in below.
       weight: null,
       quoteAsOf: quote.asOf,

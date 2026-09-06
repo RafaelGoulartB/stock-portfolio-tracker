@@ -143,6 +143,9 @@ describe("summarizePositions", () => {
       ],
       asOf: null,
       totalMarketValue: "0.00",
+      quotedInvestedCost: "0.00",
+      totalUnrealizedPnl: "0.00",
+      totalUnrealizedPnlPercent: null,
       quotedPositions: 0,
       unquotedPositions: 1,
     });
@@ -280,6 +283,10 @@ describe("valuePositions", () => {
       marketPrice: "30.00",
       marketValue: "3000.00",
       convertedMarketValue: "3000.00",
+      // 3000 market value against a 2000 cost basis.
+      unrealizedPnl: "1000.00",
+      convertedUnrealizedPnl: "1000.00",
+      unrealizedPnlPercent: "0.500000",
       quoteMissing: false,
     });
 
@@ -289,10 +296,40 @@ describe("valuePositions", () => {
       {
         asOf: "2024-06-30",
         totalMarketValue: "3700.00",
+        quotedInvestedCost: "2600.00",
+        totalUnrealizedPnl: "1100.00",
+        totalUnrealizedPnlPercent: "0.423077",
         quotedPositions: 2,
         unquotedPositions: 0,
       },
     );
+  });
+
+  it("keeps the open result negative when the quote is below the average cost", () => {
+    const native = consolidatePositions([
+      tx({
+        ticker: "AAPL",
+        assetClass: "stock_us",
+        currency: "USD",
+        side: "buy",
+        quantity: "10",
+        price: "200",
+      }),
+    ]);
+    const [valued] = valuePositions(
+      convertPositions(native, "BRL", "5"),
+      new Map([["AAPL", { ticker: "AAPL", price: "180", asOf: "2024-06-28" }]]),
+      "BRL",
+      "5",
+    );
+
+    expect(valued).toMatchObject({
+      marketValue: "1800.00",
+      convertedMarketValue: "9000.00",
+      unrealizedPnl: "-200.00",
+      convertedUnrealizedPnl: "-1000.00",
+      unrealizedPnlPercent: "-0.100000",
+    });
   });
 
   it("flags tickers without a quote instead of guessing", () => {
@@ -309,12 +346,18 @@ describe("valuePositions", () => {
     expect(valued).toMatchObject({
       marketValue: null,
       weight: null,
+      unrealizedPnl: null,
+      convertedUnrealizedPnl: null,
+      unrealizedPnlPercent: null,
       quoteMissing: true,
     });
     expect(
       summarizePositions([valued], "BRL", null, "2024-06-30"),
     ).toMatchObject({
       totalMarketValue: "0.00",
+      quotedInvestedCost: "0.00",
+      totalUnrealizedPnl: "0.00",
+      totalUnrealizedPnlPercent: null,
       quotedPositions: 0,
       unquotedPositions: 1,
     });
