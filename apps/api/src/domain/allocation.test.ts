@@ -6,6 +6,7 @@ import {
   discountFromFairValue,
   lastContributions,
   latestFairValue,
+  manualPriceFromMarketValue,
   overlayFairValueOnCloses,
   summarizeAllocation,
 } from "./allocation";
@@ -50,6 +51,7 @@ function asset(
     currency: "USD",
     targetWeight: "0.015",
     valuationRef: "1Q26",
+    manualPrice: null,
     sortOrder: 1,
     ...overrides,
   };
@@ -198,6 +200,9 @@ describe("buildAllocationRows", () => {
     // 1.5% target * 1.2355 = 1.85325%, minus the 1.46% held, times 1.0.
     expect(row?.score.value).toBe("0.00393250");
     expect(row?.score.ruleId).toBe("gap-weighted");
+    expect(row?.valueSource).toBe("quote");
+    expect(row?.manualPrice).toBeNull();
+    expect(row?.executionFxApplied).toBe(false);
     expect(row?.reviews.map((review) => review.period)).toEqual([
       "2025Q4",
       "2026Q1",
@@ -272,8 +277,55 @@ describe("buildAllocationRows", () => {
 
     expect(row?.currentWeight).toBe("0.00000000");
     expect(row?.quoteMissing).toBe(true);
+    expect(row?.valueSource).toBe("none");
     expect(row?.fairValue).toBe("100");
     expect(row?.discount).toBeNull();
+  });
+
+  it("prices USD contribution units at the VET rate", () => {
+    const [row] = buildAllocationRows({
+      positions: [position()],
+      assets: [asset()],
+      reviews: [],
+      lastContributionByTicker: new Map(),
+      displayCurrency: "BRL",
+      usdBrlRate: "5",
+      today: TODAY,
+    });
+
+    expect(row?.convertedMarketPrice).toBe("382.25");
+    expect(row?.executionPrice).toBe("389.46");
+    expect(row?.executionFxApplied).toBe(true);
+  });
+
+  it("marks a stored manual price as the value source", () => {
+    const [row] = buildAllocationRows({
+      positions: [
+        position({
+          ticker: "CDB-2027",
+          assetClass: "fixed_income",
+          currency: "BRL",
+          marketPrice: "1.00",
+          convertedMarketValue: "50000.00",
+        }),
+      ],
+      assets: [
+        asset({
+          ticker: "CDB-2027",
+          assetClass: "fixed_income",
+          currency: "BRL",
+          manualPrice: "1",
+        }),
+      ],
+      reviews: [],
+      lastContributionByTicker: new Map(),
+      displayCurrency: "BRL",
+      manualValuedTickers: new Set(["CDB-2027"]),
+      today: TODAY,
+    });
+
+    expect(row?.valueSource).toBe("manual");
+    expect(row?.manualPrice).toBe("1");
   });
 
   it("sorts by the manual order and trails untracked tickers", () => {
@@ -357,5 +409,19 @@ describe("summarizeAllocation", () => {
       totalTargetWeight: "0.09000000",
     });
     expect(summary.totalMarketValue).toBe("9000.00");
+  });
+});
+
+describe("manualPriceFromMarketValue", () => {
+  it("divides a same-currency value by quantity", () => {
+    expect(
+      manualPriceFromMarketValue("10000.00", "100", "BRL", "BRL", null),
+    ).toBe("100.00000000");
+  });
+
+  it("converts a BRL value into a USD price at the spot rate", () => {
+    expect(
+      manualPriceFromMarketValue("3000.00", "50", "BRL", "USD", "5"),
+    ).toBe("12.00000000");
   });
 });

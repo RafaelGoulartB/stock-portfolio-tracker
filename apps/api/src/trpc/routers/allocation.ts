@@ -4,13 +4,17 @@ import {
   allocationListInput,
   type Currency,
   DEFAULT_SCORE_CONFIG,
+  FX_EXECUTION_IOF,
+  FX_EXECUTION_SPREAD,
   type QuoteSource,
   removeAllocationAssetInput,
   removeAssetReviewInput,
   reorderAllocationInput,
+  setManualValueInput,
   upsertAllocationAssetInput,
   upsertAssetReviewInput,
 } from "@portifolio-tracker/shared";
+import { TRPCError } from "@trpc/server";
 import { and, asc, desc, eq, inArray, max, sql } from "drizzle-orm";
 import { db } from "../../db";
 import { allocationAssets, assetReviews, transactions } from "../../db/schema";
@@ -18,14 +22,23 @@ import {
   type AllocationAssetMeta,
   buildAllocationRows,
   lastContributions,
+  manualPriceFromMarketValue,
   overlayFairValueOnCloses,
   type StoredReview,
   summarizeAllocation,
   type WatchQuote,
 } from "../../domain/allocation";
-import { getQuoteProvider, QuoteUnavailableError } from "../../lib/quotes";
+import { usdBrlExecutionRate } from "../../domain/fx-execution";
+import { consolidatePositions } from "../../domain/positions";
+import { isZero, toDecimal } from "../../lib/decimal";
+import {
+  getQuoteProvider,
+  getQuoteWithManualFallback,
+  QuoteUnavailableError,
+} from "../../lib/quotes";
 import { protectedProcedure, router } from "../trpc";
 import { loadValuedPortfolio } from "../valuation";
+import { loadTransactions } from "./transactions";
 
 const API_TIME_ZONE = "America/Sao_Paulo";
 
@@ -67,6 +80,7 @@ async function loadAssets(userId: string): Promise<AllocationAssetMeta[]> {
     currency: row.currency,
     targetWeight: row.targetWeight,
     valuationRef: row.valuationRef,
+    manualPrice: row.manualPrice,
     sortOrder: row.sortOrder,
   }));
 }
@@ -125,6 +139,16 @@ async function nextSortOrder(userId: string): Promise<number> {
   return (row?.highest ?? 0) + 1;
 }
 
+function storedManualPrices(
+  assets: readonly AllocationAssetMeta[],
+): Record<string, string> {
+  return Object.fromEntries(
+    assets
+      .filter((asset) => asset.manualPrice !== null)
+      .map((asset) => [asset.ticker, asset.manualPrice as string]),
+  );
+}
+
 /**
  * Prices the tickers that carry no open position. They are not part of the
  * portfolio value, but the screen still shows their price and uses it to
@@ -135,15 +159,20 @@ async function quoteWatchOnly(
   assets: readonly AllocationAssetMeta[],
   quoteSource: QuoteSource,
   manualPrices: Record<string, string>,
-): Promise<{ quotes: Map<string, WatchQuote>; missing: string[] }> {
+): Promise<{
+  quotes: Map<string, WatchQuote>;
+  missing: string[];
+  manual: string[];
+}> {
   const provider = getQuoteProvider(quoteSource);
   const quotes = new Map<string, WatchQuote>();
   const missing: string[] = [];
+  const manual: string[] = [];
 
   await Promise.all(
     assets.map(async (asset) => {
       try {
-        const quote = await provider.getQuote({
+        const resolved = await getQuoteWithManualFallback(provider, {
           ticker: asset.ticker,
           assetClass: asset.assetClass,
           currency: asset.currency,
@@ -151,9 +180,13 @@ async function quoteWatchOnly(
         });
 
         quotes.set(asset.ticker, {
-          price: quote.price,
-          currency: quote.currency,
+          price: resolved.quote.price,
+          currency: resolved.quote.currency,
         });
+
+        if (resolved.manual) {
+          manual.push(asset.ticker);
+        }
       } catch {
         // One unpriced watch asset never fails the table.
         missing.push(asset.ticker);
@@ -161,7 +194,7 @@ async function quoteWatchOnly(
     }),
   );
 
-  return { quotes, missing };
+  return { quotes, missing, manual };
 }
 
 /**
@@ -194,34 +227,41 @@ export const allocationRouter = router({
   list: protectedProcedure
     .input(allocationListInput)
     .query(async ({ ctx, input }) => {
-      const [portfolio, assets, reviews] = await Promise.all([
-        loadValuedPortfolio({
-          userId: ctx.user.id,
-          displayCurrency: input.displayCurrency,
-          usdBrlRate: input.usdBrlRate,
-          quoteSource: input.quoteSource,
-          manualPrices: input.manualPrices,
-        }),
+      const [assets, reviews] = await Promise.all([
         loadAssets(ctx.user.id),
         loadReviews(ctx.user.id),
       ]);
+      const requestManuals = {
+        ...storedManualPrices(assets),
+        ...Object.fromEntries(
+          Object.entries(input.manualPrices ?? {}).map(([ticker, price]) => [
+            ticker.toUpperCase(),
+            price,
+          ]),
+        ),
+      };
+      const portfolio = await loadValuedPortfolio({
+        userId: ctx.user.id,
+        displayCurrency: input.displayCurrency,
+        usdBrlRate: input.usdBrlRate,
+        quoteSource: input.quoteSource,
+        manualPrices: requestManuals,
+      });
 
       const invested = new Set(
         portfolio.positions
           .filter((position) => Number(position.quantity) > 0)
           .map((position) => position.ticker),
       );
-      const manualPrices = Object.fromEntries(
-        Object.entries(input.manualPrices ?? {}).map(([ticker, price]) => [
-          ticker.toUpperCase(),
-          price,
-        ]),
-      );
       const watch = await quoteWatchOnly(
         assets.filter((asset) => !invested.has(asset.ticker)),
         input.quoteSource,
-        manualPrices,
+        requestManuals,
       );
+      const manualValuedTickers = new Set([
+        ...portfolio.manual,
+        ...watch.manual,
+      ]);
 
       const rows = buildAllocationRows({
         positions: portfolio.positions,
@@ -231,6 +271,7 @@ export const allocationRouter = router({
         watchQuotes: watch.quotes,
         displayCurrency: input.displayCurrency,
         usdBrlRate: input.usdBrlRate ?? null,
+        manualValuedTickers,
         today: today(),
       });
 
@@ -241,10 +282,17 @@ export const allocationRouter = router({
         fx: {
           displayCurrency: input.displayCurrency,
           usdBrlRate: input.usdBrlRate ?? null,
+          executionUsdBrlRate:
+            input.usdBrlRate === undefined
+              ? null
+              : usdBrlExecutionRate(input.usdBrlRate),
+          executionSpread: FX_EXECUTION_SPREAD,
+          executionIof: FX_EXECUTION_IOF,
         },
         quotes: {
           source: input.quoteSource,
           missing: [...portfolio.missing, ...watch.missing].sort(),
+          manual: [...manualValuedTickers].sort(),
         },
       };
     }),
@@ -365,6 +413,81 @@ export const allocationRouter = router({
         .returning();
 
       return row ?? null;
+    }),
+
+  /**
+   * Stores a display-currency market value as a native per-unit price, used
+   * when the live quote provider cannot price the ticker. Clearing removes
+   * the override so the row goes back to an unquoted state.
+   */
+  setManualValue: protectedProcedure
+    .input(setManualValueInput)
+    .mutation(async ({ ctx, input }) => {
+      if (input.marketValue === null) {
+        await db
+          .update(allocationAssets)
+          .set({ manualPrice: null, updatedAt: new Date() })
+          .where(
+            and(
+              eq(allocationAssets.userId, ctx.user.id),
+              eq(allocationAssets.ticker, input.ticker),
+            ),
+          );
+
+        return { ticker: input.ticker, manualPrice: null };
+      }
+
+      const native = consolidatePositions(await loadTransactions(ctx.user.id));
+      const position = native.find(
+        (row) =>
+          row.ticker === input.ticker && !isZero(toDecimal(row.quantity)),
+      );
+
+      if (!position) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "A position is required to set a market value",
+        });
+      }
+
+      let manualPrice: string;
+
+      try {
+        manualPrice = manualPriceFromMarketValue(
+          input.marketValue,
+          position.quantity,
+          input.displayCurrency,
+          position.currency,
+          input.usdBrlRate ?? null,
+        );
+      } catch {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "An USD/BRL rate is required to set a mixed-currency value",
+        });
+      }
+
+      const traded = await tradedIdentity(ctx.user.id, input.ticker);
+      const [row] = await db
+        .insert(allocationAssets)
+        .values({
+          userId: ctx.user.id,
+          ticker: input.ticker,
+          assetClass: traded?.assetClass ?? position.assetClass,
+          currency: traded?.currency ?? position.currency,
+          sortOrder: await nextSortOrder(ctx.user.id),
+          manualPrice,
+        })
+        .onConflictDoUpdate({
+          target: [allocationAssets.userId, allocationAssets.ticker],
+          set: { manualPrice, updatedAt: new Date() },
+        })
+        .returning({
+          ticker: allocationAssets.ticker,
+          manualPrice: allocationAssets.manualPrice,
+        });
+
+      return row ?? { ticker: input.ticker, manualPrice };
     }),
 
   /**

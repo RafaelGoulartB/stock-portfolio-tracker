@@ -17,6 +17,14 @@ export const FX_SOURCE_LABELS: Record<FxSource, string> = {
   manual: "Manual rate",
 };
 
+/**
+ * Extra costs applied only when sizing a contribution in BRL for a USD
+ * asset: broker spread, then IOF. Portfolio valuation always uses the
+ * spot dollar; these factors never leave the contribution planner.
+ */
+export const FX_EXECUTION_SPREAD = "0.015";
+export const FX_EXECUTION_IOF = "0.0038";
+
 /** `rate` is always BRL per 1 USD, travelling as a decimal string. */
 export const fxRateSchema = z.object({
   from: currencySchema,

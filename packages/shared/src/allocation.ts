@@ -134,6 +134,22 @@ export type UpsertAllocationAssetInput = z.input<
 >;
 
 /**
+ * Sets or clears the stored market value of an unquoted position. The API
+ * turns the display-currency amount into a native per-unit price
+ * (`value / quantity`) and stores that as the manual quote fallback.
+ */
+export const setManualValueInput = z.object({
+  ticker: tickerSchema,
+  /** Display-currency market value. `null` drops the override. */
+  marketValue: positiveDecimal.nullable(),
+  displayCurrency: currencySchema,
+  /** Required when the position's native currency differs from display. */
+  usdBrlRate: positiveDecimal.optional(),
+});
+
+export type SetManualValueInput = z.input<typeof setManualValueInput>;
+
+/**
  * Drops the analysis metadata of a ticker. Transactions and quarterly
  * reviews are untouched, so a ticker with a position stays in the table
  * with an empty target.
@@ -217,6 +233,25 @@ export const allocationRowSchema = z.object({
    * market price. Positive means the stock trades below fair value.
    */
   discount: z.string().nullable(),
+  /**
+   * How the Value column was produced. `quote` is quantity × live price,
+   * `manual` is the stored override used when no public quote exists, and
+   * `none` means the cell is empty.
+   */
+  valueSource: z.enum(["quote", "manual", "none"]),
+  /**
+   * Stored native per-unit price used when the quote provider has nothing.
+   * Null until the user sets a value on an unquoted row.
+   */
+  manualPrice: positiveDecimal.nullable(),
+  /**
+   * Display-currency price used only to size a contribution. USD assets
+   * shown in BRL include spread and IOF; everything else matches the spot
+   * conversion. Null without a native price or a rate.
+   */
+  executionPrice: z.string().nullable(),
+  /** True when {@link executionPrice} used the VET rate instead of spot. */
+  executionFxApplied: z.boolean(),
   /** Average of the newest graded quarters, `null` when never graded. */
   averageGrade: z.string().nullable(),
   /** How many quarters the average covers. */

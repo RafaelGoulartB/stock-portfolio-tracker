@@ -12,7 +12,16 @@ import {
   DEFAULT_SCORE_CONFIG,
   quarterEndDate,
 } from "@portifolio-tracker/shared";
-import { add, div, formatDecimal, sub, toDecimal, ZERO } from "../lib/decimal";
+import {
+  add,
+  div,
+  formatDecimal,
+  isZero,
+  sub,
+  toDecimal,
+  ZERO,
+} from "../lib/decimal";
+import { executionPrice } from "./fx-execution";
 import { type ConsolidationInput, convertMoney } from "./positions";
 import { averageGrade, scoreAsset } from "./score";
 
@@ -23,6 +32,8 @@ export type AllocationAssetMeta = {
   currency: Currency;
   targetWeight: string | null;
   valuationRef: string | null;
+  /** Native per-unit price stored when no public quote exists. */
+  manualPrice: string | null;
   sortOrder: number;
 };
 
@@ -186,6 +197,42 @@ function convertPrice(
     : convertMoney(price, from, displayCurrency, usdBrlRate);
 }
 
+const PRICE_PLACES = 8;
+
+/**
+ * Turns a display-currency market value into the native per-unit price the
+ * quote fallback stores. Quantity must be positive.
+ */
+export function manualPriceFromMarketValue(
+  marketValue: string,
+  quantity: string,
+  valueCurrency: Currency,
+  assetCurrency: Currency,
+  usdBrlRate: string | null,
+): string {
+  if (isZero(toDecimal(quantity))) {
+    throw new Error("A position is required to set a market value");
+  }
+
+  if (valueCurrency !== assetCurrency && usdBrlRate == null) {
+    throw new Error(
+      "An USD/BRL rate is required to set a mixed-currency value",
+    );
+  }
+
+  const nativeValue = convertMoney(
+    marketValue,
+    valueCurrency,
+    assetCurrency,
+    usdBrlRate ?? "1",
+  );
+
+  return formatDecimal(
+    div(toDecimal(nativeValue), toDecimal(quantity)),
+    PRICE_PLACES,
+  );
+}
+
 /** Date of the last buy per ticker, `YYYY-MM-DD`. Sells never reset it. */
 export function lastContributions(
   transactions: readonly ConsolidationInput[],
@@ -218,6 +265,8 @@ export type AllocationInput = {
   displayCurrency: Currency;
   /** BRL per 1 USD, needed to price an asset in a foreign currency. */
   usdBrlRate?: string | null;
+  /** Tickers valued from a stored manual price after the live quote failed. */
+  manualValuedTickers?: ReadonlySet<string>;
   /** Reference day for the cooldown rule, `YYYY-MM-DD`. */
   today: string;
   config?: ScoreConfig;
@@ -282,6 +331,19 @@ export function buildAllocationRows(input: AllocationInput): AllocationRow[] {
     const targetWeight = asset?.targetWeight ?? null;
     const lastContributionAt =
       input.lastContributionByTicker.get(ticker) ?? null;
+    const marketValue = position?.convertedMarketValue ?? null;
+    const execution = executionPrice(
+      marketPrice,
+      currency,
+      input.displayCurrency,
+      input.usdBrlRate ?? null,
+    );
+    const valueSource =
+      marketValue === null
+        ? "none"
+        : input.manualValuedTickers?.has(ticker)
+          ? "manual"
+          : "quote";
 
     return {
       ticker,
@@ -299,7 +361,9 @@ export function buildAllocationRows(input: AllocationInput): AllocationRow[] {
         input.displayCurrency,
         input.usdBrlRate ?? null,
       ),
-      marketValue: position?.convertedMarketValue ?? null,
+      executionPrice: execution.price,
+      executionFxApplied: execution.fxApplied,
+      marketValue,
       currentWeight,
       targetWeight,
       gapWeight:
@@ -313,6 +377,8 @@ export function buildAllocationRows(input: AllocationInput): AllocationRow[] {
       fairValuePeriod: latest?.period ?? null,
       fairValueRef: latest?.fairValueRef ?? null,
       discount,
+      valueSource,
+      manualPrice: asset?.manualPrice ?? null,
       averageGrade: grades.average,
       gradedQuarters: grades.quarters,
       lastContributionAt,

@@ -3,7 +3,8 @@ import {
   type QuoteSource,
 } from "@portifolio-tracker/shared";
 import { ManualQuoteProvider } from "./manual";
-import type { QuoteProvider } from "./provider";
+import type { MarketQuote, QuoteProvider, QuoteRequest } from "./provider";
+import { QuoteUnavailableError } from "./provider";
 import { YahooProvider } from "./yahoo";
 
 export { ManualQuoteProvider } from "./manual";
@@ -36,4 +37,26 @@ export function listQuoteSources(): { id: QuoteSource; label: string }[] {
 
 export function getQuoteProvider(source: QuoteSource): QuoteProvider {
   return QUOTE_PROVIDERS[source];
+}
+
+const manualFallback = new ManualQuoteProvider();
+
+/**
+ * Tries the selected provider, then a stored per-ticker price if the live
+ * quote is missing. The rest of the app keeps using spot prices; this is
+ * only a valuation fallback for assets without a public quote.
+ */
+export async function getQuoteWithManualFallback(
+  provider: QuoteProvider,
+  request: QuoteRequest,
+): Promise<{ quote: MarketQuote; manual: boolean }> {
+  try {
+    return { quote: await provider.getQuote(request), manual: false };
+  } catch (error) {
+    if (!(error instanceof QuoteUnavailableError) || !request.manualPrice) {
+      throw error;
+    }
+
+    return { quote: await manualFallback.getQuote(request), manual: true };
+  }
 }

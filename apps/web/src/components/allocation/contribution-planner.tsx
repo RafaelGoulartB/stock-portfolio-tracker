@@ -2,7 +2,11 @@ import { t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import type { AllocationRow, Currency } from "@portifolio-tracker/shared";
-import { Calculator } from "lucide-react";
+import {
+  FX_EXECUTION_IOF,
+  FX_EXECUTION_SPREAD,
+} from "@portifolio-tracker/shared";
+import { Calculator, Info } from "lucide-react";
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,11 +26,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { formatMoney, formatQuantity, formatWeightPrecise } from "@/lib/format";
 import { parseDecimalInput } from "@/lib/numeric-input";
 
 /** How many candidates a contribution is spread over. `0` means every one. */
 const SPREAD_OPTIONS = [1, 3, 5, 0] as const;
+
+export type ContributionFx = {
+  usdBrlRate: string | null;
+  executionUsdBrlRate: string | null;
+  executionSpread: string;
+  executionIof: string;
+};
 
 export type ContributionSlice = {
   ticker: string;
@@ -36,6 +52,8 @@ export type ContributionSlice = {
   amount: number;
   /** Suggested unit count, `null` when the asset has no price. */
   units: number | null;
+  /** True when units used the VET rate instead of spot. */
+  executionFxApplied: boolean;
 };
 
 /**
@@ -44,6 +62,10 @@ export type ContributionSlice = {
  * computed with plain numbers and rounded to cents, with the rounding
  * remainder reported separately so nothing silently disappears. Money that
  * actually moves is entered as a transaction, where decimals stay exact.
+ *
+ * Unit counts for USD assets shown in BRL use the execution (VET) price so
+ * spread and IOF are in the suggested size. Portfolio valuation still uses
+ * the spot dollar.
  */
 export function planContribution(
   rows: readonly AllocationRow[],
@@ -65,9 +87,7 @@ export function planContribution(
     const share = Number(row.score.value) / total;
     const sliceAmount = Math.round(amount * share * 100) / 100;
     const price =
-      row.convertedMarketPrice === null
-        ? null
-        : Number(row.convertedMarketPrice);
+      row.executionPrice === null ? null : Number(row.executionPrice);
 
     allocated += sliceAmount;
 
@@ -76,6 +96,7 @@ export function planContribution(
       share,
       amount: sliceAmount,
       units: price && price > 0 ? sliceAmount / price : null,
+      executionFxApplied: row.executionFxApplied,
     };
   });
 
@@ -89,10 +110,12 @@ export function planContribution(
 export function ContributionPlannerButton({
   rows,
   displayCurrency,
+  fx,
   disabled = false,
 }: {
   rows: AllocationRow[];
   displayCurrency: Currency;
+  fx?: ContributionFx | null;
   disabled?: boolean;
 }) {
   const { i18n } = useLingui();
@@ -107,6 +130,10 @@ export function ContributionPlannerButton({
   );
   const remainder = Math.round((amount - allocated) * 100) / 100;
   const candidates = rows.filter((row) => Number(row.score.value) > 0).length;
+  const usesExecutionFx = slices.some((slice) => slice.executionFxApplied);
+  const spreadPercent =
+    Number(fx?.executionSpread ?? FX_EXECUTION_SPREAD) * 100;
+  const iofPercent = Number(fx?.executionIof ?? FX_EXECUTION_IOF) * 100;
 
   return (
     <Dialog
@@ -204,7 +231,7 @@ export function ContributionPlannerButton({
               )}
             </p>
           ) : (
-            <ul className="max-h-72 space-y-2 overflow-y-auto pr-1">
+            <ul className="max-h-72 space-y-2 overflow-auto pr-1">
               {slices.map((slice) => (
                 <li key={slice.ticker} className="flex items-center gap-3">
                   <span className="w-16 shrink-0 text-sm font-semibold">
@@ -244,6 +271,48 @@ export function ContributionPlannerButton({
                 unallocated.
               </Trans>
             </p>
+          ) : null}
+
+          {usesExecutionFx ? (
+            <div className="flex justify-end">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                    aria-label={i18n._(
+                      t({
+                        id: "allocation.plannerFxAria",
+                        message: "How suggested units include FX costs",
+                      }),
+                    )}
+                  >
+                    <Info className="size-3.5" aria-hidden="true" />
+                    <span className="text-xs">
+                      <Trans id="allocation.plannerFxHint">FX costs</Trans>
+                    </span>
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="top" className="space-y-1.5 text-left">
+                  <p>
+                    <Trans id="allocation.plannerFxTooltip">
+                      Suggested units for USD assets use the execution rate
+                      (spot × {spreadPercent.toFixed(1)}% spread ×{" "}
+                      {iofPercent.toFixed(2)}% IOF). Portfolio value still uses
+                      the spot dollar.
+                    </Trans>
+                  </p>
+                  {fx?.usdBrlRate && fx.executionUsdBrlRate ? (
+                    <p className="tabular-nums opacity-90">
+                      <Trans id="allocation.plannerFxRates">
+                        Spot {fx.usdBrlRate} → execution{" "}
+                        {fx.executionUsdBrlRate}
+                      </Trans>
+                    </p>
+                  ) : null}
+                </TooltipContent>
+              </Tooltip>
+            </div>
           ) : null}
         </div>
       </DialogContent>

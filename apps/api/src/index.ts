@@ -38,6 +38,8 @@ deleteExpiredSessions().catch((error) => {
   console.error("Failed to prune expired sessions", error);
 });
 
-serve({ fetch: app.fetch, port: 3001 }, (info) => {
+const port = process.env.API_PORT ? Number(process.env.API_PORT) : 3001;
+
+serve({ fetch: app.fetch, port }, (info) => {
   console.log(`API listening on http://127.0.0.1:${info.port}`);
 });

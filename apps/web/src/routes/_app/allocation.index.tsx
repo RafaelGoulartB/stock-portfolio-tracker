@@ -52,7 +52,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { trpc } from "@/lib/api";
 import { useFxQuote } from "@/lib/fx";
-import { parsePercentInput } from "@/lib/numeric-input";
+import { parseDecimalInput, parsePercentInput } from "@/lib/numeric-input";
 import {
   currentQuarter,
   formatQuarterLabel,
@@ -274,13 +274,18 @@ function AllocationPage() {
     onSuccess: refresh,
     onError: reportError,
   });
+  const setManualValue = trpc.allocation.setManualValue.useMutation({
+    onSuccess: refresh,
+    onError: reportError,
+  });
 
   const saving =
     upsertAsset.isPending ||
     removeAsset.isPending ||
     reorder.isPending ||
     upsertReview.isPending ||
-    removeReview.isPending;
+    removeReview.isPending ||
+    setManualValue.isPending;
 
   const allRows = allocation.data?.rows ?? [];
   const rows = useMemo(() => {
@@ -329,6 +334,42 @@ function AllocationPage() {
     upsertAsset.mutate({ ticker, targetWeight: parsed });
   }
 
+  /** Market value of an unquoted position. Empty clears the stored override. */
+  function editValue(ticker: string, text: string) {
+    if (text.trim().length === 0) {
+      setManualValue.mutate({
+        ticker,
+        marketValue: null,
+        displayCurrency,
+        usdBrlRate: fx.effectiveRate,
+      });
+
+      return;
+    }
+
+    const parsed = parseDecimalInput(text);
+
+    if (parsed === null || !positiveDecimal.safeParse(parsed).success) {
+      toast.error(
+        i18n._(
+          msg({
+            id: "allocation.invalidValue",
+            message: "Enter a market value, e.g. 50000",
+          }),
+        ),
+      );
+
+      return;
+    }
+
+    setManualValue.mutate({
+      ticker,
+      marketValue: parsed,
+      displayCurrency,
+      usdBrlRate: fx.effectiveRate,
+    });
+  }
+
   async function addAsset(values: AddAssetValues) {
     await upsertAsset.mutateAsync(values);
     toast.success(
@@ -361,6 +402,7 @@ function AllocationPage() {
             displayCurrency={
               allocation.data?.summary.displayCurrency ?? displayCurrency
             }
+            fx={allocation.data?.fx}
             disabled={!allocation.data}
           />
           <AddAssetDialog onSubmit={addAsset} saving={upsertAsset.isPending} />
@@ -539,6 +581,7 @@ function AllocationPage() {
           freeOrder={freeOrder}
           onReorder={(tickers) => reorder.mutate({ tickers })}
           onEditTarget={(ticker, text) => editPercent(ticker, text)}
+          onEditValue={(ticker, text) => editValue(ticker, text)}
           onClearAnalysis={(ticker) =>
             upsertAsset.mutate({
               ticker,
