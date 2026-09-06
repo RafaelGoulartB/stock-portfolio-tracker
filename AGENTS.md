@@ -11,7 +11,7 @@ Node 24, pnpm workspaces, TypeScript `strict`, ESM. Vite, React 19, TanStack Rou
 - `apps/web` — dashboard SPA
 - `apps/api` — Hono + tRPC + Drizzle
 - `packages/shared` — shared Zod schemas
-- `tasks/` — plans. Stack decision: `tasks/plan-stack-inicial.md`. Scaffold: `tasks/plan-scaffold-stack.md`
+- `tasks/` — plans. Stack decision: `tasks/plan-stack-inicial.md`. Scaffold: `tasks/plan-scaffold-stack.md`. Allocation screen and score engine: `tasks/plan-allocation-screen.md`
 
 ## Rules
 
@@ -21,6 +21,9 @@ Node 24, pnpm workspaces, TypeScript `strict`, ESM. Vite, React 19, TanStack Rou
   display currency (`BRL`/`USD`) at an USD/BRL rate
 - FX: pluggable `FxProvider` sources (`apps/api/src/lib/fx`); Frankfurter by
   default, manual rate fallback
+- Contribution score: rules live in `apps/api/src/domain/score.ts`, thresholds
+  in `DEFAULT_SCORE_CONFIG` (`packages/shared/src/score.ts`). Never inline a
+  threshold in a router or a screen; see `tasks/plan-allocation-screen.md`
 - Auth: custom cookie session (`portifolio_session`, SHA-256 hash stored, scrypt password, 30d TTL); private routers use `protectedProcedure`
 - Do not wrap shadcn; New York only; use `--gain` / `--loss` tokens (no ad-hoc hex)
 - tRPC client URL is `/trpc` (Vite proxy). Do not bake `localhost` into the client

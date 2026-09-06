@@ -148,6 +148,35 @@ export function formatWeight(
   }).format(Number(value));
 }
 
+/**
+ * Portfolio weight rendered with two decimals (`0.0146` -> `1.46%`). Targets,
+ * current weights and scores live in tenths of a percentage point, so the
+ * single decimal of {@link formatWeight} is too coarse for them.
+ */
+export function formatWeightPrecise(
+  value: string,
+  locale: string = activeLocale(),
+): string {
+  return new Intl.NumberFormat(locale, {
+    style: "percent",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(value));
+}
+
+/** Same as {@link formatWeightPrecise}, with an explicit sign. */
+export function formatSignedWeightPrecise(
+  value: string,
+  locale: string = activeLocale(),
+): string {
+  return new Intl.NumberFormat(locale, {
+    style: "percent",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    signDisplay: "exceptZero",
+  }).format(Number(value));
+}
+
 /** Return ratio (`0.1` decimal string) rendered as a signed percent. */
 export function formatSignedPercent(
   value: string,

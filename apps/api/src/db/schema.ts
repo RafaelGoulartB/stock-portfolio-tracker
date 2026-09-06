@@ -6,11 +6,13 @@ import {
 import {
   date,
   index,
+  integer,
   numeric,
   pgEnum,
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -75,6 +77,77 @@ export const transactions = pgTable(
   ],
 );
 
+/**
+ * Per-ticker analysis metadata behind the allocation screen: the target
+ * weight, the discount to fair value and the manual row order. A row with no
+ * matching transaction is a watch-only asset: on the radar, no money in it.
+ */
+export const allocationAssets = pgTable(
+  "allocation_assets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    ticker: text("ticker").notNull(),
+    assetClass: assetClassEnum("asset_class").notNull().default("stock_br"),
+    currency: currencyEnum("currency").notNull().default("BRL"),
+    /** Target share of the portfolio, `0`-`1`. Null until the user sets it. */
+    targetWeight: numeric("target_weight", DECIMAL),
+    /** Signed gap to fair value, `0.2355` = 23.55% below fair value. */
+    discount: numeric("discount", DECIMAL),
+    /** Pointer to the valuation behind the discount, e.g. `1Q26`. */
+    valuationRef: text("valuation_ref"),
+    /** Free-order rank, ascending. Ties fall back to the ticker. */
+    sortOrder: integer("sort_order").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("allocation_assets_user_ticker_key").on(
+      table.userId,
+      table.ticker,
+    ),
+  ],
+);
+
+/** One quarterly review of an asset: a grade, notes, or both. */
+export const assetReviews = pgTable(
+  "asset_reviews",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    ticker: text("ticker").notNull(),
+    /** Calendar quarter, `YYYYQn`. Keys sort chronologically as text. */
+    period: text("period").notNull(),
+    /** `0`-`10`, null when the quarter only carries notes. */
+    grade: numeric("grade", DECIMAL),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("asset_reviews_user_ticker_period_key").on(
+      table.userId,
+      table.ticker,
+      table.period,
+    ),
+    index("asset_reviews_user_id_idx").on(table.userId),
+  ],
+);
+
 export type UserRow = typeof users.$inferSelect;
 export type SessionRow = typeof sessions.$inferSelect;
 export type TransactionRow = typeof transactions.$inferSelect;
+export type AllocationAssetRow = typeof allocationAssets.$inferSelect;
+export type AssetReviewRow = typeof assetReviews.$inferSelect;

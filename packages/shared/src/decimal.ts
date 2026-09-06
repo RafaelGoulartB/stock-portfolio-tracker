@@ -35,3 +35,12 @@ export const isoDate = z
       date.getUTCDate() === day
     );
   }, "Not a valid calendar date");
+
+/**
+ * Signed decimal string, e.g. a discount that can turn negative when the
+ * market price runs above the fair value.
+ */
+export const signedDecimal = z
+  .string()
+  .trim()
+  .regex(/^-?\d{1,14}(\.\d{1,8})?$/, "Use digits with up to 8 decimal places");

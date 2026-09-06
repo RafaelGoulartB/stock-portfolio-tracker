@@ -1,3 +1,4 @@
+import { allocationRouter } from "./routers/allocation";
 import { authRouter } from "./routers/auth";
 import { devSeedRouter } from "./routers/dev-seed";
 import { dividendsRouter } from "./routers/dividends";
@@ -11,6 +12,7 @@ import { publicProcedure, router } from "./trpc";
 export const appRouter = router({
   health: publicProcedure.query(() => ({ ok: true as const })),
   auth: authRouter,
+  allocation: allocationRouter,
   dividends: dividendsRouter,
   fx: fxRouter,
   quotes: quotesRouter,

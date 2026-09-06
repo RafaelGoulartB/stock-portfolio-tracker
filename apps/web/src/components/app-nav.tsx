@@ -8,6 +8,7 @@ import {
   type LucideIcon,
   PieChart,
   TableProperties,
+  Target,
   TrendingUp,
   Wrench,
 } from "lucide-react";
@@ -53,6 +54,11 @@ const NAV_GROUPS: NavGroup[] = [
         to: "/detailed-positions",
         icon: TableProperties,
         label: <Trans id="nav.detailedPositions">Detailed positions</Trans>,
+      },
+      {
+        to: "/allocation",
+        icon: Target,
+        label: <Trans id="nav.allocation">Allocation</Trans>,
       },
     ],
   },
