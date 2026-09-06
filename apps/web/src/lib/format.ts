@@ -175,6 +175,17 @@ export function formatCompactMoney(
   }).format(value);
 }
 
+/** Ratio (`0.1`) as a plain percent for chart axes, e.g. `10%`. */
+export function formatPercentAxis(
+  value: number,
+  locale: string = activeLocale(),
+): string {
+  return new Intl.NumberFormat(locale, {
+    style: "percent",
+    maximumFractionDigits: 1,
+  }).format(value);
+}
+
 export function formatTradeDate(
   value: string,
   locale: string = activeLocale(),

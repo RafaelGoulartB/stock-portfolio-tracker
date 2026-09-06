@@ -7,7 +7,13 @@ import type { QuoteProvider } from "./provider";
 import { YahooProvider } from "./yahoo";
 
 export { ManualQuoteProvider } from "./manual";
-export type { MarketQuote, QuoteProvider, QuoteRequest } from "./provider";
+export type {
+  MarketQuote,
+  QuoteProvider,
+  QuoteRequest,
+  QuoteSeriesPoint,
+  QuoteSeriesRequest,
+} from "./provider";
 export { QuoteUnavailableError } from "./provider";
 export { clearQuoteCache, YahooProvider } from "./yahoo";
 

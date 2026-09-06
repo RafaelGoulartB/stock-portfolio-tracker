@@ -3,7 +3,13 @@ import { FrankfurterProvider } from "./frankfurter";
 import type { FxProvider } from "./provider";
 
 export { clearFxCache } from "./frankfurter";
-export type { FxProvider, FxQuote, FxQuoteRequest } from "./provider";
+export type {
+  FxProvider,
+  FxQuote,
+  FxQuoteRequest,
+  FxSeriesPoint,
+  FxSeriesRequest,
+} from "./provider";
 
 /**
  * Registry of quote sources. Adding a source means implementing

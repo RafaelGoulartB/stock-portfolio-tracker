@@ -4,14 +4,20 @@ import {
   type MarketQuote,
   type QuoteProvider,
   type QuoteRequest,
+  type QuoteSeriesPoint,
+  type QuoteSeriesRequest,
   QuoteUnavailableError,
 } from "./provider";
 
 type CacheEntry = { quote: MarketQuote; expiresAt: number };
+type SeriesCacheEntry = { points: QuoteSeriesPoint[]; expiresAt: number };
 
 const SPOT_TTL_MS = 15 * 60 * 1_000;
 const HISTORY_TTL_MS = 7 * 24 * 60 * 60 * 1_000;
+/** A running month keeps growing, so a series is refreshed a few times a day. */
+const SERIES_TTL_MS = 6 * 60 * 60 * 1_000;
 const cache = new Map<string, CacheEntry>();
+const seriesCache = new Map<string, SeriesCacheEntry>();
 
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
@@ -176,6 +182,64 @@ export class YahooProvider implements QuoteProvider {
     return quote;
   }
 
+  /**
+   * One chart request covers the whole range, so a 36-month history costs a
+   * single upstream call per ticker instead of one call per month.
+   */
+  async getSeries(request: QuoteSeriesRequest): Promise<QuoteSeriesPoint[]> {
+    const symbol = toYahooSymbol(
+      request.ticker,
+      request.assetClass,
+      request.currency,
+    );
+
+    if (!symbol) {
+      throw new QuoteUnavailableError(
+        request.ticker,
+        `No public quote for ${request.ticker}`,
+      );
+    }
+
+    const key = `${this.id}|${symbol}|${request.start}..${request.end}`;
+    const hit = seriesCache.get(key);
+
+    if (hit && hit.expiresAt > Date.now()) {
+      return hit.points;
+    }
+
+    const result = await fetchChart(
+      symbol,
+      request.ticker,
+      dayToUnix(request.start),
+      dayToUnix(request.end) + 86400,
+    );
+    const timestamps = result.timestamp ?? [];
+    const closes = result.indicators?.quote?.[0]?.close ?? [];
+    const points: QuoteSeriesPoint[] = [];
+
+    for (let index = 0; index < timestamps.length; index += 1) {
+      const timestamp = timestamps[index];
+      const close = closes[index];
+
+      if (timestamp == null || close == null || close <= 0) {
+        continue;
+      }
+
+      points.push({
+        asOf: unixToDay(timestamp),
+        close: toPriceString(close, request.ticker),
+      });
+    }
+
+    if (points.length === 0) {
+      throw new QuoteUnavailableError(request.ticker);
+    }
+
+    seriesCache.set(key, { points, expiresAt: Date.now() + SERIES_TTL_MS });
+
+    return points;
+  }
+
   private async spotQuote(
     symbol: string,
     request: QuoteRequest,
@@ -304,4 +368,5 @@ export class YahooProvider implements QuoteProvider {
 /** Clears cached quotes. Exported for tests. */
 export function clearQuoteCache(): void {
   cache.clear();
+  seriesCache.clear();
 }

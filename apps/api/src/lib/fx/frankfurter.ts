@@ -1,11 +1,19 @@
 import { formatDecimal, toDecimal } from "../decimal";
-import type { FxProvider, FxQuote, FxQuoteRequest } from "./provider";
+import type {
+  FxProvider,
+  FxQuote,
+  FxQuoteRequest,
+  FxSeriesPoint,
+  FxSeriesRequest,
+} from "./provider";
 
 type CacheEntry = { quote: FxQuote; expiresAt: number };
+type SeriesCacheEntry = { points: FxSeriesPoint[]; expiresAt: number };
 
 /** In-memory quotes with a TTL, so one page load costs one upstream call. */
 const CACHE_TTL_MS = 6 * 60 * 60 * 1_000;
 const cache = new Map<string, CacheEntry>();
+const seriesCache = new Map<string, SeriesCacheEntry>();
 
 function todayUtc(): string {
   return new Date().toISOString().slice(0, 10);
@@ -80,9 +88,68 @@ export class FrankfurterProvider implements FxProvider {
 
     return quote;
   }
+
+  /**
+   * The dated-range endpoint (`/{start}..{end}`) returns every business-day
+   * close in one call, so a 36-month history costs a single request.
+   */
+  async getSeries({
+    from,
+    to,
+    start,
+    end,
+  }: FxSeriesRequest): Promise<FxSeriesPoint[]> {
+    if (from === to) {
+      return [{ asOf: start, rate: "1" }];
+    }
+
+    const key = `${this.id}|${from}->${to}|${start}..${end}`;
+    const hit = seriesCache.get(key);
+
+    if (hit && hit.expiresAt > Date.now()) {
+      return hit.points;
+    }
+
+    const response = await fetch(
+      `https://api.frankfurter.app/${start}..${end}?from=${from}&to=${to}`,
+      { signal: AbortSignal.timeout(10_000) },
+    );
+
+    if (!response.ok) {
+      throw new Error(`Frankfurter request failed (${response.status})`);
+    }
+
+    const body = (await response.json()) as {
+      rates?: Record<string, Record<string, number> | undefined>;
+    };
+    const points: FxSeriesPoint[] = [];
+
+    for (const [day, rates] of Object.entries(body.rates ?? {})) {
+      const raw = rates?.[to];
+
+      if (typeof raw !== "number" || !Number.isFinite(raw) || raw <= 0) {
+        continue;
+      }
+
+      points.push({
+        asOf: day,
+        rate: formatDecimal(toDecimal(String(raw)), 8),
+      });
+    }
+
+    if (points.length === 0) {
+      throw new Error(`Frankfurter returned no ${from}->${to} history`);
+    }
+
+    points.sort((a, b) => a.asOf.localeCompare(b.asOf));
+    seriesCache.set(key, { points, expiresAt: Date.now() + CACHE_TTL_MS });
+
+    return points;
+  }
 }
 
 /** Clears cached quotes. Exported for tests. */
 export function clearFxCache(): void {
   cache.clear();
+  seriesCache.clear();
 }

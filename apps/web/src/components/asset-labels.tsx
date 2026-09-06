@@ -1,3 +1,5 @@
+import type { I18n } from "@lingui/core";
+import { msg } from "@lingui/core/macro";
 import { Trans } from "@lingui/react/macro";
 import type {
   AssetClass,
@@ -44,4 +46,33 @@ export function CurrencyBadge({ currency }: { currency: Currency }) {
       {currency}
     </Badge>
   );
+}
+
+/**
+ * Same names as {@link AssetClassLabel} as a plain string, for places that
+ * cannot render an element: chart axes, tooltips and aria labels.
+ */
+export function assetClassText(assetClass: AssetClass, i18n: I18n): string {
+  switch (assetClass) {
+    case "stock_br":
+      return i18n._(
+        msg({ id: "assetClass.stockBr", message: "Brazilian stock" }),
+      );
+    case "stock_us":
+      return i18n._(msg({ id: "assetClass.stockUs", message: "US stock" }));
+    case "reit":
+      return i18n._(msg({ id: "assetClass.reit", message: "REIT" }));
+    case "etf":
+      return i18n._(msg({ id: "assetClass.etf", message: "ETF" }));
+    case "bdr":
+      return i18n._(msg({ id: "assetClass.bdr", message: "BDR" }));
+    case "crypto":
+      return i18n._(msg({ id: "assetClass.crypto", message: "Crypto" }));
+    case "fixed_income":
+      return i18n._(
+        msg({ id: "assetClass.fixedIncome", message: "Fixed income" }),
+      );
+    case "other":
+      return i18n._(msg({ id: "assetClass.other", message: "Other" }));
+  }
 }

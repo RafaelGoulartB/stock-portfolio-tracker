@@ -1,6 +1,7 @@
 import { authRouter } from "./routers/auth";
 import { devSeedRouter } from "./routers/dev-seed";
 import { fxRouter } from "./routers/fx";
+import { performanceRouter } from "./routers/performance";
 import { positionsRouter } from "./routers/positions";
 import { quotesRouter } from "./routers/quotes";
 import { transactionsRouter } from "./routers/transactions";
@@ -13,6 +14,7 @@ export const appRouter = router({
   quotes: quotesRouter,
   transactions: transactionsRouter,
   positions: positionsRouter,
+  performance: performanceRouter,
   // DEV-ONLY test-data seeder. The procedure itself refuses to run in
   // production; it stays registered so the tRPC type stays stable.
   devSeed: devSeedRouter,

@@ -3,6 +3,8 @@ import {
   type MarketQuote,
   type QuoteProvider,
   type QuoteRequest,
+  type QuoteSeriesPoint,
+  type QuoteSeriesRequest,
   QuoteUnavailableError,
 } from "./provider";
 
@@ -41,5 +43,29 @@ export class ManualQuoteProvider implements QuoteProvider {
       asOf: request.asOf ?? todayUtc(),
       source: this.id,
     };
+  }
+
+  /**
+   * A manual price has no history, so it is held flat over the whole range:
+   * one point at the range start, which lookups carry forward. Past months
+   * then value the asset at today's manual price, which shows contributions
+   * without inventing price moves.
+   */
+  async getSeries(request: QuoteSeriesRequest): Promise<QuoteSeriesPoint[]> {
+    if (!request.manualPrice) {
+      throw new QuoteUnavailableError(
+        request.ticker,
+        `No manual price for ${request.ticker}`,
+      );
+    }
+
+    if (toDecimal(request.manualPrice) <= 0n) {
+      throw new QuoteUnavailableError(
+        request.ticker,
+        `Invalid manual price for ${request.ticker}`,
+      );
+    }
+
+    return [{ asOf: request.start, close: request.manualPrice }];
   }
 }

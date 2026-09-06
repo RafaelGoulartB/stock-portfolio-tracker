@@ -30,6 +30,27 @@ export type QuoteRequest = {
   manualPrice?: string;
 };
 
+/** A daily-close range request, used to value many past snapshots at once. */
+export type QuoteSeriesRequest = {
+  ticker: string;
+  assetClass: AssetClass;
+  currency: Currency;
+  /** Inclusive `YYYY-MM-DD` range start. */
+  start: string;
+  /** Inclusive `YYYY-MM-DD` range end. */
+  end: string;
+  /** Required by the manual provider. */
+  manualPrice?: string;
+};
+
+/** One native-currency close inside a historical series. */
+export type QuoteSeriesPoint = {
+  /** Calendar day of the close, `YYYY-MM-DD`. */
+  asOf: string;
+  /** Native-currency close, as a decimal string. */
+  close: string;
+};
+
 /** Thrown when a provider has no price for a ticker (delisted, weekend gap, unsupported class). Routers catch this per ticker so one gap never fails a whole snapshot. */
 export class QuoteUnavailableError extends Error {
   readonly ticker: string;
@@ -50,4 +71,10 @@ export interface QuoteProvider {
   readonly id: QuoteSource;
   readonly label: string;
   getQuote(request: QuoteRequest): Promise<MarketQuote>;
+  /**
+   * Daily closes over a range, ascending and gap-free only on trading days.
+   * Callers resolve a snapshot by taking the last close at or before the
+   * snapshot day, so weekends and holidays need no special casing.
+   */
+  getSeries(request: QuoteSeriesRequest): Promise<QuoteSeriesPoint[]>;
 }
