@@ -102,6 +102,41 @@ msgstr ""
 #~ msgstr "Referência de valuation de {0}"
 
 #. js-lingui-explicit-id
+#: src/components/theme-lab-dialog.tsx:84
+#~ msgid "themeLab.reset"
+#~ msgstr "Limpar prévia"
+
+#. js-lingui-explicit-id
+#: src/components/theme-lab-dialog.tsx:71
+#~ msgid "themeLab.dark"
+#~ msgstr "Escuro"
+
+#. js-lingui-explicit-id
+#: src/components/theme-lab-dialog.tsx:65
+#~ msgid "themeLab.light"
+#~ msgstr "Claro"
+
+#. js-lingui-explicit-id
+#: src/components/theme-lab-dialog.tsx:57
+#~ msgid "themeLab.description"
+#~ msgstr "Escolha uma paleta para pintar o app ao vivo. Feche este painel e navegue pelas páginas, depois reabra pelo botão da paleta."
+
+#. js-lingui-explicit-id
+#: src/components/theme-lab-dialog.tsx:53
+#~ msgid "themeLab.temporary"
+#~ msgstr "Temporário"
+
+#. js-lingui-explicit-id
+#: src/components/theme-lab-dialog.tsx:39
+#~ msgid "themeLab.open"
+#~ msgstr "Laboratório de tema"
+
+#. js-lingui-explicit-id
+#: src/components/theme-lab-dialog.tsx:51
+#~ msgid "themeLab.title"
+#~ msgstr "Laboratório de tema"
+
+#. js-lingui-explicit-id
 #. placeholder {0}: formatMonthLabel(month, locale)
 #: src/routes/_app/detailed-positions.tsx:828
 #: src/routes/_app/positions.tsx:288
@@ -330,6 +365,11 @@ msgid "dividends.upcomingDescription"
 msgstr "Eventos anunciados para posições que parecem elegíveis."
 
 #. js-lingui-explicit-id
+#: src/components/settings-dialog.tsx:185
+msgid "settings.section.appearance"
+msgstr "Aparência"
+
+#. js-lingui-explicit-id
 #: src/components/allocation/allocation-table.tsx:87
 msgid "allocation.colTicker"
 msgstr "Ativo"
@@ -484,6 +524,16 @@ msgstr "Limpar"
 #: src/components/allocation/allocation-table.tsx:848
 msgid "allocation.clearAnalysis"
 msgstr "Limpar meta e desconto"
+
+#. js-lingui-explicit-id
+#: src/components/settings-appearance.tsx:31
+msgid "settings.appearance.colorScheme"
+msgstr "Esquema de cores"
+
+#. js-lingui-explicit-id
+#: src/components/settings-dialog.tsx:89
+msgid "settings.appearance.description"
+msgstr "Esquema de cores e paleta usados no painel."
 
 #. js-lingui-explicit-id
 #: src/routes/_app/allocation.index.tsx:454
@@ -665,6 +715,7 @@ msgid "daily.title"
 msgstr "Acompanhamento diário"
 
 #. js-lingui-explicit-id
+#: src/components/settings-appearance.tsx:54
 #: src/components/theme-switcher.tsx:60
 #: src/components/user-menu.tsx:211
 msgid "theme.dark"
@@ -689,6 +740,11 @@ msgstr "Variação no dia"
 #: src/routes/_app/dividends.tsx:625
 msgid "dividends.declarationDate"
 msgstr "Declaração"
+
+#. js-lingui-explicit-id
+#: src/components/settings-appearance.tsx:104
+msgid "settings.appearance.themeDefault"
+msgstr "Padrão"
 
 #. js-lingui-explicit-id
 #: src/routes/_app/detailed-positions.tsx:237
@@ -720,12 +776,12 @@ msgid "allocation.reasonGap"
 msgstr "Meta ajustada pelo desconto {0} contra {1} em carteira, vezes {2} de qualidade."
 
 #. js-lingui-explicit-id
-#: src/components/settings-dialog.tsx:91
+#: src/components/settings-dialog.tsx:209
 msgid "positions.displayCurrency"
 msgstr "Moeda de exibição"
 
 #. js-lingui-explicit-id
-#: src/components/settings-dialog.tsx:62
+#: src/components/settings-dialog.tsx:93
 msgid "settings.description"
 msgstr "Moeda de exibição, fonte de câmbio e fonte de cotações usadas para consolidar a carteira."
 
@@ -805,7 +861,7 @@ msgid "dividends.exDate"
 msgstr "Data-ex"
 
 #. js-lingui-explicit-id
-#: src/components/settings-dialog.tsx:112
+#: src/components/settings-dialog.tsx:233
 msgid "positions.fxSource"
 msgstr "Fonte da cotação"
 
@@ -859,7 +915,7 @@ msgid "daily.subtitle"
 msgstr "Acompanhe a última movimentação diária do patrimônio e veja quais ativos estão impulsionando a variação."
 
 #. js-lingui-explicit-id
-#: src/components/settings-dialog.tsx:202
+#: src/components/settings-dialog.tsx:334
 msgid "positions.quoteSourceHint"
 msgstr "Cotações gratuitas com atraso para valor de mercado e alocação."
 
@@ -873,6 +929,11 @@ msgstr "Ordem livre"
 #: src/routes/_app/allocation.$ticker.tsx:209
 msgid "allocation.colGap"
 msgstr "Gap"
+
+#. js-lingui-explicit-id
+#: src/components/settings-dialog.tsx:187
+msgid "settings.section.general"
+msgstr "Geral"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/allocation-table.tsx:94
@@ -1011,6 +1072,7 @@ msgid "daily.quotedAt"
 msgstr "Cotações mais recentes de {asOf}."
 
 #. js-lingui-explicit-id
+#: src/components/settings-appearance.tsx:52
 #: src/components/theme-switcher.tsx:58
 #: src/components/user-menu.tsx:209
 msgid "theme.light"
@@ -1032,7 +1094,7 @@ msgid "positions.manualPrices"
 msgstr "Preços manuais"
 
 #. js-lingui-explicit-id
-#: src/components/settings-dialog.tsx:198
+#: src/components/settings-dialog.tsx:330
 msgid "positions.quoteSourceManualHint"
 msgstr "Os preços manuais são informados por ticker na página Posições."
 
@@ -1103,7 +1165,7 @@ msgid "allocation.detailChartTitle"
 msgstr "Mercado vs fair value"
 
 #. js-lingui-explicit-id
-#: src/components/settings-dialog.tsx:177
+#: src/components/settings-dialog.tsx:307
 msgid "positions.quoteSource"
 msgstr "Fonte de cotações"
 
@@ -1373,6 +1435,11 @@ msgstr "Nos últimos {months} meses."
 #: src/routes/_app/dividends.tsx:786
 msgid "dividends.pageCount"
 msgstr "Página {0} de {pageCount}"
+
+#. js-lingui-explicit-id
+#: src/components/settings-appearance.tsx:71
+msgid "settings.appearance.themesHint"
+msgstr "As paletas tingem superfícies e acentos. As cores de ganho e perda não mudam."
 
 #. js-lingui-explicit-id
 #: src/routes/login.tsx:155
@@ -1772,12 +1839,13 @@ msgid "register.description"
 msgstr "Crie uma conta para começar a acompanhar suas operações."
 
 #. js-lingui-explicit-id
-#: src/components/settings-dialog.tsx:51
+#: src/components/settings-dialog.tsx:73
 msgid "settings.open"
 msgstr "Configurações"
 
 #. js-lingui-explicit-id
-#: src/components/settings-dialog.tsx:59
+#: src/components/settings-dialog.tsx:83
+#: src/components/settings-dialog.tsx:121
 msgid "settings.title"
 msgstr "Configurações"
 
@@ -1912,6 +1980,7 @@ msgid "allocation.removeAsset"
 msgstr "Parar de acompanhar"
 
 #. js-lingui-explicit-id
+#: src/components/settings-appearance.tsx:56
 #: src/components/theme-switcher.tsx:62
 #: src/components/user-menu.tsx:213
 msgid "theme.system"
@@ -1960,6 +2029,11 @@ msgstr "A distância entre as duas linhas é o resultado em aberto: valor acima 
 #: src/components/user-menu.tsx:178
 msgid "theme.toggle"
 msgstr "Tema"
+
+#. js-lingui-explicit-id
+#: src/components/settings-appearance.tsx:68
+msgid "settings.appearance.themes"
+msgstr "Temas"
 
 #. js-lingui-explicit-id
 #: src/lib/trpcErrors.ts:24
@@ -2101,8 +2175,8 @@ msgid "assetClass.stockUs"
 msgstr "Ação EUA"
 
 #. js-lingui-explicit-id
-#: src/components/settings-dialog.tsx:134
-#: src/components/settings-dialog.tsx:148
+#: src/components/settings-dialog.tsx:258
+#: src/components/settings-dialog.tsx:275
 msgid "positions.fxRate"
 msgstr "Cotação USD/BRL"
 
