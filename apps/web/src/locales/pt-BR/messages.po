@@ -1,0 +1,432 @@
+msgid ""
+msgstr ""
+"POT-Creation-Date: 2026-09-06 00:29-0300\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @lingui/cli\n"
+"Language: pt-BR\n"
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"PO-Revision-Date: \n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"Plural-Forms: \n"
+
+#. js-lingui-explicit-id
+#: src/components/language-switcher.tsx:21
+#~ msgid "shell.language"
+#~ msgstr "Idioma"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:228
+msgid "positions.closedCount"
+msgstr "{count, plural, one {# posição encerrada} other {# posições encerradas}}"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:111
+msgid "transactions.registered"
+msgstr "{side} de {quantity} {ticker} registrada"
+
+#. js-lingui-explicit-id
+#: src/routes/login.tsx:210
+msgid "login.hasAccount"
+msgstr "Já tem uma conta?"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:221
+msgid "positions.assets"
+msgstr "Ativos"
+
+#. js-lingui-explicit-id
+#: src/routes/login.tsx:165
+msgid "login.passwordHint"
+msgstr "Pelo menos 8 caracteres"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:86
+msgid "positions.holdingsHint"
+msgstr "Preço médio e custo incluem as taxas pagas em cada compra."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:112
+msgid "positions.colAvgPrice"
+msgstr "Preço médio"
+
+#. js-lingui-explicit-id
+#: src/components/asset-labels.tsx:23
+msgid "assetClass.bdr"
+msgstr "BDR"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:354
+msgid "transactions.notesDescription"
+msgstr "Corretora, estratégia ou qualquer coisa que valha lembrar."
+
+#. js-lingui-explicit-id
+#: src/components/asset-labels.tsx:7
+#: src/routes/_app/transactions.tsx:105
+msgid "side.buy"
+msgstr "Compra"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:106
+msgid "positions.colClass"
+msgstr "Classe"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:228
+msgid "transactions.class"
+msgstr "Classe"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:136
+msgid "positions.closed"
+msgstr "Encerrada"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:53
+msgid "positions.subtitle"
+msgstr "Consolidado por ticker usando o custo médio de todas as operações registradas."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:192
+msgid "positions.investedCostHint"
+msgstr "Custo de tudo que você ainda detém."
+
+#. js-lingui-explicit-id
+#: src/lib/trpcErrors.ts:49
+msgid "error.loadFailed"
+msgstr "Não foi possível carregar os dados. Tente novamente."
+
+#. js-lingui-explicit-id
+#: src/routes/login.tsx:105
+msgid "register.title"
+msgstr "Criar conta"
+
+#. js-lingui-explicit-id
+#: src/routes/login.tsx:198
+msgid "register.cta"
+msgstr "Criar conta"
+
+#. js-lingui-explicit-id
+#: src/routes/login.tsx:219
+msgid "login.switchToRegister"
+msgstr "Crie uma"
+
+#. js-lingui-explicit-id
+#: src/components/asset-labels.tsx:25
+msgid "assetClass.crypto"
+msgstr "Cripto"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:441
+msgid "transactions.colDate"
+msgstr "Data"
+
+#. js-lingui-explicit-id
+#: src/routes/login.tsx:208
+msgid "login.noAccount"
+msgstr "Ainda não tem uma conta?"
+
+#. js-lingui-explicit-id
+#: src/routes/login.tsx:133
+msgid "login.email"
+msgstr "E-mail"
+
+#. js-lingui-explicit-id
+#: src/components/asset-labels.tsx:21
+msgid "assetClass.etf"
+msgstr "ETF"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:302
+msgid "transactions.fees"
+msgstr "Taxas"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:456
+msgid "transactions.colFees"
+msgstr "Taxas"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:158
+msgid "transactions.feesHint"
+msgstr "Taxas somam em uma compra e subtraem em uma venda."
+
+#. js-lingui-explicit-id
+#: src/components/asset-labels.tsx:27
+msgid "assetClass.fixedIncome"
+msgstr "Renda fixa"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:384
+msgid "transactions.history"
+msgstr "Histórico"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:83
+msgid "positions.holdings"
+msgstr "Posições"
+
+#. js-lingui-explicit-id
+#: src/lib/trpcErrors.ts:19
+msgid "auth.invalidCredentials"
+msgstr "E-mail ou senha inválidos."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:115
+msgid "positions.colInvested"
+msgstr "Investido"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:185
+msgid "positions.investedCost"
+msgstr "Custo investido"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:121
+msgid "positions.colLastTrade"
+msgstr "Última operação"
+
+#. js-lingui-explicit-id
+#: src/routes/_app.tsx:71
+msgid "nav.main"
+msgstr "Principal"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:387
+msgid "transactions.historyHint"
+msgstr "Operações mais recentes primeiro."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:155
+msgid "transactions.newTrade"
+msgstr "Nova operação"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:94
+msgid "positions.empty"
+msgstr "Sem posições ainda. Registre sua primeira operação para vê-la aqui."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:339
+msgid "transactions.notes"
+msgstr "Notas"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:403
+msgid "transactions.empty"
+msgstr "Nada registrado ainda."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:344
+msgid "transactions.notesHint"
+msgstr "Opcional"
+
+#. js-lingui-explicit-id
+#: src/components/asset-labels.tsx:29
+msgid "assetClass.other"
+msgstr "Outro"
+
+#. js-lingui-explicit-id
+#: src/routes/login.tsx:154
+msgid "login.password"
+msgstr "Senha"
+
+#. js-lingui-explicit-id
+#: src/routes/_app.tsx:66
+#: src/routes/login.tsx:95
+msgid "shell.brand"
+msgstr "Portfolio Tracker"
+
+#. js-lingui-explicit-id
+#: src/routes/_app.tsx:41
+msgid "nav.positions"
+msgstr "Posições"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:50
+msgid "positions.title"
+msgstr "Posições"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:453
+msgid "transactions.colPrice"
+msgstr "Preço"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:109
+msgid "positions.colQuantity"
+msgstr "Quantidade"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:260
+msgid "transactions.quantity"
+msgstr "Quantidade"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:450
+msgid "transactions.colQuantity"
+msgstr "Quantidade"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:118
+msgid "positions.colRealized"
+msgstr "P&L realizado"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:201
+msgid "positions.realizedPnl"
+msgstr "P&L realizado"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:61
+msgid "positions.registerTrade"
+msgstr "Registrar operação"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:144
+msgid "transactions.subtitle"
+msgstr "Registre cada compra e venda. As posições são consolidadas deste histórico."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:374
+msgid "transactions.register"
+msgstr "Registrar operação"
+
+#. js-lingui-explicit-id
+#: src/components/asset-labels.tsx:19
+msgid "assetClass.reit"
+msgstr "FII"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:468
+msgid "transactions.remove"
+msgstr "Remover operação {ticker} de {date}"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:212
+msgid "positions.realizedPnlHint"
+msgstr "Resultado já garantido pelas suas vendas."
+
+#. js-lingui-explicit-id
+#: src/components/asset-labels.tsx:10
+#: src/routes/_app/transactions.tsx:106
+msgid "side.sell"
+msgstr "Venda"
+
+#. js-lingui-explicit-id
+#: src/routes/login.tsx:114
+msgid "register.description"
+msgstr "Crie uma conta para começar a acompanhar suas operações."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:198
+msgid "transactions.side"
+msgstr "Tipo"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:447
+msgid "transactions.colSide"
+msgstr "Tipo"
+
+#. js-lingui-explicit-id
+#: src/routes/login.tsx:103
+msgid "login.title"
+msgstr "Entrar"
+
+#. js-lingui-explicit-id
+#: src/routes/login.tsx:196
+msgid "login.cta"
+msgstr "Entrar"
+
+#. js-lingui-explicit-id
+#: src/routes/login.tsx:221
+msgid "login.switchToLogin"
+msgstr "Entrar"
+
+#. js-lingui-explicit-id
+#: src/routes/_app.tsx:102
+msgid "shell.signOut"
+msgstr "Sair"
+
+#. js-lingui-explicit-id
+#: src/lib/trpcErrors.ts:34
+msgid "error.unknown"
+msgstr "Algo deu errado. Tente novamente."
+
+#. js-lingui-explicit-id
+#: src/components/asset-labels.tsx:17
+msgid "assetClass.stock"
+msgstr "Ação"
+
+#. js-lingui-explicit-id
+#: src/lib/trpcErrors.ts:24
+msgid "auth.emailRegistered"
+msgstr "Este e-mail já está registrado."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:103
+msgid "positions.colTicker"
+msgstr "Ticker"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:176
+msgid "transactions.ticker"
+msgstr "Ticker"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:444
+msgid "transactions.colTicker"
+msgstr "Ticker"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:459
+msgid "transactions.colTotal"
+msgstr "Total"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:322
+msgid "transactions.tradeDate"
+msgstr "Data da operação"
+
+#. js-lingui-explicit-id
+#: src/lib/trpcErrors.ts:44
+msgid "transactions.notFound"
+msgstr "Operação não encontrada."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:126
+msgid "transactions.removed"
+msgstr "Operação removida"
+
+#. js-lingui-explicit-id
+#: src/routes/_app.tsx:44
+msgid "nav.transactions"
+msgstr "Operações"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:141
+msgid "transactions.title"
+msgstr "Operações"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:280
+msgid "transactions.unitPrice"
+msgstr "Preço unitário"
+
+#. js-lingui-explicit-id
+#: src/routes/login.tsx:110
+msgid "login.description"
+msgstr "Use seu e-mail e senha para abrir seu portfólio."
+
+#. js-lingui-explicit-id
+#: src/lib/trpcErrors.ts:39
+msgid "transactions.holdingsShort"
+msgstr "Você não detém o suficiente deste ticker para vender."
+
+#. js-lingui-explicit-id
+#: src/lib/trpcErrors.ts:29
+msgid "error.sessionExpired"
+msgstr "Sua sessão expirou. Entre novamente."

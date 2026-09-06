@@ -1,9 +1,10 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { msg, t } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react";
+import { Trans } from "@lingui/react/macro";
 import {
-  ASSET_CLASS_LABELS,
   ASSET_CLASSES,
   createTransactionInput,
-  TRANSACTION_SIDE_LABELS,
   TRANSACTION_SIDES,
   type Transaction,
 } from "@portifolio-tracker/shared";
@@ -12,6 +13,7 @@ import { Loader2, Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import type { z } from "zod";
+import { AssetClassLabel, SideLabel } from "@/components/asset-labels";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -49,6 +51,11 @@ import {
 } from "@/components/ui/table";
 import { trpc } from "@/lib/api";
 import { formatMoney, formatQuantity, formatTradeDate } from "@/lib/format";
+import {
+  createTradeErrorMessage,
+  queryErrorMessage,
+  removeTradeErrorMessage,
+} from "@/lib/trpcErrors";
 
 export const Route = createFileRoute("/_app/transactions")({
   component: TransactionsPage,
@@ -75,6 +82,7 @@ const emptyForm = (): FormValues => ({
 });
 
 function TransactionsPage() {
+  const { i18n } = useLingui();
   const utils = trpc.useUtils();
   const list = trpc.transactions.list.useQuery();
 
@@ -92,38 +100,64 @@ function TransactionsPage() {
 
   const create = trpc.transactions.create.useMutation({
     onSuccess: async (transaction) => {
+      const side =
+        transaction.side === "buy"
+          ? i18n._(msg({ id: "side.buy", message: "Buy" }))
+          : i18n._(msg({ id: "side.sell", message: "Sell" }));
+      const quantity = formatQuantity(transaction.quantity);
+      const ticker = transaction.ticker;
+
       toast.success(
-        `${TRANSACTION_SIDE_LABELS[transaction.side]} of ${formatQuantity(transaction.quantity)} ${transaction.ticker} registered`,
+        t({
+          id: "transactions.registered",
+          message: `${side} of ${quantity} ${ticker} registered`,
+        }),
       );
       form.reset({ ...emptyForm(), tradedAt: transaction.tradedAt });
       await refresh();
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => toast.error(createTradeErrorMessage(error)),
   });
 
   const remove = trpc.transactions.remove.useMutation({
     onSuccess: async () => {
-      toast.success("Transaction removed");
+      toast.success(
+        i18n._(
+          msg({
+            id: "transactions.removed",
+            message: "Transaction removed",
+          }),
+        ),
+      );
       await refresh();
     },
-    onError: (error) => toast.error(error.message),
+    onError: (error) => toast.error(removeTradeErrorMessage(error)),
   });
 
   return (
     <div className="space-y-6">
       <header>
-        <h1 className="text-2xl font-semibold tracking-tight">Transactions</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          <Trans id="transactions.title">Transactions</Trans>
+        </h1>
         <p className="text-sm text-muted-foreground">
-          Register every buy and sell. Positions are consolidated from this log.
+          <Trans id="transactions.subtitle">
+            Register every buy and sell. Positions are consolidated from this
+            log.
+          </Trans>
         </p>
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
         <Card className="h-fit">
           <CardHeader>
-            <CardTitle>New trade</CardTitle>
+            <CardTitle>
+              <Trans id="transactions.newTrade">New trade</Trans>
+            </CardTitle>
             <CardDescription>
-              Fees are added to a buy and subtracted from a sell.
+              <Trans id="transactions.feesHint">
+                Fees are added to a buy and subtracted from a sell.
+              </Trans>
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -138,7 +172,9 @@ function TransactionsPage() {
                   name="ticker"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Ticker</FormLabel>
+                      <FormLabel>
+                        <Trans id="transactions.ticker">Ticker</Trans>
+                      </FormLabel>
                       <FormControl>
                         <Input
                           placeholder="PETR4"
@@ -158,7 +194,9 @@ function TransactionsPage() {
                     name="side"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Side</FormLabel>
+                        <FormLabel>
+                          <Trans id="transactions.side">Side</Trans>
+                        </FormLabel>
                         <Select
                           value={field.value}
                           onValueChange={field.onChange}
@@ -171,7 +209,7 @@ function TransactionsPage() {
                           <SelectContent>
                             {TRANSACTION_SIDES.map((side) => (
                               <SelectItem key={side} value={side}>
-                                {TRANSACTION_SIDE_LABELS[side]}
+                                <SideLabel side={side} />
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -186,7 +224,9 @@ function TransactionsPage() {
                     name="assetClass"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Class</FormLabel>
+                        <FormLabel>
+                          <Trans id="transactions.class">Class</Trans>
+                        </FormLabel>
                         <Select
                           value={field.value}
                           onValueChange={field.onChange}
@@ -199,7 +239,7 @@ function TransactionsPage() {
                           <SelectContent>
                             {ASSET_CLASSES.map((assetClass) => (
                               <SelectItem key={assetClass} value={assetClass}>
-                                {ASSET_CLASS_LABELS[assetClass]}
+                                <AssetClassLabel assetClass={assetClass} />
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -216,7 +256,9 @@ function TransactionsPage() {
                     name="quantity"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Quantity</FormLabel>
+                        <FormLabel>
+                          <Trans id="transactions.quantity">Quantity</Trans>
+                        </FormLabel>
                         <FormControl>
                           <Input
                             inputMode="decimal"
@@ -234,7 +276,9 @@ function TransactionsPage() {
                     name="price"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Unit price</FormLabel>
+                        <FormLabel>
+                          <Trans id="transactions.unitPrice">Unit price</Trans>
+                        </FormLabel>
                         <FormControl>
                           <Input
                             inputMode="decimal"
@@ -254,7 +298,9 @@ function TransactionsPage() {
                     name="fees"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Fees</FormLabel>
+                        <FormLabel>
+                          <Trans id="transactions.fees">Fees</Trans>
+                        </FormLabel>
                         <FormControl>
                           <Input
                             inputMode="decimal"
@@ -272,7 +318,9 @@ function TransactionsPage() {
                     name="tradedAt"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Trade date</FormLabel>
+                        <FormLabel>
+                          <Trans id="transactions.tradeDate">Trade date</Trans>
+                        </FormLabel>
                         <FormControl>
                           <Input type="date" {...field} />
                         </FormControl>
@@ -287,16 +335,25 @@ function TransactionsPage() {
                   name="notes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Notes</FormLabel>
+                      <FormLabel>
+                        <Trans id="transactions.notes">Notes</Trans>
+                      </FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="Optional"
+                          placeholder={i18n._(
+                            msg({
+                              id: "transactions.notesHint",
+                              message: "Optional",
+                            }),
+                          )}
                           {...field}
                           value={field.value ?? ""}
                         />
                       </FormControl>
                       <FormDescription>
-                        Broker, strategy or anything worth remembering.
+                        <Trans id="transactions.notesDescription">
+                          Broker, strategy or anything worth remembering.
+                        </Trans>
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -314,7 +371,7 @@ function TransactionsPage() {
                       aria-hidden="true"
                     />
                   ) : null}
-                  Register trade
+                  <Trans id="transactions.register">Register trade</Trans>
                 </Button>
               </form>
             </Form>
@@ -323,21 +380,27 @@ function TransactionsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>History</CardTitle>
-            <CardDescription>Most recent trades first.</CardDescription>
+            <CardTitle>
+              <Trans id="transactions.history">History</Trans>
+            </CardTitle>
+            <CardDescription>
+              <Trans id="transactions.historyHint">
+                Most recent trades first.
+              </Trans>
+            </CardDescription>
           </CardHeader>
           <CardContent>
             {list.isPending ? <Skeleton className="h-64" /> : null}
 
             {list.error ? (
               <p className="py-6 text-sm text-destructive">
-                {list.error.message}
+                {queryErrorMessage(list.error)}
               </p>
             ) : null}
 
             {list.data?.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground">
-                Nothing registered yet.
+                <Trans id="transactions.empty">Nothing registered yet.</Trans>
               </p>
             ) : null}
 
@@ -366,72 +429,99 @@ function HistoryTable({
   onRemove,
   removingId,
 }: HistoryTableProps) {
+  // Subscribes this table to locale changes; amounts and dates below are
+  // rendered with `Intl` using the active locale.
+  useLingui();
+
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Date</TableHead>
-          <TableHead>Ticker</TableHead>
-          <TableHead>Side</TableHead>
-          <TableHead className="text-right">Quantity</TableHead>
-          <TableHead className="text-right">Price</TableHead>
-          <TableHead className="text-right">Fees</TableHead>
-          <TableHead className="text-right">Total</TableHead>
+          <TableHead>
+            <Trans id="transactions.colDate">Date</Trans>
+          </TableHead>
+          <TableHead>
+            <Trans id="transactions.colTicker">Ticker</Trans>
+          </TableHead>
+          <TableHead>
+            <Trans id="transactions.colSide">Side</Trans>
+          </TableHead>
+          <TableHead className="text-right">
+            <Trans id="transactions.colQuantity">Quantity</Trans>
+          </TableHead>
+          <TableHead className="text-right">
+            <Trans id="transactions.colPrice">Price</Trans>
+          </TableHead>
+          <TableHead className="text-right">
+            <Trans id="transactions.colFees">Fees</Trans>
+          </TableHead>
+          <TableHead className="text-right">
+            <Trans id="transactions.colTotal">Total</Trans>
+          </TableHead>
           <TableHead className="w-10" />
         </TableRow>
       </TableHeader>
       <TableBody>
-        {transactions.map((transaction) => (
-          <TableRow key={transaction.id}>
-            <TableCell className="whitespace-nowrap text-muted-foreground">
-              {formatTradeDate(transaction.tradedAt)}
-            </TableCell>
-            <TableCell className="font-medium">
-              {transaction.ticker}
-              {transaction.notes ? (
-                <span className="block text-xs font-normal text-muted-foreground">
-                  {transaction.notes}
-                </span>
-              ) : null}
-            </TableCell>
-            <TableCell>
-              <Badge
-                variant="outline"
-                className={
-                  transaction.side === "buy"
-                    ? "border-gain/40 text-gain"
-                    : "border-loss/40 text-loss"
-                }
-              >
-                {TRANSACTION_SIDE_LABELS[transaction.side]}
-              </Badge>
-            </TableCell>
-            <TableCell className="text-right tabular-nums">
-              {formatQuantity(transaction.quantity)}
-            </TableCell>
-            <TableCell className="text-right tabular-nums">
-              {formatMoney(transaction.price)}
-            </TableCell>
-            <TableCell className="text-right tabular-nums text-muted-foreground">
-              {formatMoney(transaction.fees)}
-            </TableCell>
-            <TableCell className="text-right tabular-nums">
-              {formatMoney(transaction.total)}
-            </TableCell>
-            <TableCell>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label={`Remove ${transaction.ticker} trade from ${transaction.tradedAt}`}
-                disabled={removingId === transaction.id}
-                onClick={() => onRemove(transaction.id)}
-              >
-                <Trash2 className="size-4" aria-hidden="true" />
-              </Button>
-            </TableCell>
-          </TableRow>
-        ))}
+        {transactions.map((transaction) => {
+          const ticker = transaction.ticker;
+          const date = transaction.tradedAt;
+          const removeLabel = t({
+            id: "transactions.remove",
+            message: `Remove ${ticker} trade from ${date}`,
+          });
+
+          return (
+            <TableRow key={transaction.id}>
+              <TableCell className="whitespace-nowrap text-muted-foreground">
+                {formatTradeDate(transaction.tradedAt)}
+              </TableCell>
+              <TableCell className="font-medium">
+                {transaction.ticker}
+                {transaction.notes ? (
+                  <span className="block text-xs font-normal text-muted-foreground">
+                    {transaction.notes}
+                  </span>
+                ) : null}
+              </TableCell>
+              <TableCell>
+                <Badge
+                  variant="outline"
+                  className={
+                    transaction.side === "buy"
+                      ? "border-gain/40 text-gain"
+                      : "border-loss/40 text-loss"
+                  }
+                >
+                  <SideLabel side={transaction.side} />
+                </Badge>
+              </TableCell>
+              <TableCell className="text-right tabular-nums">
+                {formatQuantity(transaction.quantity)}
+              </TableCell>
+              <TableCell className="text-right tabular-nums">
+                {formatMoney(transaction.price)}
+              </TableCell>
+              <TableCell className="text-right tabular-nums text-muted-foreground">
+                {formatMoney(transaction.fees)}
+              </TableCell>
+              <TableCell className="text-right tabular-nums">
+                {formatMoney(transaction.total)}
+              </TableCell>
+              <TableCell>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={removeLabel}
+                  disabled={removingId === transaction.id}
+                  onClick={() => onRemove(transaction.id)}
+                >
+                  <Trash2 className="size-4" aria-hidden="true" />
+                </Button>
+              </TableCell>
+            </TableRow>
+          );
+        })}
       </TableBody>
     </Table>
   );

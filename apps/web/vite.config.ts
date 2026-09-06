@@ -1,5 +1,7 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { lingui, linguiTransformerBabelPreset } from "@lingui/vite-plugin";
+import babel from "@rolldown/plugin-babel";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
@@ -14,6 +16,8 @@ export default defineConfig({
       autoCodeSplitting: true,
     }),
     react(),
+    lingui(),
+    babel({ presets: [linguiTransformerBabelPreset()] }),
     tailwindcss(),
   ],
   resolve: {

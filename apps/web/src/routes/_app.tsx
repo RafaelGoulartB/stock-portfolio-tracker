@@ -1,3 +1,6 @@
+import { msg } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react";
+import { Trans } from "@lingui/react/macro";
 import {
   createFileRoute,
   Link,
@@ -6,6 +9,7 @@ import {
   useNavigate,
 } from "@tanstack/react-router";
 import { LineChart, LogOut, PieChart, Receipt } from "lucide-react";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/api";
 import { clearSession, sessionQueryOptions } from "@/lib/session";
@@ -24,11 +28,24 @@ export const Route = createFileRoute("/_app")({
 });
 
 const NAV_ITEMS = [
-  { to: "/positions", label: "Positions", icon: PieChart },
-  { to: "/transactions", label: "Transactions", icon: Receipt },
+  { to: "/positions", labelId: "nav.positions" as const, icon: PieChart },
+  { to: "/transactions", labelId: "nav.transactions" as const, icon: Receipt },
 ] as const;
 
+function NavLabel({
+  labelId,
+}: {
+  labelId: (typeof NAV_ITEMS)[number]["labelId"];
+}) {
+  if (labelId === "nav.positions") {
+    return <Trans id="nav.positions">Positions</Trans>;
+  }
+
+  return <Trans id="nav.transactions">Transactions</Trans>;
+}
+
 function AppLayout() {
+  const { i18n } = useLingui();
   const { user } = Route.useRouteContext();
   const navigate = useNavigate();
 
@@ -46,11 +63,14 @@ function AppLayout() {
           <Link to="/positions" className="flex items-center gap-2">
             <LineChart className="size-5" aria-hidden="true" />
             <span className="font-semibold tracking-tight">
-              Portfolio Tracker
+              <Trans id="shell.brand">Portfolio Tracker</Trans>
             </span>
           </Link>
 
-          <nav aria-label="Main" className="flex items-center gap-1">
+          <nav
+            aria-label={i18n._(msg({ id: "nav.main", message: "Main" }))}
+            className="flex items-center gap-1"
+          >
             {NAV_ITEMS.map((item) => (
               <Link
                 key={item.to}
@@ -61,7 +81,7 @@ function AppLayout() {
                 }}
               >
                 <item.icon className="size-4" aria-hidden="true" />
-                {item.label}
+                <NavLabel labelId={item.labelId} />
               </Link>
             ))}
           </nav>
@@ -70,6 +90,7 @@ function AppLayout() {
             <span className="hidden text-sm text-muted-foreground sm:inline">
               {user.email}
             </span>
+            <LanguageSwitcher />
             <Button
               type="button"
               variant="outline"
@@ -78,7 +99,7 @@ function AppLayout() {
               disabled={logout.isPending}
             >
               <LogOut className="size-4" aria-hidden="true" />
-              Sign out
+              <Trans id="shell.signOut">Sign out</Trans>
             </Button>
           </div>
         </div>

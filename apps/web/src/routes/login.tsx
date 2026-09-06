@@ -1,10 +1,14 @@
 import { zodResolver } from "@hookform/resolvers/zod";
+import { msg } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react";
+import { Trans } from "@lingui/react/macro";
 import { credentialsSchema } from "@portifolio-tracker/shared";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { LineChart, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +29,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/api";
 import { sessionQueryOptions, setSession } from "@/lib/session";
+import { authErrorMessage } from "@/lib/trpcErrors";
 
 export const Route = createFileRoute("/login")({
   beforeLoad: async ({ context }) => {
@@ -40,21 +45,8 @@ export const Route = createFileRoute("/login")({
 type Mode = "login" | "register";
 type FormValues = z.input<typeof credentialsSchema>;
 
-const COPY: Record<Mode, { title: string; description: string; cta: string }> =
-  {
-    login: {
-      title: "Sign in",
-      description: "Use your email and password to open your portfolio.",
-      cta: "Sign in",
-    },
-    register: {
-      title: "Create account",
-      description: "Set up an account to start tracking your trades.",
-      cta: "Create account",
-    },
-  };
-
 function LoginPage() {
+  const { i18n } = useLingui();
   const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>("login");
   const [error, setError] = useState<string | null>(null);
@@ -71,16 +63,17 @@ function LoginPage() {
 
   const login = trpc.auth.login.useMutation({
     onSuccess: onAuthenticated,
-    onError: (mutationError) => setError(mutationError.message),
+    onError: (mutationError) =>
+      setError(authErrorMessage(mutationError, "login")),
   });
 
   const register = trpc.auth.register.useMutation({
     onSuccess: onAuthenticated,
-    onError: (mutationError) => setError(mutationError.message),
+    onError: (mutationError) =>
+      setError(authErrorMessage(mutationError, "register")),
   });
 
   const active = mode === "login" ? login : register;
-  const copy = COPY[mode];
 
   function switchMode() {
     setMode((current) => (current === "login" ? "register" : "login"));
@@ -99,14 +92,30 @@ function LoginPage() {
         <div className="flex items-center justify-center gap-2">
           <LineChart className="size-6" aria-hidden="true" />
           <span className="text-lg font-semibold tracking-tight">
-            Portfolio Tracker
+            <Trans id="shell.brand">Portfolio Tracker</Trans>
           </span>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>{copy.title}</CardTitle>
-            <CardDescription>{copy.description}</CardDescription>
+            <CardTitle>
+              {mode === "login" ? (
+                <Trans id="login.title">Sign in</Trans>
+              ) : (
+                <Trans id="register.title">Create account</Trans>
+              )}
+            </CardTitle>
+            <CardDescription>
+              {mode === "login" ? (
+                <Trans id="login.description">
+                  Use your email and password to open your portfolio.
+                </Trans>
+              ) : (
+                <Trans id="register.description">
+                  Set up an account to start tracking your trades.
+                </Trans>
+              )}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...form}>
@@ -120,7 +129,9 @@ function LoginPage() {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel>
+                        <Trans id="login.email">Email</Trans>
+                      </FormLabel>
                       <FormControl>
                         <Input
                           type="email"
@@ -139,7 +150,9 @@ function LoginPage() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Password</FormLabel>
+                      <FormLabel>
+                        <Trans id="login.password">Password</Trans>
+                      </FormLabel>
                       <FormControl>
                         <Input
                           type="password"
@@ -148,7 +161,12 @@ function LoginPage() {
                               ? "current-password"
                               : "new-password"
                           }
-                          placeholder="At least 8 characters"
+                          placeholder={i18n._(
+                            msg({
+                              id: "login.passwordHint",
+                              message: "At least 8 characters",
+                            }),
+                          )}
                           {...field}
                         />
                       </FormControl>
@@ -174,7 +192,11 @@ function LoginPage() {
                       aria-hidden="true"
                     />
                   ) : null}
-                  {copy.cta}
+                  {mode === "login" ? (
+                    <Trans id="login.cta">Sign in</Trans>
+                  ) : (
+                    <Trans id="register.cta">Create account</Trans>
+                  )}
                 </Button>
               </form>
             </Form>
@@ -182,18 +204,28 @@ function LoginPage() {
         </Card>
 
         <p className="text-center text-sm text-muted-foreground">
-          {mode === "login"
-            ? "Don't have an account yet?"
-            : "Already have an account?"}{" "}
+          {mode === "login" ? (
+            <Trans id="login.noAccount">Don&apos;t have an account yet?</Trans>
+          ) : (
+            <Trans id="login.hasAccount">Already have an account?</Trans>
+          )}{" "}
           <Button
             type="button"
             variant="link"
             className="h-auto p-0"
             onClick={switchMode}
           >
-            {mode === "login" ? "Create one" : "Sign in"}
+            {mode === "login" ? (
+              <Trans id="login.switchToRegister">Create one</Trans>
+            ) : (
+              <Trans id="login.switchToLogin">Sign in</Trans>
+            )}
           </Button>
         </p>
+
+        <div className="flex justify-center">
+          <LanguageSwitcher />
+        </div>
       </div>
     </main>
   );

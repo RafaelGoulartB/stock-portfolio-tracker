@@ -1,6 +1,7 @@
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { activateLocale, detectInitialLocale } from "./i18n";
 import { queryClient } from "./lib/api";
 import { routeTree } from "./routeTree.gen";
 import "./styles/globals.css";
@@ -22,6 +23,10 @@ const rootEl = document.getElementById("root");
 if (!rootEl) {
   throw new Error("Root element not found");
 }
+
+// Load the persisted locale (browser language is a first-visit hint only)
+// before the first paint so no untranslated copy flashes.
+await activateLocale(detectInitialLocale());
 
 createRoot(rootEl).render(
   <StrictMode>
