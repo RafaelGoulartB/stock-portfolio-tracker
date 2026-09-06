@@ -9,6 +9,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -223,8 +224,9 @@ function LoginPage() {
           </Button>
         </p>
 
-        <div className="flex justify-center">
+        <div className="flex items-center justify-center gap-2">
           <LanguageSwitcher />
+          <ThemeSwitcher />
         </div>
       </div>
     </main>

@@ -10,6 +10,7 @@ import {
 } from "@tanstack/react-router";
 import { LineChart, LogOut, PieChart, Receipt } from "lucide-react";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/api";
 import { clearSession, sessionQueryOptions } from "@/lib/session";
@@ -91,6 +92,7 @@ function AppLayout() {
               {user.email}
             </span>
             <LanguageSwitcher />
+            <ThemeSwitcher />
             <Button
               type="button"
               variant="outline"

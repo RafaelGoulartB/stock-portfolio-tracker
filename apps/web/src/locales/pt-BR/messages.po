@@ -14,11 +14,6 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
-#: src/components/language-switcher.tsx:21
-#~ msgid "shell.language"
-#~ msgstr "Idioma"
-
-#. js-lingui-explicit-id
 #: src/routes/_app/positions.tsx:228
 msgid "positions.closedCount"
 msgstr "{count, plural, one {# posição encerrada} other {# posições encerradas}}"
@@ -29,7 +24,7 @@ msgid "transactions.registered"
 msgstr "{side} de {quantity} {ticker} registrada"
 
 #. js-lingui-explicit-id
-#: src/routes/login.tsx:210
+#: src/routes/login.tsx:211
 msgid "login.hasAccount"
 msgstr "Já tem uma conta?"
 
@@ -39,7 +34,7 @@ msgid "positions.assets"
 msgstr "Ativos"
 
 #. js-lingui-explicit-id
-#: src/routes/login.tsx:165
+#: src/routes/login.tsx:166
 msgid "login.passwordHint"
 msgstr "Pelo menos 8 caracteres"
 
@@ -100,17 +95,17 @@ msgid "error.loadFailed"
 msgstr "Não foi possível carregar os dados. Tente novamente."
 
 #. js-lingui-explicit-id
-#: src/routes/login.tsx:105
+#: src/routes/login.tsx:106
 msgid "register.title"
 msgstr "Criar conta"
 
 #. js-lingui-explicit-id
-#: src/routes/login.tsx:198
+#: src/routes/login.tsx:199
 msgid "register.cta"
 msgstr "Criar conta"
 
 #. js-lingui-explicit-id
-#: src/routes/login.tsx:219
+#: src/routes/login.tsx:220
 msgid "login.switchToRegister"
 msgstr "Crie uma"
 
@@ -120,17 +115,22 @@ msgid "assetClass.crypto"
 msgstr "Cripto"
 
 #. js-lingui-explicit-id
+#: src/components/theme-switcher.tsx:60
+msgid "theme.dark"
+msgstr "Escuro"
+
+#. js-lingui-explicit-id
 #: src/routes/_app/transactions.tsx:441
 msgid "transactions.colDate"
 msgstr "Data"
 
 #. js-lingui-explicit-id
-#: src/routes/login.tsx:208
+#: src/routes/login.tsx:209
 msgid "login.noAccount"
 msgstr "Ainda não tem uma conta?"
 
 #. js-lingui-explicit-id
-#: src/routes/login.tsx:133
+#: src/routes/login.tsx:134
 msgid "login.email"
 msgstr "E-mail"
 
@@ -185,12 +185,23 @@ msgid "positions.investedCost"
 msgstr "Custo investido"
 
 #. js-lingui-explicit-id
+#: src/components/language-switcher.tsx:32
+#: src/components/language-switcher.tsx:36
+msgid "shell.language"
+msgstr "Idioma"
+
+#. js-lingui-explicit-id
 #: src/routes/_app/positions.tsx:121
 msgid "positions.colLastTrade"
 msgstr "Última operação"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:71
+#: src/components/theme-switcher.tsx:58
+msgid "theme.light"
+msgstr "Claro"
+
+#. js-lingui-explicit-id
+#: src/routes/_app.tsx:72
 msgid "nav.main"
 msgstr "Principal"
 
@@ -230,18 +241,18 @@ msgid "assetClass.other"
 msgstr "Outro"
 
 #. js-lingui-explicit-id
-#: src/routes/login.tsx:154
+#: src/routes/login.tsx:155
 msgid "login.password"
 msgstr "Senha"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:66
-#: src/routes/login.tsx:95
+#: src/routes/_app.tsx:67
+#: src/routes/login.tsx:96
 msgid "shell.brand"
 msgstr "Portfolio Tracker"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:41
+#: src/routes/_app.tsx:42
 msgid "nav.positions"
 msgstr "Posições"
 
@@ -317,7 +328,7 @@ msgid "side.sell"
 msgstr "Venda"
 
 #. js-lingui-explicit-id
-#: src/routes/login.tsx:114
+#: src/routes/login.tsx:115
 msgid "register.description"
 msgstr "Crie uma conta para começar a acompanhar suas operações."
 
@@ -332,22 +343,22 @@ msgid "transactions.colSide"
 msgstr "Tipo"
 
 #. js-lingui-explicit-id
-#: src/routes/login.tsx:103
+#: src/routes/login.tsx:104
 msgid "login.title"
 msgstr "Entrar"
 
 #. js-lingui-explicit-id
-#: src/routes/login.tsx:196
+#: src/routes/login.tsx:197
 msgid "login.cta"
 msgstr "Entrar"
 
 #. js-lingui-explicit-id
-#: src/routes/login.tsx:221
+#: src/routes/login.tsx:222
 msgid "login.switchToLogin"
 msgstr "Entrar"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:102
+#: src/routes/_app.tsx:104
 msgid "shell.signOut"
 msgstr "Sair"
 
@@ -360,6 +371,17 @@ msgstr "Algo deu errado. Tente novamente."
 #: src/components/asset-labels.tsx:17
 msgid "assetClass.stock"
 msgstr "Ação"
+
+#. js-lingui-explicit-id
+#: src/components/theme-switcher.tsx:62
+msgid "theme.system"
+msgstr "Sistema"
+
+#. js-lingui-explicit-id
+#: src/components/theme-switcher.tsx:34
+#: src/components/theme-switcher.tsx:45
+msgid "theme.toggle"
+msgstr "Tema"
 
 #. js-lingui-explicit-id
 #: src/lib/trpcErrors.ts:24
@@ -402,7 +424,7 @@ msgid "transactions.removed"
 msgstr "Operação removida"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:44
+#: src/routes/_app.tsx:45
 msgid "nav.transactions"
 msgstr "Operações"
 
@@ -417,7 +439,7 @@ msgid "transactions.unitPrice"
 msgstr "Preço unitário"
 
 #. js-lingui-explicit-id
-#: src/routes/login.tsx:110
+#: src/routes/login.tsx:111
 msgid "login.description"
 msgstr "Use seu e-mail e senha para abrir seu portfólio."
 
