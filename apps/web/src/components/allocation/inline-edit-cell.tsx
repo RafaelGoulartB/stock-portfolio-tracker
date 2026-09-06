@@ -9,6 +9,8 @@ export type InlineEditCellProps = {
   /** Announced by screen readers and used as the input label. */
   label: string;
   placeholder?: string;
+  /** Hover tooltip; defaults to `label`. */
+  title?: string;
   /** Extra classes for the idle button, e.g. a P&L tone. */
   className?: string;
   disabled?: boolean;
@@ -29,6 +31,7 @@ export function InlineEditCell({
   text,
   label,
   placeholder,
+  title,
   className,
   disabled = false,
   inputMode = "decimal",
@@ -109,7 +112,7 @@ export function InlineEditCell({
       }}
       disabled={disabled}
       aria-label={label}
-      title={label}
+      title={title ?? label}
       className={cn(
         "h-7 w-full rounded-sm px-1.5 text-right text-xs tabular-nums transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50",
         display === null && "text-muted-foreground",

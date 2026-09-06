@@ -22,6 +22,13 @@
       "when": 1788716066487,
       "tag": "0002_striped_post",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1788720271105,
+      "tag": "0003_fair_value",
+      "breakpoints": true
     }
   ]
 }

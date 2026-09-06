@@ -17,10 +17,10 @@ One dense, editable table plus a contribution planner.
 | Gap | `target - current` | — |
 | Score | score engine | — |
 | Grade | average of the newest graded quarters | — |
-| Discount | `allocation_assets.discount` | inline, signed percent |
+| Discount | `(fairValue - marketPrice) / fairValue` | — (computed) |
 | Last buy | newest **buy** in the trade log | — |
 | Shares / Value | consolidated position | — |
-| Valuation | `allocation_assets.valuation_ref` — a text pointer until the valuation screen exists | inline, text |
+| Fair value | `allocation_assets.fair_value` — per-share target from the user's valuation | inline, money |
 | `Qn YY` grid | `asset_reviews` (grade + notes per quarter) | popover per cell |
 
 Interactions:
@@ -34,7 +34,7 @@ Interactions:
   available. It defaults to the newest reviewed quarter (or the last completed
   one), because earnings lag the calendar.
 - **Watch-only assets** — "Add asset" registers a ticker with no trades. It is
-  priced like any other row and can already carry a target and a discount, so
+  priced like any other row and can already carry a target and a fair value, so
   the score ranks it against invested assets. "Stop following" removes it (and
   its reviews); an invested ticker keeps its row and only clears its metadata.
 - **Contribution planner** — an amount split proportionally to the score
@@ -105,19 +105,25 @@ turn any untargeted holding into a trim signal.
 
 ```text
 allocation_assets(user_id, ticker) unique
-  target_weight, discount numeric(22,8) nullable   -- ratios, 0.015 = 1.5%
-  valuation_ref text nullable
-  sort_order integer                                -- free-order rank
+  target_weight numeric(22,8) nullable          -- ratios, 0.015 = 1.5%
+  fair_value numeric(22,8) nullable             -- per-share valuation target
+  valuation_ref text nullable                   -- optional write-up pointer
+  sort_order integer                            -- free-order rank
 
 asset_reviews(user_id, ticker, period) unique
-  period text                                       -- 'YYYYQn', sorts by text
-  grade numeric(22,8) nullable                       -- 0-10
+  period text                                   -- 'YYYYQn', sorts by text
+  grade numeric(22,8) nullable                   -- 0-10
   notes text nullable
 ```
 
+Discount is not stored: `buildAllocationRows` computes
+`(fair_value - market_price) / fair_value` and feeds that into the score
+engine. Migration `0003_fair_value.sql` replaced the old user-entered
+`discount` column.
+
 A row in `allocation_assets` with no matching transaction *is* a watch-only
 asset — there is no separate flag. The table lists the union of open positions
-and metadata rows. Migration `0002_striped_post.sql`.
+and metadata rows.
 
 ## 4. API
 
@@ -131,5 +137,5 @@ so they carry a price with no position to value.
 
 ## 5. Not in scope here
 
-The valuation screen behind the `Valuation` column, and a per-user override of
+A full valuation screen behind the fair value, and a per-user override of
 the score config (the config ships as constants for now).

@@ -168,7 +168,7 @@ export function ContributionPlanner({
             {candidates === 0 ? (
               <Trans id="allocation.plannerNoCandidates">
                 No asset is taking contributions right now. Set a target, review
-                a discount, or wait for a cooldown to expire.
+                a fair value, or wait for a cooldown to expire.
               </Trans>
             ) : (
               <Trans id="allocation.plannerAwaitingAmount">

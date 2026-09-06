@@ -8,7 +8,14 @@ import type {
   ValuedPosition,
 } from "@portifolio-tracker/shared";
 import { DEFAULT_SCORE_CONFIG } from "@portifolio-tracker/shared";
-import { add, formatDecimal, sub, toDecimal, ZERO } from "../lib/decimal";
+import {
+  add,
+  div,
+  formatDecimal,
+  sub,
+  toDecimal,
+  ZERO,
+} from "../lib/decimal";
 import { type ConsolidationInput, convertMoney } from "./positions";
 import { averageGrade, scoreAsset } from "./score";
 
@@ -18,7 +25,7 @@ export type AllocationAssetMeta = {
   assetClass: AssetClass;
   currency: Currency;
   targetWeight: string | null;
-  discount: string | null;
+  fairValue: string | null;
   valuationRef: string | null;
   sortOrder: number;
 };
@@ -35,6 +42,32 @@ const MONEY_PLACES = 2;
  * free-order mode, so it trails the rows the user placed by hand.
  */
 const UNRANKED = 1_000_000;
+
+/**
+ * Signed discount of the market price to the user's fair value:
+ * `(fairValue - marketPrice) / fairValue`. Positive means the stock trades
+ * below the valuation; negative means it trades above. Null when either side
+ * is missing — the score engine then treats the discount as zero.
+ */
+export function discountFromFairValue(
+  fairValue: string | null,
+  marketPrice: string | null,
+): string | null {
+  if (fairValue === null || marketPrice === null) {
+    return null;
+  }
+
+  const fair = toDecimal(fairValue);
+
+  if (fair <= ZERO) {
+    return null;
+  }
+
+  return formatDecimal(
+    div(sub(fair, toDecimal(marketPrice)), fair),
+    WEIGHT_PLACES,
+  );
+}
 
 /**
  * Native price in the display currency. A cross-currency price with no rate
@@ -98,8 +131,8 @@ export type AllocationInput = {
 
 /**
  * Joins the three sources behind the allocation screen into one row per
- * ticker: the consolidated position, the analysis metadata (target,
- * discount, manual order) and the quarterly reviews. Every row is scored.
+ * ticker: the consolidated position, the analysis metadata (target, fair
+ * value, manual order) and the quarterly reviews. Every row is scored.
  *
  * The row set is the union of open positions and metadata rows, so an asset
  * with no money in it still shows up for research, and a target set on a
@@ -141,6 +174,8 @@ export function buildAllocationRows(input: AllocationInput): AllocationRow[] {
     const currency =
       position?.currency ?? asset?.currency ?? input.displayCurrency;
     const marketPrice = position?.marketPrice ?? watchQuote?.price ?? null;
+    const fairValue = asset?.fairValue ?? null;
+    const discount = discountFromFairValue(fairValue, marketPrice);
     // Period keys sort chronologically, so plain text order is enough.
     const reviews = (reviewsByTicker.get(ticker) ?? []).sort((a, b) =>
       a.period.localeCompare(b.period),
@@ -180,7 +215,8 @@ export function buildAllocationRows(input: AllocationInput): AllocationRow[] {
               sub(toDecimal(targetWeight), toDecimal(currentWeight)),
               WEIGHT_PLACES,
             ),
-      discount: asset?.discount ?? null,
+      fairValue,
+      discount,
       averageGrade: grades.average,
       gradedQuarters: grades.quarters,
       lastContributionAt,
@@ -191,7 +227,7 @@ export function buildAllocationRows(input: AllocationInput): AllocationRow[] {
         {
           targetWeight,
           currentWeight,
-          discount: asset?.discount ?? null,
+          discount,
           averageGrade: grades.average,
           lastContributionAt,
           today: input.today,

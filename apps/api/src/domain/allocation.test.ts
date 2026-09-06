@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   type AllocationAssetMeta,
   buildAllocationRows,
+  discountFromFairValue,
   lastContributions,
   summarizeAllocation,
 } from "./allocation";
@@ -25,8 +26,8 @@ function position(overrides: Partial<ValuedPosition> = {}): ValuedPosition {
     convertedAveragePrice: "50.00",
     convertedInvestedCost: "2500.00",
     convertedRealizedPnl: "0.00",
-    marketPrice: "12.00",
-    marketValue: "600.00",
+    marketPrice: "76.45",
+    marketValue: "3822.50",
     convertedMarketValue: "3000.00",
     unrealizedPnl: "100.00",
     convertedUnrealizedPnl: "500.00",
@@ -46,7 +47,7 @@ function asset(
     assetClass: "stock_us",
     currency: "USD",
     targetWeight: "0.015",
-    discount: "0.2355",
+    fairValue: "100",
     valuationRef: "1Q26",
     sortOrder: 1,
     ...overrides,
@@ -69,6 +70,18 @@ function trade(
     ...overrides,
   };
 }
+
+describe("discountFromFairValue", () => {
+  it("returns the signed gap of market price to fair value", () => {
+    expect(discountFromFairValue("100", "76.45")).toBe("0.23550000");
+    expect(discountFromFairValue("100", "164.49")).toBe("-0.64490000");
+  });
+
+  it("stays null without a fair value or a market price", () => {
+    expect(discountFromFairValue(null, "12")).toBeNull();
+    expect(discountFromFairValue("100", null)).toBeNull();
+  });
+});
 
 describe("lastContributions", () => {
   it("keeps the newest buy per ticker and ignores sells", () => {
@@ -105,6 +118,8 @@ describe("buildAllocationRows", () => {
       currentWeight: "0.01460000",
       targetWeight: "0.015",
       gapWeight: "0.00040000",
+      fairValue: "100",
+      discount: "0.23550000",
       averageGrade: "8.00",
       gradedQuarters: 2,
       lastContributionAt: "2026-01-10",
@@ -124,7 +139,7 @@ describe("buildAllocationRows", () => {
   it("lists watch-only assets with no position", () => {
     const rows = buildAllocationRows({
       positions: [],
-      assets: [asset({ ticker: "CAVA", targetWeight: null, discount: null })],
+      assets: [asset({ ticker: "CAVA", targetWeight: null, fairValue: null })],
       reviews: [],
       lastContributionByTicker: new Map(),
       displayCurrency: "BRL",
@@ -138,6 +153,7 @@ describe("buildAllocationRows", () => {
       quantity: "0",
       marketValue: null,
       currentWeight: "0.00000000",
+      discount: null,
     });
     expect(rows[0]?.score.ruleId).toBe("no-target");
   });
@@ -178,6 +194,7 @@ describe("buildAllocationRows", () => {
 
     expect(row?.currentWeight).toBe("0.00000000");
     expect(row?.quoteMissing).toBe(true);
+    expect(row?.discount).toBeNull();
   });
 
   it("sorts by the manual order and trails untracked tickers", () => {
@@ -207,15 +224,19 @@ describe("summarizeAllocation", () => {
       positions: [
         position({ ticker: "DLO", weight: "0.0146" }),
         // Overweight and expensive: a trim candidate.
-        position({ ticker: "AUGO", weight: "0.0494" }),
+        position({
+          ticker: "AUGO",
+          weight: "0.0494",
+          marketPrice: "164.49",
+        }),
         // Bought last week: blocked by the cooldown.
-        position({ ticker: "VOO", weight: "0.0372" }),
+        position({ ticker: "VOO", weight: "0.0372", marketPrice: "90" }),
       ],
       assets: [
         asset({ ticker: "DLO" }),
-        asset({ ticker: "AUGO", targetWeight: "0.035", discount: "-0.6449" }),
-        asset({ ticker: "VOO", targetWeight: "0.04", discount: "0.1" }),
-        asset({ ticker: "CAVA", targetWeight: null, discount: null }),
+        asset({ ticker: "AUGO", targetWeight: "0.035", fairValue: "100" }),
+        asset({ ticker: "VOO", targetWeight: "0.04", fairValue: "100" }),
+        asset({ ticker: "CAVA", targetWeight: null, fairValue: null }),
       ],
       reviews: [],
       lastContributionByTicker: new Map([["VOO", "2026-09-01"]]),

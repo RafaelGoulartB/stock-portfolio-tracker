@@ -60,13 +60,13 @@ export const ALLOCATION_COLUMNS = [
   "targetWeight",
   "currentWeight",
   "gapWeight",
-  "score",
-  "averageGrade",
   "discount",
+  "score",
   "lastContributionAt",
   "quantity",
   "marketValue",
-  "valuationRef",
+  "fairValue",
+  "averageGrade",
 ] as const;
 
 export type AllocationColumn = (typeof ALLOCATION_COLUMNS)[number];
@@ -76,7 +76,6 @@ export type AllocationSort = { id: AllocationColumn; direction: SortDirection };
 /** Columns that read better ascending on first click. */
 const ASCENDING_FIRST: AllocationColumn[] = [
   "ticker",
-  "valuationRef",
   "lastContributionAt",
 ];
 
@@ -100,8 +99,8 @@ export function columnLabels(i18n: I18n): Record<AllocationColumn, string> {
     ),
     quantity: i18n._(t({ id: "allocation.colQuantity", message: "Shares" })),
     marketValue: i18n._(t({ id: "allocation.colValue", message: "Value" })),
-    valuationRef: i18n._(
-      t({ id: "allocation.colValuation", message: "Valuation" }),
+    fairValue: i18n._(
+      t({ id: "allocation.colFairValue", message: "Fair value" }),
     ),
   };
 }
@@ -131,8 +130,8 @@ export function sortableValue(
       return Number(row.quantity);
     case "marketValue":
       return row.marketValue === null ? null : Number(row.marketValue);
-    case "valuationRef":
-      return row.valuationRef;
+    case "fairValue":
+      return row.fairValue === null ? null : Number(row.fairValue);
   }
 }
 
@@ -228,8 +227,7 @@ export type AllocationTableProps = {
   onReorder: (tickers: string[]) => void;
   /** Raw cell text; the page owns parsing and validation. */
   onEditTarget: (ticker: string, text: string) => void;
-  onEditDiscount: (ticker: string, text: string) => void;
-  onEditValuation: (ticker: string, text: string) => void;
+  onEditFairValue: (ticker: string, text: string) => void;
   onClearAnalysis: (ticker: string) => void;
   onRemoveAsset: (row: AllocationRow) => void;
   onSaveReview: (input: {
@@ -253,8 +251,7 @@ export function AllocationTable({
   freeOrder,
   onReorder,
   onEditTarget,
-  onEditDiscount,
-  onEditValuation,
+  onEditFairValue,
   onClearAnalysis,
   onRemoveAsset,
   onSaveReview,
@@ -509,6 +506,56 @@ export function AllocationTable({
                     </TableCell>
                   ) : null}
 
+                  {visibleColumns.has("discount") ? (
+                    <TableCell className="px-2 py-2">
+                      <InlineEditCell
+                        display={
+                          row.discount !== null
+                            ? formatSignedWeightPrecise(row.discount)
+                            : row.fairValue !== null
+                              ? formatMoney(row.fairValue, row.currency)
+                              : null
+                        }
+                        text={formatDecimalInput(row.fairValue, i18n.locale)}
+                        label={i18n._(
+                          t({
+                            id: "allocation.editFairValue",
+                            message: `Fair value of ${row.ticker} in ${row.currency}`,
+                          }),
+                        )}
+                        placeholder={i18n._(
+                          t({
+                            id: "allocation.fairValuePlaceholder",
+                            message: "Fair value",
+                          }),
+                        )}
+                        className={
+                          row.discount === null
+                            ? ""
+                            : pnlClassName(row.discount)
+                        }
+                        title={
+                          row.fairValue === null
+                            ? undefined
+                            : row.marketPrice === null
+                              ? i18n._(
+                                  t({
+                                    id: "allocation.discountTooltipFairOnly",
+                                    message: `Fair value ${formatMoney(row.fairValue, row.currency)}`,
+                                  }),
+                                )
+                              : i18n._(
+                                  t({
+                                    id: "allocation.discountTooltip",
+                                    message: `Market ${formatMoney(row.marketPrice, row.currency)} vs fair value ${formatMoney(row.fairValue, row.currency)}`,
+                                  }),
+                                )
+                        }
+                        onCommit={(text) => onEditFairValue(row.ticker, text)}
+                      />
+                    </TableCell>
+                  ) : null}
+
                   {visibleColumns.has("score") ? (
                     <TableCell
                       className="px-2 py-2 text-right tabular-nums"
@@ -522,50 +569,6 @@ export function AllocationTable({
                             ? scoreValue / highestScore
                             : 0
                         }
-                      />
-                    </TableCell>
-                  ) : null}
-
-                  {visibleColumns.has("averageGrade") ? (
-                    <TableCell className="px-2 py-2 text-right tabular-nums">
-                      {row.averageGrade === null ? (
-                        <span className="text-muted-foreground">—</span>
-                      ) : (
-                        <span
-                          title={i18n._(
-                            t({
-                              id: "allocation.gradeTooltip",
-                              message: `Average of ${row.gradedQuarters} graded quarters`,
-                            }),
-                          )}
-                        >
-                          {formatDecimalInput(row.averageGrade, i18n.locale)}
-                        </span>
-                      )}
-                    </TableCell>
-                  ) : null}
-
-                  {visibleColumns.has("discount") ? (
-                    <TableCell className="px-2 py-2">
-                      <InlineEditCell
-                        display={
-                          row.discount === null
-                            ? null
-                            : formatSignedWeightPrecise(row.discount)
-                        }
-                        text={formatPercentInput(row.discount, i18n.locale)}
-                        label={i18n._(
-                          t({
-                            id: "allocation.editDiscount",
-                            message: `Discount to fair value of ${row.ticker}, in percent`,
-                          }),
-                        )}
-                        className={
-                          row.discount === null
-                            ? ""
-                            : pnlClassName(row.discount)
-                        }
-                        onCommit={(text) => onEditDiscount(row.ticker, text)}
                       />
                     </TableCell>
                   ) : null}
@@ -613,20 +616,42 @@ export function AllocationTable({
                     </TableCell>
                   ) : null}
 
-                  {visibleColumns.has("valuationRef") ? (
+                  {visibleColumns.has("fairValue") ? (
                     <TableCell className="px-2 py-2">
                       <InlineEditCell
-                        display={row.valuationRef}
-                        text={row.valuationRef ?? ""}
-                        inputMode="text"
+                        display={
+                          row.fairValue === null
+                            ? null
+                            : formatMoney(row.fairValue, row.currency)
+                        }
+                        text={formatDecimalInput(row.fairValue, i18n.locale)}
                         label={i18n._(
                           t({
-                            id: "allocation.editValuation",
-                            message: `Valuation reference of ${row.ticker}`,
+                            id: "allocation.editFairValue",
+                            message: `Fair value of ${row.ticker} in ${row.currency}`,
                           }),
                         )}
-                        onCommit={(text) => onEditValuation(row.ticker, text)}
+                        onCommit={(text) => onEditFairValue(row.ticker, text)}
                       />
+                    </TableCell>
+                  ) : null}
+
+                  {visibleColumns.has("averageGrade") ? (
+                    <TableCell className="px-2 py-2 text-right tabular-nums">
+                      {row.averageGrade === null ? (
+                        <span className="text-muted-foreground">—</span>
+                      ) : (
+                        <span
+                          title={i18n._(
+                            t({
+                              id: "allocation.gradeTooltip",
+                              message: `Average of ${row.gradedQuarters} graded quarters`,
+                            }),
+                          )}
+                        >
+                          {formatDecimalInput(row.averageGrade, i18n.locale)}
+                        </span>
+                      )}
                     </TableCell>
                   ) : null}
 
@@ -821,7 +846,7 @@ function RowMenu({
         ) : null}
         <DropdownMenuItem onSelect={onClear} disabled={!row.tracked}>
           <Eraser aria-hidden="true" />
-          <Trans id="allocation.clearAnalysis">Clear target & discount</Trans>
+          <Trans id="allocation.clearAnalysis">Clear target & fair value</Trans>
         </DropdownMenuItem>
         <DropdownMenuItem
           variant="destructive"

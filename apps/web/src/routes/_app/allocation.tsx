@@ -3,9 +3,8 @@ import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import type { AllocationRow } from "@portifolio-tracker/shared";
 import {
-  discountRatio,
+  fairValueSchema,
   positiveDecimal,
-  valuationRefSchema,
   weightRatio,
 } from "@portifolio-tracker/shared";
 import { createFileRoute } from "@tanstack/react-router";
@@ -57,7 +56,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { trpc } from "@/lib/api";
 import { useFxQuote } from "@/lib/fx";
-import { parsePercentInput } from "@/lib/numeric-input";
+import { parseDecimalInput, parsePercentInput } from "@/lib/numeric-input";
 import {
   currentQuarter,
   formatQuarterLabel,
@@ -96,10 +95,10 @@ const COLUMN_PRESETS: Record<
     "targetWeight",
     "currentWeight",
     "gapWeight",
-    "score",
-    "averageGrade",
     "discount",
+    "score",
     "marketValue",
+    "averageGrade",
   ],
   all: [...ALLOCATION_COLUMNS],
 };
@@ -306,25 +305,16 @@ function AllocationPage() {
   const labels = columnLabels(i18n);
 
   /** Percent cell edits: an empty value clears the field. */
-  function editPercent(
-    ticker: string,
-    text: string,
-    field: "targetWeight" | "discount",
-  ) {
+  function editPercent(ticker: string, text: string) {
     if (text.trim().length === 0) {
-      upsertAsset.mutate(
-        field === "targetWeight"
-          ? { ticker, targetWeight: null }
-          : { ticker, discount: null },
-      );
+      upsertAsset.mutate({ ticker, targetWeight: null });
 
       return;
     }
 
     const parsed = parsePercentInput(text);
-    const schema = field === "targetWeight" ? weightRatio : discountRatio;
 
-    if (parsed === null || !schema.safeParse(parsed).success) {
+    if (parsed === null || !weightRatio.safeParse(parsed).success) {
       toast.error(
         i18n._(
           msg({
@@ -337,28 +327,24 @@ function AllocationPage() {
       return;
     }
 
-    upsertAsset.mutate(
-      field === "targetWeight"
-        ? { ticker, targetWeight: parsed }
-        : { ticker, discount: parsed },
-    );
+    upsertAsset.mutate({ ticker, targetWeight: parsed });
   }
 
-  function editValuation(ticker: string, text: string) {
-    const trimmed = text.trim();
-
-    if (trimmed.length === 0) {
-      upsertAsset.mutate({ ticker, valuationRef: null });
+  function editFairValue(ticker: string, text: string) {
+    if (text.trim().length === 0) {
+      upsertAsset.mutate({ ticker, fairValue: null });
 
       return;
     }
 
-    if (!valuationRefSchema.safeParse(trimmed).success) {
+    const parsed = parseDecimalInput(text);
+
+    if (parsed === null || !fairValueSchema.safeParse(parsed).success) {
       toast.error(
         i18n._(
           msg({
-            id: "allocation.invalidValuation",
-            message: "Use at most 24 characters",
+            id: "allocation.invalidFairValue",
+            message: "Enter a positive fair value, e.g. 45,50",
           }),
         ),
       );
@@ -366,7 +352,7 @@ function AllocationPage() {
       return;
     }
 
-    upsertAsset.mutate({ ticker, valuationRef: trimmed });
+    upsertAsset.mutate({ ticker, fairValue: parsed });
   }
 
   async function addAsset(values: AddAssetValues) {
@@ -576,18 +562,13 @@ function AllocationPage() {
           }
           freeOrder={freeOrder}
           onReorder={(tickers) => reorder.mutate({ tickers })}
-          onEditTarget={(ticker, text) =>
-            editPercent(ticker, text, "targetWeight")
-          }
-          onEditDiscount={(ticker, text) =>
-            editPercent(ticker, text, "discount")
-          }
-          onEditValuation={editValuation}
+          onEditTarget={(ticker, text) => editPercent(ticker, text)}
+          onEditFairValue={editFairValue}
           onClearAnalysis={(ticker) =>
             upsertAsset.mutate({
               ticker,
               targetWeight: null,
-              discount: null,
+              fairValue: null,
               valuationRef: null,
             })
           }

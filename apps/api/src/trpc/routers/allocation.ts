@@ -54,7 +54,7 @@ async function loadAssets(userId: string): Promise<AllocationAssetMeta[]> {
     assetClass: normalizeAssetClass(row.assetClass),
     currency: row.currency,
     targetWeight: row.targetWeight,
-    discount: row.discount,
+    fairValue: row.fairValue,
     valuationRef: row.valuationRef,
     sortOrder: row.sortOrder,
   }));
@@ -176,7 +176,7 @@ async function ensureAsset(userId: string, ticker: string): Promise<void> {
 export const allocationRouter = router({
   /**
    * The allocation table: one row per open position or tracked ticker, with
-   * targets, discounts, quarterly grades and the contribution score.
+   * targets, fair values, quarterly grades and the contribution score.
    */
   list: protectedProcedure
     .input(allocationListInput)
@@ -253,7 +253,9 @@ export const allocationRouter = router({
         ...(input.targetWeight !== undefined
           ? { targetWeight: input.targetWeight }
           : {}),
-        ...(input.discount !== undefined ? { discount: input.discount } : {}),
+        ...(input.fairValue !== undefined
+          ? { fairValue: input.fairValue }
+          : {}),
         ...(input.valuationRef !== undefined
           ? { valuationRef: input.valuationRef }
           : {}),

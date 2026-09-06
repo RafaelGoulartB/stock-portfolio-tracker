@@ -39,20 +39,26 @@ export const weightRatio = nonNegativeDecimal.refine(
 );
 
 /**
- * Gap between the asset's fair value and its market price, as a signed
- * ratio (`0.2355` = trading 23.55% below fair value). Negative means the
- * market price runs above the fair value. User-owned for now; a valuation
- * screen will feed it later.
+ * Per-share fair value in the asset's native currency, from the user's
+ * valuation. The discount ratio is derived from this and the live market
+ * price — never entered by hand.
  */
-export const discountRatio = signedDecimal
-  .refine((value) => Number(value) > -1, "Use a discount above -100%")
-  .refine((value) => Number(value) <= 10, "Use a discount up to 1000%");
+export const fairValueSchema = positiveDecimal;
 
-/** Free-text pointer to the valuation that produced the discount, e.g. `1Q26`. */
+/** Free-text pointer to the valuation write-up, e.g. `1Q26`. */
 export const valuationRefSchema = z
   .string()
   .trim()
   .max(24, "Use at most 24 characters");
+
+/**
+ * Signed gap between fair value and market price (`0.2355` = trading 23.55%
+ * below fair value). Negative means the market runs above the fair value.
+ * Computed on the server; kept here so clients can validate display ranges.
+ */
+export const discountRatio = signedDecimal
+  .refine((value) => Number(value) > -1, "Use a discount above -100%")
+  .refine((value) => Number(value) <= 10, "Use a discount up to 1000%");
 
 export const allocationListInput = z.object({
   displayCurrency: currencySchema.default("BRL"),
@@ -76,7 +82,7 @@ export const upsertAllocationAssetInput = z.object({
   assetClass: assetClassSchema.optional(),
   currency: currencySchema.optional(),
   targetWeight: weightRatio.nullable().optional(),
-  discount: discountRatio.nullable().optional(),
+  fairValue: fairValueSchema.nullable().optional(),
   valuationRef: valuationRefSchema.nullable().optional(),
 });
 
@@ -87,7 +93,7 @@ export type UpsertAllocationAssetInput = z.input<
 /**
  * Drops the analysis metadata of a ticker. Transactions and quarterly
  * reviews are untouched, so a ticker with a position stays in the table
- * with empty target and discount.
+ * with empty target and fair value.
  */
 export const removeAllocationAssetInput = z.object({ ticker: tickerSchema });
 
@@ -131,7 +137,7 @@ export const allocationRowSchema = z.object({
   assetClass: assetClassSchema,
   currency: currencySchema,
   displayCurrency: currencySchema,
-  /** True when the ticker owns an analysis row (target, discount, order). */
+  /** True when the ticker owns an analysis row (target, fair value, order). */
   tracked: z.boolean(),
   /** False for watch-only assets: on the radar, no money in them. */
   hasPosition: z.boolean(),
@@ -148,6 +154,15 @@ export const allocationRowSchema = z.object({
   targetWeight: z.string().nullable(),
   /** `targetWeight - currentWeight`, before the discount adjustment. */
   gapWeight: z.string().nullable(),
+  /**
+   * Per-share fair value in the asset's native currency. Null until the user
+   * sets it from their valuation.
+   */
+  fairValue: z.string().nullable(),
+  /**
+   * `(fairValue - marketPrice) / fairValue`. Null without a fair value or a
+   * market price. Positive means the stock trades below fair value.
+   */
   discount: z.string().nullable(),
   /** Average of the newest graded quarters, `null` when never graded. */
   averageGrade: z.string().nullable(),

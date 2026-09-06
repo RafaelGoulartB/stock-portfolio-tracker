@@ -79,8 +79,9 @@ export const transactions = pgTable(
 
 /**
  * Per-ticker analysis metadata behind the allocation screen: the target
- * weight, the discount to fair value and the manual row order. A row with no
- * matching transaction is a watch-only asset: on the radar, no money in it.
+ * weight, the fair value from the user's valuation and the manual row order.
+ * A row with no matching transaction is a watch-only asset: on the radar, no
+ * money in it. Discount to market is derived at read time, never stored.
  */
 export const allocationAssets = pgTable(
   "allocation_assets",
@@ -94,9 +95,13 @@ export const allocationAssets = pgTable(
     currency: currencyEnum("currency").notNull().default("BRL"),
     /** Target share of the portfolio, `0`-`1`. Null until the user sets it. */
     targetWeight: numeric("target_weight", DECIMAL),
-    /** Signed gap to fair value, `0.2355` = 23.55% below fair value. */
-    discount: numeric("discount", DECIMAL),
-    /** Pointer to the valuation behind the discount, e.g. `1Q26`. */
+    /**
+     * Per-share fair value in the asset's native currency, from the user's
+     * valuation. Null until set; the discount ratio is computed against the
+     * live market price.
+     */
+    fairValue: numeric("fair_value", DECIMAL),
+    /** Optional pointer to the valuation write-up, e.g. `1Q26`. */
     valuationRef: text("valuation_ref"),
     /** Free-order rank, ascending. Ties fall back to the ticker. */
     sortOrder: integer("sort_order").notNull().default(0),

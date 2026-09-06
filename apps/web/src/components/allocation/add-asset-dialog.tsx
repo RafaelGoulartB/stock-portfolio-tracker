@@ -8,7 +8,7 @@ import {
   CURRENCIES,
   CURRENCY_LABELS,
   type Currency,
-  discountRatio,
+  fairValueSchema,
   tickerSchema,
   weightRatio,
 } from "@portifolio-tracker/shared";
@@ -33,19 +33,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { parsePercentInput } from "@/lib/numeric-input";
+import { parseDecimalInput, parsePercentInput } from "@/lib/numeric-input";
 
 export type AddAssetValues = {
   ticker: string;
   assetClass: AssetClass;
   currency: Currency;
   targetWeight: string | null;
-  discount: string | null;
+  fairValue: string | null;
 };
 
 /**
  * Adds a ticker to the table without a trade behind it: a watch-only asset,
- * which can already carry a target and a discount so it competes for the
+ * which can already carry a target and a fair value so it competes for the
  * next contribution.
  */
 export function AddAssetDialog({
@@ -61,7 +61,7 @@ export function AddAssetDialog({
   const [assetClass, setAssetClass] = useState<AssetClass>("stock_us");
   const [currency, setCurrency] = useState<Currency>("USD");
   const [target, setTarget] = useState("");
-  const [discount, setDiscount] = useState("");
+  const [fairValue, setFairValue] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   function reset() {
@@ -69,7 +69,7 @@ export function AddAssetDialog({
     setAssetClass("stock_us");
     setCurrency("USD");
     setTarget("");
-    setDiscount("");
+    setFairValue("");
     setError(null);
   }
 
@@ -90,7 +90,9 @@ export function AddAssetDialog({
     }
 
     const targetValue = target.trim() ? parsePercentInput(target) : null;
-    const discountValue = discount.trim() ? parsePercentInput(discount) : null;
+    const fairValueValue = fairValue.trim()
+      ? parseDecimalInput(fairValue)
+      : null;
 
     if (
       target.trim() &&
@@ -109,15 +111,15 @@ export function AddAssetDialog({
     }
 
     if (
-      discount.trim() &&
-      (discountValue === null ||
-        !discountRatio.safeParse(discountValue).success)
+      fairValue.trim() &&
+      (fairValueValue === null ||
+        !fairValueSchema.safeParse(fairValueValue).success)
     ) {
       setError(
         i18n._(
           t({
-            id: "allocation.addDiscountInvalid",
-            message: "Use a discount above -100%.",
+            id: "allocation.addFairValueInvalid",
+            message: "Use a positive fair value.",
           }),
         ),
       );
@@ -130,7 +132,7 @@ export function AddAssetDialog({
       assetClass,
       currency,
       targetWeight: targetValue,
-      discount: discountValue,
+      fairValue: fairValueValue,
     });
     reset();
     setOpen(false);
@@ -161,7 +163,7 @@ export function AddAssetDialog({
           <DialogDescription>
             <Trans id="allocation.addDescription">
               Watch-only assets have no invested amount. They stay in the table
-              with their target and discount, so the score can already rank
+              with their target and fair value, so the score can already rank
               them.
             </Trans>
           </DialogDescription>
@@ -247,16 +249,16 @@ export function AddAssetDialog({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="allocation-add-discount">
-                <Trans id="allocation.addDiscount">Discount (%)</Trans>
+              <Label htmlFor="allocation-add-fair-value">
+                <Trans id="allocation.addFairValue">Fair value</Trans>
               </Label>
               <Input
-                id="allocation-add-discount"
-                value={discount}
+                id="allocation-add-fair-value"
+                value={fairValue}
                 inputMode="decimal"
-                placeholder="20"
+                placeholder="45,50"
                 onChange={(event) => {
-                  setDiscount(event.target.value);
+                  setFairValue(event.target.value);
                   setError(null);
                 }}
               />
