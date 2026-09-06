@@ -31,7 +31,7 @@ import {
   compareRows,
   defaultSortDirection,
 } from "@/components/allocation/allocation-table";
-import { ContributionPlanner } from "@/components/allocation/contribution-planner";
+import { ContributionPlannerButton } from "@/components/allocation/contribution-planner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -368,7 +368,7 @@ function AllocationPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="relative left-1/2 w-screen max-w-[100vw] -translate-x-1/2 space-y-4 px-3 sm:px-4 lg:px-6">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">
@@ -381,15 +381,17 @@ function AllocationPage() {
             </Trans>
           </p>
         </div>
-        <AddAssetDialog onSubmit={addAsset} saving={upsertAsset.isPending} />
+        <div className="flex flex-wrap items-center gap-2">
+          <ContributionPlannerButton
+            rows={allocation.data?.rows ?? []}
+            displayCurrency={
+              allocation.data?.summary.displayCurrency ?? displayCurrency
+            }
+            disabled={!allocation.data}
+          />
+          <AddAssetDialog onSubmit={addAsset} saving={upsertAsset.isPending} />
+        </div>
       </header>
-
-      {allocation.data ? (
-        <ContributionPlanner
-          rows={allocation.data.rows}
-          displayCurrency={allocation.data.summary.displayCurrency}
-        />
-      ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-48 flex-1 sm:max-w-xs">

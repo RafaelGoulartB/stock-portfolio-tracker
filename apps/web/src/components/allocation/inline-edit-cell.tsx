@@ -95,7 +95,7 @@ export function InlineEditCell({
             setEditing(false);
           }
         }}
-        className="h-7 w-full rounded-sm border border-ring bg-background px-1.5 text-right text-xs tabular-nums outline-none"
+        className="h-8 w-full rounded-sm border border-ring bg-background px-1.5 text-right text-sm tabular-nums outline-none"
       />
     );
   }
@@ -114,7 +114,7 @@ export function InlineEditCell({
       aria-label={label}
       title={title ?? label}
       className={cn(
-        "h-7 w-full rounded-sm px-1.5 text-right text-xs tabular-nums transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50",
+        "h-8 w-full rounded-sm px-1.5 text-right text-sm tabular-nums transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50",
         display === null && "text-muted-foreground",
         className,
       )}
