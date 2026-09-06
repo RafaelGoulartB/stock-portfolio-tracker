@@ -368,7 +368,7 @@ export function AllocationTable({
                 <TableRow
                   key={row.ticker}
                   className={cn(
-                    "h-14",
+                    "h-12",
                     dragging === row.ticker && "opacity-50",
                     dropTarget === row.ticker && "border-t-2 border-t-ring",
                   )}
@@ -497,7 +497,7 @@ export function AllocationTable({
                   {visibleColumns.has("gapWeight") ? (
                     <TableCell className="px-2.5 py-2.5 text-right tabular-nums">
                       {row.gapWeight === null ? (
-                        <span className="text-muted-foreground">â€”</span>
+                        <span className="text-muted-foreground">—</span>
                       ) : (
                         <span className={pnlClassName(row.gapWeight)}>
                           {formatSignedWeightPrecise(row.gapWeight)}
@@ -576,7 +576,7 @@ export function AllocationTable({
                   {visibleColumns.has("lastContributionAt") ? (
                     <TableCell className="px-2.5 py-2.5 text-right whitespace-nowrap tabular-nums">
                       {row.lastContributionAt === null ? (
-                        <span className="text-muted-foreground">â€”</span>
+                        <span className="text-muted-foreground">—</span>
                       ) : (
                         <span className="inline-flex items-center gap-1">
                           {row.score.cooldownUntil === null ? null : (
@@ -601,7 +601,7 @@ export function AllocationTable({
                       {row.hasPosition ? (
                         formatQuantity(row.quantity)
                       ) : (
-                        <span className="text-muted-foreground">â€”</span>
+                        <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
                   ) : null}
@@ -609,7 +609,7 @@ export function AllocationTable({
                   {visibleColumns.has("marketValue") ? (
                     <TableCell className="px-2.5 py-2.5 text-right tabular-nums">
                       {row.marketValue === null ? (
-                        <span className="text-muted-foreground">â€”</span>
+                        <span className="text-muted-foreground">—</span>
                       ) : (
                         formatMoney(row.marketValue, row.displayCurrency)
                       )}
@@ -639,7 +639,7 @@ export function AllocationTable({
                   {visibleColumns.has("averageGrade") ? (
                     <TableCell className="px-2.5 py-2.5 text-right tabular-nums">
                       {row.averageGrade === null ? (
-                        <span className="text-muted-foreground">â€”</span>
+                        <span className="text-muted-foreground">—</span>
                       ) : (
                         <span
                           title={i18n._(
@@ -791,7 +791,7 @@ function ScoreCell({
           numeric === 0 && "text-muted-foreground",
         )}
       >
-        {blocked ? "â€”" : formatSignedWeightPrecise(value)}
+        {blocked ? "—" : formatSignedWeightPrecise(value)}
       </span>
     </div>
   );
