@@ -88,6 +88,60 @@ describe("YahooProvider", () => {
     expect(fetchMock).toHaveBeenCalledOnce();
   });
 
+  it("includes the previous close for daily performance", async () => {
+    vi.stubGlobal(
+      "fetch",
+      stubFetch(
+        chartFixture(
+          [
+            { timestamp: unixDay("2026-09-03"), close: 45.25 },
+            { timestamp: unixDay("2026-09-04"), close: 47.11 },
+          ],
+          47.11,
+          unixDay("2026-09-04"),
+        ),
+      ),
+    );
+
+    const quote = await new YahooProvider().getQuote({
+      ticker: "PETR4",
+      assetClass: "stock_br",
+      currency: "BRL",
+    });
+
+    expect(quote).toMatchObject({
+      previousClose: "45.25000000",
+      previousCloseAsOf: "2026-09-03",
+    });
+  });
+
+  it("uses the immediately preceding close for historical quotes", async () => {
+    vi.stubGlobal(
+      "fetch",
+      stubFetch(
+        chartFixture([
+          { timestamp: unixDay("2026-09-02"), close: 39.19 },
+          { timestamp: unixDay("2026-09-03"), close: 41.97 },
+          { timestamp: unixDay("2026-09-04"), close: 41.92 },
+        ]),
+      ),
+    );
+
+    const quote = await new YahooProvider().getQuote({
+      ticker: "ITUB4",
+      assetClass: "stock_br",
+      currency: "BRL",
+      asOf: "2026-09-04",
+    });
+
+    expect(quote).toMatchObject({
+      price: "41.92000000",
+      asOf: "2026-09-04",
+      previousClose: "41.97000000",
+      previousCloseAsOf: "2026-09-03",
+    });
+  });
+
   it("resolves a weekend month-end to the previous close", async () => {
     vi.stubGlobal(
       "fetch",

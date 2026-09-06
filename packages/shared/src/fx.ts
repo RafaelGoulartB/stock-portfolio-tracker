@@ -62,3 +62,8 @@ export const positionsListInput = z.object({
 });
 
 export type PositionsListInput = z.input<typeof positionsListInput>;
+
+/** Live portfolio request used by the daily performance screen. */
+export const dailyTrackingInput = positionsListInput.omit({ asOf: true });
+
+export type DailyTrackingInput = z.input<typeof dailyTrackingInput>;

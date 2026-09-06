@@ -8,7 +8,7 @@ import {
   redirect,
   useNavigate,
 } from "@tanstack/react-router";
-import { LineChart, PieChart, Receipt } from "lucide-react";
+import { Activity, LineChart, PieChart, Receipt } from "lucide-react";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { UserMenu } from "@/components/user-menu";
 import { trpc } from "@/lib/api";
@@ -30,6 +30,7 @@ export const Route = createFileRoute("/_app")({
 
 const NAV_ITEMS = [
   { to: "/positions", labelId: "nav.positions" as const, icon: PieChart },
+  { to: "/daily", labelId: "nav.daily" as const, icon: Activity },
   { to: "/transactions", labelId: "nav.transactions" as const, icon: Receipt },
 ] as const;
 
@@ -40,6 +41,10 @@ function NavLabel({
 }) {
   if (labelId === "nav.positions") {
     return <Trans id="nav.positions">Positions</Trans>;
+  }
+
+  if (labelId === "nav.daily") {
+    return <Trans id="nav.daily">Daily</Trans>;
   }
 
   return <Trans id="nav.transactions">Transactions</Trans>;

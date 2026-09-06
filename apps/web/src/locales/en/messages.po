@@ -66,9 +66,15 @@ msgstr ""
 
 #. js-lingui-explicit-id
 #. placeholder {0}: formatMonthLabel(month, locale)
-#: src/routes/_app/positions.tsx:284
+#: src/routes/_app/positions.tsx:288
 msgid "positions.currentMonth"
 msgstr "{0} · Live"
+
+#. js-lingui-explicit-id
+#. placeholder {0}: summary.comparablePositions
+#: src/routes/_app/daily.tsx:205
+msgid "daily.marketBreadthHint"
+msgstr "{0} assets with daily comparison."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: result.inserted
@@ -77,17 +83,17 @@ msgid "settings.devSeed.success"
 msgstr "{0} demo transactions added"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:351
+#: src/routes/_app/positions.tsx:355
 msgid "positions.closedCount"
 msgstr "{count, plural, one {# closed position} other {# closed positions}}"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:343
+#: src/routes/_app/positions.tsx:347
 msgid "positions.openCount"
 msgstr "{count, plural, one {# open position} other {# open positions}}"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:360
+#: src/routes/_app/positions.tsx:364
 msgid "positions.unquotedCount"
 msgstr "{count, plural, one {# without a quote} other {# without a quote}}"
 
@@ -112,7 +118,7 @@ msgid "settings.devSeed.description"
 msgstr "Adds demo buys and sells across stocks, ETFs, REITs, crypto and fixed income to the signed-in account. Only for local testing, never for production use."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:553
+#: src/routes/_app/positions.tsx:560
 msgid "positions.allocation"
 msgstr "Allocation"
 
@@ -122,17 +128,28 @@ msgid "login.hasAccount"
 msgstr "Already have an account?"
 
 #. js-lingui-explicit-id
+#: src/routes/_app/daily.tsx:305
+msgid "daily.assets"
+msgstr "Assets today"
+
+#. js-lingui-explicit-id
+#. placeholder {0}: formatTradeDate(data.summary.asOf)
+#: src/routes/_app/daily.tsx:301
+msgid "daily.assetsAsOf"
+msgstr "Assets · {0}"
+
+#. js-lingui-explicit-id
 #: src/routes/login.tsx:166
 msgid "login.passwordHint"
 msgstr "At least 8 characters"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:994
+#: src/routes/_app/positions.tsx:1004
 msgid "positions.holdingsHint"
 msgstr "Average cost and prices stay in the native currency of each asset; market value and result are consolidated."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1022
+#: src/routes/_app/positions.tsx:1032
 msgid "positions.colAvgCost"
 msgstr "Avg. cost"
 
@@ -163,7 +180,12 @@ msgid "transactions.colCurrency"
 msgstr "Ccy"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1016
+#: src/routes/_app/daily.tsx:326
+msgid "daily.colClass"
+msgstr "Class"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:1026
 msgid "positions.colClass"
 msgstr "Class"
 
@@ -173,7 +195,17 @@ msgid "transactions.class"
 msgstr "Class"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:390
+#: src/routes/_app/daily.tsx:364
+msgid "daily.total"
+msgstr "Comparable total"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/daily.tsx:195
+msgid "daily.previousCloseComparison"
+msgstr "Compared with the previous close."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:394
 msgid "positions.investedCostHint"
 msgstr "Cost basis of everything you still hold."
 
@@ -181,6 +213,11 @@ msgstr "Cost basis of everything you still hold."
 #: src/components/dev-seed-section.tsx:48
 msgid "settings.devSeed.error"
 msgstr "Could not add demo data. Try again."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/daily.tsx:119
+msgid "daily.fxFailed"
+msgstr "Could not fetch the exchange rate. Try another source or enter it manually."
 
 #. js-lingui-explicit-id
 #: src/routes/_app/positions.tsx:200
@@ -218,6 +255,24 @@ msgid "transactions.currency"
 msgstr "Currency"
 
 #. js-lingui-explicit-id
+#: src/routes/_app.tsx:47
+msgid "nav.daily"
+msgstr "Daily"
+
+#. js-lingui-explicit-id
+#. placeholder {0}: summary.comparablePositions
+#. placeholder {1}: summary.openPositions
+#. placeholder {2}: summary.displayCurrency
+#: src/routes/_app/daily.tsx:212
+msgid "daily.comparisonCoverage"
+msgstr "Daily change covers {0} of {1} open assets. Values are consolidated in {2}."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/daily.tsx:91
+msgid "daily.title"
+msgstr "Daily performance"
+
+#. js-lingui-explicit-id
 #: src/components/theme-switcher.tsx:60
 #: src/components/user-menu.tsx:211
 msgid "theme.dark"
@@ -227,6 +282,16 @@ msgstr "Dark"
 #: src/routes/_app/transactions.tsx:493
 msgid "transactions.colDate"
 msgstr "Date"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/daily.tsx:180
+msgid "daily.dayChange"
+msgstr "Day change"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/daily.tsx:345
+msgid "daily.colDayChange"
+msgstr "Day change"
 
 #. js-lingui-explicit-id
 #: src/components/dev-seed-section.tsx:75
@@ -284,6 +349,11 @@ msgid "assetClass.fixedIncome"
 msgstr "Fixed income"
 
 #. js-lingui-explicit-id
+#: src/routes/_app/daily.tsx:94
+msgid "daily.subtitle"
+msgstr "Follow today's portfolio movement and see which assets are driving the change."
+
+#. js-lingui-explicit-id
 #: src/components/settings-dialog.tsx:202
 msgid "positions.quoteSourceHint"
 msgstr "Free delayed quotes used for market values and allocation."
@@ -294,7 +364,7 @@ msgid "transactions.history"
 msgstr "History"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:991
+#: src/routes/_app/positions.tsx:1001
 msgid "positions.holdings"
 msgstr "Holdings"
 
@@ -304,7 +374,7 @@ msgid "auth.invalidCredentials"
 msgstr "Invalid email or password."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:387
+#: src/routes/_app/positions.tsx:391
 msgid "positions.investedCost"
 msgstr "Invested cost"
 
@@ -314,6 +384,16 @@ msgstr "Invested cost"
 #: src/components/user-menu.tsx:112
 msgid "shell.language"
 msgstr "Language"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/daily.tsx:335
+msgid "daily.colLastPrice"
+msgstr "Last price"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/daily.tsx:173
+msgid "daily.quotedAt"
+msgstr "Latest quotes from {asOf}."
 
 #. js-lingui-explicit-id
 #: src/components/theme-switcher.tsx:58
@@ -327,12 +407,12 @@ msgid "positions.live"
 msgstr "Live"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:73
+#: src/routes/_app.tsx:78
 msgid "nav.main"
 msgstr "Main"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1260
+#: src/routes/_app/positions.tsx:1270
 msgid "positions.manualPrices"
 msgstr "Manual prices"
 
@@ -342,28 +422,38 @@ msgid "positions.quoteSourceManualHint"
 msgstr "Manual prices are entered per ticker on the Positions page."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:378
+#: src/routes/_app/daily.tsx:202
+msgid "daily.marketBreadth"
+msgstr "Market breadth"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/daily.tsx:338
+msgid "daily.colMarketValue"
+msgstr "Market value"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:382
 msgid "positions.marketValue"
 msgstr "Market value"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1033
+#: src/routes/_app/positions.tsx:1043
 msgid "positions.colMarketValue"
 msgstr "Market value"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:408
+#: src/routes/_app/positions.tsx:412
 msgid "positions.unrealizedPnlHint"
 msgstr "Market value against the cost of quoted assets."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:556
+#: src/routes/_app/positions.tsx:563
 msgid "positions.allocationHint"
 msgstr "Market value at {snapshotLabel} and share of quoted equity."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: summary.displayCurrency
-#: src/routes/_app/positions.tsx:758
+#: src/routes/_app/positions.tsx:768
 msgid "positions.openResultHint"
 msgstr "Market value minus the moving average cost, in {0}."
 
@@ -383,12 +473,12 @@ msgid "transactions.historyHint"
 msgstr "Most recent trades first."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:450
+#: src/routes/_app/positions.tsx:454
 msgid "positions.nativeTotals"
 msgstr "Native totals: {breakdown}"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1263
+#: src/routes/_app/positions.tsx:1273
 msgid "positions.manualPricesHint"
 msgstr "Native-currency price per unit. Manual prices apply to every month."
 
@@ -398,19 +488,24 @@ msgid "transactions.newTrade"
 msgstr "New trade"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:564
-#: src/routes/_app/positions.tsx:767
+#: src/routes/_app/daily.tsx:175
+msgid "daily.noQuoteDate"
+msgstr "No live quotes available."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:571
+#: src/routes/_app/positions.tsx:777
 msgid "positions.noQuotes"
 msgstr "No market quotes for this snapshot yet."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1321
+#: src/routes/_app/positions.tsx:1331
 msgid "positions.empty"
 msgstr "No positions yet. Register your first trade to see it here."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: missing.join(", ")
-#: src/routes/_app/positions.tsx:1181
+#: src/routes/_app/positions.tsx:1191
 msgid "positions.missingQuotes"
 msgstr "No quote for {0}. Values and shares cover quoted assets only."
 
@@ -425,19 +520,19 @@ msgid "transactions.empty"
 msgstr "Nothing registered yet."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:396
-#: src/routes/_app/positions.tsx:738
-#: src/routes/_app/positions.tsx:816
+#: src/routes/_app/positions.tsx:400
+#: src/routes/_app/positions.tsx:748
+#: src/routes/_app/positions.tsx:826
 msgid "positions.unrealizedPnl"
 msgstr "Open result"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1047
+#: src/routes/_app/positions.tsx:1057
 msgid "positions.colOpenResult"
 msgstr "Open result"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:755
+#: src/routes/_app/positions.tsx:765
 msgid "positions.openResult"
 msgstr "Open result by asset"
 
@@ -457,13 +552,18 @@ msgid "login.password"
 msgstr "Password"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:68
+#: src/routes/_app.tsx:73
 #: src/routes/login.tsx:96
 msgid "shell.brand"
 msgstr "Portfolio Tracker"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:42
+#: src/routes/_app/daily.tsx:169
+msgid "daily.portfolioValue"
+msgstr "Portfolio value"
+
+#. js-lingui-explicit-id
+#: src/routes/_app.tsx:43
 msgid "nav.positions"
 msgstr "Positions"
 
@@ -473,7 +573,12 @@ msgid "positions.title"
 msgstr "Positions"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1025
+#: src/routes/_app/daily.tsx:332
+msgid "daily.colPreviousClose"
+msgstr "Previous close"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:1035
 msgid "positions.colPrice"
 msgstr "Price"
 
@@ -483,7 +588,17 @@ msgid "transactions.colPrice"
 msgstr "Price"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1019
+#: src/routes/_app/daily.tsx:309
+msgid "daily.assetsHint"
+msgstr "Price change from the previous close and its impact on your current position."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/daily.tsx:329
+msgid "daily.colQuantity"
+msgstr "Quantity"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:1029
 msgid "positions.colQuantity"
 msgstr "Quantity"
 
@@ -498,20 +613,30 @@ msgid "transactions.colQuantity"
 msgstr "Quantity"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:381
+#: src/routes/_app/positions.tsx:385
 msgid "positions.marketValueHint"
 msgstr "Quoted equity at {snapshotLabel}."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:415
+#: src/routes/_app/positions.tsx:419
 msgid "positions.realizedPnl"
 msgstr "Realized P&L"
 
 #. js-lingui-explicit-id
+#: src/routes/_app/daily.tsx:111
+msgid "daily.refresh"
+msgstr "Refresh quotes"
+
+#. js-lingui-explicit-id
 #: src/routes/_app/positions.tsx:189
-#: src/routes/_app/positions.tsx:1328
+#: src/routes/_app/positions.tsx:1338
 msgid "positions.registerTrade"
 msgstr "Register a trade"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/daily.tsx:136
+msgid "daily.empty"
+msgstr "Register a trade to start tracking daily performance."
 
 #. js-lingui-explicit-id
 #: src/routes/_app/transactions.tsx:151
@@ -534,12 +659,12 @@ msgid "transactions.remove"
 msgstr "Remove {ticker} trade from {date}"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:422
+#: src/routes/_app/positions.tsx:426
 msgid "positions.realizedPnlHint"
 msgstr "Result already locked in by your sells."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1302
+#: src/routes/_app/positions.tsx:1312
 msgid "positions.savePrices"
 msgstr "Save prices"
 
@@ -565,7 +690,7 @@ msgid "settings.title"
 msgstr "Settings"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1060
+#: src/routes/_app/positions.tsx:1070
 msgid "positions.colShare"
 msgstr "Share"
 
@@ -616,6 +741,11 @@ msgid "error.unknown"
 msgstr "Something went wrong. Try again."
 
 #. js-lingui-explicit-id
+#: src/routes/_app/daily.tsx:457
+msgid "daily.sortColumn"
+msgstr "Sort this column"
+
+#. js-lingui-explicit-id
 #: src/components/theme-switcher.tsx:62
 #: src/components/user-menu.tsx:213
 msgid "theme.system"
@@ -644,7 +774,12 @@ msgid "transactions.currencyMismatch"
 msgstr "This ticker is already tracked in another currency."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1009
+#: src/routes/_app/daily.tsx:320
+msgid "daily.colTicker"
+msgstr "Ticker"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:1019
 msgid "positions.colTicker"
 msgstr "Ticker"
 
@@ -659,8 +794,8 @@ msgid "transactions.colTicker"
 msgstr "Ticker"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:642
-#: src/routes/_app/positions.tsx:1159
+#: src/routes/_app/positions.tsx:649
+#: src/routes/_app/positions.tsx:1169
 msgid "positions.total"
 msgstr "Total"
 
@@ -685,7 +820,7 @@ msgid "transactions.removed"
 msgstr "Transaction removed"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:45
+#: src/routes/_app.tsx:50
 msgid "nav.transactions"
 msgstr "Transactions"
 

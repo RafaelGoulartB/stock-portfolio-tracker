@@ -184,7 +184,7 @@ export class YahooProvider implements QuoteProvider {
     const result = await fetchChart(
       symbol,
       request.ticker,
-      now - 7 * 86400,
+      now - 14 * 86400,
       now + 86400,
     );
     const price = result.meta?.regularMarketPrice;
@@ -193,13 +193,51 @@ export class YahooProvider implements QuoteProvider {
       throw new QuoteUnavailableError(request.ticker);
     }
 
+    const timestamps = result.timestamp ?? [];
+    const closes = result.indicators?.quote?.[0]?.close ?? [];
+    let latestSeriesDay: string | undefined;
+
+    for (let index = timestamps.length - 1; index >= 0; index -= 1) {
+      const timestamp = timestamps[index];
+      const close = closes[index];
+
+      if (timestamp != null && close != null) {
+        latestSeriesDay = unixToDay(timestamp);
+        break;
+      }
+    }
+
+    const quoteAsOf =
+      latestSeriesDay ??
+      (result.meta?.regularMarketTime
+        ? unixToDay(result.meta.regularMarketTime)
+        : todayUtc());
+    let previousCloseAsOf: string | undefined;
+    let previousClose: string | undefined;
+
+    for (let index = timestamps.length - 1; index >= 0; index -= 1) {
+      const timestamp = timestamps[index];
+      const close = closes[index];
+
+      if (timestamp == null || close == null) {
+        continue;
+      }
+
+      const day = unixToDay(timestamp);
+      if (day < quoteAsOf) {
+        previousCloseAsOf = day;
+        previousClose = toPriceString(close, request.ticker);
+        break;
+      }
+    }
+
     return {
       ticker: request.ticker,
       price: toPriceString(price, request.ticker),
       currency: request.currency,
-      asOf: result.meta?.regularMarketTime
-        ? unixToDay(result.meta.regularMarketTime)
-        : todayUtc(),
+      asOf: quoteAsOf,
+      previousClose,
+      previousCloseAsOf,
       source: this.id,
     };
   }
@@ -230,11 +268,31 @@ export class YahooProvider implements QuoteProvider {
         continue;
       }
 
+      let previousClose: string | undefined;
+      let previousCloseAsOf: string | undefined;
+
+      for (
+        let previousIndex = index - 1;
+        previousIndex >= 0;
+        previousIndex -= 1
+      ) {
+        const previousTimestamp = timestamps[previousIndex];
+        const previousValue = closes[previousIndex];
+
+        if (previousTimestamp != null && previousValue != null) {
+          previousClose = toPriceString(previousValue, request.ticker);
+          previousCloseAsOf = unixToDay(previousTimestamp);
+          break;
+        }
+      }
+
       return {
         ticker: request.ticker,
         price: toPriceString(close, request.ticker),
         currency: request.currency,
         asOf: unixToDay(timestamp),
+        previousClose,
+        previousCloseAsOf,
         source: this.id,
       };
     }

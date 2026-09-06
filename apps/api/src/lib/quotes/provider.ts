@@ -12,6 +12,10 @@ export type MarketQuote = {
   currency: Currency;
   /** Calendar day the quote refers to, `YYYY-MM-DD`. */
   asOf: string;
+  /** Previous regular-session close, when exposed by the provider. */
+  previousClose?: string;
+  /** Calendar day of `previousClose`, when it can be resolved. */
+  previousCloseAsOf?: string;
   source: QuoteSource;
 };
 

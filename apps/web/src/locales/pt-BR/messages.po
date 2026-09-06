@@ -66,9 +66,15 @@ msgstr ""
 
 #. js-lingui-explicit-id
 #. placeholder {0}: formatMonthLabel(month, locale)
-#: src/routes/_app/positions.tsx:284
+#: src/routes/_app/positions.tsx:288
 msgid "positions.currentMonth"
 msgstr "{0} · Ao vivo"
+
+#. js-lingui-explicit-id
+#. placeholder {0}: summary.comparablePositions
+#: src/routes/_app/daily.tsx:205
+msgid "daily.marketBreadthHint"
+msgstr "{0} ativos com comparação diária."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: result.inserted
@@ -77,17 +83,17 @@ msgid "settings.devSeed.success"
 msgstr "{0} operações de demonstração adicionadas"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:351
+#: src/routes/_app/positions.tsx:355
 msgid "positions.closedCount"
 msgstr "{count, plural, one {# posição encerrada} other {# posições encerradas}}"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:343
+#: src/routes/_app/positions.tsx:347
 msgid "positions.openCount"
 msgstr "{count, plural, one {# posição aberta} other {# posições abertas}}"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:360
+#: src/routes/_app/positions.tsx:364
 msgid "positions.unquotedCount"
 msgstr "{count, plural, one {# sem cotação} other {# sem cotação}}"
 
@@ -112,7 +118,7 @@ msgid "settings.devSeed.description"
 msgstr "Adiciona compras e vendas de demonstração em ações, ETFs, FIIs, cripto e renda fixa à conta logada. Só para testes locais, nunca para produção."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:553
+#: src/routes/_app/positions.tsx:560
 msgid "positions.allocation"
 msgstr "Alocação"
 
@@ -122,17 +128,28 @@ msgid "login.hasAccount"
 msgstr "Já tem uma conta?"
 
 #. js-lingui-explicit-id
+#: src/routes/_app/daily.tsx:305
+msgid "daily.assets"
+msgstr "Ativos"
+
+#. js-lingui-explicit-id
+#. placeholder {0}: formatTradeDate(data.summary.asOf)
+#: src/routes/_app/daily.tsx:301
+msgid "daily.assetsAsOf"
+msgstr "Ativos · {0}"
+
+#. js-lingui-explicit-id
 #: src/routes/login.tsx:166
 msgid "login.passwordHint"
 msgstr "Pelo menos 8 caracteres"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:994
+#: src/routes/_app/positions.tsx:1004
 msgid "positions.holdingsHint"
 msgstr "Custo médio e preços ficam na moeda nativa de cada ativo; valor de mercado e resultado são consolidados."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1022
+#: src/routes/_app/positions.tsx:1032
 msgid "positions.colAvgCost"
 msgstr "Custo médio"
 
@@ -163,7 +180,12 @@ msgid "transactions.colCurrency"
 msgstr "Moeda"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1016
+#: src/routes/_app/daily.tsx:326
+msgid "daily.colClass"
+msgstr "Classe"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:1026
 msgid "positions.colClass"
 msgstr "Classe"
 
@@ -173,7 +195,17 @@ msgid "transactions.class"
 msgstr "Classe"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:390
+#: src/routes/_app/daily.tsx:364
+msgid "daily.total"
+msgstr "Total comparável"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/daily.tsx:195
+msgid "daily.previousCloseComparison"
+msgstr "Comparado ao fechamento anterior."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:394
 msgid "positions.investedCostHint"
 msgstr "Custo de tudo que você ainda detém."
 
@@ -181,6 +213,11 @@ msgstr "Custo de tudo que você ainda detém."
 #: src/components/dev-seed-section.tsx:48
 msgid "settings.devSeed.error"
 msgstr "Não foi possível adicionar os dados. Tente de novo."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/daily.tsx:119
+msgid "daily.fxFailed"
+msgstr "Não foi possível obter a taxa de câmbio. Tente outra fonte ou informe a taxa manualmente."
 
 #. js-lingui-explicit-id
 #: src/routes/_app/positions.tsx:200
@@ -218,6 +255,24 @@ msgid "transactions.currency"
 msgstr "Moeda"
 
 #. js-lingui-explicit-id
+#: src/routes/_app.tsx:47
+msgid "nav.daily"
+msgstr "Diário"
+
+#. js-lingui-explicit-id
+#. placeholder {0}: summary.comparablePositions
+#. placeholder {1}: summary.openPositions
+#. placeholder {2}: summary.displayCurrency
+#: src/routes/_app/daily.tsx:212
+msgid "daily.comparisonCoverage"
+msgstr "A variação diária abrange {0} de {1} ativos em aberto. Os valores estão consolidados em {2}."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/daily.tsx:91
+msgid "daily.title"
+msgstr "Acompanhamento diário"
+
+#. js-lingui-explicit-id
 #: src/components/theme-switcher.tsx:60
 #: src/components/user-menu.tsx:211
 msgid "theme.dark"
@@ -227,6 +282,16 @@ msgstr "Escuro"
 #: src/routes/_app/transactions.tsx:493
 msgid "transactions.colDate"
 msgstr "Data"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/daily.tsx:180
+msgid "daily.dayChange"
+msgstr "Variação no dia"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/daily.tsx:345
+msgid "daily.colDayChange"
+msgstr "Variação no dia"
 
 #. js-lingui-explicit-id
 #: src/components/dev-seed-section.tsx:75
@@ -284,6 +349,11 @@ msgid "assetClass.fixedIncome"
 msgstr "Renda fixa"
 
 #. js-lingui-explicit-id
+#: src/routes/_app/daily.tsx:94
+msgid "daily.subtitle"
+msgstr "Acompanhe a última movimentação diária do patrimônio e veja quais ativos estão impulsionando a variação."
+
+#. js-lingui-explicit-id
 #: src/components/settings-dialog.tsx:202
 msgid "positions.quoteSourceHint"
 msgstr "Cotações gratuitas com atraso para valor de mercado e alocação."
@@ -294,7 +364,7 @@ msgid "transactions.history"
 msgstr "Histórico"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:991
+#: src/routes/_app/positions.tsx:1001
 msgid "positions.holdings"
 msgstr "Posições"
 
@@ -304,7 +374,7 @@ msgid "auth.invalidCredentials"
 msgstr "E-mail ou senha inválidos."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:387
+#: src/routes/_app/positions.tsx:391
 msgid "positions.investedCost"
 msgstr "Custo investido"
 
@@ -314,6 +384,16 @@ msgstr "Custo investido"
 #: src/components/user-menu.tsx:112
 msgid "shell.language"
 msgstr "Idioma"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/daily.tsx:335
+msgid "daily.colLastPrice"
+msgstr "Último preço"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/daily.tsx:173
+msgid "daily.quotedAt"
+msgstr "Cotações mais recentes de {asOf}."
 
 #. js-lingui-explicit-id
 #: src/components/theme-switcher.tsx:58
@@ -327,12 +407,12 @@ msgid "positions.live"
 msgstr "Ao vivo"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:73
+#: src/routes/_app.tsx:78
 msgid "nav.main"
 msgstr "Principal"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1260
+#: src/routes/_app/positions.tsx:1270
 msgid "positions.manualPrices"
 msgstr "Preços manuais"
 
@@ -342,28 +422,38 @@ msgid "positions.quoteSourceManualHint"
 msgstr "Os preços manuais são informados por ticker na página Posições."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:378
+#: src/routes/_app/daily.tsx:202
+msgid "daily.marketBreadth"
+msgstr "Amplitude do mercado"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/daily.tsx:338
+msgid "daily.colMarketValue"
+msgstr "Valor de mercado"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:382
 msgid "positions.marketValue"
 msgstr "Valor de mercado"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1033
+#: src/routes/_app/positions.tsx:1043
 msgid "positions.colMarketValue"
 msgstr "Valor de mercado"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:408
+#: src/routes/_app/positions.tsx:412
 msgid "positions.unrealizedPnlHint"
 msgstr "Valor de mercado contra o custo dos ativos cotados."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:556
+#: src/routes/_app/positions.tsx:563
 msgid "positions.allocationHint"
 msgstr "Valor de mercado em {snapshotLabel} e participação no patrimônio cotado."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: summary.displayCurrency
-#: src/routes/_app/positions.tsx:758
+#: src/routes/_app/positions.tsx:768
 msgid "positions.openResultHint"
 msgstr "Valor de mercado menos o custo médio móvel, em {0}."
 
@@ -383,12 +473,12 @@ msgid "transactions.historyHint"
 msgstr "Operações mais recentes primeiro."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:450
+#: src/routes/_app/positions.tsx:454
 msgid "positions.nativeTotals"
 msgstr "Totais originais: {breakdown}"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1263
+#: src/routes/_app/positions.tsx:1273
 msgid "positions.manualPricesHint"
 msgstr "Preço por unidade na moeda nativa. Preços manuais valem para todos os meses."
 
@@ -398,19 +488,24 @@ msgid "transactions.newTrade"
 msgstr "Nova operação"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:564
-#: src/routes/_app/positions.tsx:767
+#: src/routes/_app/daily.tsx:175
+msgid "daily.noQuoteDate"
+msgstr "Nenhuma cotação ao vivo disponível."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:571
+#: src/routes/_app/positions.tsx:777
 msgid "positions.noQuotes"
 msgstr "Sem cotações de mercado para este snapshot ainda."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1321
+#: src/routes/_app/positions.tsx:1331
 msgid "positions.empty"
 msgstr "Sem posições ainda. Registre sua primeira operação para vê-la aqui."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: missing.join(", ")
-#: src/routes/_app/positions.tsx:1181
+#: src/routes/_app/positions.tsx:1191
 msgid "positions.missingQuotes"
 msgstr "Sem cotação para {0}. Valores e participações cobrem apenas ativos cotados."
 
@@ -425,19 +520,19 @@ msgid "transactions.empty"
 msgstr "Nada registrado ainda."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:396
-#: src/routes/_app/positions.tsx:738
-#: src/routes/_app/positions.tsx:816
+#: src/routes/_app/positions.tsx:400
+#: src/routes/_app/positions.tsx:748
+#: src/routes/_app/positions.tsx:826
 msgid "positions.unrealizedPnl"
 msgstr "Resultado em aberto"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1047
+#: src/routes/_app/positions.tsx:1057
 msgid "positions.colOpenResult"
 msgstr "Resultado em aberto"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:755
+#: src/routes/_app/positions.tsx:765
 msgid "positions.openResult"
 msgstr "Resultado em aberto por ativo"
 
@@ -457,13 +552,18 @@ msgid "login.password"
 msgstr "Senha"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:68
+#: src/routes/_app.tsx:73
 #: src/routes/login.tsx:96
 msgid "shell.brand"
 msgstr "Portfolio Tracker"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:42
+#: src/routes/_app/daily.tsx:169
+msgid "daily.portfolioValue"
+msgstr "Valor do patrimônio"
+
+#. js-lingui-explicit-id
+#: src/routes/_app.tsx:43
 msgid "nav.positions"
 msgstr "Posições"
 
@@ -473,7 +573,12 @@ msgid "positions.title"
 msgstr "Posições"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1025
+#: src/routes/_app/daily.tsx:332
+msgid "daily.colPreviousClose"
+msgstr "Fechamento anterior"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:1035
 msgid "positions.colPrice"
 msgstr "Preço"
 
@@ -483,7 +588,17 @@ msgid "transactions.colPrice"
 msgstr "Preço"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1019
+#: src/routes/_app/daily.tsx:309
+msgid "daily.assetsHint"
+msgstr "Variação do preço desde o fechamento anterior e o impacto na sua posição atual."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/daily.tsx:329
+msgid "daily.colQuantity"
+msgstr "Quantidade"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:1029
 msgid "positions.colQuantity"
 msgstr "Quantidade"
 
@@ -498,20 +613,30 @@ msgid "transactions.colQuantity"
 msgstr "Quantidade"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:381
+#: src/routes/_app/positions.tsx:385
 msgid "positions.marketValueHint"
 msgstr "Patrimônio cotado em {snapshotLabel}."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:415
+#: src/routes/_app/positions.tsx:419
 msgid "positions.realizedPnl"
 msgstr "P&L realizado"
 
 #. js-lingui-explicit-id
+#: src/routes/_app/daily.tsx:111
+msgid "daily.refresh"
+msgstr "Atualizar cotações"
+
+#. js-lingui-explicit-id
 #: src/routes/_app/positions.tsx:189
-#: src/routes/_app/positions.tsx:1328
+#: src/routes/_app/positions.tsx:1338
 msgid "positions.registerTrade"
 msgstr "Registrar operação"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/daily.tsx:136
+msgid "daily.empty"
+msgstr "Registre uma negociação para começar a acompanhar a variação diária."
 
 #. js-lingui-explicit-id
 #: src/routes/_app/transactions.tsx:151
@@ -534,12 +659,12 @@ msgid "transactions.remove"
 msgstr "Remover operação {ticker} de {date}"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:422
+#: src/routes/_app/positions.tsx:426
 msgid "positions.realizedPnlHint"
 msgstr "Resultado já garantido pelas suas vendas."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1302
+#: src/routes/_app/positions.tsx:1312
 msgid "positions.savePrices"
 msgstr "Salvar preços"
 
@@ -565,7 +690,7 @@ msgid "settings.title"
 msgstr "Configurações"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1060
+#: src/routes/_app/positions.tsx:1070
 msgid "positions.colShare"
 msgstr "Participação"
 
@@ -616,6 +741,11 @@ msgid "error.unknown"
 msgstr "Algo deu errado. Tente novamente."
 
 #. js-lingui-explicit-id
+#: src/routes/_app/daily.tsx:457
+msgid "daily.sortColumn"
+msgstr "Ordenar por esta coluna"
+
+#. js-lingui-explicit-id
 #: src/components/theme-switcher.tsx:62
 #: src/components/user-menu.tsx:213
 msgid "theme.system"
@@ -644,7 +774,12 @@ msgid "transactions.currencyMismatch"
 msgstr "Este ticker já é acompanhado em outra moeda."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1009
+#: src/routes/_app/daily.tsx:320
+msgid "daily.colTicker"
+msgstr "Ticker"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:1019
 msgid "positions.colTicker"
 msgstr "Ticker"
 
@@ -659,8 +794,8 @@ msgid "transactions.colTicker"
 msgstr "Ticker"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:642
-#: src/routes/_app/positions.tsx:1159
+#: src/routes/_app/positions.tsx:649
+#: src/routes/_app/positions.tsx:1169
 msgid "positions.total"
 msgstr "Total"
 
@@ -685,7 +820,7 @@ msgid "transactions.removed"
 msgstr "Operação removida"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:45
+#: src/routes/_app.tsx:50
 msgid "nav.transactions"
 msgstr "Operações"
 

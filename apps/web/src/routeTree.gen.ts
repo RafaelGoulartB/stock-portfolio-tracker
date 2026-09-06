@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as AppDailyRouteImport } from './routes/_app/daily'
 import { Route as AppPositionsRouteImport } from './routes/_app/positions'
 import { Route as AppTransactionsRouteImport } from './routes/_app/transactions'
 
@@ -29,6 +30,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppDailyRoute = AppDailyRouteImport.update({
+  id: '/daily',
+  path: '/daily',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppPositionsRoute = AppPositionsRouteImport.update({
   id: '/positions',
   path: '/positions',
@@ -43,12 +49,14 @@ const AppTransactionsRoute = AppTransactionsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/daily': typeof AppDailyRoute
   '/positions': typeof AppPositionsRoute
   '/transactions': typeof AppTransactionsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/daily': typeof AppDailyRoute
   '/positions': typeof AppPositionsRoute
   '/transactions': typeof AppTransactionsRoute
 }
@@ -57,19 +65,21 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/_app/daily': typeof AppDailyRoute
   '/_app/positions': typeof AppPositionsRoute
   '/_app/transactions': typeof AppTransactionsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/positions' | '/transactions'
+  fullPaths: '/' | '/login' | '/daily' | '/positions' | '/transactions'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/positions' | '/transactions'
+  to: '/' | '/login' | '/daily' | '/positions' | '/transactions'
   id:
     | '__root__'
     | '/'
     | '/_app'
     | '/login'
+    | '/_app/daily'
     | '/_app/positions'
     | '/_app/transactions'
   fileRoutesById: FileRoutesById
@@ -103,6 +113,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/daily': {
+      id: '/_app/daily'
+      path: '/daily'
+      fullPath: '/daily'
+      preLoaderRoute: typeof AppDailyRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/positions': {
       id: '/_app/positions'
       path: '/positions'
@@ -121,11 +138,13 @@ declare module '@tanstack/react-router' {
 }
 
 interface AppRouteChildren {
+  AppDailyRoute: typeof AppDailyRoute
   AppPositionsRoute: typeof AppPositionsRoute
   AppTransactionsRoute: typeof AppTransactionsRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
+  AppDailyRoute: AppDailyRoute,
   AppPositionsRoute: AppPositionsRoute,
   AppTransactionsRoute: AppTransactionsRoute,
 }
