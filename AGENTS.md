@@ -15,10 +15,12 @@ Node 24, pnpm workspaces, TypeScript `strict`, ESM. Vite, React 19, TanStack Rou
 
 ## Rules
 
-- Money: Postgres `numeric`, never `float`
+- Money: Postgres `numeric(22, 8)`, never `float`; decimals travel as strings
+- Positions: moving average cost, never FIFO
+- Auth: custom cookie session (`portifolio_session`, SHA-256 hash stored, scrypt password, 30d TTL); private routers use `protectedProcedure`
 - Do not wrap shadcn; New York only; use `--gain` / `--loss` tokens (no ad-hoc hex)
 - tRPC client URL is `/trpc` (Vite proxy). Do not bake `localhost` into the client
-- No Zustand, Effect, Next, Prisma, or auth in v0
+- No Zustand, Effect, Next, Prisma in v0
 - English only: code, comments, UI, docs, commits
 
 ## Out of scope until a dedicated plan
