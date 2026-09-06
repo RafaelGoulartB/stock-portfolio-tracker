@@ -2,11 +2,7 @@ import { msg, t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import type { AllocationRow } from "@portifolio-tracker/shared";
-import {
-  fairValueSchema,
-  positiveDecimal,
-  weightRatio,
-} from "@portifolio-tracker/shared";
+import { positiveDecimal, weightRatio } from "@portifolio-tracker/shared";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   ChevronDown,
@@ -56,7 +52,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { trpc } from "@/lib/api";
 import { useFxQuote } from "@/lib/fx";
-import { parseDecimalInput, parsePercentInput } from "@/lib/numeric-input";
+import { parsePercentInput } from "@/lib/numeric-input";
 import {
   currentQuarter,
   formatQuarterLabel,
@@ -330,31 +326,6 @@ function AllocationPage() {
     upsertAsset.mutate({ ticker, targetWeight: parsed });
   }
 
-  function editFairValue(ticker: string, text: string) {
-    if (text.trim().length === 0) {
-      upsertAsset.mutate({ ticker, fairValue: null });
-
-      return;
-    }
-
-    const parsed = parseDecimalInput(text);
-
-    if (parsed === null || !fairValueSchema.safeParse(parsed).success) {
-      toast.error(
-        i18n._(
-          msg({
-            id: "allocation.invalidFairValue",
-            message: "Enter a positive fair value, e.g. 45,50",
-          }),
-        ),
-      );
-
-      return;
-    }
-
-    upsertAsset.mutate({ ticker, fairValue: parsed });
-  }
-
   async function addAsset(values: AddAssetValues) {
     await upsertAsset.mutateAsync(values);
     toast.success(
@@ -565,12 +536,10 @@ function AllocationPage() {
           freeOrder={freeOrder}
           onReorder={(tickers) => reorder.mutate({ tickers })}
           onEditTarget={(ticker, text) => editPercent(ticker, text)}
-          onEditFairValue={editFairValue}
           onClearAnalysis={(ticker) =>
             upsertAsset.mutate({
               ticker,
               targetWeight: null,
-              fairValue: null,
               valuationRef: null,
             })
           }

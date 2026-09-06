@@ -25,7 +25,6 @@ export type AllocationAssetMeta = {
   assetClass: AssetClass;
   currency: Currency;
   targetWeight: string | null;
-  fairValue: string | null;
   valuationRef: string | null;
   sortOrder: number;
 };
@@ -67,6 +66,40 @@ export function discountFromFairValue(
     div(sub(fair, toDecimal(marketPrice)), fair),
     WEIGHT_PLACES,
   );
+}
+
+/**
+ * Newest quarterly fair value. Period keys (`2026Q1`) sort chronologically as
+ * plain strings, so the last review with a value wins.
+ */
+export function latestFairValue(
+  reviews: readonly {
+    period: string;
+    fairValue: string | null;
+    fairValueRef?: string | null;
+  }[],
+): { fairValue: string; period: string; fairValueRef: string | null } | null {
+  let best: {
+    fairValue: string;
+    period: string;
+    fairValueRef: string | null;
+  } | null = null;
+
+  for (const review of reviews) {
+    if (review.fairValue === null) {
+      continue;
+    }
+
+    if (best === null || review.period > best.period) {
+      best = {
+        fairValue: review.fairValue,
+        period: review.period,
+        fairValueRef: review.fairValueRef ?? null,
+      };
+    }
+  }
+
+  return best;
 }
 
 /**
@@ -131,12 +164,9 @@ export type AllocationInput = {
 
 /**
  * Joins the three sources behind the allocation screen into one row per
- * ticker: the consolidated position, the analysis metadata (target, fair
- * value, manual order) and the quarterly reviews. Every row is scored.
- *
- * The row set is the union of open positions and metadata rows, so an asset
- * with no money in it still shows up for research, and a target set on a
- * ticker never bought is kept in view.
+ * ticker: the consolidated position, the analysis metadata (target, manual
+ * order) and the quarterly reviews. Every row is scored. Discount comes from
+ * the newest review that carries a fair value.
  */
 export function buildAllocationRows(input: AllocationInput): AllocationRow[] {
   const config = input.config ?? DEFAULT_SCORE_CONFIG;
@@ -152,6 +182,8 @@ export function buildAllocationRows(input: AllocationInput): AllocationRow[] {
       period: review.period,
       grade: review.grade,
       notes: review.notes,
+      fairValue: review.fairValue,
+      fairValueRef: review.fairValueRef,
     });
     reviewsByTicker.set(review.ticker, list);
   }
@@ -174,12 +206,13 @@ export function buildAllocationRows(input: AllocationInput): AllocationRow[] {
     const currency =
       position?.currency ?? asset?.currency ?? input.displayCurrency;
     const marketPrice = position?.marketPrice ?? watchQuote?.price ?? null;
-    const fairValue = asset?.fairValue ?? null;
-    const discount = discountFromFairValue(fairValue, marketPrice);
     // Period keys sort chronologically, so plain text order is enough.
     const reviews = (reviewsByTicker.get(ticker) ?? []).sort((a, b) =>
       a.period.localeCompare(b.period),
     );
+    const latest = latestFairValue(reviews);
+    const fairValue = latest?.fairValue ?? null;
+    const discount = discountFromFairValue(fairValue, marketPrice);
     const grades = averageGrade(reviews, config);
     const currentWeight = formatDecimal(
       toDecimal(position?.weight ?? "0"),
@@ -216,6 +249,8 @@ export function buildAllocationRows(input: AllocationInput): AllocationRow[] {
               WEIGHT_PLACES,
             ),
       fairValue,
+      fairValuePeriod: latest?.period ?? null,
+      fairValueRef: latest?.fairValueRef ?? null,
       discount,
       averageGrade: grades.average,
       gradedQuarters: grades.quarters,

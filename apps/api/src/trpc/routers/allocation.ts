@@ -54,7 +54,6 @@ async function loadAssets(userId: string): Promise<AllocationAssetMeta[]> {
     assetClass: normalizeAssetClass(row.assetClass),
     currency: row.currency,
     targetWeight: row.targetWeight,
-    fairValue: row.fairValue,
     valuationRef: row.valuationRef,
     sortOrder: row.sortOrder,
   }));
@@ -67,6 +66,8 @@ async function loadReviews(userId: string): Promise<StoredReview[]> {
       period: assetReviews.period,
       grade: assetReviews.grade,
       notes: assetReviews.notes,
+      fairValue: assetReviews.fairValue,
+      fairValueRef: assetReviews.fairValueRef,
     })
     .from(assetReviews)
     .where(eq(assetReviews.userId, userId))
@@ -253,9 +254,6 @@ export const allocationRouter = router({
         ...(input.targetWeight !== undefined
           ? { targetWeight: input.targetWeight }
           : {}),
-        ...(input.fairValue !== undefined
-          ? { fairValue: input.fairValue }
-          : {}),
         ...(input.valuationRef !== undefined
           ? { valuationRef: input.valuationRef }
           : {}),
@@ -377,6 +375,12 @@ export const allocationRouter = router({
       const patch = {
         ...(input.grade !== undefined ? { grade: input.grade } : {}),
         ...(input.notes !== undefined ? { notes: input.notes } : {}),
+        ...(input.fairValue !== undefined
+          ? { fairValue: input.fairValue }
+          : {}),
+        ...(input.fairValueRef !== undefined
+          ? { fairValueRef: input.fairValueRef }
+          : {}),
       };
 
       const [row] = await db
@@ -400,6 +404,8 @@ export const allocationRouter = router({
           period: assetReviews.period,
           grade: assetReviews.grade,
           notes: assetReviews.notes,
+          fairValue: assetReviews.fairValue,
+          fairValueRef: assetReviews.fairValueRef,
         });
 
       return row ?? null;

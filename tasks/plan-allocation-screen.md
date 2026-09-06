@@ -17,11 +17,11 @@ One dense, editable table plus a contribution planner.
 | Gap | `target - current` | — |
 | Score | score engine | — |
 | Grade | average of the newest graded quarters | — |
-| Discount | `(fairValue - marketPrice) / fairValue` | — (computed) |
+| Discount | newest review `fair_value` vs market | — (set on quarter) |
 | Last buy | newest **buy** in the trade log | — |
 | Shares / Value | consolidated position | — |
-| Fair value | `allocation_assets.fair_value` — per-share target from the user's valuation | inline, money |
-| `Qn YY` grid | `asset_reviews` (grade + notes per quarter) | popover per cell |
+| Grade | average of the newest graded quarters | — |
+| `Qn YY` grid | `asset_reviews` (grade + notes + fair value per quarter) | popover per cell |
 
 Interactions:
 
@@ -106,7 +106,6 @@ turn any untargeted holding into a trim signal.
 ```text
 allocation_assets(user_id, ticker) unique
   target_weight numeric(22,8) nullable          -- ratios, 0.015 = 1.5%
-  fair_value numeric(22,8) nullable             -- per-share valuation target
   valuation_ref text nullable                   -- optional write-up pointer
   sort_order integer                            -- free-order rank
 
@@ -114,12 +113,12 @@ asset_reviews(user_id, ticker, period) unique
   period text                                   -- 'YYYYQn', sorts by text
   grade numeric(22,8) nullable                   -- 0-10
   notes text nullable
+  fair_value numeric(22,8) nullable             -- per-share valuation for that Q
 ```
 
-Discount is not stored: `buildAllocationRows` computes
-`(fair_value - market_price) / fair_value` and feeds that into the score
-engine. Migration `0003_fair_value.sql` replaced the old user-entered
-`discount` column.
+Discount is not stored: `buildAllocationRows` takes the newest review
+that has a `fair_value` and computes `(fair_value - market_price) / fair_value`.
+Migration `0004_review_fair_value.sql`.
 
 A row in `allocation_assets` with no matching transaction *is* a watch-only
 asset — there is no separate flag. The table lists the union of open positions

@@ -13,6 +13,7 @@ import {
   ArrowUpDown,
   ChevronDown,
   ChevronUp,
+  ExternalLink,
   Eraser,
   GripVertical,
   MoreVertical,
@@ -65,7 +66,6 @@ export const ALLOCATION_COLUMNS = [
   "lastContributionAt",
   "quantity",
   "marketValue",
-  "fairValue",
   "averageGrade",
 ] as const;
 
@@ -99,9 +99,6 @@ export function columnLabels(i18n: I18n): Record<AllocationColumn, string> {
     ),
     quantity: i18n._(t({ id: "allocation.colQuantity", message: "Shares" })),
     marketValue: i18n._(t({ id: "allocation.colValue", message: "Value" })),
-    fairValue: i18n._(
-      t({ id: "allocation.colFairValue", message: "Fair value" }),
-    ),
   };
 }
 
@@ -130,8 +127,6 @@ export function sortableValue(
       return Number(row.quantity);
     case "marketValue":
       return row.marketValue === null ? null : Number(row.marketValue);
-    case "fairValue":
-      return row.fairValue === null ? null : Number(row.fairValue);
   }
 }
 
@@ -227,7 +222,6 @@ export type AllocationTableProps = {
   onReorder: (tickers: string[]) => void;
   /** Raw cell text; the page owns parsing and validation. */
   onEditTarget: (ticker: string, text: string) => void;
-  onEditFairValue: (ticker: string, text: string) => void;
   onClearAnalysis: (ticker: string) => void;
   onRemoveAsset: (row: AllocationRow) => void;
   onSaveReview: (input: {
@@ -235,6 +229,8 @@ export type AllocationTableProps = {
     period: string;
     grade: string | null;
     notes: string | null;
+    fairValue: string | null;
+    fairValueRef: string | null;
   }) => void;
   onRemoveReview: (input: { ticker: string; period: string }) => void;
   missing: string[];
@@ -251,7 +247,6 @@ export function AllocationTable({
   freeOrder,
   onReorder,
   onEditTarget,
-  onEditFairValue,
   onClearAnalysis,
   onRemoveAsset,
   onSaveReview,
@@ -507,52 +502,64 @@ export function AllocationTable({
                   ) : null}
 
                   {visibleColumns.has("discount") ? (
-                    <TableCell className="px-2.5 py-2.5">
-                      <InlineEditCell
-                        display={
-                          row.discount !== null
-                            ? formatSignedWeightPrecise(row.discount)
-                            : row.fairValue !== null
-                              ? formatMoney(row.fairValue, row.currency)
-                              : null
-                        }
-                        text={formatDecimalInput(row.fairValue, i18n.locale)}
-                        label={i18n._(
-                          t({
-                            id: "allocation.editFairValue",
-                            message: `Fair value of ${row.ticker} in ${row.currency}`,
-                          }),
-                        )}
-                        placeholder={i18n._(
-                          t({
-                            id: "allocation.fairValuePlaceholder",
-                            message: "Fair value",
-                          }),
-                        )}
-                        className={
-                          row.discount === null
-                            ? ""
-                            : pnlClassName(row.discount)
-                        }
-                        title={
-                          row.fairValue === null
-                            ? undefined
-                            : row.marketPrice === null
-                              ? i18n._(
-                                  t({
-                                    id: "allocation.discountTooltipFairOnly",
-                                    message: `Fair value ${formatMoney(row.fairValue, row.currency)}`,
-                                  }),
-                                )
-                              : i18n._(
-                                  t({
-                                    id: "allocation.discountTooltip",
-                                    message: `Market ${formatMoney(row.marketPrice, row.currency)} vs fair value ${formatMoney(row.fairValue, row.currency)}`,
-                                  }),
-                                )
-                        }
-                        onCommit={(text) => onEditFairValue(row.ticker, text)}
-                      />
+                    <TableCell
+                      className={cn(
+                        "px-2.5 py-2.5 text-right tabular-nums",
+                        row.discount === null
+                          ? "text-muted-foreground"
+                          : pnlClassName(row.discount),
+                      )}
+                      title={
+                        row.fairValue === null
+                          ? i18n._(
+                              t({
+                                id: "allocation.discountEmptyTooltip",
+                                message:
+                                  "Set a fair value on a quarterly review",
+                              }),
+                            )
+                          : row.marketPrice === null
+                            ? i18n._(
+                                t({
+                                  id: "allocation.discountTooltipFairOnly",
+                                  message: `Fair value ${formatMoney(row.fairValue, row.currency)} (${row.fairValuePeriod ?? ""})`,
+                                }),
+                              )
+                            : i18n._(
+                                t({
+                                  id: "allocation.discountTooltip",
+                                  message: `Market ${formatMoney(row.marketPrice, row.currency)} vs fair value ${formatMoney(row.fairValue, row.currency)} (${row.fairValuePeriod ?? ""})`,
+                                }),
+                              )
+                      }
+                    >
+                      <span className="inline-flex items-center justify-end gap-1">
+                        {row.discount !== null
+                          ? formatSignedWeightPrecise(row.discount)
+                          : row.fairValue !== null
+                            ? formatMoney(row.fairValue, row.currency)
+                            : "—"}
+                        {row.fairValueRef ? (
+                          <a
+                            href={row.fairValueRef}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-muted-foreground hover:text-foreground"
+                            aria-label={i18n._(
+                              t({
+                                id: "allocation.openFairValueRef",
+                                message: `Open fair value reference for ${row.ticker}`,
+                              }),
+                            )}
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            <ExternalLink
+                              className="size-3"
+                              aria-hidden="true"
+                            />
+                          </a>
+                        ) : null}
+                      </span>
                     </TableCell>
                   ) : null}
 
@@ -613,26 +620,6 @@ export function AllocationTable({
                       ) : (
                         formatMoney(row.marketValue, row.displayCurrency)
                       )}
-                    </TableCell>
-                  ) : null}
-
-                  {visibleColumns.has("fairValue") ? (
-                    <TableCell className="px-2.5 py-2.5">
-                      <InlineEditCell
-                        display={
-                          row.fairValue === null
-                            ? null
-                            : formatMoney(row.fairValue, row.currency)
-                        }
-                        text={formatDecimalInput(row.fairValue, i18n.locale)}
-                        label={i18n._(
-                          t({
-                            id: "allocation.editFairValue",
-                            message: `Fair value of ${row.ticker} in ${row.currency}`,
-                          }),
-                        )}
-                        onCommit={(text) => onEditFairValue(row.ticker, text)}
-                      />
                     </TableCell>
                   ) : null}
 
@@ -846,7 +833,7 @@ function RowMenu({
         ) : null}
         <DropdownMenuItem onSelect={onClear} disabled={!row.tracked}>
           <Eraser aria-hidden="true" />
-          <Trans id="allocation.clearAnalysis">Clear target & fair value</Trans>
+          <Trans id="allocation.clearAnalysis">Clear target</Trans>
         </DropdownMenuItem>
         <DropdownMenuItem
           variant="destructive"

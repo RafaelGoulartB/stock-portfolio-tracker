@@ -39,11 +39,24 @@ export const weightRatio = nonNegativeDecimal.refine(
 );
 
 /**
- * Per-share fair value in the asset's native currency, from the user's
- * valuation. The discount ratio is derived from this and the live market
- * price — never entered by hand.
+ * Per-share fair value in the asset's native currency, set on a quarterly
+ * review. The allocation discount uses the newest quarter that has one.
  */
 export const fairValueSchema = positiveDecimal;
+
+/**
+ * Optional link to the valuation that produced the fair value (spreadsheet,
+ * Notion page, etc.). Accepts absolute http(s) URLs.
+ */
+export const fairValueRefSchema = z
+  .string()
+  .trim()
+  .url("Use a full http(s) link")
+  .refine(
+    (value) => value.startsWith("http://") || value.startsWith("https://"),
+    "Use a full http(s) link",
+  )
+  .max(2048, "Use at most 2048 characters");
 
 /** Free-text pointer to the valuation write-up, e.g. `1Q26`. */
 export const valuationRefSchema = z
@@ -82,7 +95,6 @@ export const upsertAllocationAssetInput = z.object({
   assetClass: assetClassSchema.optional(),
   currency: currencySchema.optional(),
   targetWeight: weightRatio.nullable().optional(),
-  fairValue: fairValueSchema.nullable().optional(),
   valuationRef: valuationRefSchema.nullable().optional(),
 });
 
@@ -93,7 +105,7 @@ export type UpsertAllocationAssetInput = z.input<
 /**
  * Drops the analysis metadata of a ticker. Transactions and quarterly
  * reviews are untouched, so a ticker with a position stays in the table
- * with empty target and fair value.
+ * with an empty target.
  */
 export const removeAllocationAssetInput = z.object({ ticker: tickerSchema });
 
@@ -114,6 +126,8 @@ export const upsertAssetReviewInput = z.object({
     .max(2000, "Use at most 2000 characters")
     .nullable()
     .optional(),
+  fairValue: fairValueSchema.nullable().optional(),
+  fairValueRef: fairValueRefSchema.nullable().optional(),
 });
 
 export type UpsertAssetReviewInput = z.input<typeof upsertAssetReviewInput>;
@@ -127,6 +141,10 @@ export const assetReviewSchema = z.object({
   period: reviewPeriodSchema,
   grade: gradeSchema.nullable(),
   notes: z.string().nullable(),
+  /** Per-share fair value for this quarter, in the asset's native currency. */
+  fairValue: z.string().nullable(),
+  /** Optional link to the valuation behind this fair value. */
+  fairValueRef: z.string().nullable(),
 });
 
 export type AssetReview = z.infer<typeof assetReviewSchema>;
@@ -137,7 +155,7 @@ export const allocationRowSchema = z.object({
   assetClass: assetClassSchema,
   currency: currencySchema,
   displayCurrency: currencySchema,
-  /** True when the ticker owns an analysis row (target, fair value, order). */
+  /** True when the ticker owns an analysis row (target, order). */
   tracked: z.boolean(),
   /** False for watch-only assets: on the radar, no money in them. */
   hasPosition: z.boolean(),
@@ -155,10 +173,14 @@ export const allocationRowSchema = z.object({
   /** `targetWeight - currentWeight`, before the discount adjustment. */
   gapWeight: z.string().nullable(),
   /**
-   * Per-share fair value in the asset's native currency. Null until the user
-   * sets it from their valuation.
+   * Newest quarterly fair value, in the asset's native currency. Null until
+   * any review carries one.
    */
   fairValue: z.string().nullable(),
+  /** Period of {@link fairValue}, e.g. `2026Q1`. */
+  fairValuePeriod: reviewPeriodSchema.nullable(),
+  /** Link from the review that produced {@link fairValue}, if any. */
+  fairValueRef: z.string().nullable(),
   /**
    * `(fairValue - marketPrice) / fairValue`. Null without a fair value or a
    * market price. Positive means the stock trades below fair value.

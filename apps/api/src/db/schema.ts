@@ -79,9 +79,9 @@ export const transactions = pgTable(
 
 /**
  * Per-ticker analysis metadata behind the allocation screen: the target
- * weight, the fair value from the user's valuation and the manual row order.
- * A row with no matching transaction is a watch-only asset: on the radar, no
- * money in it. Discount to market is derived at read time, never stored.
+ * weight and the manual row order. Fair value lives on each quarterly
+ * review. A row with no matching transaction is a watch-only asset: on the
+ * radar, no money in it.
  */
 export const allocationAssets = pgTable(
   "allocation_assets",
@@ -95,12 +95,6 @@ export const allocationAssets = pgTable(
     currency: currencyEnum("currency").notNull().default("BRL"),
     /** Target share of the portfolio, `0`-`1`. Null until the user sets it. */
     targetWeight: numeric("target_weight", DECIMAL),
-    /**
-     * Per-share fair value in the asset's native currency, from the user's
-     * valuation. Null until set; the discount ratio is computed against the
-     * live market price.
-     */
-    fairValue: numeric("fair_value", DECIMAL),
     /** Optional pointer to the valuation write-up, e.g. `1Q26`. */
     valuationRef: text("valuation_ref"),
     /** Free-order rank, ascending. Ties fall back to the ticker. */
@@ -120,7 +114,7 @@ export const allocationAssets = pgTable(
   ],
 );
 
-/** One quarterly review of an asset: a grade, notes, or both. */
+/** One quarterly review of an asset: a grade, notes, fair value, or any mix. */
 export const assetReviews = pgTable(
   "asset_reviews",
   {
@@ -131,9 +125,16 @@ export const assetReviews = pgTable(
     ticker: text("ticker").notNull(),
     /** Calendar quarter, `YYYYQn`. Keys sort chronologically as text. */
     period: text("period").notNull(),
-    /** `0`-`10`, null when the quarter only carries notes. */
+    /** `0`-`10`, null when the quarter only carries notes or a fair value. */
     grade: numeric("grade", DECIMAL),
     notes: text("notes"),
+    /**
+     * Per-share fair value in the asset's native currency for this quarter.
+     * The allocation discount uses the newest quarter that has one.
+     */
+    fairValue: numeric("fair_value", DECIMAL),
+    /** Optional URL to the valuation write-up behind this fair value. */
+    fairValueRef: text("fair_value_ref"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
