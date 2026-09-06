@@ -28,6 +28,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTitleIcon,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -570,7 +571,10 @@ function CategoriesPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="flex items-center gap-3">
+              <DialogTitleIcon>
+                <Pencil aria-hidden="true" />
+              </DialogTitleIcon>
               <Trans id="categories.renameTitle">Rename category</Trans>
             </DialogTitle>
             <DialogDescription>
@@ -606,7 +610,7 @@ function CategoriesPage() {
               update.mutate({ id: rename.id, name: parsed.data.name });
             }}
           >
-            <div className="space-y-2">
+            <div className="grid gap-2">
               <Label htmlFor="rename-category">
                 <Trans id="categories.name">Category name</Trans>
               </Label>
@@ -643,7 +647,10 @@ function CategoriesPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="flex items-center gap-3">
+              <DialogTitleIcon>
+                <Trash2 aria-hidden="true" />
+              </DialogTitleIcon>
               <Trans id="categories.deleteTitle">Delete category?</Trans>
             </DialogTitle>
             <DialogDescription>

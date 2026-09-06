@@ -15,6 +15,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTitleIcon,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -155,8 +156,10 @@ export function ContributionPlannerButton({
       </DialogTrigger>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Calculator className="size-4" aria-hidden="true" />
+          <DialogTitle className="flex items-center gap-3">
+            <DialogTitleIcon>
+              <Calculator aria-hidden="true" />
+            </DialogTitleIcon>
             <Trans id="allocation.plannerTitle">Contribution planner</Trans>
           </DialogTitle>
           <DialogDescription>
@@ -168,26 +171,32 @@ export function ContributionPlannerButton({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="w-full space-y-1.5 sm:w-52">
+        <div className="grid gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-2">
               <Label htmlFor="allocation-amount">
                 <Trans id="allocation.plannerAmount">Contribution</Trans>
               </Label>
-              <Input
-                id="allocation-amount"
-                value={amountText}
-                inputMode="decimal"
-                placeholder={i18n._(
-                  t({
-                    id: "allocation.plannerAmountPlaceholder",
-                    message: "5000",
-                  }),
-                )}
-                onChange={(event) => setAmountText(event.target.value)}
-              />
+              <div className="relative">
+                <span className="pointer-events-none absolute top-1/2 left-3 -translate-y-1/2 text-sm text-muted-foreground">
+                  {displayCurrency === "BRL" ? "R$" : "$"}
+                </span>
+                <Input
+                  id="allocation-amount"
+                  value={amountText}
+                  inputMode="decimal"
+                  className="pl-10"
+                  placeholder={i18n._(
+                    t({
+                      id: "allocation.plannerAmountPlaceholder",
+                      message: "5000",
+                    }),
+                  )}
+                  onChange={(event) => setAmountText(event.target.value)}
+                />
+              </div>
             </div>
-            <div className="w-40 space-y-1.5">
+            <div className="grid gap-2">
               <Label htmlFor="allocation-spread">
                 <Trans id="allocation.plannerSpread">Spread over</Trans>
               </Label>
@@ -218,7 +227,7 @@ export function ContributionPlannerButton({
           </div>
 
           {slices.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="rounded-lg border bg-muted/40 px-4 py-6 text-center text-sm text-muted-foreground">
               {candidates === 0 ? (
                 <Trans id="allocation.plannerNoCandidates">
                   No asset is taking contributions right now. Set a target,
@@ -233,7 +242,10 @@ export function ContributionPlannerButton({
           ) : (
             <ul className="max-h-72 space-y-2 overflow-auto pr-1">
               {slices.map((slice) => (
-                <li key={slice.ticker} className="flex items-center gap-3">
+                <li
+                  key={slice.ticker}
+                  className="flex items-center gap-3 rounded-lg border bg-muted/30 px-3 py-2.5"
+                >
                   <span className="w-16 shrink-0 text-sm font-semibold">
                     {slice.ticker}
                   </span>

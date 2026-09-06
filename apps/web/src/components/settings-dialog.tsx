@@ -21,6 +21,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTitleIcon,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -78,11 +79,20 @@ export function SettingsDialog() {
       <DialogContent className="flex h-[min(42rem,calc(100svh-2rem))] max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl sm:flex-row">
         <SettingsSidebar section={section} onSectionChange={setSection} />
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-          <DialogHeader className="gap-1 border-b px-6 py-4 pr-12 text-left">
-            <DialogTitle>
-              <Trans id="settings.title">Settings</Trans>
-              <span className="text-muted-foreground"> / </span>
-              <SettingsSectionLabel section={section} />
+          <DialogHeader className="gap-1.5 border-b bg-muted/20 px-6 py-5 pr-12 text-left">
+            <DialogTitle className="flex items-center gap-3">
+              <DialogTitleIcon>
+                {section === "appearance" ? (
+                  <Palette aria-hidden="true" />
+                ) : (
+                  <SlidersHorizontal aria-hidden="true" />
+                )}
+              </DialogTitleIcon>
+              <span>
+                <Trans id="settings.title">Settings</Trans>
+                <span className="text-muted-foreground"> / </span>
+                <SettingsSectionLabel section={section} />
+              </span>
             </DialogTitle>
             <DialogDescription>
               {section === "appearance" ? (
@@ -136,7 +146,7 @@ function SettingsSidebar({
           />
         ))}
       </nav>
-      <aside className="hidden w-48 shrink-0 flex-col gap-1 border-r bg-muted/30 p-3 sm:flex">
+      <aside className="hidden w-52 shrink-0 flex-col gap-1 border-r bg-muted/40 p-3 sm:flex">
         <nav className="flex flex-col gap-1" aria-label={navLabel}>
           {SECTIONS.map((item) => (
             <SectionButton
@@ -276,7 +286,7 @@ function GeneralSettings() {
             </span>
           }
         >
-          <div className="flex h-9 items-center gap-2 rounded-md border border-input bg-muted/40 px-3 text-sm tabular-nums">
+          <div className="flex h-9 items-center gap-2 rounded-md border border-input bg-muted/60 px-3 text-sm tabular-nums dark:bg-black/25">
             {fx.isPending ? (
               <Skeleton className="h-4 w-40" />
             ) : fx.rate ? (

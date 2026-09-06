@@ -64,7 +64,7 @@ export function DevSeedSection() {
   return (
     <div className="grid gap-3">
       <Separator />
-      <div className="rounded-md border border-dashed p-3">
+      <div className="rounded-lg border bg-muted/30 p-4">
         <div className="flex items-center gap-2">
           <FlaskConical
             className="size-4 text-muted-foreground"

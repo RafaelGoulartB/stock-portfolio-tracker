@@ -26,6 +26,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTitleIcon,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -251,9 +252,12 @@ export function ImportHoldingsDialog({
           <Trans id="transactions.import">Import</Trans>
         </Button>
       </DialogTrigger>
-      <DialogContent className="flex max-h-[90vh] flex-col gap-4 sm:max-w-3xl">
+      <DialogContent className="flex max-h-[90vh] min-h-0 flex-col gap-5 sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="flex items-center gap-3">
+            <DialogTitleIcon>
+              <Upload aria-hidden="true" />
+            </DialogTitleIcon>
             <Trans id="transactions.importTitle">Import holdings</Trans>
           </DialogTitle>
           <DialogDescription>
@@ -264,8 +268,8 @@ export function ImportHoldingsDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3 overflow-y-auto pr-1">
-          <div className="space-y-1.5">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
+          <div className="grid gap-2">
             <Label htmlFor="holdings-import-text">
               <Trans id="transactions.importPaste">Paste</Trans>
             </Label>

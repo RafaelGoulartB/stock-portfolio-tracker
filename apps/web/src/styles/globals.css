@@ -118,3 +118,20 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Inset fields inside dialogs only, so inputs read as a layer below the panel. */
+[data-slot="dialog-content"]
+:is([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"]) {
+  background-color: color-mix(in oklch, var(--muted) 72%, transparent);
+}
+
+html.dark
+  [data-slot="dialog-content"]
+  :is(
+    [data-slot="input"],
+    [data-slot="textarea"],
+    [data-slot="select-trigger"]
+  ) {
+  background-color: color-mix(in oklch, black 30%, var(--card));
+  border-color: oklch(1 0 0 / 14%);
+}

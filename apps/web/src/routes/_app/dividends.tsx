@@ -40,6 +40,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTitleIcon,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -591,9 +592,14 @@ function DividendDetailsDialog({
         {event ? (
           <>
             <DialogHeader>
-              <DialogTitle>
-                {event.ticker} ·{" "}
-                <Trans id="dividends.details">Income details</Trans>
+              <DialogTitle className="flex items-center gap-3">
+                <DialogTitleIcon>
+                  <CircleDollarSign aria-hidden="true" />
+                </DialogTitleIcon>
+                <span>
+                  {event.ticker} ·{" "}
+                  <Trans id="dividends.details">Income details</Trans>
+                </span>
               </DialogTitle>
               <DialogDescription>
                 <Trans id="dividends.detailsDescription">
@@ -602,7 +608,7 @@ function DividendDetailsDialog({
                 </Trans>
               </DialogDescription>
             </DialogHeader>
-            <dl className="grid grid-cols-2 gap-x-5 gap-y-4 text-sm">
+            <dl className="grid grid-cols-2 gap-x-5 gap-y-4 rounded-lg border bg-muted/30 px-4 py-4 text-sm">
               <DividendDetail
                 label={<Trans id="dividends.estimated">Estimated</Trans>}
                 value={formatMoney(event.grossAmount, event.currency)}

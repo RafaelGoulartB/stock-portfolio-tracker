@@ -21,6 +21,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTitleIcon,
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -132,7 +133,10 @@ export function AddAssetDialog({
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>
+          <DialogTitle className="flex items-center gap-3">
+            <DialogTitleIcon>
+              <Plus aria-hidden="true" />
+            </DialogTitleIcon>
             <Trans id="allocation.addTitle">Add asset to follow</Trans>
           </DialogTitle>
           <DialogDescription>
@@ -144,8 +148,8 @@ export function AddAssetDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="space-y-1.5">
+        <div className="grid gap-4">
+          <div className="grid gap-2">
             <Label htmlFor="allocation-add-ticker">
               <Trans id="allocation.addTicker">Ticker</Trans>
             </Label>
@@ -163,7 +167,7 @@ export function AddAssetDialog({
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
+            <div className="grid gap-2">
               <Label htmlFor="allocation-add-class">
                 <Trans id="allocation.addClass">Class</Trans>
               </Label>
@@ -184,7 +188,7 @@ export function AddAssetDialog({
               </Select>
             </div>
 
-            <div className="space-y-1.5">
+            <div className="grid gap-2">
               <Label htmlFor="allocation-add-currency">
                 <Trans id="allocation.addCurrency">Currency</Trans>
               </Label>
@@ -206,7 +210,7 @@ export function AddAssetDialog({
             </div>
           </div>
 
-          <div className="space-y-1.5">
+          <div className="grid gap-2">
             <Label htmlFor="allocation-add-target">
               <Trans id="allocation.addTarget">Target (%)</Trans>
             </Label>
