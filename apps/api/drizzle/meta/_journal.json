@@ -43,6 +43,13 @@
       "when": 1788722970492,
       "tag": "0005_fair_value_ref",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788729000000,
+      "tag": "0006_manual_price",
+      "breakpoints": true
     }
   ]
 }

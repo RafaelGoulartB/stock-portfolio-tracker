@@ -97,6 +97,11 @@ export const allocationAssets = pgTable(
     targetWeight: numeric("target_weight", DECIMAL),
     /** Optional pointer to the valuation write-up, e.g. `1Q26`. */
     valuationRef: text("valuation_ref"),
+    /**
+     * Native per-unit price used when the live quote provider has nothing
+     * (fixed income, opaque tickers). Set from the allocation Value cell.
+     */
+    manualPrice: numeric("manual_price", DECIMAL),
     /** Free-order rank, ascending. Ties fall back to the ticker. */
     sortOrder: integer("sort_order").notNull().default(0),
     createdAt: timestamp("created_at", { withTimezone: true })

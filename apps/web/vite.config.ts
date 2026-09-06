@@ -9,6 +9,10 @@ import { defineConfig } from "vite";
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 
+const port = process.env.WEB_PORT ? Number(process.env.WEB_PORT) : 5173;
+
+const apiPort = process.env.API_PORT ? Number(process.env.API_PORT) : 3001;
+
 export default defineConfig({
   plugins: [
     tanstackRouter({
@@ -27,11 +31,11 @@ export default defineConfig({
   },
   server: {
     host: "127.0.0.1",
-    port: 5173,
+    port,
     strictPort: true,
     proxy: {
       "/trpc": {
-        target: "http://127.0.0.1:3001",
+        target: `http://127.0.0.1:${apiPort}`,
         changeOrigin: true,
       },
     },

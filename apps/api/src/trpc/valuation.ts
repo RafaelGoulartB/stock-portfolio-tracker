@@ -13,7 +13,11 @@ import {
   type ValuationQuote,
   valuePositions,
 } from "../domain/positions";
-import { getQuoteProvider, QuoteUnavailableError } from "../lib/quotes";
+import {
+  getQuoteProvider,
+  getQuoteWithManualFallback,
+  QuoteUnavailableError,
+} from "../lib/quotes";
 import { loadTransactions } from "./routers/transactions";
 
 export type ValuationRequest = {
@@ -34,6 +38,8 @@ export type ValuationResult = {
   positions: ValuedPosition[];
   /** Tickers the provider had no price for, ascending. */
   missing: string[];
+  /** Tickers valued from a stored/client manual price after the live quote failed. */
+  manual: string[];
 };
 
 /**
@@ -87,6 +93,7 @@ export async function loadValuedPortfolio(
   const provider = getQuoteProvider(request.quoteSource);
   const quotes = new Map<string, ValuationQuote>();
   const missing: string[] = [];
+  const manual: string[] = [];
   let providerFailures = 0;
   let lastProviderError: string | null = null;
 
@@ -97,7 +104,7 @@ export async function loadValuedPortfolio(
       }
 
       try {
-        const quote = await provider.getQuote({
+        const resolved = await getQuoteWithManualFallback(provider, {
           ticker: position.ticker,
           assetClass: position.assetClass,
           currency: position.currency,
@@ -106,10 +113,14 @@ export async function loadValuedPortfolio(
         });
 
         quotes.set(position.ticker, {
-          ticker: quote.ticker,
-          price: quote.price,
-          asOf: quote.asOf,
+          ticker: resolved.quote.ticker,
+          price: resolved.quote.price,
+          asOf: resolved.quote.asOf,
         });
+
+        if (resolved.manual) {
+          manual.push(position.ticker);
+        }
       } catch (error) {
         missing.push(position.ticker);
 
@@ -138,5 +149,6 @@ export async function loadValuedPortfolio(
       request.usdBrlRate ?? null,
     ),
     missing: missing.sort(),
+    manual: manual.sort(),
   };
 }
