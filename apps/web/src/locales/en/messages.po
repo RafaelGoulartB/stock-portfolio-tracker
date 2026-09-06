@@ -1025,13 +1025,13 @@ msgid "nav.performance"
 msgstr "Performance"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:45
-msgid "nav.portfolio"
+#: src/routes/_app/performance.tsx:1415
+msgid "performance.total"
 msgstr "Portfolio"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/performance.tsx:1415
-msgid "performance.total"
+#: src/components/app-nav.tsx:45
+msgid "nav.portfolio"
 msgstr "Portfolio"
 
 #. js-lingui-explicit-id
