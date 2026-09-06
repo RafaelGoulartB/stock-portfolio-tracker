@@ -5,17 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Portfolio Tracker</title>
     <script>
+      var palette;
+      var stored;
+      var dark;
       try {
-        var stored = localStorage.getItem("portfolio-theme");
-        var dark =
+        palette = localStorage.getItem("portfolio-theme-palette") || "default";
+        if (palette === "t3-code") {
+          palette = "slate";
+        } else if (palette === "t3-chat") {
+          palette = "bloom";
+        }
+        document.documentElement.setAttribute("data-theme-palette", palette);
+        stored = localStorage.getItem("portfolio-theme");
+        dark =
           stored === "dark" ||
-          (!stored || stored === "system") &&
-            window.matchMedia("(prefers-color-scheme: dark)").matches;
+          ((!stored || stored === "system") &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches);
         if (dark) {
           document.documentElement.classList.add("dark");
         }
         document.documentElement.style.colorScheme = dark ? "dark" : "light";
-      } catch (e) {}
+      } catch {
+        // Theme hint is optional; React applies it after mount.
+      }
     </script>
   </head>
   <body>
