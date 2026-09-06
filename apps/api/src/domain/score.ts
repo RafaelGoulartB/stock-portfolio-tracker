@@ -51,7 +51,10 @@ export type ScoreInput = {
   targetWeight: string | null;
   /** Current share of the portfolio, `0`–`1`. */
   currentWeight: string;
-  /** Signed discount to fair value. `null` behaves as `0`. */
+  /**
+   * Signed discount of market price to fair value, usually derived from the
+   * user's fair value and the live quote. `null` behaves as `0`.
+   */
   discount: string | null;
   /** Average grade of the newest graded quarters, `null` when ungraded. */
   averageGrade: string | null;

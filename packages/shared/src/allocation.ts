@@ -39,20 +39,39 @@ export const weightRatio = nonNegativeDecimal.refine(
 );
 
 /**
- * Gap between the asset's fair value and its market price, as a signed
- * ratio (`0.2355` = trading 23.55% below fair value). Negative means the
- * market price runs above the fair value. User-owned for now; a valuation
- * screen will feed it later.
+ * Per-share fair value in the asset's native currency, set on a quarterly
+ * review. The allocation discount uses the newest quarter that has one.
  */
-export const discountRatio = signedDecimal
-  .refine((value) => Number(value) > -1, "Use a discount above -100%")
-  .refine((value) => Number(value) <= 10, "Use a discount up to 1000%");
+export const fairValueSchema = positiveDecimal;
 
-/** Free-text pointer to the valuation that produced the discount, e.g. `1Q26`. */
+/**
+ * Optional link to the valuation that produced the fair value (spreadsheet,
+ * Notion page, etc.). Accepts absolute http(s) URLs.
+ */
+export const fairValueRefSchema = z
+  .string()
+  .trim()
+  .url("Use a full http(s) link")
+  .refine(
+    (value) => value.startsWith("http://") || value.startsWith("https://"),
+    "Use a full http(s) link",
+  )
+  .max(2048, "Use at most 2048 characters");
+
+/** Free-text pointer to the valuation write-up, e.g. `1Q26`. */
 export const valuationRefSchema = z
   .string()
   .trim()
   .max(24, "Use at most 24 characters");
+
+/**
+ * Signed gap between fair value and market price (`0.2355` = trading 23.55%
+ * below fair value). Negative means the market runs above the fair value.
+ * Computed on the server; kept here so clients can validate display ranges.
+ */
+export const discountRatio = signedDecimal
+  .refine((value) => Number(value) > -1, "Use a discount above -100%")
+  .refine((value) => Number(value) <= 10, "Use a discount up to 1000%");
 
 export const allocationListInput = z.object({
   displayCurrency: currencySchema.default("BRL"),
@@ -76,7 +95,6 @@ export const upsertAllocationAssetInput = z.object({
   assetClass: assetClassSchema.optional(),
   currency: currencySchema.optional(),
   targetWeight: weightRatio.nullable().optional(),
-  discount: discountRatio.nullable().optional(),
   valuationRef: valuationRefSchema.nullable().optional(),
 });
 
@@ -87,7 +105,7 @@ export type UpsertAllocationAssetInput = z.input<
 /**
  * Drops the analysis metadata of a ticker. Transactions and quarterly
  * reviews are untouched, so a ticker with a position stays in the table
- * with empty target and discount.
+ * with an empty target.
  */
 export const removeAllocationAssetInput = z.object({ ticker: tickerSchema });
 
@@ -108,6 +126,8 @@ export const upsertAssetReviewInput = z.object({
     .max(2000, "Use at most 2000 characters")
     .nullable()
     .optional(),
+  fairValue: fairValueSchema.nullable().optional(),
+  fairValueRef: fairValueRefSchema.nullable().optional(),
 });
 
 export type UpsertAssetReviewInput = z.input<typeof upsertAssetReviewInput>;
@@ -121,6 +141,10 @@ export const assetReviewSchema = z.object({
   period: reviewPeriodSchema,
   grade: gradeSchema.nullable(),
   notes: z.string().nullable(),
+  /** Per-share fair value for this quarter, in the asset's native currency. */
+  fairValue: z.string().nullable(),
+  /** Optional link to the valuation behind this fair value. */
+  fairValueRef: z.string().nullable(),
 });
 
 export type AssetReview = z.infer<typeof assetReviewSchema>;
@@ -131,7 +155,7 @@ export const allocationRowSchema = z.object({
   assetClass: assetClassSchema,
   currency: currencySchema,
   displayCurrency: currencySchema,
-  /** True when the ticker owns an analysis row (target, discount, order). */
+  /** True when the ticker owns an analysis row (target, order). */
   tracked: z.boolean(),
   /** False for watch-only assets: on the radar, no money in them. */
   hasPosition: z.boolean(),
@@ -148,6 +172,19 @@ export const allocationRowSchema = z.object({
   targetWeight: z.string().nullable(),
   /** `targetWeight - currentWeight`, before the discount adjustment. */
   gapWeight: z.string().nullable(),
+  /**
+   * Newest quarterly fair value, in the asset's native currency. Null until
+   * any review carries one.
+   */
+  fairValue: z.string().nullable(),
+  /** Period of {@link fairValue}, e.g. `2026Q1`. */
+  fairValuePeriod: reviewPeriodSchema.nullable(),
+  /** Link from the review that produced {@link fairValue}, if any. */
+  fairValueRef: z.string().nullable(),
+  /**
+   * `(fairValue - marketPrice) / fairValue`. Null without a fair value or a
+   * market price. Positive means the stock trades below fair value.
+   */
   discount: z.string().nullable(),
   /** Average of the newest graded quarters, `null` when never graded. */
   averageGrade: z.string().nullable(),

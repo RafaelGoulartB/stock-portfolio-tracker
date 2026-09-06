@@ -8,7 +8,6 @@ import {
   CURRENCIES,
   CURRENCY_LABELS,
   type Currency,
-  discountRatio,
   tickerSchema,
   weightRatio,
 } from "@portifolio-tracker/shared";
@@ -40,13 +39,12 @@ export type AddAssetValues = {
   assetClass: AssetClass;
   currency: Currency;
   targetWeight: string | null;
-  discount: string | null;
 };
 
 /**
  * Adds a ticker to the table without a trade behind it: a watch-only asset,
- * which can already carry a target and a discount so it competes for the
- * next contribution.
+ * which can already carry a target so it competes for the next contribution
+ * once a quarterly fair value is set.
  */
 export function AddAssetDialog({
   onSubmit,
@@ -61,7 +59,6 @@ export function AddAssetDialog({
   const [assetClass, setAssetClass] = useState<AssetClass>("stock_us");
   const [currency, setCurrency] = useState<Currency>("USD");
   const [target, setTarget] = useState("");
-  const [discount, setDiscount] = useState("");
   const [error, setError] = useState<string | null>(null);
 
   function reset() {
@@ -69,7 +66,6 @@ export function AddAssetDialog({
     setAssetClass("stock_us");
     setCurrency("USD");
     setTarget("");
-    setDiscount("");
     setError(null);
   }
 
@@ -90,7 +86,6 @@ export function AddAssetDialog({
     }
 
     const targetValue = target.trim() ? parsePercentInput(target) : null;
-    const discountValue = discount.trim() ? parsePercentInput(discount) : null;
 
     if (
       target.trim() &&
@@ -108,29 +103,11 @@ export function AddAssetDialog({
       return;
     }
 
-    if (
-      discount.trim() &&
-      (discountValue === null ||
-        !discountRatio.safeParse(discountValue).success)
-    ) {
-      setError(
-        i18n._(
-          t({
-            id: "allocation.addDiscountInvalid",
-            message: "Use a discount above -100%.",
-          }),
-        ),
-      );
-
-      return;
-    }
-
     await onSubmit({
       ticker: parsedTicker.data,
       assetClass,
       currency,
       targetWeight: targetValue,
-      discount: discountValue,
     });
     reset();
     setOpen(false);
@@ -161,8 +138,8 @@ export function AddAssetDialog({
           <DialogDescription>
             <Trans id="allocation.addDescription">
               Watch-only assets have no invested amount. They stay in the table
-              with their target and discount, so the score can already rank
-              them.
+              with their target; set a fair value on a quarterly review so the
+              score can already rank them.
             </Trans>
           </DialogDescription>
         </DialogHeader>
@@ -229,38 +206,20 @@ export function AddAssetDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="allocation-add-target">
-                <Trans id="allocation.addTarget">Target (%)</Trans>
-              </Label>
-              <Input
-                id="allocation-add-target"
-                value={target}
-                inputMode="decimal"
-                placeholder="1,5"
-                onChange={(event) => {
-                  setTarget(event.target.value);
-                  setError(null);
-                }}
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="allocation-add-discount">
-                <Trans id="allocation.addDiscount">Discount (%)</Trans>
-              </Label>
-              <Input
-                id="allocation-add-discount"
-                value={discount}
-                inputMode="decimal"
-                placeholder="20"
-                onChange={(event) => {
-                  setDiscount(event.target.value);
-                  setError(null);
-                }}
-              />
-            </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="allocation-add-target">
+              <Trans id="allocation.addTarget">Target (%)</Trans>
+            </Label>
+            <Input
+              id="allocation-add-target"
+              value={target}
+              inputMode="decimal"
+              placeholder="1,5"
+              onChange={(event) => {
+                setTarget(event.target.value);
+                setError(null);
+              }}
+            />
           </div>
 
           {error ? <p className="text-sm text-destructive">{error}</p> : null}

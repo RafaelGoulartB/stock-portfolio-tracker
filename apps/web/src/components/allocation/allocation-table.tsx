@@ -1,4 +1,4 @@
-import type { I18n } from "@lingui/core";
+﻿import type { I18n } from "@lingui/core";
 import { t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
@@ -13,6 +13,7 @@ import {
   ArrowUpDown,
   ChevronDown,
   ChevronUp,
+  ExternalLink,
   Eraser,
   GripVertical,
   MoreVertical,
@@ -60,13 +61,12 @@ export const ALLOCATION_COLUMNS = [
   "targetWeight",
   "currentWeight",
   "gapWeight",
-  "score",
-  "averageGrade",
   "discount",
+  "score",
   "lastContributionAt",
   "quantity",
   "marketValue",
-  "valuationRef",
+  "averageGrade",
 ] as const;
 
 export type AllocationColumn = (typeof ALLOCATION_COLUMNS)[number];
@@ -76,7 +76,6 @@ export type AllocationSort = { id: AllocationColumn; direction: SortDirection };
 /** Columns that read better ascending on first click. */
 const ASCENDING_FIRST: AllocationColumn[] = [
   "ticker",
-  "valuationRef",
   "lastContributionAt",
 ];
 
@@ -100,9 +99,6 @@ export function columnLabels(i18n: I18n): Record<AllocationColumn, string> {
     ),
     quantity: i18n._(t({ id: "allocation.colQuantity", message: "Shares" })),
     marketValue: i18n._(t({ id: "allocation.colValue", message: "Value" })),
-    valuationRef: i18n._(
-      t({ id: "allocation.colValuation", message: "Valuation" }),
-    ),
   };
 }
 
@@ -131,8 +127,6 @@ export function sortableValue(
       return Number(row.quantity);
     case "marketValue":
       return row.marketValue === null ? null : Number(row.marketValue);
-    case "valuationRef":
-      return row.valuationRef;
   }
 }
 
@@ -228,8 +222,6 @@ export type AllocationTableProps = {
   onReorder: (tickers: string[]) => void;
   /** Raw cell text; the page owns parsing and validation. */
   onEditTarget: (ticker: string, text: string) => void;
-  onEditDiscount: (ticker: string, text: string) => void;
-  onEditValuation: (ticker: string, text: string) => void;
   onClearAnalysis: (ticker: string) => void;
   onRemoveAsset: (row: AllocationRow) => void;
   onSaveReview: (input: {
@@ -237,6 +229,8 @@ export type AllocationTableProps = {
     period: string;
     grade: string | null;
     notes: string | null;
+    fairValue: string | null;
+    fairValueRef: string | null;
   }) => void;
   onRemoveReview: (input: { ticker: string; period: string }) => void;
   missing: string[];
@@ -253,8 +247,6 @@ export function AllocationTable({
   freeOrder,
   onReorder,
   onEditTarget,
-  onEditDiscount,
-  onEditValuation,
   onClearAnalysis,
   onRemoveAsset,
   onSaveReview,
@@ -298,19 +290,19 @@ export function AllocationTable({
   }
 
   return (
-    <Card className="gap-0 overflow-hidden py-0">
+    <Card className="gap-0 overflow-hidden rounded-md py-0 shadow-none">
       <CardContent className="overflow-x-auto p-0">
-        <Table className="text-xs">
-          <TableHeader className="bg-muted/60">
+        <Table className="text-sm">
+          <TableHeader className="bg-muted/50">
             <TableRow className="hover:bg-transparent">
-              <TableHead className="h-9 w-8 px-1" />
+              <TableHead className="h-10 w-8 px-1" />
               {visible.map((id) => (
                 <TableHead
                   key={id}
                   className={cn(
-                    "h-9 px-2 whitespace-nowrap",
+                    "h-10 px-2.5 whitespace-nowrap",
                     id === "ticker"
-                      ? "sticky left-0 z-10 bg-muted"
+                      ? "sticky left-0 z-10 bg-muted/50"
                       : "text-right",
                   )}
                 >
@@ -351,12 +343,12 @@ export function AllocationTable({
               {quarters.map((quarter) => (
                 <TableHead
                   key={quarter.key}
-                  className="h-9 w-14 px-1 text-center font-medium whitespace-nowrap"
+                  className="h-10 w-14 px-1 text-center font-medium whitespace-nowrap"
                 >
                   {formatQuarterLabel(quarter)}
                 </TableHead>
               ))}
-              <TableHead className="h-9 w-8 px-1" />
+              <TableHead className="h-10 w-8 px-1" />
             </TableRow>
           </TableHeader>
 
@@ -406,7 +398,7 @@ export function AllocationTable({
                       : undefined
                   }
                 >
-                  <TableCell className="px-1 py-2">
+                  <TableCell className="px-1.5 py-2.5">
                     {freeOrder ? (
                       <button
                         type="button"
@@ -445,7 +437,7 @@ export function AllocationTable({
                   </TableCell>
 
                   {visibleColumns.has("ticker") ? (
-                    <TableCell className="sticky left-0 z-10 bg-card px-2 py-2">
+                    <TableCell className="sticky left-0 z-10 bg-card px-2.5 py-2.5">
                       <div className="flex items-center gap-1.5">
                         <span className="font-semibold">{row.ticker}</span>
                         {row.hasPosition ? null : (
@@ -472,7 +464,7 @@ export function AllocationTable({
                   ) : null}
 
                   {visibleColumns.has("targetWeight") ? (
-                    <TableCell className="px-2 py-2">
+                    <TableCell className="px-2.5 py-2.5">
                       <InlineEditCell
                         display={
                           row.targetWeight === null
@@ -492,13 +484,13 @@ export function AllocationTable({
                   ) : null}
 
                   {visibleColumns.has("currentWeight") ? (
-                    <TableCell className="px-2 py-2 text-right tabular-nums">
+                    <TableCell className="px-2.5 py-2.5 text-right tabular-nums">
                       {formatWeightPrecise(row.currentWeight)}
                     </TableCell>
                   ) : null}
 
                   {visibleColumns.has("gapWeight") ? (
-                    <TableCell className="px-2 py-2 text-right tabular-nums">
+                    <TableCell className="px-2.5 py-2.5 text-right tabular-nums">
                       {row.gapWeight === null ? (
                         <span className="text-muted-foreground">—</span>
                       ) : (
@@ -509,9 +501,71 @@ export function AllocationTable({
                     </TableCell>
                   ) : null}
 
+                  {visibleColumns.has("discount") ? (
+                    <TableCell
+                      className={cn(
+                        "px-2.5 py-2.5 text-right tabular-nums",
+                        row.discount === null
+                          ? "text-muted-foreground"
+                          : pnlClassName(row.discount),
+                      )}
+                      title={
+                        row.fairValue === null
+                          ? i18n._(
+                              t({
+                                id: "allocation.discountEmptyTooltip",
+                                message:
+                                  "Set a fair value on a quarterly review",
+                              }),
+                            )
+                          : row.marketPrice === null
+                            ? i18n._(
+                                t({
+                                  id: "allocation.discountTooltipFairOnly",
+                                  message: `Fair value ${formatMoney(row.fairValue, row.currency)} (${row.fairValuePeriod ?? ""})`,
+                                }),
+                              )
+                            : i18n._(
+                                t({
+                                  id: "allocation.discountTooltip",
+                                  message: `Market ${formatMoney(row.marketPrice, row.currency)} vs fair value ${formatMoney(row.fairValue, row.currency)} (${row.fairValuePeriod ?? ""})`,
+                                }),
+                              )
+                      }
+                    >
+                      <span className="inline-flex items-center justify-end gap-1">
+                        {row.discount !== null
+                          ? formatSignedWeightPrecise(row.discount)
+                          : row.fairValue !== null
+                            ? formatMoney(row.fairValue, row.currency)
+                            : "—"}
+                        {row.fairValueRef ? (
+                          <a
+                            href={row.fairValueRef}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-muted-foreground hover:text-foreground"
+                            aria-label={i18n._(
+                              t({
+                                id: "allocation.openFairValueRef",
+                                message: `Open fair value reference for ${row.ticker}`,
+                              }),
+                            )}
+                            onClick={(event) => event.stopPropagation()}
+                          >
+                            <ExternalLink
+                              className="size-3"
+                              aria-hidden="true"
+                            />
+                          </a>
+                        ) : null}
+                      </span>
+                    </TableCell>
+                  ) : null}
+
                   {visibleColumns.has("score") ? (
                     <TableCell
-                      className="px-2 py-2 text-right tabular-nums"
+                      className="px-2.5 py-2.5 text-right tabular-nums"
                       title={scoreReason(row, i18n)}
                     >
                       <ScoreCell
@@ -526,52 +580,8 @@ export function AllocationTable({
                     </TableCell>
                   ) : null}
 
-                  {visibleColumns.has("averageGrade") ? (
-                    <TableCell className="px-2 py-2 text-right tabular-nums">
-                      {row.averageGrade === null ? (
-                        <span className="text-muted-foreground">—</span>
-                      ) : (
-                        <span
-                          title={i18n._(
-                            t({
-                              id: "allocation.gradeTooltip",
-                              message: `Average of ${row.gradedQuarters} graded quarters`,
-                            }),
-                          )}
-                        >
-                          {formatDecimalInput(row.averageGrade, i18n.locale)}
-                        </span>
-                      )}
-                    </TableCell>
-                  ) : null}
-
-                  {visibleColumns.has("discount") ? (
-                    <TableCell className="px-2 py-2">
-                      <InlineEditCell
-                        display={
-                          row.discount === null
-                            ? null
-                            : formatSignedWeightPrecise(row.discount)
-                        }
-                        text={formatPercentInput(row.discount, i18n.locale)}
-                        label={i18n._(
-                          t({
-                            id: "allocation.editDiscount",
-                            message: `Discount to fair value of ${row.ticker}, in percent`,
-                          }),
-                        )}
-                        className={
-                          row.discount === null
-                            ? ""
-                            : pnlClassName(row.discount)
-                        }
-                        onCommit={(text) => onEditDiscount(row.ticker, text)}
-                      />
-                    </TableCell>
-                  ) : null}
-
                   {visibleColumns.has("lastContributionAt") ? (
-                    <TableCell className="px-2 py-2 text-right whitespace-nowrap tabular-nums">
+                    <TableCell className="px-2.5 py-2.5 text-right whitespace-nowrap tabular-nums">
                       {row.lastContributionAt === null ? (
                         <span className="text-muted-foreground">—</span>
                       ) : (
@@ -594,7 +604,7 @@ export function AllocationTable({
                   ) : null}
 
                   {visibleColumns.has("quantity") ? (
-                    <TableCell className="px-2 py-2 text-right tabular-nums">
+                    <TableCell className="px-2.5 py-2.5 text-right tabular-nums">
                       {row.hasPosition ? (
                         formatQuantity(row.quantity)
                       ) : (
@@ -604,7 +614,7 @@ export function AllocationTable({
                   ) : null}
 
                   {visibleColumns.has("marketValue") ? (
-                    <TableCell className="px-2 py-2 text-right tabular-nums">
+                    <TableCell className="px-2.5 py-2.5 text-right tabular-nums">
                       {row.marketValue === null ? (
                         <span className="text-muted-foreground">—</span>
                       ) : (
@@ -613,25 +623,27 @@ export function AllocationTable({
                     </TableCell>
                   ) : null}
 
-                  {visibleColumns.has("valuationRef") ? (
-                    <TableCell className="px-2 py-2">
-                      <InlineEditCell
-                        display={row.valuationRef}
-                        text={row.valuationRef ?? ""}
-                        inputMode="text"
-                        label={i18n._(
-                          t({
-                            id: "allocation.editValuation",
-                            message: `Valuation reference of ${row.ticker}`,
-                          }),
-                        )}
-                        onCommit={(text) => onEditValuation(row.ticker, text)}
-                      />
+                  {visibleColumns.has("averageGrade") ? (
+                    <TableCell className="px-2.5 py-2.5 text-right tabular-nums">
+                      {row.averageGrade === null ? (
+                        <span className="text-muted-foreground">—</span>
+                      ) : (
+                        <span
+                          title={i18n._(
+                            t({
+                              id: "allocation.gradeTooltip",
+                              message: `Average of ${row.gradedQuarters} graded quarters`,
+                            }),
+                          )}
+                        >
+                          {formatDecimalInput(row.averageGrade, i18n.locale)}
+                        </span>
+                      )}
                     </TableCell>
                   ) : null}
 
                   {quarters.map((quarter) => (
-                    <TableCell key={quarter.key} className="px-1 py-2">
+                    <TableCell key={quarter.key} className="px-1.5 py-2.5">
                       <QuarterReviewCell
                         ticker={row.ticker}
                         quarter={quarter}
@@ -643,7 +655,7 @@ export function AllocationTable({
                     </TableCell>
                   ))}
 
-                  <TableCell className="px-1 py-2">
+                  <TableCell className="px-1.5 py-2.5">
                     <RowMenu
                       row={row}
                       freeOrder={freeOrder}
@@ -674,13 +686,13 @@ export function AllocationTable({
           {rows.length > 0 && summary ? (
             <TableFooter>
               <TableRow>
-                <TableCell className="px-1 py-2" />
+                <TableCell className="px-1.5 py-2.5" />
                 {visible.map((id) => {
                   if (id === "ticker") {
                     return (
                       <TableCell
                         key={id}
-                        className="sticky left-0 z-10 bg-muted px-2 py-2 font-medium"
+                        className="sticky left-0 z-10 bg-muted px-2.5 py-2.5 font-medium"
                       >
                         <Trans id="allocation.total">Total</Trans>
                       </TableCell>
@@ -691,7 +703,7 @@ export function AllocationTable({
                     return (
                       <TableCell
                         key={id}
-                        className="px-2 py-2 text-right tabular-nums"
+                        className="px-2.5 py-2.5 text-right tabular-nums"
                       >
                         {formatWeightPrecise(summary.totalTargetWeight)}
                       </TableCell>
@@ -702,7 +714,7 @@ export function AllocationTable({
                     return (
                       <TableCell
                         key={id}
-                        className="px-2 py-2 text-right tabular-nums"
+                        className="px-2.5 py-2.5 text-right tabular-nums"
                       >
                         {formatWeightPrecise(summary.totalCurrentWeight)}
                       </TableCell>
@@ -713,7 +725,7 @@ export function AllocationTable({
                     return (
                       <TableCell
                         key={id}
-                        className="px-2 py-2 text-right tabular-nums"
+                        className="px-2.5 py-2.5 text-right tabular-nums"
                       >
                         {formatMoney(
                           summary.totalMarketValue,
@@ -821,7 +833,7 @@ function RowMenu({
         ) : null}
         <DropdownMenuItem onSelect={onClear} disabled={!row.tracked}>
           <Eraser aria-hidden="true" />
-          <Trans id="allocation.clearAnalysis">Clear target & discount</Trans>
+          <Trans id="allocation.clearAnalysis">Clear target</Trans>
         </DropdownMenuItem>
         <DropdownMenuItem
           variant="destructive"

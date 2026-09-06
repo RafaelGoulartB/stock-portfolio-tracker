@@ -4,13 +4,15 @@ import { Trans } from "@lingui/react/macro";
 import type { AllocationRow, Currency } from "@portifolio-tracker/shared";
 import { Calculator } from "lucide-react";
 import { useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -80,14 +82,21 @@ export function planContribution(
   return { slices, allocated: Math.round(allocated * 100) / 100 };
 }
 
-export function ContributionPlanner({
+/**
+ * Opens the contribution planner in a dialog so the allocation screen stays
+ * focused on the table.
+ */
+export function ContributionPlannerButton({
   rows,
   displayCurrency,
+  disabled = false,
 }: {
   rows: AllocationRow[];
   displayCurrency: Currency;
+  disabled?: boolean;
 }) {
   const { i18n } = useLingui();
+  const [open, setOpen] = useState(false);
   const [amountText, setAmountText] = useState("");
   const [spread, setSpread] = useState<number>(3);
 
@@ -100,124 +109,144 @@ export function ContributionPlanner({
   const candidates = rows.filter((row) => Number(row.score.value) > 0).length;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Calculator className="size-4" aria-hidden="true" />
-          <Trans id="allocation.plannerTitle">Contribution planner</Trans>
-        </CardTitle>
-        <CardDescription>
-          <Trans id="allocation.plannerDescription">
-            Enter how much you are contributing and the amount is split
-            proportionally to the score. Suggestion only — nothing is saved
-            until you register the trade.
-          </Trans>
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="w-full space-y-1.5 sm:w-52">
-            <Label htmlFor="allocation-amount">
-              <Trans id="allocation.plannerAmount">Contribution</Trans>
-            </Label>
-            <Input
-              id="allocation-amount"
-              value={amountText}
-              inputMode="decimal"
-              placeholder={i18n._(
-                t({
-                  id: "allocation.plannerAmountPlaceholder",
-                  message: "5000",
-                }),
-              )}
-              onChange={(event) => setAmountText(event.target.value)}
-            />
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+
+        if (!next) {
+          setAmountText("");
+          setSpread(3);
+        }
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button type="button" variant="outline" size="sm" disabled={disabled}>
+          <Calculator aria-hidden="true" />
+          <Trans id="allocation.plannerOpen">Plan contribution</Trans>
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Calculator className="size-4" aria-hidden="true" />
+            <Trans id="allocation.plannerTitle">Contribution planner</Trans>
+          </DialogTitle>
+          <DialogDescription>
+            <Trans id="allocation.plannerDescription">
+              Enter how much you are contributing and the amount is split
+              proportionally to the score. Suggestion only — nothing is saved
+              until you register the trade.
+            </Trans>
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="w-full space-y-1.5 sm:w-52">
+              <Label htmlFor="allocation-amount">
+                <Trans id="allocation.plannerAmount">Contribution</Trans>
+              </Label>
+              <Input
+                id="allocation-amount"
+                value={amountText}
+                inputMode="decimal"
+                placeholder={i18n._(
+                  t({
+                    id: "allocation.plannerAmountPlaceholder",
+                    message: "5000",
+                  }),
+                )}
+                onChange={(event) => setAmountText(event.target.value)}
+              />
+            </div>
+            <div className="w-40 space-y-1.5">
+              <Label htmlFor="allocation-spread">
+                <Trans id="allocation.plannerSpread">Spread over</Trans>
+              </Label>
+              <Select
+                value={String(spread)}
+                onValueChange={(value) => setSpread(Number(value))}
+              >
+                <SelectTrigger id="allocation-spread" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SPREAD_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={String(option)}>
+                      {option === 0 ? (
+                        <Trans id="allocation.plannerAll">
+                          Every candidate ({candidates})
+                        </Trans>
+                      ) : (
+                        <Trans id="allocation.plannerTop">
+                          Top {option} assets
+                        </Trans>
+                      )}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <div className="w-40 space-y-1.5">
-            <Label htmlFor="allocation-spread">
-              <Trans id="allocation.plannerSpread">Spread over</Trans>
-            </Label>
-            <Select
-              value={String(spread)}
-              onValueChange={(value) => setSpread(Number(value))}
-            >
-              <SelectTrigger id="allocation-spread" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SPREAD_OPTIONS.map((option) => (
-                  <SelectItem key={option} value={String(option)}>
-                    {option === 0 ? (
-                      <Trans id="allocation.plannerAll">
-                        Every candidate ({candidates})
-                      </Trans>
+
+          {slices.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {candidates === 0 ? (
+                <Trans id="allocation.plannerNoCandidates">
+                  No asset is taking contributions right now. Set a target,
+                  review a fair value, or wait for a cooldown to expire.
+                </Trans>
+              ) : (
+                <Trans id="allocation.plannerAwaitingAmount">
+                  Enter an amount to see the suggested split.
+                </Trans>
+              )}
+            </p>
+          ) : (
+            <ul className="max-h-72 space-y-2 overflow-y-auto pr-1">
+              {slices.map((slice) => (
+                <li key={slice.ticker} className="flex items-center gap-3">
+                  <span className="w-16 shrink-0 text-sm font-semibold">
+                    {slice.ticker}
+                  </span>
+                  <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                    <span
+                      className="block h-full rounded-full bg-foreground/60"
+                      style={{ width: `${Math.round(slice.share * 100)}%` }}
+                    />
+                  </span>
+                  <span className="w-14 shrink-0 text-right text-xs text-muted-foreground tabular-nums">
+                    {formatWeightPrecise(String(slice.share))}
+                  </span>
+                  <span className="w-28 shrink-0 text-right text-sm tabular-nums">
+                    {formatMoney(slice.amount.toFixed(2), displayCurrency)}
+                  </span>
+                  <span className="w-20 shrink-0 text-right text-xs text-muted-foreground tabular-nums">
+                    {slice.units === null ? (
+                      "—"
                     ) : (
-                      <Trans id="allocation.plannerTop">
-                        Top {option} assets
+                      <Trans id="allocation.plannerUnits">
+                        {formatQuantity(slice.units.toFixed(4))} un.
                       </Trans>
                     )}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {slices.length > 0 && Math.abs(remainder) >= 0.01 ? (
+            <p className="text-xs text-muted-foreground">
+              <Trans id="allocation.plannerRemainder">
+                Rounding leaves{" "}
+                {formatMoney(remainder.toFixed(2), displayCurrency)}{" "}
+                unallocated.
+              </Trans>
+            </p>
+          ) : null}
         </div>
-
-        {slices.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            {candidates === 0 ? (
-              <Trans id="allocation.plannerNoCandidates">
-                No asset is taking contributions right now. Set a target, review
-                a discount, or wait for a cooldown to expire.
-              </Trans>
-            ) : (
-              <Trans id="allocation.plannerAwaitingAmount">
-                Enter an amount to see the suggested split.
-              </Trans>
-            )}
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {slices.map((slice) => (
-              <li key={slice.ticker} className="flex items-center gap-3">
-                <span className="w-16 shrink-0 text-sm font-semibold">
-                  {slice.ticker}
-                </span>
-                <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                  <span
-                    className="block h-full rounded-full bg-foreground/60"
-                    style={{ width: `${Math.round(slice.share * 100)}%` }}
-                  />
-                </span>
-                <span className="w-14 shrink-0 text-right text-xs text-muted-foreground tabular-nums">
-                  {formatWeightPrecise(String(slice.share))}
-                </span>
-                <span className="w-28 shrink-0 text-right text-sm tabular-nums">
-                  {formatMoney(slice.amount.toFixed(2), displayCurrency)}
-                </span>
-                <span className="w-20 shrink-0 text-right text-xs text-muted-foreground tabular-nums">
-                  {slice.units === null ? (
-                    "—"
-                  ) : (
-                    <Trans id="allocation.plannerUnits">
-                      {formatQuantity(slice.units.toFixed(4))} un.
-                    </Trans>
-                  )}
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {slices.length > 0 && Math.abs(remainder) >= 0.01 ? (
-          <p className="text-xs text-muted-foreground">
-            <Trans id="allocation.plannerRemainder">
-              Rounding leaves{" "}
-              {formatMoney(remainder.toFixed(2), displayCurrency)} unallocated.
-            </Trans>
-          </p>
-        ) : null}
-      </CardContent>
-    </Card>
+      </DialogContent>
+    </Dialog>
   );
 }

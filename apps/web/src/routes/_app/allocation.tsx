@@ -2,12 +2,7 @@ import { msg, t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import type { AllocationRow } from "@portifolio-tracker/shared";
-import {
-  discountRatio,
-  positiveDecimal,
-  valuationRefSchema,
-  weightRatio,
-} from "@portifolio-tracker/shared";
+import { positiveDecimal, weightRatio } from "@portifolio-tracker/shared";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   ChevronDown,
@@ -32,7 +27,7 @@ import {
   compareRows,
   defaultSortDirection,
 } from "@/components/allocation/allocation-table";
-import { ContributionPlanner } from "@/components/allocation/contribution-planner";
+import { ContributionPlannerButton } from "@/components/allocation/contribution-planner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -96,10 +91,10 @@ const COLUMN_PRESETS: Record<
     "targetWeight",
     "currentWeight",
     "gapWeight",
-    "score",
-    "averageGrade",
     "discount",
+    "score",
     "marketValue",
+    "averageGrade",
   ],
   all: [...ALLOCATION_COLUMNS],
 };
@@ -306,25 +301,16 @@ function AllocationPage() {
   const labels = columnLabels(i18n);
 
   /** Percent cell edits: an empty value clears the field. */
-  function editPercent(
-    ticker: string,
-    text: string,
-    field: "targetWeight" | "discount",
-  ) {
+  function editPercent(ticker: string, text: string) {
     if (text.trim().length === 0) {
-      upsertAsset.mutate(
-        field === "targetWeight"
-          ? { ticker, targetWeight: null }
-          : { ticker, discount: null },
-      );
+      upsertAsset.mutate({ ticker, targetWeight: null });
 
       return;
     }
 
     const parsed = parsePercentInput(text);
-    const schema = field === "targetWeight" ? weightRatio : discountRatio;
 
-    if (parsed === null || !schema.safeParse(parsed).success) {
+    if (parsed === null || !weightRatio.safeParse(parsed).success) {
       toast.error(
         i18n._(
           msg({
@@ -337,36 +323,7 @@ function AllocationPage() {
       return;
     }
 
-    upsertAsset.mutate(
-      field === "targetWeight"
-        ? { ticker, targetWeight: parsed }
-        : { ticker, discount: parsed },
-    );
-  }
-
-  function editValuation(ticker: string, text: string) {
-    const trimmed = text.trim();
-
-    if (trimmed.length === 0) {
-      upsertAsset.mutate({ ticker, valuationRef: null });
-
-      return;
-    }
-
-    if (!valuationRefSchema.safeParse(trimmed).success) {
-      toast.error(
-        i18n._(
-          msg({
-            id: "allocation.invalidValuation",
-            message: "Use at most 24 characters",
-          }),
-        ),
-      );
-
-      return;
-    }
-
-    upsertAsset.mutate({ ticker, valuationRef: trimmed });
+    upsertAsset.mutate({ ticker, targetWeight: parsed });
   }
 
   async function addAsset(values: AddAssetValues) {
@@ -382,7 +339,7 @@ function AllocationPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="relative left-1/2 w-screen max-w-[100vw] -translate-x-1/2 space-y-4 px-3 sm:px-4 lg:px-6">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">
@@ -395,15 +352,17 @@ function AllocationPage() {
             </Trans>
           </p>
         </div>
-        <AddAssetDialog onSubmit={addAsset} saving={upsertAsset.isPending} />
+        <div className="flex flex-wrap items-center gap-2">
+          <ContributionPlannerButton
+            rows={allocation.data?.rows ?? []}
+            displayCurrency={
+              allocation.data?.summary.displayCurrency ?? displayCurrency
+            }
+            disabled={!allocation.data}
+          />
+          <AddAssetDialog onSubmit={addAsset} saving={upsertAsset.isPending} />
+        </div>
       </header>
-
-      {allocation.data ? (
-        <ContributionPlanner
-          rows={allocation.data.rows}
-          displayCurrency={allocation.data.summary.displayCurrency}
-        />
-      ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-48 flex-1 sm:max-w-xs">
@@ -576,18 +535,11 @@ function AllocationPage() {
           }
           freeOrder={freeOrder}
           onReorder={(tickers) => reorder.mutate({ tickers })}
-          onEditTarget={(ticker, text) =>
-            editPercent(ticker, text, "targetWeight")
-          }
-          onEditDiscount={(ticker, text) =>
-            editPercent(ticker, text, "discount")
-          }
-          onEditValuation={editValuation}
+          onEditTarget={(ticker, text) => editPercent(ticker, text)}
           onClearAnalysis={(ticker) =>
             upsertAsset.mutate({
               ticker,
               targetWeight: null,
-              discount: null,
               valuationRef: null,
             })
           }
