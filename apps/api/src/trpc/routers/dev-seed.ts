@@ -1,18 +1,22 @@
 // DEV-ONLY tRPC router for manual testing. Never import this from
 // production domain code.
 //
-// The procedure below inserts a fixed batch of demo transactions into the
-// signed-in account so empty states, mixed BRL/USD consolidation, open and
-// closed positions, and realized P&L can be exercised without hand-typing
-// trades. It always refuses to run when NODE_ENV is production, keeping
-// test tooling out of the production path by construction.
+// Inserts a fixed batch of demo transactions, allocation targets and
+// quarterly reviews into the signed-in account so empty states, mixed
+// BRL/USD consolidation, scores, fair-value history and the asset-detail
+// page can be exercised without hand-typing data. It always refuses to
+// run when NODE_ENV is production.
 
 import { createTransactionInput } from "@portifolio-tracker/shared";
 import { TRPCError } from "@trpc/server";
-import { eq } from "drizzle-orm";
+import { eq, max } from "drizzle-orm";
 import { db } from "../../db";
-import { transactions } from "../../db/schema";
-import { DEV_SEED_FIXTURES } from "../../dev/seed-fixtures";
+import { allocationAssets, assetReviews, transactions } from "../../db/schema";
+import {
+  DEV_SEED_ASSETS,
+  DEV_SEED_FIXTURES,
+  DEV_SEED_REVIEWS,
+} from "../../dev/seed-fixtures";
 import {
   availableQuantity,
   type ConsolidationInput,
@@ -52,6 +56,9 @@ export const devSeedRouter = router({
     const accepted: typeof DEV_SEED_FIXTURES = [];
     const staged: ConsolidationInput[] = [];
     const skippedTickers = new Set<string>();
+    const existingTradeTickers = new Set(
+      history.map((row) => row.ticker.toUpperCase()),
+    );
 
     // Legacy rows written before the BR/US stock split read as `stock`.
     const normalizedHistory = history.map((row) => ({
@@ -71,6 +78,12 @@ export const devSeedRouter = router({
       }
 
       const trade = parsed.data;
+
+      if (existingTradeTickers.has(trade.ticker)) {
+        skippedTickers.add(trade.ticker);
+        continue;
+      }
+
       const combined = [...normalizedHistory, ...staged];
       const used = tickerCurrencies(combined, trade.ticker);
 
@@ -96,30 +109,93 @@ export const devSeedRouter = router({
       staged.push({ ...trade, createdAt: new Date() });
     }
 
-    if (accepted.length === 0) {
+    if (accepted.length > 0) {
+      await db.insert(transactions).values(
+        accepted.map((trade) => ({
+          userId: ctx.user.id,
+          ticker: trade.ticker,
+          assetClass: trade.assetClass,
+          currency: trade.currency,
+          side: trade.side,
+          quantity: trade.quantity,
+          price: trade.price,
+          fees: trade.fees,
+          tradedAt: trade.tradedAt,
+          notes: trade.notes && trade.notes.length > 0 ? trade.notes : null,
+        })),
+      );
+    }
+
+    const [highest] = await db
+      .select({ value: max(allocationAssets.sortOrder) })
+      .from(allocationAssets)
+      .where(eq(allocationAssets.userId, ctx.user.id));
+    let sortOrder = (highest?.value ?? 0) + 1;
+
+    const assetsInserted =
+      DEV_SEED_ASSETS.length === 0
+        ? []
+        : await db
+            .insert(allocationAssets)
+            .values(
+              DEV_SEED_ASSETS.map((asset) => ({
+                userId: ctx.user.id,
+                ticker: asset.ticker,
+                assetClass: asset.assetClass,
+                currency: asset.currency,
+                targetWeight: asset.targetWeight,
+                valuationRef: asset.valuationRef,
+                sortOrder: sortOrder++,
+              })),
+            )
+            .onConflictDoNothing({
+              target: [allocationAssets.userId, allocationAssets.ticker],
+            })
+            .returning({ ticker: allocationAssets.ticker });
+
+    const reviewsInserted =
+      DEV_SEED_REVIEWS.length === 0
+        ? []
+        : await db
+            .insert(assetReviews)
+            .values(
+              DEV_SEED_REVIEWS.map((review) => ({
+                userId: ctx.user.id,
+                ticker: review.ticker,
+                period: review.period,
+                grade: review.grade,
+                notes: review.notes,
+                fairValue: review.fairValue,
+                fairValueRef: review.fairValueRef,
+              })),
+            )
+            .onConflictDoNothing({
+              target: [
+                assetReviews.userId,
+                assetReviews.ticker,
+                assetReviews.period,
+              ],
+            })
+            .returning({
+              ticker: assetReviews.ticker,
+              period: assetReviews.period,
+            });
+
+    if (
+      accepted.length === 0 &&
+      assetsInserted.length === 0 &&
+      reviewsInserted.length === 0
+    ) {
       throw new TRPCError({
         code: "PRECONDITION_FAILED",
-        message: "Demo trades conflict with the tickers already tracked",
+        message: "Demo data already matches the signed-in account",
       });
     }
 
-    await db.insert(transactions).values(
-      accepted.map((trade) => ({
-        userId: ctx.user.id,
-        ticker: trade.ticker,
-        assetClass: trade.assetClass,
-        currency: trade.currency,
-        side: trade.side,
-        quantity: trade.quantity,
-        price: trade.price,
-        fees: trade.fees,
-        tradedAt: trade.tradedAt,
-        notes: trade.notes && trade.notes.length > 0 ? trade.notes : null,
-      })),
-    );
-
     return {
       inserted: accepted.length,
+      assetsInserted: assetsInserted.length,
+      reviewsInserted: reviewsInserted.length,
       skippedTickers: [...skippedTickers].sort(),
     };
   }),

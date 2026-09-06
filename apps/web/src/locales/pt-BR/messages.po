@@ -150,12 +150,6 @@ msgid "daily.marketBreadthHint"
 msgstr "{0} ativos com comparação diária."
 
 #. js-lingui-explicit-id
-#. placeholder {0}: result.inserted
-#: src/components/dev-seed-section.tsx:28
-msgid "settings.devSeed.success"
-msgstr "{0} operações de demonstração adicionadas"
-
-#. js-lingui-explicit-id
 #. placeholder {0}: summary.upcomingCount
 #: src/routes/_app/dividends.tsx:265
 msgid "dividends.eventCount"
@@ -201,6 +195,14 @@ msgstr "{0} posições · {1} colunas"
 #: src/routes/_app/performance.tsx:511
 msgid "performance.realizedInWindow"
 msgstr "{0} realizados."
+
+#. js-lingui-explicit-id
+#. placeholder {0}: result.inserted
+#. placeholder {1}: result.assetsInserted
+#. placeholder {2}: result.reviewsInserted
+#: src/components/dev-seed-section.tsx:30
+msgid "settings.devSeed.success"
+msgstr "{0} operações, {1} linhas de alocação, {2} revisões adicionadas"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: formatQuantity(slice.units.toFixed(4))
@@ -290,7 +292,7 @@ msgid "allocation.addTitle"
 msgstr "Adicionar ativo para acompanhar"
 
 #. js-lingui-explicit-id
-#: src/components/dev-seed-section.tsx:97
+#: src/components/dev-seed-section.tsx:99
 msgid "settings.devSeed.action"
 msgstr "Adicionar dados de demonstração"
 
@@ -300,9 +302,9 @@ msgid "nav.addTransaction"
 msgstr "Nova operação"
 
 #. js-lingui-explicit-id
-#: src/components/dev-seed-section.tsx:79
+#: src/components/dev-seed-section.tsx:81
 msgid "settings.devSeed.description"
-msgstr "Adiciona compras e vendas de demonstração em ações, ETFs, FIIs, cripto e renda fixa à conta logada. Só para testes locais, nunca para produção."
+msgstr "Adiciona um livro demo com 25+ ativos: operações BRL/USD, metas, notas trimestrais, anotações e fair values. Tickers já existentes são ignorados; um segundo clique só preenche o que ainda falta. Só para testes locais."
 
 #. js-lingui-explicit-id
 #: src/routes/_app/allocation.index.tsx:469
@@ -607,7 +609,7 @@ msgid "positions.investedCostHint"
 msgstr "Custo de tudo que você ainda detém."
 
 #. js-lingui-explicit-id
-#: src/components/dev-seed-section.tsx:48
+#: src/components/dev-seed-section.tsx:50
 msgid "settings.devSeed.error"
 msgstr "Não foi possível adicionar os dados. Tente de novo."
 
@@ -757,7 +759,7 @@ msgid "nav.detailedPositions"
 msgstr "Posições detalhadas"
 
 #. js-lingui-explicit-id
-#: src/components/dev-seed-section.tsx:75
+#: src/components/dev-seed-section.tsx:77
 msgid "settings.devSeed.badge"
 msgstr "Só desenvolvimento"
 
@@ -1921,7 +1923,7 @@ msgstr "Sair"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: result.skippedTickers.join(", ")
-#: src/components/dev-seed-section.tsx:36
+#: src/components/dev-seed-section.tsx:38
 msgid "settings.devSeed.skipped"
 msgstr "Ignorado: {0}"
 
@@ -2009,7 +2011,7 @@ msgid "allocation.subtitle"
 msgstr "Metas, notas trimestrais e o score de aporte em um só lugar. Edite qualquer célula da tabela; o score é recalculado ao salvar."
 
 #. js-lingui-explicit-id
-#: src/components/dev-seed-section.tsx:72
+#: src/components/dev-seed-section.tsx:74
 msgid "settings.devSeed.title"
 msgstr "Dados de teste"
 

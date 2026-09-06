@@ -22,12 +22,14 @@ export function DevSeedSection() {
       await Promise.all([
         utils.transactions.list.invalidate(),
         utils.positions.list.invalidate(),
+        utils.allocation.list.invalidate(),
+        utils.allocation.history.invalidate(),
       ]);
 
       const base = i18n._(
         msg({
           id: "settings.devSeed.success",
-          message: `${result.inserted} demo transactions added`,
+          message: `${result.inserted} trades, ${result.assetsInserted} allocation rows, ${result.reviewsInserted} reviews added`,
         }),
       );
       const skipped =
@@ -77,9 +79,9 @@ export function DevSeedSection() {
         </div>
         <p className="mt-1 text-xs text-muted-foreground">
           <Trans id="settings.devSeed.description">
-            Adds demo buys and sells across stocks, ETFs, REITs, crypto and
-            fixed income to the signed-in account. Only for local testing, never
-            for production use.
+            Adds a 25+ asset demo book: mixed BRL/USD trades, targets, quarterly
+            grades, notes and fair values. Existing tickers are skipped, so a
+            second click only fills what is still missing. Local testing only.
           </Trans>
         </p>
         <Button
