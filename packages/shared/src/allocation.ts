@@ -32,6 +32,15 @@ export function parseQuarterKey(period: string): {
   return { year: Number(match[1]), quarter: Number(match[2]) };
 }
 
+/** Inclusive last calendar day of a review period, `YYYY-MM-DD`. */
+export function quarterEndDate(period: string): string {
+  const { year, quarter } = parseQuarterKey(period);
+  const month = quarter * 3;
+  const day = new Date(Date.UTC(year, month, 0)).getUTCDate();
+
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
 /** Target share of the portfolio, `0`–`1` (`0.015` = 1.5%). */
 export const weightRatio = nonNegativeDecimal.refine(
   (value) => Number(value) <= 1,
@@ -83,6 +92,28 @@ export const allocationListInput = z.object({
 });
 
 export type AllocationListInput = z.input<typeof allocationListInput>;
+
+/** Price history for one allocation ticker, overlaid with fair value. */
+export const allocationHistoryInput = allocationListInput.extend({
+  ticker: tickerSchema,
+});
+
+export type AllocationHistoryInput = z.input<typeof allocationHistoryInput>;
+
+export const allocationHistoryPointSchema = z.object({
+  asOf: z.string(),
+  /** Native-currency close. */
+  close: z.string(),
+  /**
+   * Fair value in force on `asOf`: the newest quarterly valuation whose
+   * quarter has already ended. Null before the first reviewed quarter.
+   */
+  fairValue: z.string().nullable(),
+});
+
+export type AllocationHistoryPoint = z.infer<
+  typeof allocationHistoryPointSchema
+>;
 
 /**
  * Creates or patches the analysis metadata of a ticker. Omitted fields keep

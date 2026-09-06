@@ -19,6 +19,8 @@ import { Route as AppDividendsRouteImport } from './routes/_app/dividends'
 import { Route as AppPerformanceRouteImport } from './routes/_app/performance'
 import { Route as AppPositionsRouteImport } from './routes/_app/positions'
 import { Route as AppTransactionsRouteImport } from './routes/_app/transactions'
+import { Route as AppAllocationIndexRouteImport } from './routes/_app/allocation.index'
+import { Route as AppAllocationTickerRouteImport } from './routes/_app/allocation.$ticker'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -69,41 +71,56 @@ const AppTransactionsRoute = AppTransactionsRouteImport.update({
   path: '/transactions',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAllocationIndexRoute = AppAllocationIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppAllocationRoute,
+} as any)
+const AppAllocationTickerRoute = AppAllocationTickerRouteImport.update({
+  id: '/$ticker',
+  path: '/$ticker',
+  getParentRoute: () => AppAllocationRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/allocation': typeof AppAllocationRoute
+  '/allocation': typeof AppAllocationRouteWithChildren
   '/daily': typeof AppDailyRoute
   '/detailed-positions': typeof AppDetailedPositionsRoute
   '/dividends': typeof AppDividendsRoute
   '/performance': typeof AppPerformanceRoute
   '/positions': typeof AppPositionsRoute
   '/transactions': typeof AppTransactionsRoute
+  '/allocation/$ticker': typeof AppAllocationTickerRoute
+  '/allocation/': typeof AppAllocationIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
-  '/allocation': typeof AppAllocationRoute
   '/daily': typeof AppDailyRoute
   '/detailed-positions': typeof AppDetailedPositionsRoute
   '/dividends': typeof AppDividendsRoute
   '/performance': typeof AppPerformanceRoute
   '/positions': typeof AppPositionsRoute
   '/transactions': typeof AppTransactionsRoute
+  '/allocation/$ticker': typeof AppAllocationTickerRoute
+  '/allocation': typeof AppAllocationIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
-  '/_app/allocation': typeof AppAllocationRoute
+  '/_app/allocation': typeof AppAllocationRouteWithChildren
   '/_app/daily': typeof AppDailyRoute
   '/_app/detailed-positions': typeof AppDetailedPositionsRoute
   '/_app/dividends': typeof AppDividendsRoute
   '/_app/performance': typeof AppPerformanceRoute
   '/_app/positions': typeof AppPositionsRoute
   '/_app/transactions': typeof AppTransactionsRoute
+  '/_app/allocation/$ticker': typeof AppAllocationTickerRoute
+  '/_app/allocation/': typeof AppAllocationIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -117,17 +134,20 @@ export interface FileRouteTypes {
     | '/performance'
     | '/positions'
     | '/transactions'
+    | '/allocation/$ticker'
+    | '/allocation/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
-    | '/allocation'
     | '/daily'
     | '/detailed-positions'
     | '/dividends'
     | '/performance'
     | '/positions'
     | '/transactions'
+    | '/allocation/$ticker'
+    | '/allocation'
   id:
     | '__root__'
     | '/'
@@ -140,6 +160,8 @@ export interface FileRouteTypes {
     | '/_app/performance'
     | '/_app/positions'
     | '/_app/transactions'
+    | '/_app/allocation/$ticker'
+    | '/_app/allocation/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -220,11 +242,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppTransactionsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/allocation/': {
+      id: '/_app/allocation/'
+      path: '/'
+      fullPath: '/allocation/'
+      preLoaderRoute: typeof AppAllocationIndexRouteImport
+      parentRoute: typeof AppAllocationRoute
+    }
+    '/_app/allocation/$ticker': {
+      id: '/_app/allocation/$ticker'
+      path: '/$ticker'
+      fullPath: '/allocation/$ticker'
+      preLoaderRoute: typeof AppAllocationTickerRouteImport
+      parentRoute: typeof AppAllocationRoute
+    }
   }
 }
 
+interface AppAllocationRouteChildren {
+  AppAllocationTickerRoute: typeof AppAllocationTickerRoute
+  AppAllocationIndexRoute: typeof AppAllocationIndexRoute
+}
+
+const AppAllocationRouteChildren: AppAllocationRouteChildren = {
+  AppAllocationTickerRoute: AppAllocationTickerRoute,
+  AppAllocationIndexRoute: AppAllocationIndexRoute,
+}
+
+const AppAllocationRouteWithChildren = AppAllocationRoute._addFileChildren(
+  AppAllocationRouteChildren,
+)
+
 interface AppRouteChildren {
-  AppAllocationRoute: typeof AppAllocationRoute
+  AppAllocationRoute: typeof AppAllocationRouteWithChildren
   AppDailyRoute: typeof AppDailyRoute
   AppDetailedPositionsRoute: typeof AppDetailedPositionsRoute
   AppDividendsRoute: typeof AppDividendsRoute
@@ -234,7 +284,7 @@ interface AppRouteChildren {
 }
 
 const AppRouteChildren: AppRouteChildren = {
-  AppAllocationRoute: AppAllocationRoute,
+  AppAllocationRoute: AppAllocationRouteWithChildren,
   AppDailyRoute: AppDailyRoute,
   AppDetailedPositionsRoute: AppDetailedPositionsRoute,
   AppDividendsRoute: AppDividendsRoute,

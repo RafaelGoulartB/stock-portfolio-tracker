@@ -1,4 +1,5 @@
 import type {
+  AllocationHistoryPoint,
   AllocationRow,
   AllocationSummary,
   AssetClass,
@@ -7,15 +8,11 @@ import type {
   ScoreConfig,
   ValuedPosition,
 } from "@portifolio-tracker/shared";
-import { DEFAULT_SCORE_CONFIG } from "@portifolio-tracker/shared";
 import {
-  add,
-  div,
-  formatDecimal,
-  sub,
-  toDecimal,
-  ZERO,
-} from "../lib/decimal";
+  DEFAULT_SCORE_CONFIG,
+  quarterEndDate,
+} from "@portifolio-tracker/shared";
+import { add, div, formatDecimal, sub, toDecimal, ZERO } from "../lib/decimal";
 import { type ConsolidationInput, convertMoney } from "./positions";
 import { averageGrade, scoreAsset } from "./score";
 
@@ -100,6 +97,70 @@ export function latestFairValue(
   }
 
   return best;
+}
+
+const MAX_HISTORY_POINTS = 360;
+
+/**
+ * Carries each quarterly fair value forward from that quarter's last day,
+ * onto a daily close series. Points before the first valuation stay null.
+ * Long series are thinned so the chart stays light.
+ */
+export function overlayFairValueOnCloses(
+  closes: readonly { asOf: string; close: string }[],
+  reviews: readonly { period: string; fairValue: string | null }[],
+): AllocationHistoryPoint[] {
+  const steps = reviews
+    .filter(
+      (review): review is { period: string; fairValue: string } =>
+        review.fairValue !== null,
+    )
+    .map((review) => ({
+      from: quarterEndDate(review.period),
+      fairValue: review.fairValue,
+    }))
+    .sort((a, b) => a.from.localeCompare(b.from));
+
+  const points: AllocationHistoryPoint[] = closes.map((point) => {
+    let fairValue: string | null = null;
+
+    for (const step of steps) {
+      if (step.from <= point.asOf) {
+        fairValue = step.fairValue;
+      }
+    }
+
+    return { asOf: point.asOf, close: point.close, fairValue };
+  });
+
+  if (points.length <= MAX_HISTORY_POINTS) {
+    return points;
+  }
+
+  const stride = (points.length - 1) / (MAX_HISTORY_POINTS - 1);
+  const sampled: AllocationHistoryPoint[] = [];
+  let lastIndex = -1;
+
+  for (let slot = 0; slot < MAX_HISTORY_POINTS; slot += 1) {
+    const index = Math.round(slot * stride);
+
+    if (index !== lastIndex) {
+      const point = points[index];
+
+      if (point) {
+        sampled.push(point);
+        lastIndex = index;
+      }
+    }
+  }
+
+  const tail = points[points.length - 1];
+
+  if (tail && sampled[sampled.length - 1]?.asOf !== tail.asOf) {
+    sampled.push(tail);
+  }
+
+  return sampled;
 }
 
 /**

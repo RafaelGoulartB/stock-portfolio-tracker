@@ -1,5 +1,6 @@
 import {
   type AssetClass,
+  allocationHistoryInput,
   allocationListInput,
   type Currency,
   DEFAULT_SCORE_CONFIG,
@@ -17,11 +18,12 @@ import {
   type AllocationAssetMeta,
   buildAllocationRows,
   lastContributions,
+  overlayFairValueOnCloses,
   type StoredReview,
   summarizeAllocation,
   type WatchQuote,
 } from "../../domain/allocation";
-import { getQuoteProvider } from "../../lib/quotes";
+import { getQuoteProvider, QuoteUnavailableError } from "../../lib/quotes";
 import { protectedProcedure, router } from "../trpc";
 import { loadValuedPortfolio } from "../valuation";
 
@@ -35,6 +37,16 @@ function today(now = new Date()): string {
     month: "2-digit",
     day: "2-digit",
   }).format(now);
+}
+
+/** Inclusive start of an N-month lookback, `YYYY-MM-DD`. */
+function monthsAgo(day: string, months: number): string {
+  const [year, month, date] = day.split("-").map(Number);
+  const shifted = new Date(
+    Date.UTC(year ?? 1970, (month ?? 1) - 1 - months, date ?? 1),
+  );
+
+  return shifted.toISOString().slice(0, 10);
 }
 
 /** Rows written before the BR/US stock split still read back as `stock`. */
@@ -235,6 +247,81 @@ export const allocationRouter = router({
           missing: [...portfolio.missing, ...watch.missing].sort(),
         },
       };
+    }),
+
+  /**
+   * Daily closes for one ticker, with the quarterly fair value carried
+   * forward from each quarter end. Used by the asset detail chart. A ticker
+   * the provider cannot price returns an empty series, never an error.
+   */
+  history: protectedProcedure
+    .input(allocationHistoryInput)
+    .query(async ({ ctx, input }) => {
+      const [traded, assets, reviews] = await Promise.all([
+        tradedIdentity(ctx.user.id, input.ticker),
+        loadAssets(ctx.user.id),
+        db
+          .select({
+            period: assetReviews.period,
+            fairValue: assetReviews.fairValue,
+          })
+          .from(assetReviews)
+          .where(
+            and(
+              eq(assetReviews.userId, ctx.user.id),
+              eq(assetReviews.ticker, input.ticker),
+            ),
+          )
+          .orderBy(asc(assetReviews.period)),
+      ]);
+      const asset = assets.find((row) => row.ticker === input.ticker);
+      const assetClass = traded?.assetClass ?? asset?.assetClass;
+      const currency = traded?.currency ?? asset?.currency;
+
+      if (!assetClass || !currency) {
+        return {
+          ticker: input.ticker,
+          currency: input.displayCurrency,
+          series: [],
+        };
+      }
+
+      const end = today();
+      const start = monthsAgo(end, 36);
+      const manualPrices = Object.fromEntries(
+        Object.entries(input.manualPrices ?? {}).map(([ticker, price]) => [
+          ticker.toUpperCase(),
+          price,
+        ]),
+      );
+      const provider = getQuoteProvider(input.quoteSource);
+
+      try {
+        const closes = await provider.getSeries({
+          ticker: input.ticker,
+          assetClass,
+          currency,
+          start,
+          end,
+          manualPrice: manualPrices[input.ticker],
+        });
+
+        return {
+          ticker: input.ticker,
+          currency,
+          series: overlayFairValueOnCloses(closes, reviews),
+        };
+      } catch (error) {
+        if (error instanceof QuoteUnavailableError) {
+          return {
+            ticker: input.ticker,
+            currency,
+            series: [],
+          };
+        }
+
+        throw error;
+      }
     }),
 
   /**

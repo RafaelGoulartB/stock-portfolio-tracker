@@ -6,6 +6,7 @@ import {
   discountFromFairValue,
   lastContributions,
   latestFairValue,
+  overlayFairValueOnCloses,
   summarizeAllocation,
 } from "./allocation";
 import type { ConsolidationInput } from "./positions";
@@ -108,6 +109,30 @@ describe("latestFairValue", () => {
         { period: "2026Q1", fairValue: null, fairValueRef: null },
       ]),
     ).toBeNull();
+  });
+});
+
+describe("overlayFairValueOnCloses", () => {
+  it("carries a quarterly fair value from the quarter end onward", () => {
+    const points = overlayFairValueOnCloses(
+      [
+        { asOf: "2026-03-30", close: "38" },
+        { asOf: "2026-03-31", close: "40" },
+        { asOf: "2026-06-15", close: "42" },
+        { asOf: "2026-06-30", close: "36" },
+      ],
+      [
+        { period: "2026Q1", fairValue: "50" },
+        { period: "2026Q2", fairValue: "55" },
+      ],
+    );
+
+    expect(points.map((point) => point.fairValue)).toEqual([
+      null,
+      "50",
+      "50",
+      "55",
+    ]);
   });
 });
 

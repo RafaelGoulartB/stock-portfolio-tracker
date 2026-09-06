@@ -7,14 +7,16 @@ import type {
   AllocationSummary,
   AssetReview,
 } from "@portifolio-tracker/shared";
+import { Link } from "@tanstack/react-router";
 import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
   ChevronDown,
   ChevronUp,
-  ExternalLink,
   Eraser,
+  ExternalLink,
+  Eye,
   GripVertical,
   MoreVertical,
   Timer,
@@ -74,10 +76,7 @@ export type SortDirection = "asc" | "desc";
 export type AllocationSort = { id: AllocationColumn; direction: SortDirection };
 
 /** Columns that read better ascending on first click. */
-const ASCENDING_FIRST: AllocationColumn[] = [
-  "ticker",
-  "lastContributionAt",
-];
+const ASCENDING_FIRST: AllocationColumn[] = ["ticker", "lastContributionAt"];
 
 export function defaultSortDirection(id: AllocationColumn): SortDirection {
   return ASCENDING_FIRST.includes(id) ? "asc" : "desc";
@@ -159,7 +158,7 @@ export function compareRows(
 }
 
 /** Plain-language reason behind a score, shown on hover. */
-function scoreReason(row: AllocationRow, i18n: I18n): string {
+export function scoreReason(row: AllocationRow, i18n: I18n): string {
   const { score } = row;
 
   switch (score.ruleId) {
@@ -439,7 +438,13 @@ export function AllocationTable({
                   {visibleColumns.has("ticker") ? (
                     <TableCell className="sticky left-0 z-10 bg-card px-2.5 py-2.5">
                       <div className="flex items-center gap-1.5">
-                        <span className="font-semibold">{row.ticker}</span>
+                        <Link
+                          to="/allocation/$ticker"
+                          params={{ ticker: row.ticker }}
+                          className="font-semibold hover:underline underline-offset-2"
+                        >
+                          {row.ticker}
+                        </Link>
                         {row.hasPosition ? null : (
                           <Badge
                             variant="outline"
@@ -818,6 +823,13 @@ function RowMenu({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
+        <DropdownMenuItem asChild>
+          <Link to="/allocation/$ticker" params={{ ticker: row.ticker }}>
+            <Eye aria-hidden="true" />
+            <Trans id="allocation.viewDetails">View details</Trans>
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         {freeOrder ? (
           <>
             <DropdownMenuItem onSelect={() => onMove(-1)}>
