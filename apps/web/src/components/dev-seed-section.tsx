@@ -9,7 +9,6 @@ import { FlaskConical, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { trpc } from "@/lib/api";
 
 /** Seed button rendered at the bottom of the settings modal in dev builds. */
@@ -62,43 +61,40 @@ export function DevSeedSection() {
   }
 
   return (
-    <div className="grid gap-3">
-      <Separator />
-      <div className="rounded-lg border bg-muted/30 p-4">
-        <div className="flex items-center gap-2">
-          <FlaskConical
-            className="size-4 text-muted-foreground"
-            aria-hidden="true"
-          />
-          <p className="text-sm font-medium">
-            <Trans id="settings.devSeed.title">Test data</Trans>
-          </p>
-          <Badge variant="outline" className="ml-auto">
-            <Trans id="settings.devSeed.badge">Development only</Trans>
-          </Badge>
-        </div>
-        <p className="mt-1 text-xs text-muted-foreground">
-          <Trans id="settings.devSeed.description">
-            Adds a 25+ asset demo book: mixed BRL/USD trades, targets, quarterly
-            grades, notes and fair values. Existing tickers are skipped, so a
-            second click only fills what is still missing. Local testing only.
-          </Trans>
+    <div className="grid gap-3 rounded-lg border bg-muted/30 p-4">
+      <div className="flex items-center gap-2">
+        <FlaskConical
+          className="size-4 text-muted-foreground"
+          aria-hidden="true"
+        />
+        <p className="text-sm font-medium">
+          <Trans id="settings.devSeed.title">Test data</Trans>
         </p>
-        <Button
-          type="button"
-          variant="secondary"
-          className="mt-3 w-full"
-          disabled={seed.isPending}
-          onClick={() => seed.mutate()}
-        >
-          {seed.isPending ? (
-            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-          ) : (
-            <FlaskConical className="size-4" aria-hidden="true" />
-          )}
-          <Trans id="settings.devSeed.action">Add demo test data</Trans>
-        </Button>
+        <Badge variant="outline" className="ml-auto">
+          <Trans id="settings.devSeed.badge">Development only</Trans>
+        </Badge>
       </div>
+      <p className="mt-1 text-xs text-muted-foreground">
+        <Trans id="settings.devSeed.description">
+          Adds a 25+ asset demo book: mixed BRL/USD trades, targets, quarterly
+          grades, notes and fair values. Existing tickers are skipped, so a
+          second click only fills what is still missing. Local testing only.
+        </Trans>
+      </p>
+      <Button
+        type="button"
+        variant="secondary"
+        className="mt-3 w-full"
+        disabled={seed.isPending}
+        onClick={() => seed.mutate()}
+      >
+        {seed.isPending ? (
+          <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+        ) : (
+          <FlaskConical className="size-4" aria-hidden="true" />
+        )}
+        <Trans id="settings.devSeed.action">Add demo test data</Trans>
+      </Button>
     </div>
   );
 }

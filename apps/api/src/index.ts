@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { sql } from "./db";
 import { deleteExpiredSessions } from "./lib/session";
+import { dataBackupRoutes } from "./routes/data-backup";
 import { createContext } from "./trpc/context";
 import { appRouter } from "./trpc/router";
 
@@ -25,6 +26,8 @@ app.get("/health", async (c) => {
     return c.json({ ok: false }, 503);
   }
 });
+
+app.route("/api/data", dataBackupRoutes);
 
 app.use(
   "/trpc/*",

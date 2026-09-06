@@ -2815,3 +2815,129 @@ msgstr "Your session expired. Sign in again."
 #: src/routes/_app/deep-finder.tsx:225
 msgid "deepFinder.windowYtd"
 msgstr "YTD"
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:180
+msgid "settings.data.rowCount"
+msgstr "{totalRows} rows"
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:171
+msgid "settings.data.scopeTitle"
+msgstr "Account data"
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:77
+msgid "settings.data.deleteSuccess"
+msgstr "All portfolio data was deleted. Your account was kept."
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:156
+msgid "settings.data.backupTitle"
+msgstr "Backup"
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:120
+msgid "settings.data.importSuccess"
+msgstr "Backup imported successfully."
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:294
+#: src/components/settings-data.tsx:355
+msgid "common.cancel"
+msgstr "Cancel"
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:199
+msgid "settings.data.chooseImport"
+msgstr "Choose backup"
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:87
+msgid "settings.data.deleteError"
+msgstr "Could not delete the application data."
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:131
+msgid "settings.data.importError"
+msgstr "Could not import this backup."
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:231
+msgid "settings.data.dangerTitle"
+msgstr "Danger zone"
+
+#. js-lingui-explicit-id
+#: src/components/settings-dialog.tsx:212
+msgid "settings.section.data"
+msgstr "Data"
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:249
+msgid "settings.data.deleteAll"
+msgstr "Delete all application data"
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:319
+msgid "settings.data.deleteTitle"
+msgstr "Delete all data?"
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:368
+msgid "settings.data.deleteConfirm"
+msgstr "Delete everything"
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:159
+msgid "settings.data.backupDescription"
+msgstr "Export a portable, compressed copy of all portfolio data in this account."
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:190
+msgid "settings.data.export"
+msgstr "Export backup"
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:272
+msgid "settings.data.importDescription"
+msgstr "Importing replaces all current portfolio data with this backup. The operation is atomic: an invalid or incomplete file leaves current data unchanged."
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:174
+msgid "settings.data.scopeDescription"
+msgstr "Includes transactions, allocation assets, reviews, categories, and assignments. Passwords and active sessions are excluded."
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:331
+msgid "settings.data.deleteWarning"
+msgstr "Permanent deletion"
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:234
+msgid "settings.data.dangerDescription"
+msgstr "Permanently delete every portfolio row in this account. Your login account remains available."
+
+#. js-lingui-explicit-id
+#: src/components/settings-dialog.tsx:112
+msgid "settings.data.description"
+msgstr "Portable backups, restores, test fixtures, and data removal."
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:267
+msgid "settings.data.importTitle"
+msgstr "Replace account data?"
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:302
+msgid "settings.data.importConfirm"
+msgstr "Replace and import"
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:322
+msgid "settings.data.deleteDescription"
+msgstr "This cannot be undone. Export a backup first if you may need this data again."
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:334
+msgid "settings.data.deleteInstruction"
+msgstr "Type DELETE below to confirm."

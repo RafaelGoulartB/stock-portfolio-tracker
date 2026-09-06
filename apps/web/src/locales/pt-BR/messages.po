@@ -2815,3 +2815,129 @@ msgstr "Sua sessão expirou. Entre novamente."
 #: src/routes/_app/deep-finder.tsx:225
 msgid "deepFinder.windowYtd"
 msgstr "No ano"
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:180
+msgid "settings.data.rowCount"
+msgstr "{totalRows} registros"
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:171
+msgid "settings.data.scopeTitle"
+msgstr "Dados da conta"
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:77
+msgid "settings.data.deleteSuccess"
+msgstr "Todos os dados de investimentos foram excluídos. Sua conta foi mantida."
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:156
+msgid "settings.data.backupTitle"
+msgstr "Backup"
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:120
+msgid "settings.data.importSuccess"
+msgstr "Backup importado com sucesso."
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:294
+#: src/components/settings-data.tsx:355
+msgid "common.cancel"
+msgstr "Cancelar"
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:199
+msgid "settings.data.chooseImport"
+msgstr "Escolher backup"
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:87
+msgid "settings.data.deleteError"
+msgstr "Não foi possível excluir os dados da aplicação."
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:131
+msgid "settings.data.importError"
+msgstr "Não foi possível importar este backup."
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:231
+msgid "settings.data.dangerTitle"
+msgstr "Zona de perigo"
+
+#. js-lingui-explicit-id
+#: src/components/settings-dialog.tsx:212
+msgid "settings.section.data"
+msgstr "Dados"
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:249
+msgid "settings.data.deleteAll"
+msgstr "Excluir todos os dados da aplicação"
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:319
+msgid "settings.data.deleteTitle"
+msgstr "Excluir todos os dados?"
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:368
+msgid "settings.data.deleteConfirm"
+msgstr "Excluir tudo"
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:159
+msgid "settings.data.backupDescription"
+msgstr "Exporte uma cópia portátil e compactada de todos os dados de investimentos desta conta."
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:190
+msgid "settings.data.export"
+msgstr "Exportar backup"
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:272
+msgid "settings.data.importDescription"
+msgstr "A importação substitui todos os dados atuais de investimentos por este backup. A operação é atômica: um arquivo inválido ou incompleto mantém os dados atuais inalterados."
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:174
+msgid "settings.data.scopeDescription"
+msgstr "Inclui operações, ativos de alocação, revisões, categorias e associações. Senhas e sessões ativas não são incluídas."
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:331
+msgid "settings.data.deleteWarning"
+msgstr "Exclusão permanente"
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:234
+msgid "settings.data.dangerDescription"
+msgstr "Exclua permanentemente todos os registros de investimentos desta conta. Sua conta de acesso continuará disponível."
+
+#. js-lingui-explicit-id
+#: src/components/settings-dialog.tsx:112
+msgid "settings.data.description"
+msgstr "Backups portáteis, restaurações, dados de teste e remoção de dados."
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:267
+msgid "settings.data.importTitle"
+msgstr "Substituir os dados da conta?"
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:302
+msgid "settings.data.importConfirm"
+msgstr "Substituir e importar"
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:322
+msgid "settings.data.deleteDescription"
+msgstr "Isso não pode ser desfeito. Exporte um backup antes se você puder precisar destes dados novamente."
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:334
+msgid "settings.data.deleteInstruction"
+msgstr "Digite DELETE abaixo para confirmar."

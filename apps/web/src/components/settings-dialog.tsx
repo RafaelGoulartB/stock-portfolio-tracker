@@ -10,10 +10,16 @@ import {
   QUOTE_SOURCE_LABELS,
   type QuoteSource,
 } from "@portifolio-tracker/shared";
-import { Palette, RefreshCw, Settings, SlidersHorizontal } from "lucide-react";
+import {
+  Database,
+  Palette,
+  RefreshCw,
+  Settings,
+  SlidersHorizontal,
+} from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { DevSeedSection } from "@/components/dev-seed-section";
 import { SettingsAppearance } from "@/components/settings-appearance";
+import { SettingsData } from "@/components/settings-data";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -39,7 +45,7 @@ import { useFxQuote } from "@/lib/fx";
 import { useSettings } from "@/lib/settings";
 import { cn } from "@/lib/utils";
 
-type SettingsSection = "general" | "appearance";
+type SettingsSection = "general" | "appearance" | "data";
 
 const SECTIONS: {
   id: SettingsSection;
@@ -47,6 +53,7 @@ const SECTIONS: {
 }[] = [
   { id: "general", icon: SlidersHorizontal },
   { id: "appearance", icon: Palette },
+  { id: "data", icon: Database },
 ];
 
 /** Header shortcut that opens the portfolio settings modal. */
@@ -84,6 +91,8 @@ export function SettingsDialog() {
               <DialogTitleIcon>
                 {section === "appearance" ? (
                   <Palette aria-hidden="true" />
+                ) : section === "data" ? (
+                  <Database aria-hidden="true" />
                 ) : (
                   <SlidersHorizontal aria-hidden="true" />
                 )}
@@ -99,6 +108,10 @@ export function SettingsDialog() {
                 <Trans id="settings.appearance.description">
                   Color scheme and palette used across the dashboard.
                 </Trans>
+              ) : section === "data" ? (
+                <Trans id="settings.data.description">
+                  Portable backups, restores, test fixtures, and data removal.
+                </Trans>
               ) : (
                 <Trans id="settings.description">
                   Display currency, exchange-rate source, and market-quote
@@ -110,6 +123,8 @@ export function SettingsDialog() {
           <div className="min-h-0 flex-1 overflow-y-auto p-6">
             {section === "appearance" ? (
               <SettingsAppearance />
+            ) : section === "data" ? (
+              <SettingsData />
             ) : (
               <GeneralSettings />
             )}
@@ -193,6 +208,8 @@ function SectionButton({
 function SettingsSectionLabel({ section }: { section: SettingsSection }) {
   return section === "appearance" ? (
     <Trans id="settings.section.appearance">Appearance</Trans>
+  ) : section === "data" ? (
+    <Trans id="settings.section.data">Data</Trans>
   ) : (
     <Trans id="settings.section.general">General</Trans>
   );
@@ -347,8 +364,6 @@ function GeneralSettings() {
           )}
         </p>
       </Field>
-      {/* DEV-ONLY test-data seeder; renders nothing in production builds. */}
-      {import.meta.env.DEV ? <DevSeedSection /> : null}
     </div>
   );
 }
