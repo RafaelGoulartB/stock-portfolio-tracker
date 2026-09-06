@@ -1,9 +1,9 @@
 import { plural, t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
-import type { PortfolioSummary } from "@portifolio-tracker/shared";
+import type { Currency, PortfolioSummary } from "@portifolio-tracker/shared";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { AssetClassLabel } from "@/components/asset-labels";
+import { AssetClassLabel, CurrencyBadge } from "@/components/asset-labels";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -30,7 +30,9 @@ import {
   formatTradeDate,
   pnlClassName,
 } from "@/lib/format";
-import { queryErrorMessage } from "@/lib/trpcErrors";
+import { useFxQuote } from "@/lib/fx";
+import { useSettings } from "@/lib/settings";
+import { isFxRateRequired, queryErrorMessage } from "@/lib/trpcErrors";
 
 export const Route = createFileRoute("/_app/positions")({
   component: PositionsPage,
@@ -40,7 +42,22 @@ function PositionsPage() {
   // Subscribes this page to locale changes; amounts and dates below are
   // rendered with `Intl` using the active locale.
   useLingui();
-  const positions = trpc.positions.list.useQuery();
+  const { displayCurrency } = useSettings();
+  const fx = useFxQuote();
+  const positions = trpc.positions.list.useQuery({
+    displayCurrency,
+    usdBrlRate: fx.effectiveRate,
+  });
+
+  // The portfolio cannot consolidate mixed currencies until the quote
+  // arrives; keep the skeleton instead of flashing a rate error.
+  const waitingForRate =
+    !!positions.error && isFxRateRequired(positions.error) && fx.isPending;
+  const fxFailed =
+    !!positions.error &&
+    isFxRateRequired(positions.error) &&
+    fx.fxSource !== "manual" &&
+    !!fx.error;
 
   return (
     <div className="space-y-6">
@@ -51,8 +68,8 @@ function PositionsPage() {
           </h1>
           <p className="text-sm text-muted-foreground">
             <Trans id="positions.subtitle">
-              Consolidated by ticker using the moving average cost of every
-              trade you registered.
+              Consolidated by ticker and currency using the moving average cost
+              of every trade you registered.
             </Trans>
           </p>
         </div>
@@ -63,9 +80,20 @@ function PositionsPage() {
         </Button>
       </header>
 
-      {positions.isPending ? <PositionsSkeleton /> : null}
+      {positions.isPending || waitingForRate ? <PositionsSkeleton /> : null}
 
-      {positions.error ? (
+      {fxFailed ? (
+        <Card>
+          <CardContent className="py-6 text-sm text-destructive">
+            <Trans id="positions.fxFailed">
+              Could not fetch the exchange rate. Try another source or enter it
+              manually.
+            </Trans>
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {positions.error && !waitingForRate && !fxFailed ? (
         <Card>
           <CardContent className="py-6 text-sm text-destructive">
             {queryErrorMessage(positions.error)}
@@ -85,6 +113,7 @@ function PositionsPage() {
               <CardDescription>
                 <Trans id="positions.holdingsHint">
                   Average price and cost include the fees paid on each buy.
+                  Foreign amounts convert at the rate from Settings.
                 </Trans>
               </CardDescription>
             </CardHeader>
@@ -104,6 +133,9 @@ function PositionsPage() {
                       </TableHead>
                       <TableHead>
                         <Trans id="positions.colClass">Class</Trans>
+                      </TableHead>
+                      <TableHead>
+                        <Trans id="positions.colCurrency">Ccy</Trans>
                       </TableHead>
                       <TableHead className="text-right">
                         <Trans id="positions.colQuantity">Quantity</Trans>
@@ -127,7 +159,9 @@ function PositionsPage() {
                       const isOpen = Number(position.quantity) > 0;
 
                       return (
-                        <TableRow key={position.ticker}>
+                        <TableRow
+                          key={`${position.ticker}|${position.currency}`}
+                        >
                           <TableCell className="font-medium">
                             <div className="flex items-center gap-2">
                               {position.ticker}
@@ -141,21 +175,49 @@ function PositionsPage() {
                           <TableCell className="text-muted-foreground">
                             <AssetClassLabel assetClass={position.assetClass} />
                           </TableCell>
+                          <TableCell>
+                            <CurrencyBadge currency={position.currency} />
+                          </TableCell>
                           <TableCell className="text-right tabular-nums">
                             {formatQuantity(position.quantity)}
                           </TableCell>
                           <TableCell className="text-right tabular-nums">
-                            {isOpen ? formatMoney(position.averagePrice) : "—"}
+                            {isOpen ? (
+                              <ConvertedMoney
+                                native={position.averagePrice}
+                                nativeCurrency={position.currency}
+                                converted={position.convertedAveragePrice}
+                                displayCurrency={position.displayCurrency}
+                              />
+                            ) : (
+                              "—"
+                            )}
                           </TableCell>
                           <TableCell className="text-right tabular-nums">
-                            {formatMoney(position.investedCost)}
+                            <ConvertedMoney
+                              native={position.investedCost}
+                              nativeCurrency={position.currency}
+                              converted={position.convertedInvestedCost}
+                              displayCurrency={position.displayCurrency}
+                            />
                           </TableCell>
                           <TableCell
-                            className={`text-right tabular-nums ${pnlClassName(position.realizedPnl)}`}
+                            className={`text-right tabular-nums ${pnlClassName(position.convertedRealizedPnl)}`}
                           >
-                            {Number(position.realizedPnl) === 0
-                              ? formatMoney(position.realizedPnl)
-                              : formatSignedMoney(position.realizedPnl)}
+                            {Number(position.convertedRealizedPnl) === 0 ? (
+                              formatMoney(
+                                position.convertedRealizedPnl,
+                                position.displayCurrency,
+                              )
+                            ) : (
+                              <ConvertedMoney
+                                native={position.realizedPnl}
+                                nativeCurrency={position.currency}
+                                converted={position.convertedRealizedPnl}
+                                displayCurrency={position.displayCurrency}
+                                signed
+                              />
+                            )}
                           </TableCell>
                           <TableCell className="text-right text-muted-foreground">
                             {formatTradeDate(position.lastTradedAt)}
@@ -174,70 +236,128 @@ function PositionsPage() {
   );
 }
 
-function SummaryCards({ summary }: { summary: PortfolioSummary }) {
-  useLingui();
+/** Display-currency amount with the native amount underneath when converted. */
+function ConvertedMoney({
+  native,
+  nativeCurrency,
+  converted,
+  displayCurrency,
+  signed = false,
+}: {
+  native: string;
+  nativeCurrency: Currency;
+  converted: string;
+  displayCurrency: Currency;
+  signed?: boolean;
+}) {
+  const primary = signed
+    ? formatSignedMoney(converted, displayCurrency)
+    : formatMoney(converted, displayCurrency);
+
+  if (nativeCurrency === displayCurrency) {
+    return primary;
+  }
 
   return (
-    <div className="grid gap-4 sm:grid-cols-3">
-      <Card>
-        <CardHeader>
-          <CardDescription>
-            <Trans id="positions.investedCost">Invested cost</Trans>
-          </CardDescription>
-          <CardTitle className="text-2xl tabular-nums">
-            {formatMoney(summary.totalInvested)}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          <Trans id="positions.investedCostHint">
-            Cost basis of everything you still hold.
-          </Trans>
-        </CardContent>
-      </Card>
+    <span>
+      {primary}
+      <span className="block text-xs font-normal text-muted-foreground">
+        {formatMoney(native, nativeCurrency)}
+      </span>
+    </span>
+  );
+}
 
-      <Card>
-        <CardHeader>
-          <CardDescription>
-            <Trans id="positions.realizedPnl">Realized P&L</Trans>
-          </CardDescription>
-          <CardTitle
-            className={`text-2xl tabular-nums ${pnlClassName(summary.totalRealizedPnl)}`}
-          >
-            {Number(summary.totalRealizedPnl) === 0
-              ? formatMoney(summary.totalRealizedPnl)
-              : formatSignedMoney(summary.totalRealizedPnl)}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          <Trans id="positions.realizedPnlHint">
-            Result already locked in by your sells.
-          </Trans>
-        </CardContent>
-      </Card>
+function SummaryCards({ summary }: { summary: PortfolioSummary }) {
+  useLingui();
+  const breakdown = summary.totalsByCurrency
+    .map(
+      (total) =>
+        `${formatMoney(total.investedCost, total.currency)} ${total.currency}`,
+    )
+    .join(" + ");
 
-      <Card>
-        <CardHeader>
-          <CardDescription>
-            <Trans id="positions.assets">Assets</Trans>
-          </CardDescription>
-          <CardTitle className="text-2xl tabular-nums">
-            {summary.openPositions}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          {t({
-            id: "positions.closedCount",
-            message: plural(
-              { count: summary.closedPositions },
-              {
-                one: "# closed position",
-                other: "# closed positions",
-              },
-            ),
-          })}
-          .
-        </CardContent>
-      </Card>
+  return (
+    <div className="space-y-2">
+      <div className="grid gap-4 sm:grid-cols-3">
+        <Card>
+          <CardHeader>
+            <CardDescription>
+              <Trans id="positions.investedCost">Invested cost</Trans>
+            </CardDescription>
+            <CardTitle className="text-2xl tabular-nums">
+              {formatMoney(summary.totalInvested, summary.displayCurrency)}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            <Trans id="positions.investedCostHint">
+              Cost basis of everything you still hold.
+            </Trans>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardDescription>
+              <Trans id="positions.realizedPnl">Realized P&L</Trans>
+            </CardDescription>
+            <CardTitle
+              className={`text-2xl tabular-nums ${pnlClassName(summary.totalRealizedPnl)}`}
+            >
+              {Number(summary.totalRealizedPnl) === 0
+                ? formatMoney(summary.totalRealizedPnl, summary.displayCurrency)
+                : formatSignedMoney(
+                    summary.totalRealizedPnl,
+                    summary.displayCurrency,
+                  )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            <Trans id="positions.realizedPnlHint">
+              Result already locked in by your sells.
+            </Trans>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardDescription>
+              <Trans id="positions.assets">Assets</Trans>
+            </CardDescription>
+            <CardTitle className="text-2xl tabular-nums">
+              {summary.openPositions}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-muted-foreground">
+            {t({
+              id: "positions.closedCount",
+              message: plural(
+                { count: summary.closedPositions },
+                {
+                  one: "# closed position",
+                  other: "# closed positions",
+                },
+              ),
+            })}
+            .
+          </CardContent>
+        </Card>
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        {summary.usdBrlRate ? (
+          <>
+            <Trans id="positions.consolidationRate">
+              Consolidated at 1 USD = {formatQuantity(summary.usdBrlRate)} BRL.
+            </Trans>{" "}
+          </>
+        ) : null}
+        {breakdown ? (
+          <Trans id="positions.nativeBreakdown">
+            Native totals: {breakdown}.
+          </Trans>
+        ) : null}
+      </p>
     </div>
   );
 }

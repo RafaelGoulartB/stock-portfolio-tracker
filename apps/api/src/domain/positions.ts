@@ -1,5 +1,7 @@
 import type {
   AssetClass,
+  Currency,
+  CurrencyTotal,
   PortfolioSummary,
   Position,
   TransactionSide,
@@ -19,6 +21,7 @@ import {
 export type ConsolidationInput = {
   ticker: string;
   assetClass: AssetClass;
+  currency: Currency;
   side: TransactionSide;
   quantity: string;
   price: string;
@@ -30,8 +33,9 @@ export type ConsolidationInput = {
 type Accumulator = {
   ticker: string;
   assetClass: AssetClass;
+  currency: Currency;
   quantity: Decimal;
-  /** Acquisition cost still held, fees included. */
+  /** Acquisition cost still held, fees included, in the native currency. */
   costBasis: Decimal;
   realizedPnl: Decimal;
   transactionCount: number;
@@ -51,23 +55,36 @@ function byTradeOrder(a: ConsolidationInput, b: ConsolidationInput): number {
 }
 
 /**
- * Consolidates a transaction log into one position per ticker using the
- * moving average cost method: buys raise the average price, sells release
- * cost at the current average and realize the difference as P&L.
+ * Consolidates a transaction log into one position per ticker and currency
+ * using the moving average cost method: buys raise the average price, sells
+ * release cost at the current average and realize the difference as P&L.
+ *
+ * Each currency is consolidated in isolation so BRL and USD costs are never
+ * averaged together. Writes are additionally guarded by a one-currency-per
+ * ticker rule, but grouping here stays (ticker, currency) as defense in
+ * depth.
  */
 export function consolidatePositions(
   input: readonly ConsolidationInput[],
-): Position[] {
-  const byTicker = new Map<string, Accumulator>();
+): Omit<
+  Position,
+  | "displayCurrency"
+  | "convertedAveragePrice"
+  | "convertedInvestedCost"
+  | "convertedRealizedPnl"
+>[] {
+  const byKey = new Map<string, Accumulator>();
 
   for (const entry of [...input].sort(byTradeOrder)) {
+    const key = `${entry.ticker}|${entry.currency}`;
     const quantity = toDecimal(entry.quantity);
     const price = toDecimal(entry.price);
     const fees = toDecimal(entry.fees);
 
-    const current: Accumulator = byTicker.get(entry.ticker) ?? {
+    const current: Accumulator = byKey.get(key) ?? {
       ticker: entry.ticker,
       assetClass: entry.assetClass,
+      currency: entry.currency,
       quantity: ZERO,
       costBasis: ZERO,
       realizedPnl: ZERO,
@@ -105,13 +122,14 @@ export function consolidatePositions(
       }
     }
 
-    byTicker.set(entry.ticker, current);
+    byKey.set(key, current);
   }
 
-  return [...byTicker.values()]
+  return [...byKey.values()]
     .map((position) => ({
       ticker: position.ticker,
       assetClass: position.assetClass,
+      currency: position.currency,
       quantity: formatDecimal(position.quantity, QUANTITY_PLACES),
       averagePrice: formatDecimal(
         isZero(position.quantity)
@@ -124,30 +142,140 @@ export function consolidatePositions(
       transactionCount: position.transactionCount,
       lastTradedAt: position.lastTradedAt,
     }))
-    .sort((a, b) => a.ticker.localeCompare(b.ticker));
+    .sort(
+      (a, b) =>
+        a.ticker.localeCompare(b.ticker) ||
+        a.currency.localeCompare(b.currency),
+    );
+}
+
+/** BRL per 1 USD, as a decimal string. */
+export type UsdBrlRate = string;
+
+/**
+ * Converts a native-currency amount to the display currency. Amounts already
+ * in the display currency pass through untouched.
+ */
+export function convertMoney(
+  value: string,
+  from: Currency,
+  display: Currency,
+  usdBrlRate: UsdBrlRate,
+): string {
+  if (from === display) {
+    return formatDecimal(toDecimal(value), MONEY_PLACES);
+  }
+
+  const rate = toDecimal(usdBrlRate);
+
+  if (rate <= ZERO) {
+    throw new Error(`Invalid USD/BRL rate: ${usdBrlRate}`);
+  }
+
+  const converted =
+    from === "USD" ? mul(toDecimal(value), rate) : div(toDecimal(value), rate);
+
+  return formatDecimal(converted, MONEY_PLACES);
+}
+
+/**
+ * Attaches display-currency amounts to every native position. Realized P&L
+ * converts at the current consolidation rate; it is an approximation, not a
+ * historical-FX accounting.
+ */
+export function convertPositions(
+  positions: readonly Omit<
+    Position,
+    | "displayCurrency"
+    | "convertedAveragePrice"
+    | "convertedInvestedCost"
+    | "convertedRealizedPnl"
+  >[],
+  displayCurrency: Currency,
+  usdBrlRate: UsdBrlRate | null,
+): Position[] {
+  if (
+    usdBrlRate === null &&
+    positions.some((position) => position.currency !== displayCurrency)
+  ) {
+    throw new Error(
+      "An USD/BRL rate is required to consolidate mixed currencies",
+    );
+  }
+
+  return positions.map((position) => ({
+    ...position,
+    displayCurrency,
+    convertedAveragePrice: convertMoney(
+      position.averagePrice,
+      position.currency,
+      displayCurrency,
+      usdBrlRate ?? "1",
+    ),
+    convertedInvestedCost: convertMoney(
+      position.investedCost,
+      position.currency,
+      displayCurrency,
+      usdBrlRate ?? "1",
+    ),
+    convertedRealizedPnl: convertMoney(
+      position.realizedPnl,
+      position.currency,
+      displayCurrency,
+      usdBrlRate ?? "1",
+    ),
+  }));
 }
 
 export function summarizePositions(
   positions: readonly Position[],
+  displayCurrency: Currency,
+  usdBrlRate: UsdBrlRate | null,
 ): PortfolioSummary {
   let totalInvested = ZERO;
   let totalRealizedPnl = ZERO;
   let openPositions = 0;
+  const byCurrency = new Map<Currency, { invested: Decimal; pnl: Decimal }>();
 
   for (const position of positions) {
-    totalInvested = add(totalInvested, toDecimal(position.investedCost));
-    totalRealizedPnl = add(totalRealizedPnl, toDecimal(position.realizedPnl));
+    totalInvested = add(
+      totalInvested,
+      toDecimal(position.convertedInvestedCost),
+    );
+    totalRealizedPnl = add(
+      totalRealizedPnl,
+      toDecimal(position.convertedRealizedPnl),
+    );
+
+    const native = byCurrency.get(position.currency) ?? {
+      invested: ZERO,
+      pnl: ZERO,
+    };
+    native.invested = add(native.invested, toDecimal(position.investedCost));
+    native.pnl = add(native.pnl, toDecimal(position.realizedPnl));
+    byCurrency.set(position.currency, native);
 
     if (!isZero(toDecimal(position.quantity))) {
       openPositions += 1;
     }
   }
 
+  const totalsByCurrency: CurrencyTotal[] = [...byCurrency.entries()]
+    .map(([currency, totals]) => ({
+      currency,
+      investedCost: formatDecimal(totals.invested, MONEY_PLACES),
+      realizedPnl: formatDecimal(totals.pnl, MONEY_PLACES),
+    }))
+    .sort((a, b) => a.currency.localeCompare(b.currency));
+
   return {
     openPositions,
     closedPositions: positions.length - openPositions,
+    displayCurrency,
+    usdBrlRate,
     totalInvested: formatDecimal(totalInvested, MONEY_PLACES),
     totalRealizedPnl: formatDecimal(totalRealizedPnl, MONEY_PLACES),
+    totalsByCurrency,
   };
 }
 
@@ -156,9 +284,29 @@ export function availableQuantity(
   input: readonly ConsolidationInput[],
   ticker: string,
 ): string {
-  const position = consolidatePositions(input).find(
-    (item) => item.ticker === ticker,
-  );
+  let total = ZERO;
 
-  return position?.quantity ?? "0";
+  for (const position of consolidatePositions(input)) {
+    if (position.ticker === ticker) {
+      total = add(total, toDecimal(position.quantity));
+    }
+  }
+
+  return formatDecimal(total, QUANTITY_PLACES);
+}
+
+/** Native currencies already used by a ticker, e.g. to enforce one per ticker. */
+export function tickerCurrencies(
+  input: readonly ConsolidationInput[],
+  ticker: string,
+): Currency[] {
+  const found = new Set<Currency>();
+
+  for (const entry of input) {
+    if (entry.ticker === ticker) {
+      found.add(entry.currency);
+    }
+  }
+
+  return [...found].sort();
 }

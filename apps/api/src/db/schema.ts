@@ -1,4 +1,8 @@
-import { ASSET_CLASSES, TRANSACTION_SIDES } from "@portifolio-tracker/shared";
+import {
+  ASSET_CLASSES,
+  CURRENCIES,
+  TRANSACTION_SIDES,
+} from "@portifolio-tracker/shared";
 import {
   date,
   index,
@@ -15,6 +19,7 @@ export const transactionSideEnum = pgEnum(
   "transaction_side",
   TRANSACTION_SIDES,
 );
+export const currencyEnum = pgEnum("currency", CURRENCIES);
 
 /** Money and quantities are `numeric` so no value is ever stored as a float. */
 const DECIMAL = { precision: 22, scale: 8 } as const;
@@ -52,7 +57,8 @@ export const transactions = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     ticker: text("ticker").notNull(),
-    assetClass: assetClassEnum("asset_class").notNull().default("stock"),
+    assetClass: assetClassEnum("asset_class").notNull().default("stock_br"),
+    currency: currencyEnum("currency").notNull().default("BRL"),
     side: transactionSideEnum("side").notNull(),
     quantity: numeric("quantity", DECIMAL).notNull(),
     price: numeric("price", DECIMAL).notNull(),

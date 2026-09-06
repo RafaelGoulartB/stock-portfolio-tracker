@@ -14,14 +14,24 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:228
+#: src/components/asset-labels.tsx:17
+#~ msgid "assetClass.stock"
+#~ msgstr "Stock"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:337
 msgid "positions.closedCount"
 msgstr "{count, plural, one {# closed position} other {# closed positions}}"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:111
+#: src/routes/_app/transactions.tsx:118
 msgid "transactions.registered"
 msgstr "{side} of {quantity} {ticker} registered"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:338
+msgid "transactions.currencyLockHint"
+msgstr "A ticker always uses the currency of its first trade."
 
 #. js-lingui-explicit-id
 #: src/routes/login.tsx:211
@@ -29,7 +39,7 @@ msgid "login.hasAccount"
 msgstr "Already have an account?"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:221
+#: src/routes/_app/positions.tsx:330
 msgid "positions.assets"
 msgstr "Assets"
 
@@ -39,58 +49,84 @@ msgid "login.passwordHint"
 msgstr "At least 8 characters"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:86
+#: src/routes/_app/positions.tsx:119
 msgid "positions.holdingsHint"
 msgstr "Average price and cost include the fees paid on each buy."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:112
+#: src/routes/_app/positions.tsx:149
 msgid "positions.colAvgPrice"
 msgstr "Avg. price"
 
 #. js-lingui-explicit-id
-#: src/components/asset-labels.tsx:23
+#: src/components/asset-labels.tsx:30
 msgid "assetClass.bdr"
 msgstr "BDR"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:354
+#: src/components/asset-labels.tsx:22
+msgid "assetClass.stockBr"
+msgstr "Brazilian stock"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:406
 msgid "transactions.notesDescription"
 msgstr "Broker, strategy or anything worth remembering."
 
 #. js-lingui-explicit-id
-#: src/components/asset-labels.tsx:7
-#: src/routes/_app/transactions.tsx:105
+#: src/components/asset-labels.tsx:12
+#: src/routes/_app/transactions.tsx:112
 msgid "side.buy"
 msgstr "Buy"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:106
+#: src/routes/_app/positions.tsx:143
+msgid "positions.colCurrency"
+msgstr "Ccy"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:502
+msgid "transactions.colCurrency"
+msgstr "Ccy"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:140
 msgid "positions.colClass"
 msgstr "Class"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:228
+#: src/routes/_app/transactions.tsx:235
 msgid "transactions.class"
 msgstr "Class"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:136
+#: src/routes/_app/positions.tsx:175
 msgid "positions.closed"
 msgstr "Closed"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:53
+#. placeholder {0}: formatQuantity(summary.usdBrlRate)
+#: src/routes/_app/positions.tsx:355
+msgid "positions.consolidationRate"
+msgstr "Consolidated at 1 USD = {0} BRL."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:75
 msgid "positions.subtitle"
 msgstr "Consolidated by ticker using the moving average cost of every trade you registered."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:192
+#: src/routes/_app/positions.tsx:298
 msgid "positions.investedCostHint"
 msgstr "Cost basis of everything you still hold."
 
 #. js-lingui-explicit-id
-#: src/lib/trpcErrors.ts:49
+#: src/routes/_app/positions.tsx:93
+msgid "positions.fxFailed"
+msgstr "Could not fetch the exchange rate. Try another source or enter it manually."
+
+#. js-lingui-explicit-id
+#: src/lib/trpcErrors.ts:54
 msgid "error.loadFailed"
 msgstr "Could not load this data. Try again."
 
@@ -110,9 +146,14 @@ msgid "login.switchToRegister"
 msgstr "Create one"
 
 #. js-lingui-explicit-id
-#: src/components/asset-labels.tsx:25
+#: src/components/asset-labels.tsx:32
 msgid "assetClass.crypto"
 msgstr "Crypto"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:318
+msgid "transactions.currency"
+msgstr "Currency"
 
 #. js-lingui-explicit-id
 #: src/components/theme-switcher.tsx:60
@@ -120,9 +161,19 @@ msgid "theme.dark"
 msgstr "Dark"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:441
+#: src/routes/_app/transactions.tsx:493
 msgid "transactions.colDate"
 msgstr "Date"
+
+#. js-lingui-explicit-id
+#: src/components/settings-dialog.tsx:86
+msgid "positions.displayCurrency"
+msgstr "Display currency"
+
+#. js-lingui-explicit-id
+#: src/components/settings-dialog.tsx:59
+msgid "settings.description"
+msgstr "Display currency and exchange-rate source used to consolidate the portfolio."
 
 #. js-lingui-explicit-id
 #: src/routes/login.tsx:209
@@ -135,37 +186,42 @@ msgid "login.email"
 msgstr "Email"
 
 #. js-lingui-explicit-id
-#: src/components/asset-labels.tsx:21
+#: src/components/asset-labels.tsx:28
 msgid "assetClass.etf"
 msgstr "ETF"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:302
+#: src/components/settings-dialog.tsx:107
+msgid "positions.fxSource"
+msgstr "Exchange-rate source"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:354
 msgid "transactions.fees"
 msgstr "Fees"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:456
+#: src/routes/_app/transactions.tsx:511
 msgid "transactions.colFees"
 msgstr "Fees"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:158
+#: src/routes/_app/transactions.tsx:165
 msgid "transactions.feesHint"
 msgstr "Fees are added to a buy and subtracted from a sell."
 
 #. js-lingui-explicit-id
-#: src/components/asset-labels.tsx:27
+#: src/components/asset-labels.tsx:34
 msgid "assetClass.fixedIncome"
 msgstr "Fixed income"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:384
+#: src/routes/_app/transactions.tsx:436
 msgid "transactions.history"
 msgstr "History"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:83
+#: src/routes/_app/positions.tsx:116
 msgid "positions.holdings"
 msgstr "Holdings"
 
@@ -175,12 +231,12 @@ msgid "auth.invalidCredentials"
 msgstr "Invalid email or password."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:115
+#: src/routes/_app/positions.tsx:152
 msgid "positions.colInvested"
 msgstr "Invested"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:185
+#: src/routes/_app/positions.tsx:291
 msgid "positions.investedCost"
 msgstr "Invested cost"
 
@@ -191,7 +247,7 @@ msgid "shell.language"
 msgstr "Language"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:121
+#: src/routes/_app/positions.tsx:158
 msgid "positions.colLastTrade"
 msgstr "Last trade"
 
@@ -201,42 +257,47 @@ msgid "theme.light"
 msgstr "Light"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:72
+#: src/routes/_app.tsx:75
 msgid "nav.main"
 msgstr "Main"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:387
+#: src/routes/_app/transactions.tsx:439
 msgid "transactions.historyHint"
 msgstr "Most recent trades first."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:155
+#: src/routes/_app/positions.tsx:361
+msgid "positions.nativeBreakdown"
+msgstr "Native totals: {breakdown}."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:162
 msgid "transactions.newTrade"
 msgstr "New trade"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:94
+#: src/routes/_app/positions.tsx:128
 msgid "positions.empty"
 msgstr "No positions yet. Register your first trade to see it here."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:339
+#: src/routes/_app/transactions.tsx:391
 msgid "transactions.notes"
 msgstr "Notes"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:403
+#: src/routes/_app/transactions.tsx:455
 msgid "transactions.empty"
 msgstr "Nothing registered yet."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:344
+#: src/routes/_app/transactions.tsx:396
 msgid "transactions.notesHint"
 msgstr "Optional"
 
 #. js-lingui-explicit-id
-#: src/components/asset-labels.tsx:29
+#: src/components/asset-labels.tsx:36
 msgid "assetClass.other"
 msgstr "Other"
 
@@ -246,84 +307,84 @@ msgid "login.password"
 msgstr "Password"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:67
+#: src/routes/_app.tsx:70
 #: src/routes/login.tsx:96
 msgid "shell.brand"
 msgstr "Portfolio Tracker"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:42
+#: src/routes/_app.tsx:44
 msgid "nav.positions"
 msgstr "Positions"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:50
+#: src/routes/_app/positions.tsx:72
 msgid "positions.title"
 msgstr "Positions"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:453
+#: src/routes/_app/transactions.tsx:508
 msgid "transactions.colPrice"
 msgstr "Price"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:109
+#: src/routes/_app/positions.tsx:146
 msgid "positions.colQuantity"
 msgstr "Quantity"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:260
+#: src/routes/_app/transactions.tsx:276
 msgid "transactions.quantity"
 msgstr "Quantity"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:450
+#: src/routes/_app/transactions.tsx:505
 msgid "transactions.colQuantity"
 msgstr "Quantity"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:118
+#: src/routes/_app/positions.tsx:155
 msgid "positions.colRealized"
 msgstr "Realized P&L"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:201
+#: src/routes/_app/positions.tsx:307
 msgid "positions.realizedPnl"
 msgstr "Realized P&L"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:61
+#: src/routes/_app/positions.tsx:83
 msgid "positions.registerTrade"
 msgstr "Register a trade"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:144
+#: src/routes/_app/transactions.tsx:151
 msgid "transactions.subtitle"
 msgstr "Register every buy and sell. Positions are consolidated from this log."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:374
+#: src/routes/_app/transactions.tsx:426
 msgid "transactions.register"
 msgstr "Register trade"
 
 #. js-lingui-explicit-id
-#: src/components/asset-labels.tsx:19
+#: src/components/asset-labels.tsx:26
 msgid "assetClass.reit"
 msgstr "REIT"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:468
+#: src/routes/_app/transactions.tsx:523
 msgid "transactions.remove"
 msgstr "Remove {ticker} trade from {date}"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:212
+#: src/routes/_app/positions.tsx:321
 msgid "positions.realizedPnlHint"
 msgstr "Result already locked in by your sells."
 
 #. js-lingui-explicit-id
-#: src/components/asset-labels.tsx:10
-#: src/routes/_app/transactions.tsx:106
+#: src/components/asset-labels.tsx:15
+#: src/routes/_app/transactions.tsx:113
 msgid "side.sell"
 msgstr "Sell"
 
@@ -333,12 +394,22 @@ msgid "register.description"
 msgstr "Set up an account to start tracking your trades."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:198
+#: src/components/settings-dialog.tsx:48
+msgid "settings.open"
+msgstr "Settings"
+
+#. js-lingui-explicit-id
+#: src/components/settings-dialog.tsx:56
+msgid "settings.title"
+msgstr "Settings"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/transactions.tsx:205
 msgid "transactions.side"
 msgstr "Side"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:447
+#: src/routes/_app/transactions.tsx:499
 msgid "transactions.colSide"
 msgstr "Side"
 
@@ -358,7 +429,7 @@ msgid "login.switchToLogin"
 msgstr "Sign in"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:104
+#: src/routes/_app.tsx:108
 msgid "shell.signOut"
 msgstr "Sign out"
 
@@ -366,11 +437,6 @@ msgstr "Sign out"
 #: src/lib/trpcErrors.ts:34
 msgid "error.unknown"
 msgstr "Something went wrong. Try again."
-
-#. js-lingui-explicit-id
-#: src/components/asset-labels.tsx:17
-msgid "assetClass.stock"
-msgstr "Stock"
 
 #. js-lingui-explicit-id
 #: src/components/theme-switcher.tsx:62
@@ -389,54 +455,70 @@ msgid "auth.emailRegistered"
 msgstr "This email is already registered."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:103
+#: src/lib/trpcErrors.ts:44
+msgid "transactions.currencyMismatch"
+msgstr "This ticker is already tracked in another currency."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:137
 msgid "positions.colTicker"
 msgstr "Ticker"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:176
+#: src/routes/_app/transactions.tsx:183
 msgid "transactions.ticker"
 msgstr "Ticker"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:444
+#: src/routes/_app/transactions.tsx:496
 msgid "transactions.colTicker"
 msgstr "Ticker"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:459
+#: src/routes/_app/transactions.tsx:514
 msgid "transactions.colTotal"
 msgstr "Total"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:322
+#: src/routes/_app/transactions.tsx:375
 msgid "transactions.tradeDate"
 msgstr "Trade date"
 
 #. js-lingui-explicit-id
-#: src/lib/trpcErrors.ts:44
+#: src/lib/trpcErrors.ts:49
 msgid "transactions.notFound"
 msgstr "Transaction not found."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:126
+#: src/routes/_app/transactions.tsx:133
 msgid "transactions.removed"
 msgstr "Transaction removed"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:45
+#: src/routes/_app.tsx:47
 msgid "nav.transactions"
 msgstr "Transactions"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:141
+#: src/routes/_app/transactions.tsx:148
 msgid "transactions.title"
 msgstr "Transactions"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:280
+#: src/routes/_app/transactions.tsx:296
 msgid "transactions.unitPrice"
 msgstr "Unit price"
+
+#. js-lingui-explicit-id
+#: src/components/asset-labels.tsx:24
+msgid "assetClass.stockUs"
+msgstr "US stock"
+
+#. js-lingui-explicit-id
+#: src/components/settings-dialog.tsx:129
+#: src/components/settings-dialog.tsx:143
+msgid "positions.fxRate"
+msgstr "USD/BRL rate"
 
 #. js-lingui-explicit-id
 #: src/routes/login.tsx:111

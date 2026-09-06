@@ -1,14 +1,18 @@
+import type { Currency } from "@portifolio-tracker/shared";
+import { DEFAULT_CURRENCY as SHARED_DEFAULT } from "@portifolio-tracker/shared";
 import { i18n } from "@/i18n";
 
 /**
  * Fixed ISO currency stored per asset. The UI locale only changes how an
  * amount is displayed (separators, symbol placement) and never converts it:
- * 100 BRL stays 100 BRL when the UI switches to English.
+ * 100 BRL stays 100 BRL when the UI switches to English. Conversion only
+ * happens explicitly through the portfolio display currency and an USD/BRL
+ * rate.
  */
-export type CurrencyCode = "BRL" | "USD";
+export type CurrencyCode = Currency;
 
 /** Rows that predate the per-asset currency column are BRL. */
-export const DEFAULT_CURRENCY: CurrencyCode = "BRL";
+export const DEFAULT_CURRENCY: CurrencyCode = SHARED_DEFAULT;
 
 /** API timezone used when rendering calendar dates. */
 export const API_TIME_ZONE = "America/Sao_Paulo";

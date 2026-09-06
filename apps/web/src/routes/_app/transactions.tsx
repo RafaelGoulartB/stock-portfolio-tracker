@@ -4,6 +4,8 @@ import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import {
   ASSET_CLASSES,
+  CURRENCIES,
+  CURRENCY_LABELS,
   createTransactionInput,
   TRANSACTION_SIDES,
   type Transaction,
@@ -13,7 +15,11 @@ import { Loader2, Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import type { z } from "zod";
-import { AssetClassLabel, SideLabel } from "@/components/asset-labels";
+import {
+  AssetClassLabel,
+  CurrencyBadge,
+  SideLabel,
+} from "@/components/asset-labels";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -72,7 +78,8 @@ function today(): string {
 
 const emptyForm = (): FormValues => ({
   ticker: "",
-  assetClass: "stock",
+  assetClass: "stock_br",
+  currency: "BRL",
   side: "buy",
   quantity: "",
   price: "",
@@ -229,7 +236,16 @@ function TransactionsPage() {
                         </FormLabel>
                         <Select
                           value={field.value}
-                          onValueChange={field.onChange}
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            // Stocks imply their home currency; the user can
+                            // still override it below.
+                            if (value === "stock_us") {
+                              form.setValue("currency", "USD");
+                            } else if (value === "stock_br") {
+                              form.setValue("currency", "BRL");
+                            }
+                          }}
                         >
                           <FormControl>
                             <SelectTrigger className="w-full">
@@ -295,6 +311,42 @@ function TransactionsPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
+                    name="currency"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          <Trans id="transactions.currency">Currency</Trans>
+                        </FormLabel>
+                        <Select
+                          value={field.value ?? "BRL"}
+                          onValueChange={field.onChange}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="w-full">
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {CURRENCIES.map((currency) => (
+                              <SelectItem key={currency} value={currency}>
+                                {CURRENCY_LABELS[currency]}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          <Trans id="transactions.currencyLockHint">
+                            A ticker always uses the currency of its first
+                            trade.
+                          </Trans>
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
                     name="fees"
                     render={({ field }) => (
                       <FormItem>
@@ -312,23 +364,23 @@ function TransactionsPage() {
                       </FormItem>
                     )}
                   />
-
-                  <FormField
-                    control={form.control}
-                    name="tradedAt"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>
-                          <Trans id="transactions.tradeDate">Trade date</Trans>
-                        </FormLabel>
-                        <FormControl>
-                          <Input type="date" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
                 </div>
+
+                <FormField
+                  control={form.control}
+                  name="tradedAt"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>
+                        <Trans id="transactions.tradeDate">Trade date</Trans>
+                      </FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <FormField
                   control={form.control}
@@ -446,6 +498,9 @@ function HistoryTable({
           <TableHead>
             <Trans id="transactions.colSide">Side</Trans>
           </TableHead>
+          <TableHead>
+            <Trans id="transactions.colCurrency">Ccy</Trans>
+          </TableHead>
           <TableHead className="text-right">
             <Trans id="transactions.colQuantity">Quantity</Trans>
           </TableHead>
@@ -495,17 +550,20 @@ function HistoryTable({
                   <SideLabel side={transaction.side} />
                 </Badge>
               </TableCell>
+              <TableCell>
+                <CurrencyBadge currency={transaction.currency} />
+              </TableCell>
               <TableCell className="text-right tabular-nums">
                 {formatQuantity(transaction.quantity)}
               </TableCell>
               <TableCell className="text-right tabular-nums">
-                {formatMoney(transaction.price)}
+                {formatMoney(transaction.price, transaction.currency)}
               </TableCell>
               <TableCell className="text-right tabular-nums text-muted-foreground">
-                {formatMoney(transaction.fees)}
+                {formatMoney(transaction.fees, transaction.currency)}
               </TableCell>
               <TableCell className="text-right tabular-nums">
-                {formatMoney(transaction.total)}
+                {formatMoney(transaction.total, transaction.currency)}
               </TableCell>
               <TableCell>
                 <Button

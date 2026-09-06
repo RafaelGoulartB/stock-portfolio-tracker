@@ -16,7 +16,11 @@ Node 24, pnpm workspaces, TypeScript `strict`, ESM. Vite, React 19, TanStack Rou
 ## Rules
 
 - Money: Postgres `numeric(22, 8)`, never `float`; decimals travel as strings
-- Positions: moving average cost, never FIFO
+- Positions: moving average cost, never FIFO; one currency per ticker, never
+  averaged across currencies; portfolio consolidates into a user-selected
+  display currency (`BRL`/`USD`) at an USD/BRL rate
+- FX: pluggable `FxProvider` sources (`apps/api/src/lib/fx`); Frankfurter by
+  default, manual rate fallback
 - Auth: custom cookie session (`portifolio_session`, SHA-256 hash stored, scrypt password, 30d TTL); private routers use `protectedProcedure`
 - Do not wrap shadcn; New York only; use `--gain` / `--loss` tokens (no ad-hoc hex)
 - tRPC client URL is `/trpc` (Vite proxy). Do not bake `localhost` into the client
@@ -25,4 +29,4 @@ Node 24, pnpm workspaces, TypeScript `strict`, ESM. Vite, React 19, TanStack Rou
 
 ## Out of scope until a dedicated plan
 
-Brokerage-note parser, FIFO, quotes, Better Auth.
+Brokerage-note parser, FIFO, Better Auth.

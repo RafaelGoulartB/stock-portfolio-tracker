@@ -1,4 +1,5 @@
 import {
+  type AssetClass,
   createTransactionInput,
   deleteTransactionInput,
   type Transaction,
@@ -10,6 +11,7 @@ import { transactions } from "../../db/schema";
 import {
   availableQuantity,
   type ConsolidationInput,
+  tickerCurrencies,
 } from "../../domain/positions";
 import { add, formatDecimal, mul, sub, toDecimal } from "../../lib/decimal";
 import { protectedProcedure, router } from "../trpc";
@@ -18,6 +20,7 @@ const columns = {
   id: transactions.id,
   ticker: transactions.ticker,
   assetClass: transactions.assetClass,
+  currency: transactions.currency,
   side: transactions.side,
   quantity: transactions.quantity,
   price: transactions.price,
@@ -30,11 +33,23 @@ const columns = {
 export async function loadTransactions(
   userId: string,
 ): Promise<ConsolidationInput[]> {
-  return db
+  const rows = await db
     .select(columns)
     .from(transactions)
     .where(eq(transactions.userId, userId))
     .orderBy(asc(transactions.tradedAt), asc(transactions.createdAt));
+
+  // Rows written before the BR/US stock split still read back as `stock`.
+  return rows.map((row) => {
+    const rawClass: string = row.assetClass;
+
+    return {
+      ...row,
+      assetClass: (rawClass === "stock"
+        ? "stock_br"
+        : row.assetClass) as AssetClass,
+    };
+  });
 }
 
 /** Cash moved by the trade: fees increase a buy and reduce a sell. */
@@ -49,10 +64,16 @@ function tradeTotal(row: ConsolidationInput): string {
 }
 
 function toDto(row: ConsolidationInput & { id: string; notes: string | null }) {
+  // Rows written before the BR/US stock split read back as `stock`.
+  const rawClass: string = row.assetClass;
+  const assetClass: AssetClass =
+    rawClass === "stock" ? "stock_br" : row.assetClass;
+
   return {
     id: row.id,
     ticker: row.ticker,
-    assetClass: row.assetClass,
+    assetClass,
+    currency: row.currency,
     side: row.side,
     quantity: row.quantity,
     price: row.price,
@@ -77,11 +98,21 @@ export const transactionsRouter = router({
   create: protectedProcedure
     .input(createTransactionInput)
     .mutation(async ({ ctx, input }) => {
+      const history = await loadTransactions(ctx.user.id);
+
+      // One ticker, one currency: costs in BRL and USD must never be averaged
+      // together, so the first currency used by a ticker wins.
+      const used = tickerCurrencies(history, input.ticker);
+
+      if (used.length > 0 && !used.includes(input.currency)) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: `Ticker ${input.ticker} is tracked in ${used.join(", ")}. Register this trade in the same currency.`,
+        });
+      }
+
       if (input.side === "sell") {
-        const held = availableQuantity(
-          await loadTransactions(ctx.user.id),
-          input.ticker,
-        );
+        const held = availableQuantity(history, input.ticker);
 
         if (toDecimal(input.quantity) > toDecimal(held)) {
           throw new TRPCError({
@@ -97,6 +128,7 @@ export const transactionsRouter = router({
           userId: ctx.user.id,
           ticker: input.ticker,
           assetClass: input.assetClass,
+          currency: input.currency,
           side: input.side,
           quantity: input.quantity,
           price: input.price,

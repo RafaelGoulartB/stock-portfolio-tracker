@@ -41,6 +41,11 @@ const holdingsShort = msg({
   message: "You do not hold enough of this ticker to sell.",
 });
 
+const currencyMismatch = msg({
+  id: "transactions.currencyMismatch",
+  message: "This ticker is already tracked in another currency.",
+});
+
 const transactionMissing = msg({
   id: "transactions.notFound",
   message: "Transaction not found.",
@@ -77,6 +82,10 @@ export function authErrorMessage(
 }
 
 export function createTradeErrorMessage(error: unknown): string {
+  if (codeOf(error) === "PRECONDITION_FAILED") {
+    return i18n._(currencyMismatch);
+  }
+
   if (codeOf(error) === "BAD_REQUEST") {
     return i18n._(holdingsShort);
   }
@@ -86,6 +95,20 @@ export function createTradeErrorMessage(error: unknown): string {
   }
 
   return i18n._(unknownError);
+}
+
+/** True when the portfolio needs an USD/BRL rate it was not given. */
+export function isFxRateRequired(error: unknown): boolean {
+  if (codeOf(error) !== "BAD_REQUEST" || typeof error !== "object") {
+    return false;
+  }
+
+  const message =
+    error !== null && "message" in error
+      ? String((error as { message?: unknown }).message ?? "")
+      : "";
+
+  return message.toLowerCase().includes("rate");
 }
 
 export function removeTradeErrorMessage(error: unknown): string {

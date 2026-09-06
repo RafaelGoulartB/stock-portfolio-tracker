@@ -1,5 +1,10 @@
 import { Trans } from "@lingui/react/macro";
-import type { AssetClass, TransactionSide } from "@portifolio-tracker/shared";
+import type {
+  AssetClass,
+  Currency,
+  TransactionSide,
+} from "@portifolio-tracker/shared";
+import { Badge } from "@/components/ui/badge";
 
 /** Translated side badge content shared by holdings and history tables. */
 export function SideLabel({ side }: { side: TransactionSide }) {
@@ -13,8 +18,10 @@ export function SideLabel({ side }: { side: TransactionSide }) {
 /** Translated asset class name shared by holdings and history tables. */
 export function AssetClassLabel({ assetClass }: { assetClass: AssetClass }) {
   switch (assetClass) {
-    case "stock":
-      return <Trans id="assetClass.stock">Stock</Trans>;
+    case "stock_br":
+      return <Trans id="assetClass.stockBr">Brazilian stock</Trans>;
+    case "stock_us":
+      return <Trans id="assetClass.stockUs">US stock</Trans>;
     case "reit":
       return <Trans id="assetClass.reit">REIT</Trans>;
     case "etf":
@@ -28,4 +35,13 @@ export function AssetClassLabel({ assetClass }: { assetClass: AssetClass }) {
     case "other":
       return <Trans id="assetClass.other">Other</Trans>;
   }
+}
+
+/** ISO currency code of a trade or position. Codes need no translation. */
+export function CurrencyBadge({ currency }: { currency: Currency }) {
+  return (
+    <Badge variant="outline" className="tabular-nums">
+      {currency}
+    </Badge>
+  );
 }

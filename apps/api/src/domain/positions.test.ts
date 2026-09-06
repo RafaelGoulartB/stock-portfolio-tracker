@@ -3,7 +3,10 @@ import {
   availableQuantity,
   type ConsolidationInput,
   consolidatePositions,
+  convertMoney,
+  convertPositions,
   summarizePositions,
+  tickerCurrencies,
 } from "./positions";
 
 let sequence = 0;
@@ -15,7 +18,8 @@ function tx(
 
   return {
     ticker: "PETR4",
-    assetClass: "stock",
+    assetClass: "stock_br",
+    currency: "BRL",
     quantity: "1",
     price: "10",
     fees: "0",
@@ -117,19 +121,99 @@ describe("consolidatePositions", () => {
 });
 
 describe("summarizePositions", () => {
-  it("totals invested cost and realized P&L", () => {
-    const positions = consolidatePositions([
+  it("totals invested cost and realized P&L in the display currency", () => {
+    const native = consolidatePositions([
       tx({ ticker: "ITUB4", side: "buy", quantity: "100", price: "20" }),
       tx({ ticker: "VALE3", side: "buy", quantity: "10", price: "60" }),
       tx({ ticker: "VALE3", side: "sell", quantity: "10", price: "70" }),
     ]);
+    const positions = convertPositions(native, "BRL", null);
 
-    expect(summarizePositions(positions)).toEqual({
+    expect(summarizePositions(positions, "BRL", null)).toEqual({
       openPositions: 1,
       closedPositions: 1,
+      displayCurrency: "BRL",
+      usdBrlRate: null,
       totalInvested: "2000.00",
       totalRealizedPnl: "100.00",
+      totalsByCurrency: [
+        { currency: "BRL", investedCost: "2000.00", realizedPnl: "100.00" },
+      ],
     });
+  });
+
+  it("converts foreign positions at the consolidation rate", () => {
+    const native = consolidatePositions([
+      tx({ ticker: "ITUB4", side: "buy", quantity: "100", price: "20" }),
+      tx({
+        ticker: "AAPL",
+        assetClass: "stock_us",
+        currency: "USD",
+        side: "buy",
+        quantity: "10",
+        price: "200",
+      }),
+    ]);
+    const positions = convertPositions(native, "BRL", "5");
+
+    expect(summarizePositions(positions, "BRL", "5")).toMatchObject({
+      displayCurrency: "BRL",
+      usdBrlRate: "5",
+      // 2000 BRL + 2000 USD * 5.
+      totalInvested: "12000.00",
+      totalsByCurrency: [
+        { currency: "BRL", investedCost: "2000.00", realizedPnl: "0.00" },
+        { currency: "USD", investedCost: "2000.00", realizedPnl: "0.00" },
+      ],
+    });
+    expect(
+      positions.find((position) => position.ticker === "AAPL"),
+    ).toMatchObject({
+      currency: "USD",
+      displayCurrency: "BRL",
+      investedCost: "2000.00",
+      convertedInvestedCost: "10000.00",
+    });
+  });
+});
+
+describe("multi-currency consolidation", () => {
+  it("never averages BRL and USD costs of the same ticker together", () => {
+    const positions = consolidatePositions([
+      tx({ side: "buy", quantity: "10", price: "30" }),
+      tx({
+        side: "buy",
+        currency: "USD",
+        quantity: "10",
+        price: "30",
+        tradedAt: "2026-01-02",
+      }),
+    ]);
+
+    expect(positions).toHaveLength(2);
+    expect(positions.map((position) => position.currency).sort()).toEqual([
+      "BRL",
+      "USD",
+    ]);
+  });
+
+  it("requires a rate only when holdings span both currencies", () => {
+    const single = consolidatePositions([tx({ side: "buy" })]);
+
+    expect(() => convertPositions(single, "BRL", null)).not.toThrow();
+
+    const mixed = consolidatePositions([
+      tx({ side: "buy" }),
+      tx({ side: "buy", currency: "USD", tradedAt: "2026-01-02" }),
+    ]);
+
+    expect(() => convertPositions(mixed, "BRL", null)).toThrow();
+  });
+
+  it("converts amounts through the USD/BRL rate", () => {
+    expect(convertMoney("2000.00", "USD", "BRL", "5")).toBe("10000.00");
+    expect(convertMoney("10000.00", "BRL", "USD", "5")).toBe("2000.00");
+    expect(convertMoney("100.00", "BRL", "BRL", "5")).toBe("100.00");
   });
 });
 
@@ -141,6 +225,15 @@ describe("availableQuantity", () => {
     ];
 
     expect(availableQuantity(log, "PETR4")).toBe("18.00000000");
-    expect(availableQuantity(log, "MGLU3")).toBe("0");
+    expect(availableQuantity(log, "MGLU3")).toBe("0.00000000");
+  });
+});
+
+describe("tickerCurrencies", () => {
+  it("lists the currencies already used by a ticker", () => {
+    const log = [tx({ side: "buy" })];
+
+    expect(tickerCurrencies(log, "PETR4")).toEqual(["BRL"]);
+    expect(tickerCurrencies(log, "AAPL")).toEqual([]);
   });
 });

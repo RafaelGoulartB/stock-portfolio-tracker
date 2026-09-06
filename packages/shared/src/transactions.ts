@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { currencySchema, DEFAULT_CURRENCY } from "./currency";
 import { isoDate, nonNegativeDecimal, positiveDecimal } from "./decimal";
 
 export const TRANSACTION_SIDES = ["buy", "sell"] as const;
@@ -6,7 +7,8 @@ export const transactionSideSchema = z.enum(TRANSACTION_SIDES);
 export type TransactionSide = z.infer<typeof transactionSideSchema>;
 
 export const ASSET_CLASSES = [
-  "stock",
+  "stock_br",
+  "stock_us",
   "reit",
   "etf",
   "bdr",
@@ -18,7 +20,8 @@ export const assetClassSchema = z.enum(ASSET_CLASSES);
 export type AssetClass = z.infer<typeof assetClassSchema>;
 
 export const ASSET_CLASS_LABELS: Record<AssetClass, string> = {
-  stock: "Stock",
+  stock_br: "Brazilian stock",
+  stock_us: "US stock",
   reit: "REIT",
   etf: "ETF",
   bdr: "BDR",
@@ -43,6 +46,7 @@ export const tickerSchema = z
 export const createTransactionInput = z.object({
   ticker: tickerSchema,
   assetClass: assetClassSchema,
+  currency: currencySchema.default(DEFAULT_CURRENCY),
   side: transactionSideSchema,
   quantity: positiveDecimal,
   price: positiveDecimal,
@@ -59,6 +63,7 @@ export const transactionSchema = z.object({
   id: z.string(),
   ticker: z.string(),
   assetClass: assetClassSchema,
+  currency: currencySchema,
   side: transactionSideSchema,
   quantity: z.string(),
   price: z.string(),
@@ -73,21 +78,42 @@ export type Transaction = z.infer<typeof transactionSchema>;
 export const positionSchema = z.object({
   ticker: z.string(),
   assetClass: assetClassSchema,
+  /** Native currency of the trades behind this position. Never converted. */
+  currency: currencySchema,
   quantity: z.string(),
   averagePrice: z.string(),
   investedCost: z.string(),
   realizedPnl: z.string(),
   transactionCount: z.number(),
   lastTradedAt: z.string(),
+  /** Currency the portfolio is consolidated into. */
+  displayCurrency: currencySchema,
+  /** Same amounts converted at the consolidation rate. */
+  convertedAveragePrice: z.string(),
+  convertedInvestedCost: z.string(),
+  convertedRealizedPnl: z.string(),
 });
 
 export type Position = z.infer<typeof positionSchema>;
 
+export const currencyTotalSchema = z.object({
+  currency: currencySchema,
+  investedCost: z.string(),
+  realizedPnl: z.string(),
+});
+
+export type CurrencyTotal = z.infer<typeof currencyTotalSchema>;
+
 export const portfolioSummarySchema = z.object({
   openPositions: z.number(),
   closedPositions: z.number(),
+  displayCurrency: currencySchema,
+  /** BRL per 1 USD used for the conversion, when a conversion happened. */
+  usdBrlRate: z.string().nullable(),
   totalInvested: z.string(),
   totalRealizedPnl: z.string(),
+  /** Native-currency subtotals before conversion. */
+  totalsByCurrency: z.array(currencyTotalSchema),
 });
 
 export type PortfolioSummary = z.infer<typeof portfolioSummarySchema>;

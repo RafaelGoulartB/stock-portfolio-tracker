@@ -17,5 +17,5 @@ test("appRouter exports health", async () => {
 test("protected procedures reject anonymous callers", async () => {
   const caller = appRouter.createCaller(anonymousContext);
   await expect(caller.transactions.list()).rejects.toThrow(/sign in/i);
-  await expect(caller.positions.list()).rejects.toThrow(/sign in/i);
+  await expect(caller.positions.list({})).rejects.toThrow(/sign in/i);
 });
