@@ -56,6 +56,21 @@ const loadFailed = msg({
   message: "Could not load this data. Try again.",
 });
 
+const categoryNameTaken = msg({
+  id: "categories.nameTaken",
+  message: "A category with this name already exists.",
+});
+
+const categoryMissing = msg({
+  id: "categories.notFound",
+  message: "Category not found.",
+});
+
+const unknownTicker = msg({
+  id: "categories.unknownTicker",
+  message: "That ticker is not in your portfolio.",
+});
+
 function isAuthCode(code: string | undefined): boolean {
   return code === "UNAUTHORIZED" || code === "FORBIDDEN";
 }
@@ -131,4 +146,26 @@ export function queryErrorMessage(error: unknown): string {
   }
 
   return i18n._(loadFailed);
+}
+
+export function categoryErrorMessage(error: unknown): string {
+  const code = codeOf(error);
+
+  if (code === "CONFLICT") {
+    return i18n._(categoryNameTaken);
+  }
+
+  if (code === "NOT_FOUND") {
+    return i18n._(categoryMissing);
+  }
+
+  if (code === "BAD_REQUEST") {
+    return i18n._(unknownTicker);
+  }
+
+  if (isAuthCode(code)) {
+    return i18n._(sessionExpired);
+  }
+
+  return i18n._(unknownError);
 }

@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppAllocationRouteImport } from './routes/_app/allocation'
+import { Route as AppCategoriesRouteImport } from './routes/_app/categories'
 import { Route as AppDailyRouteImport } from './routes/_app/daily'
 import { Route as AppDetailedPositionsRouteImport } from './routes/_app/detailed-positions'
 import { Route as AppDividendsRouteImport } from './routes/_app/dividends'
@@ -39,6 +40,11 @@ const LoginRoute = LoginRouteImport.update({
 const AppAllocationRoute = AppAllocationRouteImport.update({
   id: '/allocation',
   path: '/allocation',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppCategoriesRoute = AppCategoriesRouteImport.update({
+  id: '/categories',
+  path: '/categories',
   getParentRoute: () => AppRoute,
 } as any)
 const AppDailyRoute = AppDailyRouteImport.update({
@@ -86,6 +92,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/allocation': typeof AppAllocationRouteWithChildren
+  '/categories': typeof AppCategoriesRoute
   '/daily': typeof AppDailyRoute
   '/detailed-positions': typeof AppDetailedPositionsRoute
   '/dividends': typeof AppDividendsRoute
@@ -98,6 +105,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/categories': typeof AppCategoriesRoute
   '/daily': typeof AppDailyRoute
   '/detailed-positions': typeof AppDetailedPositionsRoute
   '/dividends': typeof AppDividendsRoute
@@ -113,6 +121,7 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/_app/allocation': typeof AppAllocationRouteWithChildren
+  '/_app/categories': typeof AppCategoriesRoute
   '/_app/daily': typeof AppDailyRoute
   '/_app/detailed-positions': typeof AppDetailedPositionsRoute
   '/_app/dividends': typeof AppDividendsRoute
@@ -128,6 +137,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/allocation'
+    | '/categories'
     | '/daily'
     | '/detailed-positions'
     | '/dividends'
@@ -140,6 +150,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/categories'
     | '/daily'
     | '/detailed-positions'
     | '/dividends'
@@ -154,6 +165,7 @@ export interface FileRouteTypes {
     | '/_app'
     | '/login'
     | '/_app/allocation'
+    | '/_app/categories'
     | '/_app/daily'
     | '/_app/detailed-positions'
     | '/_app/dividends'
@@ -198,6 +210,13 @@ declare module '@tanstack/react-router' {
       path: '/allocation'
       fullPath: '/allocation'
       preLoaderRoute: typeof AppAllocationRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/categories': {
+      id: '/_app/categories'
+      path: '/categories'
+      fullPath: '/categories'
+      preLoaderRoute: typeof AppCategoriesRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/daily': {
@@ -275,6 +294,7 @@ const AppAllocationRouteWithChildren = AppAllocationRoute._addFileChildren(
 
 interface AppRouteChildren {
   AppAllocationRoute: typeof AppAllocationRouteWithChildren
+  AppCategoriesRoute: typeof AppCategoriesRoute
   AppDailyRoute: typeof AppDailyRoute
   AppDetailedPositionsRoute: typeof AppDetailedPositionsRoute
   AppDividendsRoute: typeof AppDividendsRoute
@@ -285,6 +305,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppAllocationRoute: AppAllocationRouteWithChildren,
+  AppCategoriesRoute: AppCategoriesRoute,
   AppDailyRoute: AppDailyRoute,
   AppDetailedPositionsRoute: AppDetailedPositionsRoute,
   AppDividendsRoute: AppDividendsRoute,

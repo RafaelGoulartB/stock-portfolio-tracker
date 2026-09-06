@@ -8,6 +8,7 @@ import {
   type LucideIcon,
   PieChart,
   TableProperties,
+  Tags,
   Target,
   TrendingUp,
   Wrench,
@@ -88,7 +89,13 @@ const NAV_GROUPS: NavGroup[] = [
     id: "tools",
     icon: Wrench,
     label: <Trans id="nav.tools">Tools</Trans>,
-    items: [],
+    items: [
+      {
+        to: "/categories",
+        icon: Tags,
+        label: <Trans id="nav.categories">My categories</Trans>,
+      },
+    ],
   },
 ];
 

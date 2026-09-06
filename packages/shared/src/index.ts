@@ -1,5 +1,6 @@
 export * from "./allocation";
 export * from "./auth";
+export * from "./categories";
 export * from "./currency";
 export * from "./decimal";
 export * from "./dividends";
