@@ -1,3 +1,4 @@
+import { msg } from "@lingui/core/macro";
 import { Trans } from "@lingui/react/macro";
 import {
   DIVIDEND_SOURCE_LABELS,
@@ -16,7 +17,7 @@ import {
   RefreshCw,
   WalletCards,
 } from "lucide-react";
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,13 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -226,7 +234,10 @@ function DividendsContent({ data }: { data: DividendData }) {
         <UpcomingCard data={data} />
       </div>
       <IncomeCalendar events={data.events} />
-      <HistoryTable data={data} />
+      <HistoryTable
+        key={`${data.provider.requested}|${data.range.start}|${data.range.end}`}
+        data={data}
+      />
       <ProviderNotice data={data} />
     </>
   );
@@ -422,6 +433,9 @@ function UpcomingCard({ data }: { data: DividendData }) {
 
 function IncomeCalendar({ events }: { events: DividendEvent[] }) {
   const [month, setMonth] = useState(currentMonth);
+  const [selectedEvent, setSelectedEvent] = useState<DividendEvent | null>(
+    null,
+  );
   const byDay = useMemo(() => {
     const result = new Map<string, DividendEvent[]>();
     for (const event of events) {
@@ -453,7 +467,12 @@ function IncomeCalendar({ events }: { events: DividendEvent[] }) {
             variant="outline"
             size="icon-sm"
             onClick={() => setMonth(moveMonth(month, -1))}
-            aria-label="Previous month"
+            aria-label={i18n._(
+              msg({
+                id: "dividends.previousMonth",
+                message: "Previous month",
+              }),
+            )}
           >
             <ChevronLeft className="size-4" />
           </Button>
@@ -464,7 +483,9 @@ function IncomeCalendar({ events }: { events: DividendEvent[] }) {
             variant="outline"
             size="icon-sm"
             onClick={() => setMonth(moveMonth(month, 1))}
-            aria-label="Next month"
+            aria-label={i18n._(
+              msg({ id: "dividends.nextMonth", message: "Next month" }),
+            )}
           >
             <ChevronRight className="size-4" />
           </Button>
@@ -498,11 +519,16 @@ function IncomeCalendar({ events }: { events: DividendEvent[] }) {
                   </span>
                   <div className="mt-1 flex flex-wrap gap-1">
                     {dayEvents.slice(0, 3).map((event) => (
-                      <span
+                      <button
+                        type="button"
                         key={event.id}
                         title={`${event.ticker} · ${formatMoney(event.grossAmount, event.currency)}`}
-                        className="size-2 rounded-full bg-gain"
-                      />
+                        aria-label={`${event.ticker} · ${formatMoney(event.grossAmount, event.currency)}`}
+                        className="flex size-6 items-center justify-center rounded-full outline-none hover:bg-gain/15 focus-visible:ring-2 focus-visible:ring-ring"
+                        onClick={() => setSelectedEvent(event)}
+                      >
+                        <span className="size-2.5 rounded-full bg-gain" />
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -542,11 +568,123 @@ function IncomeCalendar({ events }: { events: DividendEvent[] }) {
           )}
         </div>
       </CardContent>
+      <DividendDetailsDialog
+        event={selectedEvent}
+        onOpenChange={(open) => {
+          if (!open) setSelectedEvent(null);
+        }}
+      />
     </Card>
   );
 }
 
+function DividendDetailsDialog({
+  event,
+  onOpenChange,
+}: {
+  event: DividendEvent | null;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <Dialog open={event !== null} onOpenChange={onOpenChange}>
+      <DialogContent>
+        {event ? (
+          <>
+            <DialogHeader>
+              <DialogTitle>
+                {event.ticker} ·{" "}
+                <Trans id="dividends.details">Income details</Trans>
+              </DialogTitle>
+              <DialogDescription>
+                <Trans id="dividends.detailsDescription">
+                  Estimated gross income based on the position held before the
+                  ex-date.
+                </Trans>
+              </DialogDescription>
+            </DialogHeader>
+            <dl className="grid grid-cols-2 gap-x-5 gap-y-4 text-sm">
+              <DividendDetail
+                label={<Trans id="dividends.estimated">Estimated</Trans>}
+                value={formatMoney(event.grossAmount, event.currency)}
+                prominent
+              />
+              <DividendDetail
+                label={<Trans id="dividends.status">Status</Trans>}
+                value={<StatusBadge status={event.status} />}
+              />
+              <DividendDetail
+                label={<Trans id="dividends.shares">Shares</Trans>}
+                value={formatQuantity(event.eligibleQuantity)}
+              />
+              <DividendDetail
+                label={<Trans id="dividends.perShare">Per share</Trans>}
+                value={formatMoney(event.amountPerShare, event.currency)}
+              />
+              <DividendDetail
+                label={
+                  <Trans id="dividends.declarationDate">Declaration</Trans>
+                }
+                value={formatOptionalDate(event.declarationDate)}
+              />
+              <DividendDetail
+                label={<Trans id="dividends.exDate">Ex-date</Trans>}
+                value={formatTradeDate(event.exDate)}
+              />
+              <DividendDetail
+                label={<Trans id="dividends.recordDate">Record date</Trans>}
+                value={formatOptionalDate(event.recordDate)}
+              />
+              <DividendDetail
+                label={<Trans id="dividends.paymentDate">Payment date</Trans>}
+                value={formatOptionalDate(event.paymentDate)}
+              />
+              <DividendDetail
+                label={<Trans id="dividends.source">Source</Trans>}
+                value={<DividendSourceLabel source={event.source} />}
+              />
+            </dl>
+          </>
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function DividendDetail({
+  label,
+  value,
+  prominent = false,
+}: {
+  label: ReactNode;
+  value: ReactNode;
+  prominent?: boolean;
+}) {
+  return (
+    <div className="min-w-0 space-y-1">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd
+        className={
+          prominent ? "text-lg font-semibold tabular-nums" : "font-medium"
+        }
+      >
+        {value}
+      </dd>
+    </div>
+  );
+}
+
 function HistoryTable({ data }: { data: DividendData }) {
+  const [page, setPage] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
+  const pageCount = Math.max(1, Math.ceil(data.events.length / pageSize));
+  const safePage = Math.min(page, pageCount - 1);
+  const firstRow = safePage * pageSize;
+  const visibleEvents = data.events.slice(firstRow, firstRow + pageSize);
+
+  useEffect(() => {
+    setPage((current) => Math.min(current, pageCount - 1));
+  }, [pageCount]);
+
   return (
     <Card>
       <CardHeader>
@@ -588,7 +726,7 @@ function HistoryTable({ data }: { data: DividendData }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.events.map((event) => (
+            {visibleEvents.map((event) => (
               <TableRow key={event.id}>
                 <TableCell className="font-medium">{event.ticker}</TableCell>
                 <TableCell>{formatTradeDate(event.exDate)}</TableCell>
@@ -614,6 +752,69 @@ function HistoryTable({ data }: { data: DividendData }) {
             ))}
           </TableBody>
         </Table>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-4 text-sm">
+          <p className="text-muted-foreground">
+            <Trans id="dividends.rowsShown">
+              Showing {firstRow + 1}–
+              {Math.min(firstRow + pageSize, data.events.length)} of{" "}
+              {data.events.length}
+            </Trans>
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-muted-foreground">
+              <Trans id="dividends.rowsPerPage">Rows per page</Trans>
+            </span>
+            <Select
+              value={String(pageSize)}
+              onValueChange={(value) => {
+                setPageSize(Number(value));
+                setPage(0);
+              }}
+            >
+              <SelectTrigger size="sm" className="w-20">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[10, 25, 50].map((size) => (
+                  <SelectItem key={size} value={String(size)}>
+                    {size}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="min-w-24 text-center tabular-nums">
+              <Trans id="dividends.pageCount">
+                Page {safePage + 1} of {pageCount}
+              </Trans>
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-sm"
+              disabled={safePage === 0}
+              onClick={() => setPage((current) => Math.max(0, current - 1))}
+              aria-label={i18n._(
+                msg({ id: "dividends.previousPage", message: "Previous page" }),
+              )}
+            >
+              <ChevronLeft className="size-4" />
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon-sm"
+              disabled={safePage >= pageCount - 1}
+              onClick={() =>
+                setPage((current) => Math.min(pageCount - 1, current + 1))
+              }
+              aria-label={i18n._(
+                msg({ id: "dividends.nextPage", message: "Next page" }),
+              )}
+            >
+              <ChevronRight className="size-4" />
+            </Button>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
@@ -700,6 +901,10 @@ function DividendsSkeleton() {
 
 function eventDay(event: DividendEvent): string {
   return event.paymentDate ?? event.exDate;
+}
+
+function formatOptionalDate(day: string | null): string {
+  return day ? formatTradeDate(day) : "—";
 }
 
 function monthLabel(month: string, width: "short" | "long" = "short"): string {
