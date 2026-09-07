@@ -61,7 +61,7 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-5 overflow-hidden rounded-xl border bg-card p-6 text-card-foreground shadow-xl ring-1 ring-foreground/8 duration-200 outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:max-w-lg dark:border-white/12 dark:bg-[color-mix(in_oklch,var(--card)_88%,white)] dark:shadow-[0_24px_64px_-12px_rgba(0,0,0,0.85)] dark:ring-white/10",
+          "fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-5 overflow-hidden rounded-xl border bg-card p-6 text-card-foreground shadow-xl ring-1 ring-foreground/8 duration-200 outline-none data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 sm:max-w-lg dark:border-white/12 dark:bg-[color-mix(in_oklch,var(--card)_92%,var(--primary)_8%)] dark:shadow-[0_24px_64px_-12px_rgba(0,0,0,0.85)] dark:ring-white/10",
           className,
         )}
         {...props}
