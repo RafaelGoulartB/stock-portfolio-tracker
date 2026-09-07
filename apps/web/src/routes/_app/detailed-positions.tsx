@@ -21,6 +21,7 @@ import { type ReactNode, useMemo, useState } from "react";
 import { AssetClassLabel } from "@/components/asset-labels";
 import { AssetLink } from "@/components/asset-link";
 import { AssetLogo } from "@/components/asset-logo";
+import { PageContent } from "@/components/page-content";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -114,7 +115,6 @@ const PRESETS: Record<"compact" | "standard" | "all", ColumnId[]> = {
     "unrealizedPnl",
     "unrealizedPnlPercent",
     "weight",
-    "lastTradedAt",
   ],
   all: [...COLUMN_IDS],
 };
@@ -232,7 +232,7 @@ function DetailedPositionsPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <PageContent width="wide" className="space-y-5">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">
@@ -367,7 +367,7 @@ function DetailedPositionsPage() {
           missing={positions.data.quotes.missing}
         />
       ) : null}
-    </div>
+    </PageContent>
   );
 }
 
@@ -498,13 +498,13 @@ function PositionsTable({
   return (
     <Card className="gap-0 overflow-hidden py-0">
       <CardContent className="p-0">
-        <Table className="text-xs">
+        <Table className="text-[13px] leading-5">
           <TableHeader className="bg-muted/60">
             <TableRow className="hover:bg-transparent">
               {columns.map((id) => (
                 <TableHead
                   key={id}
-                  className={`${id === "ticker" ? "sticky left-0 z-10 bg-muted" : ""} h-9 px-3`}
+                  className={`${id === "ticker" ? "sticky left-0 z-10 bg-muted" : ""} h-10 px-3`}
                 >
                   <button
                     type="button"
@@ -531,7 +531,7 @@ function PositionsTable({
             {rows.map((position) => (
               <TableRow
                 key={`${position.ticker}|${position.currency}`}
-                className="h-10"
+                className="h-11"
               >
                 {columns.map((id) => (
                   <PositionCell

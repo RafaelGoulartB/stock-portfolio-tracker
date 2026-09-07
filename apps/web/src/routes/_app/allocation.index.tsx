@@ -37,6 +37,7 @@ import {
   summarizeVisibleRows,
 } from "@/components/allocation/allocation-table";
 import { ContributionPlannerButton } from "@/components/allocation/contribution-planner";
+import { PageContent } from "@/components/page-content";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -531,7 +532,7 @@ function AllocationPage() {
   }
 
   return (
-    <div className="relative left-1/2 w-screen max-w-[100vw] -translate-x-1/2 space-y-4 px-3 sm:px-4 lg:px-6">
+    <PageContent width="wide" className="space-y-4">
       <header className="flex flex-wrap items-start justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-2xl font-semibold tracking-tight">
@@ -788,7 +789,7 @@ function AllocationPage() {
           </Trans>
         </p>
       ) : null}
-    </div>
+    </PageContent>
   );
 }
 

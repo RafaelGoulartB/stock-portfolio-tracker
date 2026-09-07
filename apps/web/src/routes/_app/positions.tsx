@@ -428,6 +428,24 @@ const COLLAPSED_ASSET_ROWS = 24;
 /** Bucket holding every asset the user has not filed under a category. */
 const UNCATEGORIZED = "uncategorized";
 
+/** Stable theme colors keep each built-in bucket recognizable across views. */
+const CLASS_GROUP_COLORS: Record<AssetClass, string> = {
+  stock_br: "var(--chart-1)",
+  stock_us: "var(--chart-2)",
+  reit: "var(--chart-3)",
+  etf: "var(--chart-4)",
+  bdr: "var(--chart-5)",
+  crypto: "var(--chart-6)",
+  fixed_income: "var(--chart-7)",
+  cash: "var(--chart-8)",
+  other: "var(--chart-9)",
+};
+
+const CURRENCY_GROUP_COLORS: Record<Currency, string> = {
+  BRL: "var(--chart-1)",
+  USD: "var(--chart-2)",
+};
+
 type GroupRow = {
   key: string;
   label: string;
@@ -453,6 +471,16 @@ type AssetRow = {
   shareLabel: string;
   display: string;
 };
+
+/** Color used by a non-category bucket in the allocation panel. */
+function builtInGroupColor(
+  groupBy: Exclude<AllocationGroupBy, "category">,
+  key: string,
+): string {
+  return groupBy === "class"
+    ? CLASS_GROUP_COLORS[key as AssetClass]
+    : CURRENCY_GROUP_COLORS[key as Currency];
+}
 
 /** Bucket name for the active grouping, as a plain string for the tile. */
 function bucketLabel(
@@ -641,7 +669,7 @@ function AllocationCard({
           activeGroupBy === "category"
             ? (category && `var(--${category.color})`) ||
               "var(--muted-foreground)"
-            : undefined,
+            : builtInGroupColor(activeGroupBy, key),
         value: 0,
         count: 0,
         assetIds: new Set<string>(),
@@ -710,6 +738,31 @@ function AllocationCard({
   const visibleAssets = expanded
     ? listedAssets
     : listedAssets.slice(0, COLLAPSED_ASSET_ROWS);
+
+  // Keep the visual association between a group bar and every asset in it.
+  const groupByAssetId = useMemo(() => {
+    const result = new Map<string, Pick<GroupRow, "color">>();
+
+    for (const group of groups) {
+      for (const assetId of group.assetIds) {
+        result.set(assetId, group);
+      }
+    }
+
+    return result;
+  }, [groups]);
+
+  // CSS grid normally fills rows (left, right, left, right). Split the list
+  // explicitly so descending values run down the left column, then continue
+  // at the top of the right column.
+  const assetColumns = useMemo(() => {
+    const splitAt = Math.ceil(visibleAssets.length / 2);
+
+    return [
+      { key: "first", assets: visibleAssets.slice(0, splitAt) },
+      { key: "second", assets: visibleAssets.slice(splitAt) },
+    ];
+  }, [visibleAssets]);
 
   const groupings: { id: AllocationGroupBy; label: ReactNode }[] = [
     { id: "class", label: <Trans id="positions.allocByClass">Class</Trans> },
@@ -871,47 +924,58 @@ function AllocationCard({
                 }
               />
               {/* Two columns at most: a third one starves the bars. */}
-              <ul className="-mx-2 grid gap-x-8 gap-y-0.5 md:grid-cols-2">
-                {visibleAssets.map((asset) => (
-                  <li
-                    key={asset.id}
-                    className={cn(
-                      "flex items-center gap-2.5 rounded-md px-2 py-1 text-sm transition-opacity",
-                      previewedIds && !previewedIds.has(asset.id)
-                        ? "opacity-30"
-                        : "",
-                    )}
-                  >
-                    <AssetLogo
-                      ticker={asset.ticker}
-                      assetClass={asset.assetClass}
-                      currency={asset.currency}
-                      className="size-6 shrink-0 rounded-sm"
-                    />
-                    <AssetLink
-                      ticker={asset.ticker}
-                      className="w-[76px] shrink-0 truncate font-medium"
-                      title={asset.ticker}
-                    >
-                      {asset.ticker}
-                    </AssetLink>
-                    <ShareBar
-                      className="min-w-8 flex-1"
-                      fraction={
-                        largestShare > 0 ? asset.share / largestShare : 0
-                      }
-                    />
-                    <span className="w-11 shrink-0 text-right tabular-nums">
-                      {asset.shareLabel}
-                    </span>
-                    {/* The amount is a bonus: it only shows where the bar can
-                        spare the width, and the holdings table always has it. */}
-                    <span className="hidden w-20 shrink-0 text-right text-muted-foreground tabular-nums xl:block">
-                      {asset.display}
-                    </span>
-                  </li>
+              <div className="-mx-2 grid gap-x-8 md:grid-cols-2">
+                {assetColumns.map((column) => (
+                  <ul key={column.key} className="space-y-0.5">
+                    {column.assets.map((asset) => {
+                      const group = groupByAssetId.get(asset.id);
+
+                      return (
+                        <li
+                          key={asset.id}
+                          className={cn(
+                            "flex items-center gap-2.5 rounded-md px-2 py-1 text-sm transition-opacity",
+                            previewedIds && !previewedIds.has(asset.id)
+                              ? "opacity-30"
+                              : "",
+                          )}
+                        >
+                          <AssetLogo
+                            ticker={asset.ticker}
+                            assetClass={asset.assetClass}
+                            currency={asset.currency}
+                            className="size-6 shrink-0 rounded-sm"
+                          />
+                          <div className="w-[76px] shrink-0">
+                            <AssetLink
+                              ticker={asset.ticker}
+                              className="block truncate font-medium"
+                              title={asset.ticker}
+                            >
+                              {asset.ticker}
+                            </AssetLink>
+                          </div>
+                          <ShareBar
+                            className="min-w-8 flex-1"
+                            color={group?.color}
+                            fraction={
+                              largestShare > 0 ? asset.share / largestShare : 0
+                            }
+                          />
+                          <span className="w-11 shrink-0 text-right tabular-nums">
+                            {asset.shareLabel}
+                          </span>
+                          {/* The amount is a bonus: it only shows where the bar can
+                              spare the width, and the holdings table always has it. */}
+                          <span className="hidden w-20 shrink-0 text-right text-muted-foreground tabular-nums xl:block">
+                            {asset.display}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
                 ))}
-              </ul>
+              </div>
               {listedAssets.length > COLLAPSED_ASSET_ROWS ? (
                 <Button
                   type="button"
