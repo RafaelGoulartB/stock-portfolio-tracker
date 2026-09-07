@@ -309,6 +309,11 @@ export const allocationSummarySchema = z.object({
   totalMarketValue: z.string(),
   totalTargetWeight: z.string(),
   totalCurrentWeight: z.string(),
+  /**
+   * Simple average of non-null discounts among the summarised rows.
+   * `null` when no row carries a discount.
+   */
+  averageDiscount: signedDecimal.nullable(),
   /** Rows with a position vs rows listed for research only. */
   investedAssets: z.number(),
   watchOnlyAssets: z.number(),

@@ -9,6 +9,7 @@ import {
   assetReviews,
   categories,
   transactions,
+  userScoreConfigs,
 } from "../db/schema";
 import {
   BACKUP_ENTITIES,
@@ -86,7 +87,9 @@ async function* exportBackup(userId: string): AsyncGenerator<string> {
             ? "asset_reviews"
             : entity === "assetCategories"
               ? "asset_categories"
-              : entity;
+              : entity === "scoreConfigs"
+                ? "user_score_configs"
+                : entity;
       const [result] = await connection`
         select count(*)::text as value
         from ${connection(tableName)}
@@ -187,6 +190,25 @@ async function* exportBackup(userId: string): AsyncGenerator<string> {
       }
     }
 
+    for await (const rows of connection`
+      select version, absolute_weight_cap as "absoluteWeightCap",
+        overweight_block_factor as "overweightBlockFactor",
+        trim_factor as "trimFactor", cooldown_days as "cooldownDays",
+        grade_window_quarters as "gradeWindowQuarters",
+        grade_bands as "gradeBands",
+        ungraded_multiplier as "ungradedMultiplier",
+        updated_at as "updatedAt"
+      from user_score_configs where user_id = ${userId} order by user_id
+    `.cursor(BATCH_SIZE)) {
+      for (const data of rows) {
+        yield emit({
+          type: "record",
+          entity: "scoreConfigs",
+          data: serializeRow(data),
+        });
+      }
+    }
+
     yield encodeBackupLine({
       type: "checksum",
       algorithm: "sha256",
@@ -239,6 +261,9 @@ async function importBackup(body: ReadableStream<Uint8Array>, userId: string) {
       .where(eq(allocationAssets.userId, userId));
     await tx.delete(transactions).where(eq(transactions.userId, userId));
     await tx.delete(categories).where(eq(categories.userId, userId));
+    await tx
+      .delete(userScoreConfigs)
+      .where(eq(userScoreConfigs.userId, userId));
 
     const categoryIdByRef = new Map<string, string>();
     let categoryBatch: RecordData<"categories">[] = [];
@@ -246,6 +271,7 @@ async function importBackup(body: ReadableStream<Uint8Array>, userId: string) {
     let reviewBatch: RecordData<"assetReviews">[] = [];
     let transactionBatch: RecordData<"transactions">[] = [];
     let assignmentBatch: RecordData<"assetCategories">[] = [];
+    let scoreConfigBatch: RecordData<"scoreConfigs">[] = [];
 
     const flush = async (entity: BackupEntity) => {
       if (entity === "categories" && categoryBatch.length > 0) {
@@ -282,6 +308,14 @@ async function importBackup(body: ReadableStream<Uint8Array>, userId: string) {
           }),
         );
         assignmentBatch = [];
+      } else if (entity === "scoreConfigs" && scoreConfigBatch.length > 0) {
+        if (scoreConfigBatch.length > 1) {
+          throw new Error("Backup contains more than one score config");
+        }
+        await tx
+          .insert(userScoreConfigs)
+          .values(scoreConfigBatch.map((row) => ({ ...row, userId })));
+        scoreConfigBatch = [];
       }
     };
 
@@ -344,6 +378,10 @@ async function importBackup(body: ReadableStream<Uint8Array>, userId: string) {
         case "assetCategories":
           assignmentBatch.push(record.data);
           if (assignmentBatch.length >= BATCH_SIZE) await flush(record.entity);
+          break;
+        case "scoreConfigs":
+          scoreConfigBatch.push(record.data);
+          if (scoreConfigBatch.length >= BATCH_SIZE) await flush(record.entity);
           break;
       }
     }

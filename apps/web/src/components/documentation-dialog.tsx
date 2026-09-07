@@ -2,7 +2,6 @@ import { msg } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import {
-  DEFAULT_SCORE_CONFIG,
   FX_EXECUTION_IOF,
   FX_EXECUTION_SPREAD,
 } from "@portifolio-tracker/shared";
@@ -15,7 +14,16 @@ import {
   Target,
   WalletCards,
 } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { useState } from "react";
+import {
+  Callout,
+  Definition,
+  DocumentBody,
+  Formula,
+  Rule,
+  Topic,
+} from "@/components/documentation-primitives";
+import { ScoreDocumentation } from "@/components/score-documentation";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -63,10 +71,6 @@ const SECTIONS: readonly SectionDefinition[] = [
   },
 ];
 
-const SCORE = DEFAULT_SCORE_CONFIG;
-const scoreCap = percent(SCORE.absoluteWeightCap);
-const overweightLimit = percent(SCORE.overweightBlockFactor);
-const trimLimit = percent(SCORE.trimFactor);
 const fxSpread = percent(FX_EXECUTION_SPREAD);
 const fxIof = percent(FX_EXECUTION_IOF);
 const fxMarkup = (
@@ -261,7 +265,8 @@ function DocumentationSectionDescription({
     case "score":
       return (
         <Trans id="documentation.section.scoreDescription">
-          How the next-contribution priority is calculated.
+          How the next-contribution priority is calculated, and the thresholds
+          you can tune.
         </Trans>
       );
     case "contributions":
@@ -289,205 +294,6 @@ function DocumentationSectionDescription({
         </Trans>
       );
   }
-}
-
-function ScoreDocumentation() {
-  return (
-    <DocumentBody>
-      <Callout
-        icon={Target}
-        title={
-          <Trans id="documentation.score.policyVersion">
-            Policy version {SCORE.version}
-          </Trans>
-        }
-      >
-        <Trans id="documentation.score.intro">
-          The score answers how strongly an asset should compete for the next
-          contribution. It is expressed in portfolio-weight units: a score of
-          0.0075 means 0.75 percentage points. Positive values are buy
-          candidates, zero means skip, and a negative value is a trim signal.
-        </Trans>
-      </Callout>
-
-      <Topic
-        title={
-          <Trans id="documentation.score.coreCalculation">
-            Core calculation
-          </Trans>
-        }
-      >
-        <Definition
-          term={
-            <Trans id="documentation.score.fairValueDiscount">
-              Fair-value discount
-            </Trans>
-          }
-        >
-          <Trans id="documentation.score.fairValueDiscountDescription">
-            Positive when the market price is below the newest quarterly Fair
-            value; negative when it is above it. A missing Fair value or price
-            is treated as a zero discount by the score.
-          </Trans>
-        </Definition>
-        <Formula>(fair value - market price) / fair value</Formula>
-        <Definition
-          term={
-            <Trans id="documentation.score.adjustedTarget">
-              Adjusted target
-            </Trans>
-          }
-        >
-          <Trans id="documentation.score.adjustedTargetDescription">
-            A discount raises the target used for this decision; a premium
-            lowers it.
-          </Trans>
-        </Definition>
-        <Formula>target weight × (1 + discount)</Formula>
-        <Definition
-          term={<Trans id="documentation.score.rawGap">Raw gap</Trans>}
-        >
-          <Trans id="documentation.score.rawGapDescription">
-            The distance between the adjusted target and the asset&apos;s
-            current portfolio weight.
-          </Trans>
-        </Definition>
-        <Formula>adjusted target - current weight</Formula>
-      </Topic>
-
-      <Topic
-        title={
-          <Trans id="documentation.score.gradeMultiplier">
-            Quarterly grade multiplier
-          </Trans>
-        }
-      >
-        <p>
-          <Trans id="documentation.score.gradeDescription">
-            The grade is the average of the newest {SCORE.gradeWindowQuarters}{" "}
-            quarters that actually contain a grade. Notes-only reviews are
-            ignored. An asset with no grades uses a neutral ×
-            {SCORE.ungradedMultiplier} multiplier.
-          </Trans>
-        </p>
-        <div className="grid gap-2 sm:grid-cols-2">
-          {SCORE.gradeBands.map((band, index) => {
-            const next = SCORE.gradeBands[index + 1];
-
-            return (
-              <Definition
-                key={band.minGrade}
-                term={
-                  next ? (
-                    <Trans id="documentation.score.gradeRange">
-                      Grade ≥ {band.minGrade} and &lt; {next.minGrade}
-                    </Trans>
-                  ) : (
-                    <Trans id="documentation.score.gradeMinimum">
-                      Grade ≥ {band.minGrade}
-                    </Trans>
-                  )
-                }
-              >
-                <Trans id="documentation.score.gapMultiplier">
-                  Gap multiplier ×{band.multiplier}
-                </Trans>
-              </Definition>
-            );
-          })}
-        </div>
-      </Topic>
-
-      <Topic
-        title={<Trans id="documentation.score.ruleLadder">Rule ladder</Trans>}
-      >
-        <p>
-          <Trans id="documentation.score.ruleLadderDescription">
-            Rules run in this exact order and the first match wins. This
-            priority is part of the method.
-          </Trans>
-        </p>
-        <ol className="grid gap-2">
-          <Rule
-            number="1"
-            title={<Trans id="documentation.score.noTarget">No target</Trans>}
-          >
-            <Trans id="documentation.score.noTargetDescription">
-              Score is zero because there is no allocation target to close.
-            </Trans>
-          </Rule>
-          <Rule
-            number="2"
-            title={
-              <Trans id="documentation.score.trimTitle">
-                Trim an expensive overweight position
-              </Trans>
-            }
-          >
-            <Trans id="documentation.score.trimDescription">
-              If the discount is negative and current weight is above{" "}
-              {trimLimit} of target, return the signed raw gap. This rule
-              precedes the blocking caps so it can produce a negative trim
-              signal.
-            </Trans>
-          </Rule>
-          <Rule
-            number="3"
-            title={
-              <Trans id="documentation.score.absoluteCap">
-                Absolute weight cap
-              </Trans>
-            }
-          >
-            <Trans id="documentation.score.absoluteCapDescription">
-              Block new contributions when current weight is greater than{" "}
-              {scoreCap} of the portfolio.
-            </Trans>
-          </Rule>
-          <Rule
-            number="4"
-            title={
-              <Trans id="documentation.score.targetCap">
-                Target-relative cap
-              </Trans>
-            }
-          >
-            <Trans id="documentation.score.targetCapDescription">
-              Block new contributions when current weight is greater than{" "}
-              {overweightLimit} of its own target.
-            </Trans>
-          </Rule>
-          <Rule
-            number="5"
-            title={
-              <Trans id="documentation.score.cooldown">
-                Contribution cooldown
-              </Trans>
-            }
-          >
-            <Trans id="documentation.score.cooldownDescription">
-              Block the asset for {SCORE.cooldownDays} days after its latest
-              buy. Sells do not reset the clock; the asset is eligible again on
-              day {SCORE.cooldownDays}.
-            </Trans>
-          </Rule>
-          <Rule
-            number="6"
-            title={
-              <Trans id="documentation.score.normalCandidate">
-                Normal candidate
-              </Trans>
-            }
-          >
-            <Trans id="documentation.score.normalCandidateDescription">
-              Clamp a negative gap to zero, then apply the grade multiplier.
-            </Trans>
-            <Formula>max(raw gap, 0) × grade multiplier</Formula>
-          </Rule>
-        </ol>
-      </Topic>
-    </DocumentBody>
-  );
 }
 
 function ContributionDocumentation() {
@@ -926,89 +732,5 @@ function ComparisonDocumentation() {
         </p>
       </Topic>
     </DocumentBody>
-  );
-}
-
-function DocumentBody({ children }: { children: ReactNode }) {
-  return <div className="mx-auto grid max-w-2xl gap-6">{children}</div>;
-}
-
-function Topic({ title, children }: { title: ReactNode; children: ReactNode }) {
-  return (
-    <section className="grid gap-3">
-      <h3 className="text-sm font-semibold tracking-tight">{title}</h3>
-      <div className="grid gap-3 text-sm leading-relaxed text-muted-foreground">
-        {children}
-      </div>
-    </section>
-  );
-}
-
-function Callout({
-  icon: Icon,
-  title,
-  children,
-}: {
-  icon: LucideIcon;
-  title: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <div className="flex gap-3 rounded-lg border bg-muted/35 p-4">
-      <span className="flex size-8 shrink-0 items-center justify-center rounded-md bg-background ring-1 ring-border">
-        <Icon className="size-4" aria-hidden="true" />
-      </span>
-      <div className="grid gap-1">
-        <p className="text-sm font-medium text-foreground">{title}</p>
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          {children}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function Definition({
-  term,
-  children,
-}: {
-  term: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <div className="rounded-lg border px-3.5 py-3">
-      <p className="font-medium text-foreground">{term}</p>
-      <div className="mt-1 text-muted-foreground">{children}</div>
-    </div>
-  );
-}
-
-function Formula({ children }: { children: ReactNode }) {
-  return (
-    <code className="block overflow-x-auto rounded-md border bg-muted/50 px-3 py-2 font-mono text-xs leading-relaxed text-foreground">
-      {children}
-    </code>
-  );
-}
-
-function Rule({
-  number,
-  title,
-  children,
-}: {
-  number: string;
-  title: ReactNode;
-  children: ReactNode;
-}) {
-  return (
-    <li className="flex gap-3 rounded-lg border px-3.5 py-3">
-      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-foreground text-xs font-semibold text-background">
-        {number}
-      </span>
-      <div className="min-w-0">
-        <p className="font-medium text-foreground">{title}</p>
-        <div className="mt-1 grid gap-2 text-muted-foreground">{children}</div>
-      </div>
-    </li>
   );
 }

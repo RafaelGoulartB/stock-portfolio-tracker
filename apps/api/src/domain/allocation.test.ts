@@ -413,6 +413,8 @@ describe("summarizeAllocation", () => {
       totalTargetWeight: "0.09000000",
     });
     expect(summary.totalMarketValue).toBe("9000.00");
+    // DLO 0.2355, AUGO -0.6449, VOO 0.10; CAVA has no fair value.
+    expect(summary.averageDiscount).toBe("-0.10313333");
   });
 });
 

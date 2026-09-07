@@ -15,6 +15,13 @@
       "when": 1788748853256,
       "tag": "0001_broken_living_lightning",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788750935326,
+      "tag": "0002_flashy_veda",
+      "breakpoints": true
     }
   ]
 }

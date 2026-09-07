@@ -1,12 +1,14 @@
 import {
   ASSET_CLASSES,
   CURRENCIES,
+  type GradeBand,
   TRANSACTION_SIDES,
 } from "@portifolio-tracker/shared";
 import {
   date,
   index,
   integer,
+  jsonb,
   numeric,
   pgEnum,
   pgTable,
@@ -220,6 +222,27 @@ export const assetCategories = pgTable(
   ],
 );
 
+/**
+ * Per-user contribution-score policy. Missing row means
+ * `DEFAULT_SCORE_CONFIG` from `@portifolio-tracker/shared`.
+ */
+export const userScoreConfigs = pgTable("user_score_configs", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  version: text("version").notNull(),
+  absoluteWeightCap: numeric("absolute_weight_cap", DECIMAL).notNull(),
+  overweightBlockFactor: numeric("overweight_block_factor", DECIMAL).notNull(),
+  trimFactor: numeric("trim_factor", DECIMAL).notNull(),
+  cooldownDays: integer("cooldown_days").notNull(),
+  gradeWindowQuarters: integer("grade_window_quarters").notNull(),
+  gradeBands: jsonb("grade_bands").$type<GradeBand[]>().notNull(),
+  ungradedMultiplier: numeric("ungraded_multiplier", DECIMAL).notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export type UserRow = typeof users.$inferSelect;
 export type SessionRow = typeof sessions.$inferSelect;
 export type TransactionRow = typeof transactions.$inferSelect;
@@ -227,3 +250,4 @@ export type AllocationAssetRow = typeof allocationAssets.$inferSelect;
 export type AssetReviewRow = typeof assetReviews.$inferSelect;
 export type CategoryRow = typeof categories.$inferSelect;
 export type AssetCategoryRow = typeof assetCategories.$inferSelect;
+export type UserScoreConfigRow = typeof userScoreConfigs.$inferSelect;

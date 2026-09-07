@@ -201,6 +201,18 @@ function fromScaled(value: bigint, places: number): string {
   return negative && rounded !== 0n ? `-${text}` : text;
 }
 
+/** Average of scaled values, rounding half away from zero. */
+function averageScaled(sum: bigint, count: number): bigint {
+  const denominator = BigInt(count);
+  const negative = sum < 0n;
+  const absolute = negative ? -sum : sum;
+  const quotient = absolute / denominator;
+  const remainder = absolute % denominator;
+  const rounded = remainder * 2n >= denominator ? quotient + 1n : quotient;
+
+  return negative && rounded !== 0n ? -rounded : rounded;
+}
+
 /**
  * Totals for the rows currently shown (search + category filters). Matches
  * the server summary shape so the footer and footnote stay consistent.
@@ -213,6 +225,8 @@ export function summarizeVisibleRows(
   let totalMarketValue = 0n;
   let totalTargetWeight = 0n;
   let totalCurrentWeight = 0n;
+  let discountSum = 0n;
+  let discountCount = 0;
   let investedAssets = 0;
   let watchOnlyAssets = 0;
   let candidates = 0;
@@ -229,6 +243,11 @@ export function summarizeVisibleRows(
     }
 
     totalCurrentWeight += toScaled(row.currentWeight);
+
+    if (row.discount !== null) {
+      discountSum += toScaled(row.discount);
+      discountCount += 1;
+    }
 
     if (row.hasPosition) {
       investedAssets += 1;
@@ -254,6 +273,10 @@ export function summarizeVisibleRows(
     totalMarketValue: fromScaled(totalMarketValue, 2),
     totalTargetWeight: fromScaled(totalTargetWeight, 8),
     totalCurrentWeight: fromScaled(totalCurrentWeight, 8),
+    averageDiscount:
+      discountCount === 0
+        ? null
+        : fromScaled(averageScaled(discountSum, discountCount), 8),
     investedAssets,
     watchOnlyAssets,
     candidates,
@@ -1052,6 +1075,24 @@ export function AllocationTable({
                           summary.totalMarketValue,
                           summary.displayCurrency,
                         )}
+                      </TableCell>
+                    );
+                  }
+
+                  if (id === "discount") {
+                    return (
+                      <TableCell
+                        key={id}
+                        className={cn(
+                          "px-2.5 py-2.5 text-right tabular-nums",
+                          summary.averageDiscount === null
+                            ? "text-muted-foreground"
+                            : pnlClassName(summary.averageDiscount),
+                        )}
+                      >
+                        {summary.averageDiscount === null
+                          ? "—"
+                          : formatSignedWeightPrecise(summary.averageDiscount)}
                       </TableCell>
                     );
                   }

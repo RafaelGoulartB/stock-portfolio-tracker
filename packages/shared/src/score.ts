@@ -48,6 +48,32 @@ export const scoreConfigSchema = z.object({
 
 export type ScoreConfig = z.infer<typeof scoreConfigSchema>;
 
+/** Version stamp written when the user overrides the built-in defaults. */
+export const CUSTOM_SCORE_VERSION = "custom";
+
+/**
+ * User-editable fields of {@link ScoreConfig}. The API owns `version`
+ * (`DEFAULT_SCORE_CONFIG.version` or {@link CUSTOM_SCORE_VERSION}).
+ */
+export const scoreConfigUpdateSchema = scoreConfigSchema
+  .omit({ version: true })
+  .superRefine((config, ctx) => {
+    for (let index = 1; index < config.gradeBands.length; index += 1) {
+      const previous = Number(config.gradeBands[index - 1]?.minGrade);
+      const current = Number(config.gradeBands[index]?.minGrade);
+
+      if (!(current > previous)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["gradeBands", index, "minGrade"],
+          message: "Grade bands must be strictly ascending by minimum grade",
+        });
+      }
+    }
+  });
+
+export type ScoreConfigUpdate = z.infer<typeof scoreConfigUpdateSchema>;
+
 /**
  * Ported from the spreadsheet formula this screen replaces:
  * grades `0`–`3` halve the gap, `4`–`6` cut it to 70%, `7` to 80%, and only

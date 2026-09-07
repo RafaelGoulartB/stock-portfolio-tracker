@@ -417,6 +417,8 @@ export function summarizeAllocation(
   let totalMarketValue = ZERO;
   let totalTargetWeight = ZERO;
   let totalCurrentWeight = ZERO;
+  let discountSum = ZERO;
+  let discountCount = 0;
   let investedAssets = 0;
   let watchOnlyAssets = 0;
   let candidates = 0;
@@ -433,6 +435,11 @@ export function summarizeAllocation(
     }
 
     totalCurrentWeight = add(totalCurrentWeight, toDecimal(row.currentWeight));
+
+    if (row.discount !== null) {
+      discountSum = add(discountSum, toDecimal(row.discount));
+      discountCount += 1;
+    }
 
     if (row.hasPosition) {
       investedAssets += 1;
@@ -458,6 +465,13 @@ export function summarizeAllocation(
     totalMarketValue: formatDecimal(totalMarketValue, MONEY_PLACES),
     totalTargetWeight: formatDecimal(totalTargetWeight, WEIGHT_PLACES),
     totalCurrentWeight: formatDecimal(totalCurrentWeight, WEIGHT_PLACES),
+    averageDiscount:
+      discountCount === 0
+        ? null
+        : formatDecimal(
+            div(discountSum, toDecimal(String(discountCount))),
+            WEIGHT_PLACES,
+          ),
     investedAssets,
     watchOnlyAssets,
     candidates,

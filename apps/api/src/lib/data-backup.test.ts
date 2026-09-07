@@ -54,8 +54,29 @@ describe("portable data backups", () => {
       },
     });
 
-    expect(manifest.version).toBe(1);
+    expect(manifest.version).toBe(2);
+    if (record.entity !== "transactions") {
+      throw new Error("expected transaction record");
+    }
     expect(record.data.createdAt).toBeInstanceOf(Date);
+  });
+
+  it("accepts a v1 manifest without scoreConfigs and defaults the count", () => {
+    const manifest = manifestSchema.parse({
+      type: "manifest",
+      format: BACKUP_FORMAT,
+      version: 1,
+      exportedAt: "2026-09-06T20:00:00.000Z",
+      counts: {
+        categories: 0,
+        allocationAssets: 0,
+        assetReviews: 0,
+        transactions: 0,
+        assetCategories: 0,
+      },
+    });
+
+    expect(manifest.counts.scoreConfigs).toBe(0);
   });
 
   it("hashes the exact newline-delimited representation", () => {

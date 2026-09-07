@@ -1,11 +1,10 @@
 import {
+  type AllocationMarkColor,
   type AssetClass,
   allocationHistoryInput,
   allocationListInput,
   allocationMarkColorSchema,
-  type AllocationMarkColor,
   type Currency,
-  DEFAULT_SCORE_CONFIG,
   FX_EXECUTION_IOF,
   FX_EXECUTION_SPREAD,
   type QuoteSource,
@@ -32,6 +31,7 @@ import {
 } from "../../domain/allocation";
 import { usdBrlExecutionRate } from "../../domain/fx-execution";
 import { consolidatePositions } from "../../domain/positions";
+import { loadScoreConfig } from "../../domain/score-config";
 import { isZero, toDecimal } from "../../lib/decimal";
 import {
   getQuoteProvider,
@@ -240,9 +240,10 @@ export const allocationRouter = router({
   list: protectedProcedure
     .input(allocationListInput)
     .query(async ({ ctx, input }) => {
-      const [assets, reviews] = await Promise.all([
+      const [assets, reviews, scorePolicy] = await Promise.all([
         loadAssets(ctx.user.id),
         loadReviews(ctx.user.id),
+        loadScoreConfig(ctx.user.id),
       ]);
       const requestManuals = {
         ...storedManualPrices(assets),
@@ -286,12 +287,13 @@ export const allocationRouter = router({
         usdBrlRate: input.usdBrlRate ?? null,
         manualValuedTickers,
         today: today(),
+        config: scorePolicy.config,
       });
 
       return {
         rows,
         summary: summarizeAllocation(rows, input.displayCurrency),
-        scoreConfig: DEFAULT_SCORE_CONFIG,
+        scoreConfig: scorePolicy.config,
         fx: {
           displayCurrency: input.displayCurrency,
           usdBrlRate: input.usdBrlRate ?? null,

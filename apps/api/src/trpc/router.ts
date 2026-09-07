@@ -8,6 +8,7 @@ import { fxRouter } from "./routers/fx";
 import { performanceRouter } from "./routers/performance";
 import { positionsRouter } from "./routers/positions";
 import { quotesRouter } from "./routers/quotes";
+import { scoreConfigRouter } from "./routers/score-config";
 import { transactionsRouter } from "./routers/transactions";
 import { publicProcedure, router } from "./trpc";
 
@@ -20,6 +21,7 @@ export const appRouter = router({
   dividends: dividendsRouter,
   fx: fxRouter,
   quotes: quotesRouter,
+  scoreConfig: scoreConfigRouter,
   transactions: transactionsRouter,
   positions: positionsRouter,
   performance: performanceRouter,

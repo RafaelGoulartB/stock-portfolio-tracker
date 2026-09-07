@@ -7,7 +7,7 @@ import {
 import { z } from "zod";
 
 export const BACKUP_FORMAT = "portifolio-tracker-backup";
-export const BACKUP_VERSION = 1;
+export const BACKUP_VERSION = 2;
 export const BACKUP_MEDIA_TYPE = "application/x-portifolio-backup+gzip";
 
 export const BACKUP_ENTITIES = [
@@ -16,6 +16,7 @@ export const BACKUP_ENTITIES = [
   "assetReviews",
   "transactions",
   "assetCategories",
+  "scoreConfigs",
 ] as const;
 
 export type BackupEntity = (typeof BACKUP_ENTITIES)[number];
@@ -26,18 +27,21 @@ const nullableDecimal = decimal.nullable();
 const timestamp = z.iso.datetime({ offset: true });
 const databaseTimestamp = timestamp.transform((value) => new Date(value));
 
-export const manifestSchema = z.strictObject({
+const backupCountsSchema = z.strictObject({
+  categories: z.number().int().nonnegative(),
+  allocationAssets: z.number().int().nonnegative(),
+  assetReviews: z.number().int().nonnegative(),
+  transactions: z.number().int().nonnegative(),
+  assetCategories: z.number().int().nonnegative(),
+  scoreConfigs: z.number().int().nonnegative().default(0),
+});
+
+export const manifestSchema = z.object({
   type: z.literal("manifest"),
   format: z.literal(BACKUP_FORMAT),
-  version: z.literal(BACKUP_VERSION),
+  version: z.union([z.literal(1), z.literal(2)]),
   exportedAt: timestamp,
-  counts: z.strictObject({
-    categories: z.number().int().nonnegative(),
-    allocationAssets: z.number().int().nonnegative(),
-    assetReviews: z.number().int().nonnegative(),
-    transactions: z.number().int().nonnegative(),
-    assetCategories: z.number().int().nonnegative(),
-  }),
+  counts: backupCountsSchema,
 });
 
 export type BackupManifest = z.infer<typeof manifestSchema>;
@@ -115,12 +119,36 @@ const assetCategoryRecord = z.strictObject({
   }),
 });
 
+const scoreConfigRecord = z.strictObject({
+  type: z.literal("record"),
+  entity: z.literal("scoreConfigs"),
+  data: z.strictObject({
+    version: z.string().min(1),
+    absoluteWeightCap: decimal,
+    overweightBlockFactor: decimal,
+    trimFactor: decimal,
+    cooldownDays: z.number().int().nonnegative(),
+    gradeWindowQuarters: z.number().int().positive(),
+    gradeBands: z
+      .array(
+        z.strictObject({
+          minGrade: decimal,
+          multiplier: decimal,
+        }),
+      )
+      .min(1),
+    ungradedMultiplier: decimal,
+    updatedAt: databaseTimestamp,
+  }),
+});
+
 export const backupRecordSchema = z.discriminatedUnion("entity", [
   categoryRecord,
   allocationAssetRecord,
   assetReviewRecord,
   transactionRecord,
   assetCategoryRecord,
+  scoreConfigRecord,
 ]);
 
 export type BackupRecord = z.infer<typeof backupRecordSchema>;
@@ -146,6 +174,7 @@ export function emptyBackupCounts(): BackupCounts {
     assetReviews: 0,
     transactions: 0,
     assetCategories: 0,
+    scoreConfigs: 0,
   };
 }
 
