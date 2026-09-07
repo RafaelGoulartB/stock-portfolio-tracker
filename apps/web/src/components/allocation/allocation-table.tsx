@@ -138,12 +138,30 @@ export function sortableValue(
   }
 }
 
+/**
+ * The default score view should focus capital allocation on owned assets with
+ * a target. Watch-only tickers can still be scored and sorted, but trail those
+ * actionable positions until the user chooses a different column or free order.
+ */
+function hasActionableTarget(row: AllocationRow): boolean {
+  return row.hasPosition && row.targetWeight !== null;
+}
+
 /** Rows with no value for the sorted column always sink to the bottom. */
 export function compareRows(
   a: AllocationRow,
   b: AllocationRow,
   sort: AllocationSort,
 ): number {
+  if (sort.id === "score") {
+    const targetPriority =
+      Number(hasActionableTarget(b)) - Number(hasActionableTarget(a));
+
+    if (targetPriority !== 0) {
+      return targetPriority;
+    }
+  }
+
   const left = sortableValue(a, sort.id);
   const right = sortableValue(b, sort.id);
 
@@ -216,8 +234,8 @@ function averageScaled(sum: bigint, count: number): bigint {
 }
 
 /**
- * Totals for the rows currently shown (search + category filters). Matches
- * the server summary shape so the footer and footnote stay consistent.
+ * Totals for the rows currently shown (search, category and radar filters).
+ * Matches the server summary shape so the footer and footnote stay consistent.
  */
 export function summarizeVisibleRows(
   rows: readonly AllocationRow[],
@@ -518,7 +536,7 @@ export function AllocationTable({
                   className={cn(
                     "h-10 px-2.5 whitespace-nowrap",
                     id === "ticker"
-                      ? "sticky left-0 z-10 w-36 max-w-36 bg-muted/50"
+                      ? "sticky left-0 z-10 w-40 max-w-40 bg-muted/50"
                       : "text-right",
                   )}
                 >
@@ -709,7 +727,7 @@ export function AllocationTable({
                   {visibleColumns.has("ticker") ? (
                     <TableCell
                       className={cn(
-                        "sticky left-0 z-10 w-36 max-w-36 px-2.5 py-2.5",
+                        "sticky left-0 z-10 w-40 max-w-40 px-2.5 py-2.5",
                         row.markColor
                           ? MARK_STICKY[row.markColor]
                           : "bg-card group-hover:bg-[color-mix(in_oklab,var(--muted)_50%,var(--card))]",
@@ -1090,7 +1108,7 @@ export function AllocationTable({
                     return (
                       <TableCell
                         key={id}
-                        className="sticky left-0 z-10 w-36 max-w-36 bg-muted px-2.5 py-2.5 font-medium"
+                        className="sticky left-0 z-10 w-40 max-w-40 bg-muted px-2.5 py-2.5 font-medium"
                       >
                         <Trans id="allocation.total">Total</Trans>
                       </TableCell>

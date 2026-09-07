@@ -59,13 +59,13 @@ msgstr "{0} holdings added to the list"
 #. placeholder {2}: visibleSummary.candidates
 #. placeholder {3}: visibleSummary.blocked
 #. placeholder {4}: visibleSummary.scoreVersion
-#: src/routes/_app/allocation.index.tsx:784
+#: src/routes/_app/allocation.index.tsx:825
 msgid "allocation.footnote"
 msgstr "{0} investidos · {1} em acompanhamento · {2} recebendo aporte · {3} bloqueados · regras de score {4}"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: values.ticker
-#: src/routes/_app/allocation.index.tsx:526
+#: src/routes/_app/allocation.index.tsx:541
 msgid "allocation.added"
 msgstr "{0} agora está na tabela"
 
@@ -177,7 +177,7 @@ msgid "transactions.booked"
 msgstr "{count} holdings booked as buys"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:664
+#: src/routes/_app/allocation.index.tsx:705
 msgid "allocation.quartersOption"
 msgstr "{count} trimestres"
 
@@ -284,7 +284,7 @@ msgid "transactions.currencyLockHint"
 msgstr "Um ticker sempre usa a moeda da sua primeira operação."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:305
+#: src/components/allocation/allocation-table.tsx:323
 msgid "allocation.reasonTrim"
 msgstr "Acima da meta e sem desconto: considere reduzir em vez de comprar."
 
@@ -305,7 +305,7 @@ msgstr "Dados da conta"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.ticker
-#: src/components/allocation/allocation-table.tsx:1236
+#: src/components/allocation/allocation-table.tsx:1254
 msgid "allocation.rowMenu"
 msgstr "Ações de {0}"
 
@@ -375,12 +375,17 @@ msgid "deepFinder.filterAll"
 msgstr "Todos"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:596
+#: src/routes/_app/allocation.index.tsx:639
+msgid "allocation.radarAll"
+msgstr "Todos os ativos"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/allocation.index.tsx:611
 msgid "allocation.categoryAll"
 msgstr "Todas as categorias"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:689
+#: src/routes/_app/allocation.index.tsx:730
 msgid "allocation.all"
 msgstr "Todos os dados"
 
@@ -400,7 +405,7 @@ msgid "categories.filterAll"
 msgstr "Todos os tickers"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:539
+#: src/routes/_app/allocation.index.tsx:554
 msgid "allocation.title"
 msgstr "Alocação"
 
@@ -435,7 +440,7 @@ msgid "login.hasAccount"
 msgstr "Já tem uma conta?"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:320
+#: src/components/allocation/allocation-table.tsx:338
 msgid "allocation.reasonOverweight"
 msgstr "Já passou da própria meta além do fator de bloqueio."
 
@@ -480,7 +485,7 @@ msgid "allocation.colTicker"
 msgstr "Ativo"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:325
+#: src/routes/_app/allocation.index.tsx:329
 msgid "allocation.removed"
 msgstr "Ativo removido da tabela"
 
@@ -537,7 +542,7 @@ msgid "dividends.alphaHint"
 msgstr "O modo automático está usando apenas o Yahoo. Defina ALPHA_VANTAGE_API_KEY na API para complementar eventos dos EUA com datas de pagamento e anúncios futuros."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:767
+#: src/components/allocation/allocation-table.tsx:785
 msgid "allocation.cashTargetHint"
 msgstr "Preenche automaticamente a parte não atribuída aos outros ativos."
 
@@ -553,7 +558,7 @@ msgstr "Custo médio e preços ficam na moeda nativa de cada ativo; valor de mer
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.gradedQuarters
-#: src/components/allocation/allocation-table.tsx:1014
+#: src/components/allocation/allocation-table.tsx:1032
 msgid "allocation.gradeTooltip"
 msgstr "Média de {0} trimestres com nota"
 
@@ -654,7 +659,7 @@ msgstr "Book holdings"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: score.cooldownUntil ?? ""
-#: src/components/allocation/allocation-table.tsx:327
+#: src/components/allocation/allocation-table.tsx:345
 msgid "allocation.reasonCooldown"
 msgstr "Aporte recente; liberado novamente em {0}."
 
@@ -751,7 +756,7 @@ msgid "assetClass.cash"
 msgstr "Caixa"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:726
+#: src/components/allocation/allocation-table.tsx:744
 msgid "allocation.cash"
 msgstr "Caixa"
 
@@ -761,7 +766,7 @@ msgid "documentation.performance.cashFlowsTitle"
 msgstr "Fluxos de caixa e tempo"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:969
+#: src/components/allocation/allocation-table.tsx:987
 msgid "allocation.cashValueHint"
 msgstr "O caixa é informado manualmente e incluído no patrimônio total."
 
@@ -917,12 +922,12 @@ msgstr "Limpar"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.ticker
-#: src/components/allocation/allocation-table.tsx:1288
+#: src/components/allocation/allocation-table.tsx:1306
 msgid "allocation.clearMark"
 msgstr "Remover destaque de {0}"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1316
+#: src/components/allocation/allocation-table.tsx:1334
 msgid "allocation.clearAnalysis"
 msgstr "Limpar meta e desconto"
 
@@ -937,7 +942,7 @@ msgid "allocation.detailReviewsHint"
 msgstr "Clique em um trimestre para expandir e editar a nota, o fair value e as anotações."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:697
+#: src/components/allocation/allocation-table.tsx:715
 msgid "allocation.cycleMarkHint"
 msgstr "Clique para alternar a cor de destaque"
 
@@ -952,7 +957,7 @@ msgid "settings.appearance.description"
 msgstr "Esquema de cores e paleta usados no painel."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:674
+#: src/routes/_app/allocation.index.tsx:715
 msgid "allocation.columns"
 msgstr "Colunas"
 
@@ -962,7 +967,7 @@ msgid "detailedPositions.columns"
 msgstr "Colunas"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:683
+#: src/routes/_app/allocation.index.tsx:724
 msgid "allocation.compact"
 msgstr "Compacta"
 
@@ -1160,7 +1165,7 @@ msgid "settings.data.deleteError"
 msgstr "Não foi possível excluir os dados da aplicação."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:732
+#: src/routes/_app/allocation.index.tsx:773
 #: src/routes/_app/detailed-positions.tsx:350
 #: src/routes/_app/positions.tsx:166
 msgid "positions.fxFailed"
@@ -1312,7 +1317,7 @@ msgid "documentation.contribution.customPolicy"
 msgstr "Divisão de aporte personalizada"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:693
+#: src/routes/_app/allocation.index.tsx:734
 msgid "allocation.customize"
 msgstr "Personalizar colunas"
 
@@ -1323,7 +1328,7 @@ msgstr "Personalizar colunas"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.ticker
-#: src/components/allocation/allocation-table.tsx:691
+#: src/components/allocation/allocation-table.tsx:709
 msgid "allocation.cycleMark"
 msgstr "Alternar cor de destaque de {0}"
 
@@ -1486,7 +1491,7 @@ msgstr "Desconto"
 #. placeholder {0}: score.adjustedTarget === null ? "" : formatWeightPrecise(score.adjustedTarget)
 #. placeholder {1}: formatWeightPrecise(row.currentWeight)
 #. placeholder {2}: score.multiplier
-#: src/components/allocation/allocation-table.tsx:334
+#: src/components/allocation/allocation-table.tsx:352
 msgid "allocation.reasonGap"
 msgstr "Meta ajustada pelo desconto {0} contra {1} em carteira, vezes {2} de qualidade."
 
@@ -1563,17 +1568,17 @@ msgid "allocation.plannerAutoEmpty"
 msgstr "Carteira vazia — espalhando em {0} ativos, até {1}."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:471
+#: src/routes/_app/allocation.index.tsx:486
 msgid "allocation.invalidCashValue"
 msgstr "Informe um valor de caixa igual ou maior que zero."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:504
+#: src/routes/_app/allocation.index.tsx:519
 msgid "allocation.invalidValue"
 msgstr "Enter a market value, e.g. 50000"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:450
+#: src/routes/_app/allocation.index.tsx:465
 msgid "allocation.invalidPercent"
 msgstr "Informe uma porcentagem, ex.: 1,5 ou -20"
 
@@ -1717,7 +1722,7 @@ msgstr "Fair value"
 #. js-lingui-explicit-id
 #. placeholder {0}: formatMoney(row.fairValue, row.currency)
 #. placeholder {1}: row.fairValuePeriod ?? ""
-#: src/components/allocation/allocation-table.tsx:836
+#: src/components/allocation/allocation-table.tsx:854
 msgid "allocation.discountTooltipFairOnly"
 msgstr "Fair value {0} ({1})"
 
@@ -1753,7 +1758,7 @@ msgid "transactions.feesHint"
 msgstr "Taxas somam em uma compra e subtraem em uma venda."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:586
+#: src/routes/_app/allocation.index.tsx:601
 msgid "allocation.categoryFilter"
 msgstr "Filtrar por categoria"
 
@@ -1761,6 +1766,11 @@ msgstr "Filtrar por categoria"
 #: src/routes/_app/categories.tsx:413
 msgid "categories.filter"
 msgstr "Filtrar por categoria"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/allocation.index.tsx:629
+msgid "allocation.radarFilter"
+msgstr "Filtrar por status de investimento"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/asset-movements.tsx:94
@@ -1784,7 +1794,7 @@ msgid "positions.quoteSourceHint"
 msgstr "Cotações gratuitas com atraso para valor de mercado e alocação."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:716
+#: src/routes/_app/allocation.index.tsx:757
 msgid "allocation.freeOrder"
 msgstr "Ordem livre"
 
@@ -1858,7 +1868,7 @@ msgid "positions.allocGroupBy"
 msgstr "Agrupar por"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1254
+#: src/components/allocation/allocation-table.tsx:1272
 msgid "allocation.markColor"
 msgstr "Destaque"
 
@@ -1949,7 +1959,7 @@ msgstr "A importação substitui todos os dados atuais de investimentos por este
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.score.cooldownUntil
-#: src/components/allocation/allocation-table.tsx:906
+#: src/components/allocation/allocation-table.tsx:924
 #: src/routes/_app/allocation.$ticker.tsx:299
 msgid "allocation.cooldownIcon"
 msgstr "Em carência até {0}"
@@ -2009,6 +2019,11 @@ msgstr "E-mail ou senha inválidos."
 #: src/components/transactions/book-holdings-panel.tsx:123
 msgid "transactions.bookTickerInvalid"
 msgstr "Invalid ticker “{0}”."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/allocation.index.tsx:645
+msgid "allocation.radarOff"
+msgstr "Investidos"
 
 #. js-lingui-explicit-id
 #: src/routes/_app/detailed-positions.tsx:402
@@ -2107,13 +2122,13 @@ msgstr "Os preços manuais são informados por ticker na página Posições."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.ticker
-#: src/components/allocation/allocation-table.tsx:1265
+#: src/components/allocation/allocation-table.tsx:1283
 msgid "allocation.markAs"
 msgstr "Marcar {0} como {color}"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: formatQuarterLabel(quarter)
-#: src/components/allocation/allocation-table.tsx:580
+#: src/components/allocation/allocation-table.tsx:598
 msgid "allocation.focusQuarter"
 msgstr "Mark {0} as the quarter you are working on"
 
@@ -2128,7 +2143,7 @@ msgstr "Mercado"
 #. placeholder {0}: formatMoney(row.marketPrice, row.currency)
 #. placeholder {1}: formatMoney(row.fairValue, row.currency)
 #. placeholder {2}: row.fairValuePeriod ?? ""
-#: src/components/allocation/allocation-table.tsx:842
+#: src/components/allocation/allocation-table.tsx:860
 msgid "allocation.discountTooltip"
 msgstr "Market {0} vs fair value {1} ({2})"
 
@@ -2179,7 +2194,7 @@ msgstr "Valor de mercado em {snapshotLabel} e participação no patrimônio cota
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.ticker
-#: src/components/allocation/allocation-table.tsx:961
+#: src/components/allocation/allocation-table.tsx:979
 msgid "allocation.editValue"
 msgstr "Market value of {0}"
 
@@ -2286,7 +2301,7 @@ msgid "categories.move"
 msgstr "Mover"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1309
+#: src/components/allocation/allocation-table.tsx:1327
 msgid "allocation.moveDown"
 msgstr "Mover para baixo"
 
@@ -2297,7 +2312,7 @@ msgid "categories.moveTo"
 msgstr "Mover para…"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1305
+#: src/components/allocation/allocation-table.tsx:1323
 msgid "allocation.moveUp"
 msgstr "Mover para cima"
 
@@ -2458,7 +2473,7 @@ msgid "daily.noQuoteDate"
 msgstr "Nenhuma cotação ao vivo disponível."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:750
+#: src/components/allocation/allocation-table.tsx:768
 msgid "allocation.quoteMissing"
 msgstr "Sem cotação de mercado para este ticker"
 
@@ -2489,12 +2504,12 @@ msgid "allocation.detailChartEmpty"
 msgstr "Ainda não há histórico de preço para este ticker."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:984
+#: src/components/allocation/allocation-table.tsx:1002
 msgid "allocation.valueMissingTooltip"
 msgstr "No public quote. Enter the position's market value."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:977
+#: src/components/allocation/allocation-table.tsx:995
 msgid "allocation.valueManualTooltip"
 msgstr "No public quote. This value is set by you. Clear the cell to remove it."
 
@@ -2520,7 +2535,7 @@ msgid "documentation.score.noTarget"
 msgstr "Sem target"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:298
+#: src/components/allocation/allocation-table.tsx:316
 msgid "allocation.reasonNoTarget"
 msgstr "Sem meta definida, então não há gap a fechar."
 
@@ -2570,9 +2585,14 @@ msgid "transactions.empty"
 msgstr "Nada registrado ainda."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1075
+#: src/components/allocation/allocation-table.tsx:1093
 msgid "allocation.empty"
 msgstr "Nada para alocar ainda. Registre uma operação ou adicione um ativo para acompanhar."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/allocation.index.tsx:642
+msgid "allocation.radarOn"
+msgstr "No radar"
 
 #. js-lingui-explicit-id
 #: src/routes/_app/positions.tsx:1156
@@ -2581,7 +2601,7 @@ msgstr "Abrir Deep Finder"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.ticker
-#: src/components/allocation/allocation-table.tsx:862
+#: src/components/allocation/allocation-table.tsx:880
 msgid "allocation.openFairValueRef"
 msgstr "Open fair value reference for {0}"
 
@@ -2691,7 +2711,7 @@ msgid "login.password"
 msgstr "Senha"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:313
+#: src/components/allocation/allocation-table.tsx:331
 msgid "allocation.reasonWeightCap"
 msgstr "Passou do teto de peso da carteira para um único ativo."
 
@@ -2923,7 +2943,7 @@ msgid "transactions.colQuantity"
 msgstr "Quantidade"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:938
+#: src/components/allocation/allocation-table.tsx:956
 msgid "allocation.valueQuotedTooltip"
 msgstr "Quantity × market price"
 
@@ -2950,7 +2970,7 @@ msgid "documentation.score.unit.quarters"
 msgstr "trimestres"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:645
+#: src/routes/_app/allocation.index.tsx:686
 msgid "allocation.quarterCount"
 msgstr "Trimestres exibidos"
 
@@ -3122,7 +3142,7 @@ msgstr "Renomear categoria"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.ticker
-#: src/components/allocation/allocation-table.tsx:668
+#: src/components/allocation/allocation-table.tsx:686
 msgid "allocation.dragHandle"
 msgstr "Reordenar {0}. Use as setas para mover."
 
@@ -3147,7 +3167,7 @@ msgid "documentation.score.resetDefaults"
 msgstr "Restaurar padrões"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:709
+#: src/routes/_app/allocation.index.tsx:750
 msgid "allocation.reset"
 msgstr "Restaurar padrão"
 
@@ -3286,7 +3306,7 @@ msgid "allocation.plannerNeedRemainder"
 msgstr "A necessidade pontuada é menor que este aporte. {0} permanece sem alocar."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:572
+#: src/routes/_app/allocation.index.tsx:587
 msgid "allocation.searchLabel"
 msgstr "Buscar ativos"
 
@@ -3311,7 +3331,7 @@ msgid "detailedPositions.search"
 msgstr "Buscar ticker ou classe…"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:575
+#: src/routes/_app/allocation.index.tsx:590
 msgid "allocation.search"
 msgstr "Buscar ticker…"
 
@@ -3348,7 +3368,7 @@ msgid "side.sell"
 msgstr "Venda"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:828
+#: src/components/allocation/allocation-table.tsx:846
 msgid "allocation.discountEmptyTooltip"
 msgstr "Set a fair value on a quarterly review"
 
@@ -3363,7 +3383,7 @@ msgid "register.description"
 msgstr "Crie uma conta para começar a acompanhar suas operações."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:992
+#: src/components/allocation/allocation-table.tsx:1010
 msgid "allocation.valuePlaceholder"
 msgstr "Set value"
 
@@ -3422,7 +3442,7 @@ msgid "settings.showLogos"
 msgstr "Mostrar logos das empresas"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:615
+#: src/routes/_app/allocation.index.tsx:656
 msgid "allocation.quartersBack"
 msgstr "Mostrar trimestres anteriores"
 
@@ -3432,7 +3452,7 @@ msgid "positions.allocShowLess"
 msgstr "Mostrar menos"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:633
+#: src/routes/_app/allocation.index.tsx:674
 msgid "allocation.quartersForward"
 msgstr "Mostrar trimestres seguintes"
 
@@ -3504,7 +3524,7 @@ msgstr "Algo deu errado. Tente novamente."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: labels[id]
-#: src/components/allocation/allocation-table.tsx:536
+#: src/components/allocation/allocation-table.tsx:554
 msgid "allocation.sortBy"
 msgstr "Ordenar por {0}"
 
@@ -3532,7 +3552,7 @@ msgid "allocation.plannerSpread"
 msgstr "Dividir entre"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:686
+#: src/routes/_app/allocation.index.tsx:727
 msgid "allocation.standard"
 msgstr "Padrão"
 
@@ -3548,13 +3568,13 @@ msgid "dividends.status"
 msgstr "Status"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1324
+#: src/components/allocation/allocation-table.tsx:1342
 msgid "allocation.removeAsset"
 msgstr "Parar de acompanhar"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: formatQuarterLabel(quarter)
-#: src/components/allocation/allocation-table.tsx:576
+#: src/components/allocation/allocation-table.tsx:594
 msgid "allocation.unfocusQuarter"
 msgstr "Stop marking {0} as the quarter you are working on"
 
@@ -3593,7 +3613,7 @@ msgstr "Bloqueio por overweight do alvo"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.ticker
-#: src/components/allocation/allocation-table.tsx:788
+#: src/components/allocation/allocation-table.tsx:806
 msgid "allocation.editTarget"
 msgstr "Meta de peso de {0}, em porcentagem"
 
@@ -3603,7 +3623,7 @@ msgid "documentation.score.targetCap"
 msgstr "Limite relativo ao target"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:542
+#: src/routes/_app/allocation.index.tsx:557
 msgid "allocation.subtitle"
 msgstr "Metas, notas trimestrais e o score de aporte em um só lugar. Edite qualquer célula da tabela; o score é recalculado ao salvar."
 
@@ -3868,7 +3888,7 @@ msgid "transactions.colTotal"
 msgstr "Total"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1095
+#: src/components/allocation/allocation-table.tsx:1113
 msgid "allocation.total"
 msgstr "Total"
 
@@ -3934,7 +3954,7 @@ msgid "dividends.unavailable"
 msgstr "Tickers indisponíveis: {0}."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:599
+#: src/routes/_app/allocation.index.tsx:614
 msgid "allocation.categoryNone"
 msgstr "Sem categoria"
 
@@ -4070,12 +4090,12 @@ msgid "allocation.plannerFxHint"
 msgstr "VET / custos cambiais"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1249
+#: src/components/allocation/allocation-table.tsx:1267
 msgid "allocation.viewDetails"
 msgstr "Ver detalhes"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:680
+#: src/routes/_app/allocation.index.tsx:721
 msgid "allocation.presets"
 msgstr "Padrões de visualização"
 
@@ -4095,7 +4115,7 @@ msgid "deepFinder.windowCost"
 msgstr "Vs custo"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:743
+#: src/components/allocation/allocation-table.tsx:761
 #: src/routes/_app/allocation.$ticker.tsx:180
 msgid "allocation.watchBadge"
 msgstr "Radar"

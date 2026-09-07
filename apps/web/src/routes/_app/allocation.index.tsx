@@ -86,6 +86,9 @@ const COLUMN_STORAGE_KEY = "portfolio.allocation.columns";
 /** Category filter sentinels — match the categories screen. */
 const CATEGORY_ALL = "all";
 const CATEGORY_NONE = "none";
+const RADAR_ALL = "all";
+const RADAR_ON = "on";
+const RADAR_OFF = "off";
 
 const COLUMN_PRESETS: Record<
   "compact" | "standard" | "all",
@@ -195,6 +198,7 @@ function AllocationPage() {
   const [visibleColumns, setVisibleColumns] =
     useState<Set<AllocationColumn>>(initialColumns);
   const [categoryFilter, setCategoryFilter] = useState(CATEGORY_ALL);
+  const [radarFilter, setRadarFilter] = useState(RADAR_ALL);
 
   const sanitizedManualPrices = useMemo(
     () =>
@@ -394,17 +398,27 @@ function AllocationPage() {
         return false;
       }
 
-      if (activeCategoryFilter === CATEGORY_ALL) {
-        return true;
-      }
-
       const categoryId = categoryByTicker.get(row.ticker) ?? null;
 
       if (activeCategoryFilter === CATEGORY_NONE) {
-        return categoryId === null;
+        if (categoryId !== null) {
+          return false;
+        }
+      } else if (activeCategoryFilter !== CATEGORY_ALL) {
+        if (categoryId !== activeCategoryFilter) {
+          return false;
+        }
       }
 
-      return categoryId === activeCategoryFilter;
+      if (radarFilter === RADAR_ON) {
+        return !row.hasPosition;
+      }
+
+      if (radarFilter === RADAR_OFF) {
+        return row.hasPosition;
+      }
+
+      return true;
     });
 
     // Free order keeps the stored rank the API already sorted by.
@@ -416,6 +430,7 @@ function AllocationPage() {
     search,
     activeCategoryFilter,
     categoryByTicker,
+    radarFilter,
     sort,
     freeOrder,
     i18n.locale,
@@ -603,6 +618,32 @@ function AllocationPage() {
                 {category.name}
               </SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={radarFilter} onValueChange={setRadarFilter}>
+          <SelectTrigger
+            size="sm"
+            className="w-36"
+            aria-label={i18n._(
+              t({
+                id: "allocation.radarFilter",
+                message: "Filter by investment status",
+              }),
+            )}
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={RADAR_ALL}>
+              <Trans id="allocation.radarAll">All assets</Trans>
+            </SelectItem>
+            <SelectItem value={RADAR_ON}>
+              <Trans id="allocation.radarOn">On radar</Trans>
+            </SelectItem>
+            <SelectItem value={RADAR_OFF}>
+              <Trans id="allocation.radarOff">Invested</Trans>
+            </SelectItem>
           </SelectContent>
         </Select>
 

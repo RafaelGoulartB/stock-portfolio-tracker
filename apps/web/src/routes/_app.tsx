@@ -46,7 +46,7 @@ function AppLayout() {
 
   return (
     <SettingsProvider>
-      <div className="min-h-svh bg-muted/30">
+      <div className="min-h-svh overflow-x-clip bg-muted/30">
         <header className="border-b bg-background">
           <div className="mx-auto flex min-h-14 w-full max-w-6xl flex-wrap items-center gap-2 px-4 py-2 lg:h-14 lg:flex-nowrap lg:gap-6 lg:px-6 lg:py-0">
             <Link to="/positions" className="flex shrink-0 items-center gap-2">
