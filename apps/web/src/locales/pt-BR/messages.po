@@ -213,13 +213,13 @@ msgstr ""
 #. placeholder {2}: allocation.data.summary.candidates
 #. placeholder {3}: allocation.data.summary.blocked
 #. placeholder {4}: allocation.data.summary.scoreVersion
-#: src/routes/_app/allocation.index.tsx:602
+#: src/routes/_app/allocation.index.tsx:680
 msgid "allocation.footnote"
 msgstr "{0} investidos · {1} em acompanhamento · {2} recebendo aporte · {3} bloqueados · regras de score {4}"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: values.ticker
-#: src/routes/_app/allocation.index.tsx:377
+#: src/routes/_app/allocation.index.tsx:424
 msgid "allocation.added"
 msgstr "{0} agora está na tabela"
 
@@ -318,7 +318,7 @@ msgid "transactions.booked"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:486
+#: src/routes/_app/allocation.index.tsx:564
 msgid "allocation.quartersOption"
 msgstr "{count} trimestres"
 
@@ -495,7 +495,12 @@ msgid "deepFinder.filterAll"
 msgstr "Todos"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:511
+#: src/routes/_app/allocation.index.tsx:496
+msgid "allocation.categoryAll"
+msgstr "Todas as categorias"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/allocation.index.tsx:589
 msgid "allocation.all"
 msgstr "Todos os dados"
 
@@ -520,7 +525,7 @@ msgid "allocation.detailBack"
 msgstr "Alocação"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:390
+#: src/routes/_app/allocation.index.tsx:437
 msgid "allocation.title"
 msgstr "Alocação"
 
@@ -600,7 +605,7 @@ msgid "allocation.colTicker"
 msgstr "Ativo"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:253
+#: src/routes/_app/allocation.index.tsx:258
 msgid "allocation.removed"
 msgstr "Ativo removido da tabela"
 
@@ -983,7 +988,7 @@ msgid "settings.appearance.description"
 msgstr "Esquema de cores e paleta usados no painel."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:496
+#: src/routes/_app/allocation.index.tsx:574
 msgid "allocation.columns"
 msgstr "Colunas"
 
@@ -993,7 +998,7 @@ msgid "detailedPositions.columns"
 msgstr "Colunas"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:505
+#: src/routes/_app/allocation.index.tsx:583
 msgid "allocation.compact"
 msgstr "Compacta"
 
@@ -1152,7 +1157,7 @@ msgid "settings.data.deleteError"
 msgstr "Não foi possível excluir os dados da aplicação."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:554
+#: src/routes/_app/allocation.index.tsx:632
 #: src/routes/_app/detailed-positions.tsx:348
 #: src/routes/_app/positions.tsx:198
 msgid "positions.fxFailed"
@@ -1249,7 +1254,7 @@ msgid "allocation.colCurrent"
 msgstr "Atual"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:515
+#: src/routes/_app/allocation.index.tsx:593
 msgid "allocation.customize"
 msgstr "Personalizar colunas"
 
@@ -1460,12 +1465,12 @@ msgid "login.email"
 msgstr "E-mail"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:355
+#: src/routes/_app/allocation.index.tsx:402
 msgid "allocation.invalidValue"
 msgstr ""
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:324
+#: src/routes/_app/allocation.index.tsx:371
 msgid "allocation.invalidPercent"
 msgstr "Informe uma porcentagem, ex.: 1,5 ou -20"
 
@@ -1635,6 +1640,11 @@ msgid "transactions.feesHint"
 msgstr "Taxas somam em uma compra e subtraem em uma venda."
 
 #. js-lingui-explicit-id
+#: src/routes/_app/allocation.index.tsx:486
+msgid "allocation.categoryFilter"
+msgstr "Filtrar por categoria"
+
+#. js-lingui-explicit-id
 #: src/routes/_app/categories.tsx:411
 msgid "categories.filter"
 msgstr "Filtrar por categoria"
@@ -1661,7 +1671,7 @@ msgid "positions.quoteSourceHint"
 msgstr "Cotações gratuitas com atraso para valor de mercado e alocação."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:538
+#: src/routes/_app/allocation.index.tsx:616
 msgid "allocation.freeOrder"
 msgstr "Ordem livre"
 
@@ -2714,7 +2724,7 @@ msgid "allocation.detailReviews"
 msgstr "Revisões trimestrais"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:467
+#: src/routes/_app/allocation.index.tsx:545
 msgid "allocation.quarterCount"
 msgstr "Trimestres exibidos"
 
@@ -2871,7 +2881,7 @@ msgid "settings.data.importConfirm"
 msgstr "Substituir e importar"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:531
+#: src/routes/_app/allocation.index.tsx:609
 msgid "allocation.reset"
 msgstr "Restaurar padrão"
 
@@ -2994,7 +3004,7 @@ msgid "documentation.score.noTargetDescription"
 msgstr "O score é zero porque não existe um target de alocação a ser alcançado."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:422
+#: src/routes/_app/allocation.index.tsx:469
 msgid "allocation.searchLabel"
 msgstr "Buscar ativos"
 
@@ -3019,7 +3029,7 @@ msgid "detailedPositions.search"
 msgstr "Buscar ticker ou classe…"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:425
+#: src/routes/_app/allocation.index.tsx:472
 msgid "allocation.search"
 msgstr "Buscar ticker…"
 
@@ -3109,12 +3119,12 @@ msgid "detailedPositions.showClosed"
 msgstr "Mostrar posições encerradas"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:437
+#: src/routes/_app/allocation.index.tsx:515
 msgid "allocation.quartersBack"
 msgstr "Mostrar trimestres anteriores"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:455
+#: src/routes/_app/allocation.index.tsx:533
 msgid "allocation.quartersForward"
 msgstr "Mostrar trimestres seguintes"
 
@@ -3209,7 +3219,7 @@ msgid "allocation.plannerSpread"
 msgstr "Dividir entre"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:508
+#: src/routes/_app/allocation.index.tsx:586
 msgid "allocation.standard"
 msgstr "Padrão"
 
@@ -3275,7 +3285,7 @@ msgid "documentation.score.targetCap"
 msgstr "Limite relativo ao target"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:393
+#: src/routes/_app/allocation.index.tsx:440
 msgid "allocation.subtitle"
 msgstr "Metas, notas trimestrais e o score de aporte em um só lugar. Edite qualquer célula da tabela; o score é recalculado ao salvar."
 
@@ -3552,6 +3562,11 @@ msgid "dividends.unavailable"
 msgstr "Tickers indisponíveis: {0}."
 
 #. js-lingui-explicit-id
+#: src/routes/_app/allocation.index.tsx:499
+msgid "allocation.categoryNone"
+msgstr "Sem categoria"
+
+#. js-lingui-explicit-id
 #: src/routes/_app/categories.tsx:424
 #: src/routes/_app/categories.tsx:467
 #: src/routes/_app/categories.tsx:758
@@ -3673,7 +3688,7 @@ msgid "allocation.viewDetails"
 msgstr "Ver detalhes"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:502
+#: src/routes/_app/allocation.index.tsx:580
 msgid "allocation.presets"
 msgstr "Padrões de visualização"
 

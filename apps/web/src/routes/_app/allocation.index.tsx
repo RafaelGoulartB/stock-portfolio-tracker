@@ -26,6 +26,7 @@ import {
   columnLabels,
   compareRows,
   defaultSortDirection,
+  summarizeVisibleRows,
 } from "@/components/allocation/allocation-table";
 import { ContributionPlannerButton } from "@/components/allocation/contribution-planner";
 import { Button } from "@/components/ui/button";
@@ -73,6 +74,9 @@ const QUARTER_COUNT_KEY = "portfolio.allocation.quarters";
 const QUARTER_COUNTS = [3, 4, 5, 8] as const;
 const DEFAULT_QUARTER_COUNT = 4;
 const COLUMN_STORAGE_KEY = "portfolio.allocation.columns";
+/** Category filter sentinels — match the categories screen. */
+const CATEGORY_ALL = "all";
+const CATEGORY_NONE = "none";
 
 const COLUMN_PRESETS: Record<
   "compact" | "standard" | "all",
@@ -181,6 +185,7 @@ function AllocationPage() {
   const [quarterEndKey, setQuarterEndKey] = useState<string | null>(null);
   const [visibleColumns, setVisibleColumns] =
     useState<Set<AllocationColumn>>(initialColumns);
+  const [categoryFilter, setCategoryFilter] = useState(CATEGORY_ALL);
 
   const sanitizedManualPrices = useMemo(
     () =>
@@ -201,6 +206,7 @@ function AllocationPage() {
         ? sanitizedManualPrices
         : undefined,
   });
+  const categories = trpc.categories.list.useQuery();
 
   const waitingForRate =
     !!allocation.error && isFxRateRequired(allocation.error) && fx.isPending;
@@ -288,25 +294,74 @@ function AllocationPage() {
     setManualValue.isPending;
 
   const allRows = allocation.data?.rows ?? [];
+  const categoryOptions = categories.data?.categories ?? [];
+  const categoryByTicker = useMemo(() => {
+    const map = new Map<string, string | null>();
+
+    for (const asset of categories.data?.assets ?? []) {
+      map.set(asset.ticker, asset.categoryId);
+    }
+
+    return map;
+  }, [categories.data?.assets]);
+
+  // Drop a stale pick if the category was deleted elsewhere.
+  const activeCategoryFilter =
+    categoryFilter === CATEGORY_ALL ||
+    categoryFilter === CATEGORY_NONE ||
+    categoryOptions.some((category) => category.id === categoryFilter)
+      ? categoryFilter
+      : CATEGORY_ALL;
+
   const rows = useMemo(() => {
     const needle = search.trim().toLocaleLowerCase(i18n.locale);
-    const filtered = needle
-      ? allRows.filter((row) =>
-          row.ticker.toLocaleLowerCase(i18n.locale).includes(needle),
-        )
-      : [...allRows];
+    const filtered = allRows.filter((row) => {
+      if (
+        needle &&
+        !row.ticker.toLocaleLowerCase(i18n.locale).includes(needle)
+      ) {
+        return false;
+      }
+
+      if (activeCategoryFilter === CATEGORY_ALL) {
+        return true;
+      }
+
+      const categoryId = categoryByTicker.get(row.ticker) ?? null;
+
+      if (activeCategoryFilter === CATEGORY_NONE) {
+        return categoryId === null;
+      }
+
+      return categoryId === activeCategoryFilter;
+    });
 
     // Free order keeps the stored rank the API already sorted by.
     return freeOrder
       ? filtered
       : filtered.sort((a, b) => compareRows(a, b, sort));
-  }, [allRows, search, sort, freeOrder, i18n.locale]);
+  }, [
+    allRows,
+    search,
+    activeCategoryFilter,
+    categoryByTicker,
+    sort,
+    freeOrder,
+    i18n.locale,
+  ]);
 
   const quarterEnd = quarterEndKey
     ? toQuarter(quarterEndKey)
     : defaultQuarterEnd(allRows);
   const quarters = quarterWindow(quarterEnd, quarterCount);
   const labels = columnLabels(i18n);
+  const visibleSummary = allocation.data
+    ? summarizeVisibleRows(
+        rows,
+        allocation.data.summary.displayCurrency,
+        allocation.data.summary.scoreVersion,
+      )
+    : undefined;
 
   /** Percent cell edits: an empty value clears the field. */
   function editPercent(ticker: string, text: string) {
@@ -427,6 +482,37 @@ function AllocationPage() {
             className="h-8 pl-8"
           />
         </div>
+
+        <Select
+          value={activeCategoryFilter}
+          onValueChange={setCategoryFilter}
+        >
+          <SelectTrigger
+            size="sm"
+            className="w-44"
+            aria-label={i18n._(
+              t({
+                id: "allocation.categoryFilter",
+                message: "Filter by category",
+              }),
+            )}
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={CATEGORY_ALL}>
+              <Trans id="allocation.categoryAll">All categories</Trans>
+            </SelectItem>
+            <SelectItem value={CATEGORY_NONE}>
+              <Trans id="allocation.categoryNone">Uncategorized</Trans>
+            </SelectItem>
+            {categoryOptions.map((category) => (
+              <SelectItem key={category.id} value={category.id}>
+                {category.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         <div className="flex items-center gap-1 rounded-md border px-1 py-0.5">
           <Button
@@ -565,7 +651,7 @@ function AllocationPage() {
         <AllocationTable
           rows={rows}
           quarters={quarters}
-          summary={allocation.data.summary}
+          summary={visibleSummary}
           visibleColumns={visibleColumns}
           sort={sort}
           onSort={(id: AllocationColumn) =>
@@ -597,14 +683,14 @@ function AllocationPage() {
         />
       ) : null}
 
-      {allocation.data ? (
+      {visibleSummary ? (
         <p className="text-xs text-muted-foreground">
           <Trans id="allocation.footnote">
-            {allocation.data.summary.investedAssets} invested ·{" "}
-            {allocation.data.summary.watchOnlyAssets} watch-only ·{" "}
-            {allocation.data.summary.candidates} taking contributions ·{" "}
-            {allocation.data.summary.blocked} blocked · score rules{" "}
-            {allocation.data.summary.scoreVersion}
+            {visibleSummary.investedAssets} invested ·{" "}
+            {visibleSummary.watchOnlyAssets} watch-only ·{" "}
+            {visibleSummary.candidates} taking contributions ·{" "}
+            {visibleSummary.blocked} blocked · score rules{" "}
+            {visibleSummary.scoreVersion}
           </Trans>
         </p>
       ) : null}
