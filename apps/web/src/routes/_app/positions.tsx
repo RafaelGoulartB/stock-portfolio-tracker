@@ -1,8 +1,10 @@
+import type { I18n } from "@lingui/core";
 import { plural, t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import {
   type AssetClass,
+  type Category,
   type Currency,
   type PortfolioSummary,
   positiveDecimal,
@@ -417,14 +419,19 @@ function nativeTotalsLabel(breakdown: string): string {
 /* -------------------------------------------------------------------------- */
 
 /** How the composition panel buckets the portfolio. */
-type AllocationGroupBy = "class" | "currency";
+type AllocationGroupBy = "class" | "currency" | "category";
 
 /** Assets listed before the panel asks to be expanded. */
 const COLLAPSED_ASSET_ROWS = 24;
 
+/** Bucket holding every asset the user has not filed under a category. */
+const UNCATEGORIZED = "uncategorized";
+
 type GroupRow = {
   key: string;
   label: string;
+  /** CSS color of the bar. Categories carry the color the user picked. */
+  color?: string;
   /** Share of quoted equity, `0`–`1`. */
   share: number;
   shareLabel: string;
@@ -446,6 +453,27 @@ type AssetRow = {
   display: string;
 };
 
+/** Bucket name for the active grouping, as a plain string for the tile. */
+function bucketLabel(
+  position: ValuedPosition,
+  groupBy: AllocationGroupBy,
+  category: Category | undefined,
+  i18n: I18n,
+): string {
+  if (groupBy === "class") {
+    return assetClassText(position.assetClass, i18n);
+  }
+
+  if (groupBy === "currency") {
+    return position.currency;
+  }
+
+  return (
+    category?.name ??
+    i18n._(t({ id: "positions.allocUncategorized", message: "Uncategorized" }))
+  );
+}
+
 /** Same row identity the holdings table uses: a ticker per currency. */
 function assetRowId(position: ValuedPosition): string {
   return `${position.ticker}|${position.currency}`;
@@ -458,9 +486,11 @@ function assetRowId(position: ValuedPosition): string {
  */
 function ShareBar({
   fraction,
+  color,
   className,
 }: {
   fraction: number;
+  color?: string;
   className?: string;
 }) {
   return (
@@ -472,9 +502,12 @@ function ShareBar({
       aria-hidden="true"
     >
       <span
-        className="block h-full rounded-r-[3px] bg-chart-1"
-        // A sliver keeps sub-percent rows visible instead of blank.
-        style={{ width: `${Math.max(fraction * 100, 1.2)}%` }}
+        className={cn("block h-full rounded-r-[3px]", !color && "bg-chart-1")}
+        style={{
+          // A sliver keeps sub-percent rows visible instead of blank.
+          width: `${Math.max(fraction * 100, 1.2)}%`,
+          backgroundColor: color,
+        }}
       />
     </span>
   );
@@ -512,6 +545,26 @@ function AllocationCard({
   const [pinned, setPinned] = useState<string | undefined>(undefined);
   const [expanded, setExpanded] = useState(false);
   const activeGroup = hovered ?? pinned;
+
+  // Categories are the user's own buckets; the tab only shows up once at
+  // least one exists.
+  const categoryList = trpc.categories.list.useQuery();
+  const categories = categoryList.data?.categories ?? [];
+  const categoryByTicker = useMemo(() => {
+    const map = new Map<string, string>();
+
+    for (const asset of categoryList.data?.assets ?? []) {
+      if (asset.categoryId) {
+        map.set(asset.ticker, asset.categoryId);
+      }
+    }
+
+    return map;
+  }, [categoryList.data?.assets]);
+
+  // Falls back to classes when the last category is deleted elsewhere.
+  const activeGroupBy: AllocationGroupBy =
+    groupBy === "category" && categories.length === 0 ? "class" : groupBy;
 
   const quoted = useMemo(
     () => positions.filter((position) => position.convertedMarketValue != null),
@@ -554,18 +607,40 @@ function AllocationCard({
   );
 
   const groups: GroupRow[] = useMemo(() => {
+    const categoryById = new Map(
+      categories.map((category) => [category.id, category]),
+    );
     const buckets = new Map<
       string,
-      { label: string; value: number; count: number; assetIds: Set<string> }
+      {
+        label: string;
+        color?: string;
+        value: number;
+        count: number;
+        assetIds: Set<string>;
+      }
     >();
 
     for (const position of quoted) {
-      const key = groupBy === "class" ? position.assetClass : position.currency;
+      const category =
+        activeGroupBy === "category"
+          ? categoryById.get(categoryByTicker.get(position.ticker) ?? "")
+          : undefined;
+      const key =
+        activeGroupBy === "class"
+          ? position.assetClass
+          : activeGroupBy === "currency"
+            ? position.currency
+            : (category?.id ?? UNCATEGORIZED);
       const bucket = buckets.get(key) ?? {
-        label:
-          groupBy === "class"
-            ? assetClassText(position.assetClass, i18n)
-            : position.currency,
+        label: bucketLabel(position, activeGroupBy, category, i18n),
+        // Categories wear the color the user picked; the residual bucket
+        // stays neutral so it never reads as one of them.
+        color:
+          activeGroupBy === "category"
+            ? (category && `var(--${category.color})`) ||
+              "var(--muted-foreground)"
+            : undefined,
         value: 0,
         count: 0,
         assetIds: new Set<string>(),
@@ -577,36 +652,79 @@ function AllocationCard({
       buckets.set(key, bucket);
     }
 
-    return [...buckets]
-      .map(([key, bucket]) => {
-        const share = total > 0 ? bucket.value / total : 0;
+    return (
+      [...buckets]
+        .map(([key, bucket]) => {
+          const share = total > 0 ? bucket.value / total : 0;
 
-        return {
-          key,
-          label: bucket.label,
-          share,
-          shareLabel: formatWeight(String(share)),
-          display: formatMoney(
-            bucket.value.toFixed(2),
-            summary.displayCurrency,
-          ),
-          count: bucket.count,
-          assetIds: bucket.assetIds,
-        };
-      })
-      .sort((a, b) => b.share - a.share);
-  }, [quoted, groupBy, total, summary.displayCurrency, i18n]);
+          return {
+            key,
+            label: bucket.label,
+            color: bucket.color,
+            share,
+            shareLabel: formatWeight(String(share)),
+            display: formatMoney(
+              bucket.value.toFixed(2),
+              summary.displayCurrency,
+            ),
+            count: bucket.count,
+            assetIds: bucket.assetIds,
+          };
+        })
+        // The residual bucket trails the real ones however big it is.
+        .sort((a, b) => {
+          if (a.key === UNCATEGORIZED || b.key === UNCATEGORIZED) {
+            return a.key === UNCATEGORIZED ? 1 : -1;
+          }
 
-  const activeAssetIds = activeGroup
-    ? groups.find((group) => group.key === activeGroup)?.assetIds
-    : undefined;
+          return b.share - a.share;
+        })
+    );
+  }, [
+    quoted,
+    activeGroupBy,
+    categories,
+    categoryByTicker,
+    total,
+    summary.displayCurrency,
+    i18n,
+  ]);
 
-  // Bars in the asset list are relative to the largest holding: shares of the
-  // whole portfolio are too small to compare at this scale.
+  // Clicking a bucket filters the list; hovering one only previews it, so the
+  // rows never reflow under the pointer.
+  const pinnedGroup = groups.find((group) => group.key === pinned);
+  const previewedIds =
+    !pinnedGroup && hovered
+      ? groups.find((group) => group.key === hovered)?.assetIds
+      : undefined;
+
+  const listedAssets = pinnedGroup
+    ? assets.filter((asset) => pinnedGroup.assetIds.has(asset.id))
+    : assets;
+
+  // Bars in the asset list are relative to the largest holding of the whole
+  // portfolio: shares of the total are too small to compare at this scale, and
+  // a fixed reference keeps a bar the same length whatever the filter is.
   const largestShare = assets[0]?.share ?? 0;
   const visibleAssets = expanded
-    ? assets
-    : assets.slice(0, COLLAPSED_ASSET_ROWS);
+    ? listedAssets
+    : listedAssets.slice(0, COLLAPSED_ASSET_ROWS);
+
+  const groupings: { id: AllocationGroupBy; label: ReactNode }[] = [
+    { id: "class", label: <Trans id="positions.allocByClass">Class</Trans> },
+    {
+      id: "currency",
+      label: <Trans id="positions.allocByCurrency">Currency</Trans>,
+    },
+    ...(categories.length > 0
+      ? [
+          {
+            id: "category" as const,
+            label: <Trans id="positions.allocByCategory">Category</Trans>,
+          },
+        ]
+      : []),
+  ];
 
   function toggleGroup(key: string) {
     setPinned((current) => (current === key ? undefined : key));
@@ -629,34 +747,24 @@ function AllocationCard({
               <legend className="sr-only">
                 <Trans id="positions.allocGroupBy">Group by</Trans>
               </legend>
-              <Button
-                type="button"
-                size="sm"
-                aria-pressed={groupBy === "class"}
-                variant={groupBy === "class" ? "default" : "ghost"}
-                className={cn(groupBy !== "class" && "text-muted-foreground")}
-                onClick={() => {
-                  setGroupBy("class");
-                  setPinned(undefined);
-                }}
-              >
-                <Trans id="positions.allocByClass">Class</Trans>
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                aria-pressed={groupBy === "currency"}
-                variant={groupBy === "currency" ? "default" : "ghost"}
-                className={cn(
-                  groupBy !== "currency" && "text-muted-foreground",
-                )}
-                onClick={() => {
-                  setGroupBy("currency");
-                  setPinned(undefined);
-                }}
-              >
-                <Trans id="positions.allocByCurrency">Currency</Trans>
-              </Button>
+              {groupings.map((grouping) => (
+                <Button
+                  key={grouping.id}
+                  type="button"
+                  size="sm"
+                  aria-pressed={activeGroupBy === grouping.id}
+                  variant={activeGroupBy === grouping.id ? "default" : "ghost"}
+                  className={cn(
+                    activeGroupBy !== grouping.id && "text-muted-foreground",
+                  )}
+                  onClick={() => {
+                    setGroupBy(grouping.id);
+                    setPinned(undefined);
+                  }}
+                >
+                  {grouping.label}
+                </Button>
+              ))}
             </fieldset>
           </CardAction>
         ) : null}
@@ -673,11 +781,15 @@ function AllocationCard({
             <section className="space-y-3">
               <PanelHeading
                 title={
-                  groupBy === "class" ? (
+                  activeGroupBy === "class" ? (
                     <Trans id="positions.allocGroupsClass">By class</Trans>
-                  ) : (
+                  ) : activeGroupBy === "currency" ? (
                     <Trans id="positions.allocGroupsCurrency">
                       By currency
+                    </Trans>
+                  ) : (
+                    <Trans id="positions.allocGroupsCategory">
+                      By category
                     </Trans>
                   )
                 }
@@ -717,7 +829,11 @@ function AllocationCard({
                           {group.shareLabel}
                         </span>
                       </span>
-                      <ShareBar className="mt-1.5" fraction={group.share} />
+                      <ShareBar
+                        className="mt-1.5"
+                        color={group.color}
+                        fraction={group.share}
+                      />
                       <span className="mt-1 flex items-baseline justify-between gap-3 text-xs text-muted-foreground">
                         <span className="tabular-nums">
                           {i18n._(
@@ -744,7 +860,7 @@ function AllocationCard({
               <PanelHeading
                 title={
                   <Trans id="positions.allocAssets">
-                    By asset · {assets.length}
+                    By asset · {listedAssets.length}
                   </Trans>
                 }
                 caption={
@@ -760,7 +876,7 @@ function AllocationCard({
                     key={asset.id}
                     className={cn(
                       "flex items-center gap-2.5 rounded-md px-2 py-1 text-sm transition-opacity",
-                      activeAssetIds && !activeAssetIds.has(asset.id)
+                      previewedIds && !previewedIds.has(asset.id)
                         ? "opacity-30"
                         : "",
                     )}
@@ -794,7 +910,7 @@ function AllocationCard({
                   </li>
                 ))}
               </ul>
-              {assets.length > COLLAPSED_ASSET_ROWS ? (
+              {listedAssets.length > COLLAPSED_ASSET_ROWS ? (
                 <Button
                   type="button"
                   variant="ghost"
@@ -811,7 +927,7 @@ function AllocationCard({
                     <>
                       <ChevronDown className="size-4" aria-hidden="true" />
                       <Trans id="positions.allocShowAll">
-                        Show all {assets.length}
+                        Show all {listedAssets.length}
                       </Trans>
                     </>
                   )}
