@@ -570,7 +570,8 @@ function ContributionDocumentation() {
           <Trans id="documentation.contribution.vetDescription">
             When a USD asset is sized in BRL, the suggested unit count includes
             the configured broker spread and IOF. These costs are compounded,
-            not added.
+            not added. The planner reports USD asset contributions in USD using
+            this VET; BRL assets remain in the BRL total.
           </Trans>
         </p>
         <Formula>
@@ -579,9 +580,11 @@ function ContributionDocumentation() {
         <p>
           <Trans id="documentation.contribution.vetPolicy">
             With the current policy, the execution rate is {fxMarkup}% above
-            spot. VET is used only for suggested units when converting USD to
-            BRL. Portfolio value, allocation weights, results, and every other
-            FX conversion continue to use spot.
+            spot. VET is used for suggested units and USD asset contribution
+            amounts. The planner splits its final totals by asset currency
+            instead of converting the full contribution into both currencies.
+            Portfolio value, allocation weights, results, and every other FX
+            conversion continue to use spot.
           </Trans>
         </p>
       </Topic>

@@ -36,7 +36,7 @@ import { formatMoney, formatQuantity, formatWeightPrecise } from "@/lib/format";
 import { parseDecimalInput } from "@/lib/numeric-input";
 
 /** How many candidates a contribution is spread over. `0` means every one. */
-const SPREAD_OPTIONS = [1, 3, 5, 0] as const;
+const SPREAD_OPTIONS = [1, 2, 3, 4, 5, 0] as const;
 
 export type ContributionFx = {
   usdBrlRate: string | null;
@@ -47,6 +47,7 @@ export type ContributionFx = {
 
 export type ContributionSlice = {
   ticker: string;
+  currency: Currency;
   /** Share of the contribution, `0`–`1`. */
   share: number;
   /** Suggested amount in the display currency. */
@@ -56,6 +57,77 @@ export type ContributionSlice = {
   /** True when units used the VET rate instead of spot. */
   executionFxApplied: boolean;
 };
+
+/** Converts a display-currency slice into the asset's native contribution currency. */
+export function contributionAmountInAssetCurrency(
+  amount: number,
+  assetCurrency: Currency,
+  displayCurrency: Currency,
+  usdBrlRate: number | null,
+  executionUsdBrlRate: number | null,
+): number | null {
+  if (!Number.isFinite(amount)) {
+    return null;
+  }
+
+  if (assetCurrency === displayCurrency) {
+    return amount;
+  }
+
+  const rate =
+    assetCurrency === "USD" && displayCurrency === "BRL"
+      ? executionUsdBrlRate
+      : usdBrlRate;
+
+  if (rate === null || !Number.isFinite(rate) || rate <= 0) {
+    return null;
+  }
+
+  return assetCurrency === "USD" ? amount / rate : amount * rate;
+}
+
+function formatContributionMoney(
+  amount: number | null,
+  currency: Currency,
+): string {
+  return amount === null ? "—" : formatMoney(amount.toFixed(2), currency);
+}
+
+function sumContributionTotals(
+  slices: readonly ContributionSlice[],
+  displayCurrency: Currency,
+  usdBrlRate: number | null,
+  executionUsdBrlRate: number | null,
+): { brl: number | null; usd: number | null } {
+  let brl = 0;
+  let usd = 0;
+  let brlAvailable = true;
+  let usdAvailable = true;
+
+  for (const slice of slices) {
+    const nativeAmount = contributionAmountInAssetCurrency(
+      slice.amount,
+      slice.currency,
+      displayCurrency,
+      usdBrlRate,
+      executionUsdBrlRate,
+    );
+
+    if (nativeAmount === null) {
+      if (slice.currency === "BRL") brlAvailable = false;
+      else usdAvailable = false;
+      continue;
+    }
+
+    if (slice.currency === "BRL") brl += nativeAmount;
+    else usd += nativeAmount;
+  }
+
+  return {
+    brl: brlAvailable ? brl : null,
+    usd: usdAvailable ? usd : null,
+  };
+}
 
 /**
  * Splits an amount across the top-scoring assets, proportionally to their
@@ -94,6 +166,7 @@ export function planContribution(
 
     return {
       ticker: row.ticker,
+      currency: row.currency,
       share,
       amount: sliceAmount,
       units: price && price > 0 ? sliceAmount / price : null,
@@ -131,7 +204,25 @@ export function ContributionPlannerButton({
   );
   const remainder = Math.round((amount - allocated) * 100) / 100;
   const candidates = rows.filter((row) => Number(row.score.value) > 0).length;
-  const usesExecutionFx = slices.some((slice) => slice.executionFxApplied);
+  const executionUsdBrlRate = Number(fx?.executionUsdBrlRate);
+  const validExecutionUsdBrlRate =
+    Number.isFinite(executionUsdBrlRate) && executionUsdBrlRate > 0
+      ? executionUsdBrlRate
+      : null;
+  const usdBrlRate = Number(fx?.usdBrlRate);
+  const validUsdBrlRate =
+    Number.isFinite(usdBrlRate) && usdBrlRate > 0 ? usdBrlRate : null;
+  const totals = sumContributionTotals(
+    slices,
+    displayCurrency,
+    validUsdBrlRate,
+    validExecutionUsdBrlRate,
+  );
+  const hasUsdSlices = slices.some((slice) => slice.currency === "USD");
+  const hasBrlSlices = slices.some((slice) => slice.currency === "BRL");
+  const hasCrossCurrencySlice = slices.some(
+    (slice) => slice.currency !== displayCurrency,
+  );
   const spreadPercent =
     Number(fx?.executionSpread ?? FX_EXECUTION_SPREAD) * 100;
   const iofPercent = Number(fx?.executionIof ?? FX_EXECUTION_IOF) * 100;
@@ -241,37 +332,63 @@ export function ContributionPlannerButton({
             </p>
           ) : (
             <ul className="max-h-72 space-y-2 overflow-auto pr-1">
-              {slices.map((slice) => (
-                <li
-                  key={slice.ticker}
-                  className="flex items-center gap-3 rounded-lg border bg-muted/30 px-3 py-2.5"
-                >
-                  <span className="w-16 shrink-0 text-sm font-semibold">
-                    {slice.ticker}
-                  </span>
-                  <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                    <span
-                      className="block h-full rounded-full bg-foreground/60"
-                      style={{ width: `${Math.round(slice.share * 100)}%` }}
-                    />
-                  </span>
-                  <span className="w-14 shrink-0 text-right text-xs text-muted-foreground tabular-nums">
-                    {formatWeightPrecise(String(slice.share))}
-                  </span>
-                  <span className="w-28 shrink-0 text-right text-sm tabular-nums">
-                    {formatMoney(slice.amount.toFixed(2), displayCurrency)}
-                  </span>
-                  <span className="w-20 shrink-0 text-right text-xs text-muted-foreground tabular-nums">
-                    {slice.units === null ? (
-                      "—"
-                    ) : (
-                      <Trans id="allocation.plannerUnits">
-                        {formatQuantity(slice.units.toFixed(4))} un.
-                      </Trans>
-                    )}
-                  </span>
-                </li>
-              ))}
+              {slices.map((slice) => {
+                const usdAmount =
+                  slice.currency === "USD"
+                    ? contributionAmountInAssetCurrency(
+                        slice.amount,
+                        "USD",
+                        displayCurrency,
+                        validUsdBrlRate,
+                        validExecutionUsdBrlRate,
+                      )
+                    : null;
+
+                return (
+                  <li
+                    key={slice.ticker}
+                    className="flex items-center gap-3 rounded-lg border bg-muted/30 px-3 py-2.5"
+                  >
+                    <span className="w-16 shrink-0 text-sm font-semibold">
+                      {slice.ticker}
+                    </span>
+                    <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                      <span
+                        className="block h-full rounded-full bg-foreground/60"
+                        style={{ width: `${Math.round(slice.share * 100)}%` }}
+                      />
+                    </span>
+                    <span className="w-14 shrink-0 text-right text-xs text-muted-foreground tabular-nums">
+                      {formatWeightPrecise(String(slice.share))}
+                    </span>
+                    <span className="w-32 shrink-0 text-right tabular-nums">
+                      <span className="block text-sm">
+                        {formatMoney(slice.amount.toFixed(2), displayCurrency)}
+                      </span>
+                      {slice.currency === "USD" && displayCurrency === "BRL" ? (
+                        <span className="block text-xs text-muted-foreground">
+                          <span className="sr-only">
+                            <Trans id="allocation.plannerUsdEquivalent">
+                              USD equivalent
+                            </Trans>
+                            :{" "}
+                          </span>
+                          ≈ {formatContributionMoney(usdAmount, "USD")}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="w-20 shrink-0 text-right text-xs text-muted-foreground tabular-nums">
+                      {slice.units === null ? (
+                        "—"
+                      ) : (
+                        <Trans id="allocation.plannerUnits">
+                          {formatQuantity(slice.units.toFixed(4))} un.
+                        </Trans>
+                      )}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           )}
 
@@ -285,7 +402,62 @@ export function ContributionPlannerButton({
             </p>
           ) : null}
 
-          {usesExecutionFx ? (
+          {slices.length > 0 ? (
+            <div className="grid gap-3 rounded-lg border bg-muted/30 px-4 py-3">
+              <p className="text-xs font-medium text-muted-foreground">
+                <Trans id="allocation.plannerTotals">Contribution totals</Trans>
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="grid gap-0.5">
+                  <span className="text-xs text-muted-foreground">
+                    <Trans id="allocation.plannerTotalBrl">
+                      Contribution to BRL assets
+                    </Trans>
+                  </span>
+                  <span className="text-sm font-semibold tabular-nums">
+                    {formatContributionMoney(totals.brl, "BRL")}
+                  </span>
+                </div>
+                <div className="grid gap-0.5">
+                  <span className="text-xs text-muted-foreground">
+                    <Trans id="allocation.plannerTotalUsd">
+                      Contribution to USD assets
+                    </Trans>
+                  </span>
+                  <span className="text-sm font-semibold tabular-nums">
+                    {formatContributionMoney(totals.usd, "USD")}
+                  </span>
+                </div>
+              </div>
+              {hasUsdSlices && displayCurrency === "BRL" ? (
+                <p className="text-xs text-muted-foreground">
+                  {validExecutionUsdBrlRate === null ? (
+                    <Trans id="allocation.plannerFxUnavailable">
+                      A currency total is unavailable until the required FX rate
+                      is available.
+                    </Trans>
+                  ) : (
+                    <Trans id="allocation.plannerVetRate">
+                      USD asset amounts use VET at{" "}
+                      {formatQuantity(validExecutionUsdBrlRate.toFixed(4))} BRL
+                      per USD.
+                    </Trans>
+                  )}
+                </p>
+              ) : hasBrlSlices &&
+                displayCurrency === "USD" &&
+                totals.brl === null ? (
+                <p className="text-xs text-muted-foreground">
+                  <Trans id="allocation.plannerFxUnavailable">
+                    A currency total is unavailable until the required FX rate
+                    is available.
+                  </Trans>
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {hasCrossCurrencySlice ? (
             <div className="flex justify-end">
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -295,23 +467,28 @@ export function ContributionPlannerButton({
                     aria-label={i18n._(
                       t({
                         id: "allocation.plannerFxAria",
-                        message: "How suggested units include FX costs",
+                        message:
+                          "How FX is used for contribution amounts and units",
                       }),
                     )}
                   >
                     <Info className="size-3.5" aria-hidden="true" />
                     <span className="text-xs">
-                      <Trans id="allocation.plannerFxHint">FX costs</Trans>
+                      <Trans id="allocation.plannerFxHint">
+                        VET / FX costs
+                      </Trans>
                     </span>
                   </button>
                 </TooltipTrigger>
                 <TooltipContent side="top" className="space-y-1.5 text-left">
                   <p>
                     <Trans id="allocation.plannerFxTooltip">
-                      Suggested units for USD assets use the execution rate
-                      (spot × {spreadPercent.toFixed(1)}% spread ×{" "}
-                      {iofPercent.toFixed(2)}% IOF). Portfolio value still uses
-                      the spot dollar.
+                      Contribution totals are split by asset currency. USD
+                      assets budgeted in BRL use the execution rate (spot ×{" "}
+                      {spreadPercent.toFixed(1)}% spread ×{" "}
+                      {iofPercent.toFixed(2)}% IOF) for their amount and units;
+                      BRL assets budgeted in USD use spot. Portfolio value still
+                      uses the spot dollar.
                     </Trans>
                   </p>
                   {fx?.usdBrlRate && fx.executionUsdBrlRate ? (
