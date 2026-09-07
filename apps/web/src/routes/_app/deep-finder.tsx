@@ -12,6 +12,7 @@ import { ArrowDown, ArrowUp, ArrowUpDown, ScanSearch } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
 import { Bar, BarChart, Cell, ReferenceLine, XAxis, YAxis } from "recharts";
 import { AssetClassLabel } from "@/components/asset-labels";
+import { AssetLogo } from "@/components/asset-logo";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -672,6 +673,11 @@ function ResultTable({
               <TableRow key={row.ticker}>
                 <TableCell className="font-medium">
                   <div className="flex flex-wrap items-center gap-2">
+                    <AssetLogo
+                      ticker={row.ticker}
+                      assetClass={row.assetClass}
+                      currency={row.currency}
+                    />
                     {row.ticker}
                     {missingSet.has(row.ticker) ? (
                       <span className="text-xs font-normal text-muted-foreground">

@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
 import { AssetClassLabel } from "@/components/asset-labels";
+import { AssetLogo } from "@/components/asset-logo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -597,7 +598,16 @@ function PositionCell({
   let content: ReactNode;
   switch (id) {
     case "ticker":
-      content = <span className="font-semibold">{position.ticker}</span>;
+      content = (
+        <span className="flex items-center gap-2 font-semibold">
+          <AssetLogo
+            ticker={position.ticker}
+            assetClass={position.assetClass}
+            currency={position.currency}
+          />
+          {position.ticker}
+        </span>
+      );
       break;
     case "assetClass":
       content = <AssetClassLabel assetClass={position.assetClass} />;

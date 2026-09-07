@@ -2,6 +2,7 @@ import { plural, t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import {
+  type AssetClass,
   type Currency,
   type PortfolioSummary,
   positiveDecimal,
@@ -19,6 +20,7 @@ import {
 import { type ReactNode, useMemo, useState } from "react";
 import { Cell, Pie, PieChart, Sector } from "recharts";
 import { AssetClassLabel } from "@/components/asset-labels";
+import { AssetLogo } from "@/components/asset-logo";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -461,6 +463,8 @@ function nativeTotalsLabel(breakdown: string): string {
 
 type SliceDatum = {
   ticker: string;
+  assetClass: AssetClass;
+  currency: Currency;
   value: number;
   color: string;
   display: string;
@@ -521,6 +525,8 @@ function AllocationCard({
         )
         .map((position) => ({
           ticker: position.ticker,
+          assetClass: position.assetClass,
+          currency: position.currency,
           value: Number(position.convertedMarketValue ?? 0),
           color: colorByTicker.get(position.ticker) ?? UNQUOTED_COLOR,
           display: formatMoney(
@@ -683,6 +689,12 @@ function AllocationCard({
                       className="size-2 shrink-0 rounded-full"
                       style={{ backgroundColor: slice.color }}
                       aria-hidden="true"
+                    />
+                    <AssetLogo
+                      ticker={slice.ticker}
+                      assetClass={slice.assetClass}
+                      currency={slice.currency}
+                      className="size-5 rounded-sm"
                     />
                     <span className="truncate font-medium">{slice.ticker}</span>
                     <span className="ml-auto text-muted-foreground tabular-nums">
@@ -1141,6 +1153,11 @@ function HoldingsCard({
                           colorByTicker.get(position.ticker) ?? "var(--border)",
                       }}
                       aria-hidden="true"
+                    />
+                    <AssetLogo
+                      ticker={position.ticker}
+                      assetClass={position.assetClass}
+                      currency={position.currency}
                     />
                     {position.ticker}
                   </span>

@@ -11,6 +11,7 @@ import {
 import { LineChart } from "lucide-react";
 import { AddTransactionButton } from "@/components/add-transaction-button";
 import { AppNav } from "@/components/app-nav";
+import { LogoDevAttribution } from "@/components/asset-logo";
 import { DocumentationDialog } from "@/components/documentation-dialog";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { UserMenu } from "@/components/user-menu";
@@ -78,6 +79,9 @@ function AppLayout() {
         <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
           <Outlet />
         </main>
+        <footer className="mx-auto flex w-full max-w-6xl justify-end px-4 pb-4 sm:px-6">
+          <LogoDevAttribution />
+        </footer>
       </div>
     </SettingsProvider>
   );

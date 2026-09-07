@@ -30,6 +30,7 @@ import {
   X,
 } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import { AssetLogo } from "@/components/asset-logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -709,7 +710,12 @@ export function AllocationTable({
                           : "bg-card group-hover:bg-[color-mix(in_oklab,var(--muted)_50%,var(--card))]",
                       )}
                     >
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-2">
+                        <AssetLogo
+                          ticker={row.ticker}
+                          assetClass={row.assetClass}
+                          currency={row.currency}
+                        />
                         <Link
                           to="/allocation/$ticker"
                           params={{ ticker: row.ticker }}

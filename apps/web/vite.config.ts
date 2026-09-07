@@ -14,6 +14,7 @@ const port = process.env.WEB_PORT ? Number(process.env.WEB_PORT) : 5173;
 const apiPort = process.env.API_PORT ? Number(process.env.API_PORT) : 3001;
 
 export default defineConfig({
+  envDir: path.resolve(dir, "../.."),
   plugins: [
     tanstackRouter({
       target: "react",
@@ -30,7 +31,7 @@ export default defineConfig({
     },
   },
   server: {
-    host: "127.0.0.1",
+    host: "localhost",
     port,
     strictPort: true,
     proxy: {

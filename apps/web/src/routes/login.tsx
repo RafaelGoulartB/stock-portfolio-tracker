@@ -8,6 +8,7 @@ import { LineChart, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
+import { LogoDevAttribution } from "@/components/asset-logo";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -228,6 +229,8 @@ function LoginPage() {
           <LanguageSwitcher />
           <ThemeSwitcher />
         </div>
+
+        <LogoDevAttribution className="text-center" />
       </div>
     </main>
   );

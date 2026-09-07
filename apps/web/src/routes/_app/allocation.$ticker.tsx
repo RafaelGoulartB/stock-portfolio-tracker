@@ -11,6 +11,7 @@ import { AssetDetailChart } from "@/components/allocation/asset-detail-chart";
 import { AssetMovements } from "@/components/allocation/asset-movements";
 import { AssetReviews } from "@/components/allocation/asset-reviews";
 import { AssetClassLabel, CurrencyBadge } from "@/components/asset-labels";
+import { AssetLogo } from "@/components/asset-logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -149,6 +150,12 @@ function AssetDetailPage() {
         <>
           <header className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
+              <AssetLogo
+                ticker={row.ticker}
+                assetClass={row.assetClass}
+                currency={row.currency}
+                className="size-10"
+              />
               <h1 className="text-2xl font-semibold tracking-tight">
                 {row.ticker}
               </h1>
