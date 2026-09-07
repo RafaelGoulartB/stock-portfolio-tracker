@@ -11,6 +11,7 @@ import {
 import { LineChart } from "lucide-react";
 import { AddTransactionButton } from "@/components/add-transaction-button";
 import { AppNav } from "@/components/app-nav";
+import { DocumentationDialog } from "@/components/documentation-dialog";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { UserMenu } from "@/components/user-menu";
 import { trpc } from "@/lib/api";
@@ -63,6 +64,7 @@ function AppLayout() {
 
             <div className="ml-auto flex items-center gap-2">
               <AddTransactionButton />
+              <DocumentationDialog />
               <SettingsDialog />
               <UserMenu
                 email={user.email}
