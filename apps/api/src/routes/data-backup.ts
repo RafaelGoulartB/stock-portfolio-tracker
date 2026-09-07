@@ -129,6 +129,7 @@ async function* exportBackup(userId: string): AsyncGenerator<string> {
       select ticker, asset_class as "assetClass", currency,
         target_weight as "targetWeight", valuation_ref as "valuationRef",
         manual_price as "manualPrice", sort_order as "sortOrder",
+        mark_color as "markColor",
         created_at as "createdAt", updated_at as "updatedAt"
       from allocation_assets where user_id = ${userId} order by id
     `.cursor(BATCH_SIZE)) {

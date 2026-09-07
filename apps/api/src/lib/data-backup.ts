@@ -66,6 +66,7 @@ const allocationAssetRecord = z.strictObject({
     valuationRef: z.string().nullable(),
     manualPrice: nullableDecimal,
     sortOrder: z.number().int(),
+    markColor: z.string().nullable().optional(),
     createdAt: databaseTimestamp,
     updatedAt: databaseTimestamp,
   }),

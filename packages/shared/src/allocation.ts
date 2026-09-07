@@ -116,6 +116,38 @@ export type AllocationHistoryPoint = z.infer<
 >;
 
 /**
+ * Soft row highlight on the allocation table. Tokens only — the user decides
+ * what each color means. Stored on `allocation_assets.mark_color`.
+ */
+export const ALLOCATION_MARK_COLORS = [
+  "blue",
+  "yellow",
+  "red",
+  "orange",
+  "green",
+] as const;
+
+export const allocationMarkColorSchema = z.enum(ALLOCATION_MARK_COLORS);
+export type AllocationMarkColor = z.infer<typeof allocationMarkColorSchema>;
+
+/** Cycles null → blue → … → green → null for the left-index toggle. */
+export function nextAllocationMarkColor(
+  current: AllocationMarkColor | null,
+): AllocationMarkColor | null {
+  if (current === null) {
+    return ALLOCATION_MARK_COLORS[0];
+  }
+
+  const index = ALLOCATION_MARK_COLORS.indexOf(current);
+
+  if (index < 0 || index >= ALLOCATION_MARK_COLORS.length - 1) {
+    return null;
+  }
+
+  return ALLOCATION_MARK_COLORS[index + 1] ?? null;
+}
+
+/**
  * Creates or patches the analysis metadata of a ticker. Omitted fields keep
  * their stored value, which is what inline cell edits send; an explicit
  * `null` clears the field. Upserting a ticker with no position is how a
@@ -127,6 +159,7 @@ export const upsertAllocationAssetInput = z.object({
   currency: currencySchema.optional(),
   targetWeight: weightRatio.nullable().optional(),
   valuationRef: valuationRefSchema.nullable().optional(),
+  markColor: allocationMarkColorSchema.nullable().optional(),
 });
 
 export type UpsertAllocationAssetInput = z.input<
@@ -259,6 +292,8 @@ export const allocationRowSchema = z.object({
   /** Date of the last buy (`YYYY-MM-DD`), `null` when never bought. */
   lastContributionAt: z.string().nullable(),
   valuationRef: z.string().nullable(),
+  /** Soft row highlight; null when unmarked. */
+  markColor: allocationMarkColorSchema.nullable(),
   sortOrder: z.number(),
   quoteMissing: z.boolean(),
   score: scoreBreakdownSchema,

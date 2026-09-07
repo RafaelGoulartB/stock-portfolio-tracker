@@ -1,5 +1,6 @@
 import type {
   AllocationHistoryPoint,
+  AllocationMarkColor,
   AllocationRow,
   AllocationSummary,
   AssetClass,
@@ -34,6 +35,8 @@ export type AllocationAssetMeta = {
   valuationRef: string | null;
   /** Native per-unit price stored when no public quote exists. */
   manualPrice: string | null;
+  /** Soft row highlight token, null when unmarked. */
+  markColor: AllocationMarkColor | null;
   sortOrder: number;
 };
 
@@ -383,6 +386,7 @@ export function buildAllocationRows(input: AllocationInput): AllocationRow[] {
       gradedQuarters: grades.quarters,
       lastContributionAt,
       valuationRef: asset?.valuationRef ?? null,
+      markColor: asset?.markColor ?? null,
       sortOrder: asset?.sortOrder ?? UNRANKED,
       quoteMissing: position?.quoteMissing ?? false,
       score: scoreAsset(

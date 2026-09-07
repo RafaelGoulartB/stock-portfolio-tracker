@@ -104,6 +104,11 @@ export const allocationAssets = pgTable(
     manualPrice: numeric("manual_price", DECIMAL),
     /** Free-order rank, ascending. Ties fall back to the ticker. */
     sortOrder: integer("sort_order").notNull().default(0),
+    /**
+     * Soft row highlight on the allocation table (`blue` / `yellow` / …).
+     * Null when unmarked. Meaning of each color is user-defined.
+     */
+    markColor: text("mark_color"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

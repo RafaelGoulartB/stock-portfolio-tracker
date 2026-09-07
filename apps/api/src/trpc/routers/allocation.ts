@@ -2,6 +2,8 @@ import {
   type AssetClass,
   allocationHistoryInput,
   allocationListInput,
+  allocationMarkColorSchema,
+  type AllocationMarkColor,
   type Currency,
   DEFAULT_SCORE_CONFIG,
   FX_EXECUTION_IOF,
@@ -67,6 +69,16 @@ function normalizeAssetClass(value: string): AssetClass {
   return (value === "stock" ? "stock_br" : value) as AssetClass;
 }
 
+function parseMarkColor(value: string | null): AllocationMarkColor | null {
+  if (value === null) {
+    return null;
+  }
+
+  const parsed = allocationMarkColorSchema.safeParse(value);
+
+  return parsed.success ? parsed.data : null;
+}
+
 async function loadAssets(userId: string): Promise<AllocationAssetMeta[]> {
   const rows = await db
     .select()
@@ -81,6 +93,7 @@ async function loadAssets(userId: string): Promise<AllocationAssetMeta[]> {
     targetWeight: row.targetWeight,
     valuationRef: row.valuationRef,
     manualPrice: row.manualPrice,
+    markColor: parseMarkColor(row.markColor),
     sortOrder: row.sortOrder,
   }));
 }
@@ -391,6 +404,9 @@ export const allocationRouter = router({
           : {}),
         ...(input.valuationRef !== undefined
           ? { valuationRef: input.valuationRef }
+          : {}),
+        ...(input.markColor !== undefined
+          ? { markColor: input.markColor }
           : {}),
       };
 

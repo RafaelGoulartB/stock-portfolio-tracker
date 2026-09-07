@@ -1,4 +1,7 @@
-import type { ValuedPosition } from "@portifolio-tracker/shared";
+import {
+  nextAllocationMarkColor,
+  type ValuedPosition,
+} from "@portifolio-tracker/shared";
 import { describe, expect, it } from "vitest";
 import {
   type AllocationAssetMeta,
@@ -52,6 +55,7 @@ function asset(
     targetWeight: "0.015",
     valuationRef: "1Q26",
     manualPrice: null,
+    markColor: null,
     sortOrder: 1,
     ...overrides,
   };
@@ -420,8 +424,19 @@ describe("manualPriceFromMarketValue", () => {
   });
 
   it("converts a BRL value into a USD price at the spot rate", () => {
-    expect(
-      manualPriceFromMarketValue("3000.00", "50", "BRL", "USD", "5"),
-    ).toBe("12.00000000");
+    expect(manualPriceFromMarketValue("3000.00", "50", "BRL", "USD", "5")).toBe(
+      "12.00000000",
+    );
+  });
+});
+
+describe("nextAllocationMarkColor", () => {
+  it("cycles through every color and back to null", () => {
+    expect(nextAllocationMarkColor(null)).toBe("blue");
+    expect(nextAllocationMarkColor("blue")).toBe("yellow");
+    expect(nextAllocationMarkColor("yellow")).toBe("red");
+    expect(nextAllocationMarkColor("red")).toBe("orange");
+    expect(nextAllocationMarkColor("orange")).toBe("green");
+    expect(nextAllocationMarkColor("green")).toBeNull();
   });
 });

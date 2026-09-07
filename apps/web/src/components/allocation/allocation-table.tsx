@@ -3,9 +3,14 @@ import { t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import type {
+  AllocationMarkColor,
   AllocationRow,
   AllocationSummary,
   AssetReview,
+} from "@portifolio-tracker/shared";
+import {
+  ALLOCATION_MARK_COLORS,
+  nextAllocationMarkColor,
 } from "@portifolio-tracker/shared";
 import { Link } from "@tanstack/react-router";
 import {
@@ -22,6 +27,7 @@ import {
   Timer,
   Trash2,
   TriangleAlert,
+  X,
 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +37,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -185,8 +192,7 @@ function fromScaled(value: bigint, places: number): string {
   const absolute = negative ? -value : value;
   const quotient = absolute / divisor;
   const remainder = absolute % divisor;
-  const rounded =
-    remainder * 2n >= divisor ? quotient + 1n : quotient;
+  const rounded = remainder * 2n >= divisor ? quotient + 1n : quotient;
   const digits = rounded.toString().padStart(places + 1, "0");
   const whole = digits.slice(0, digits.length - places);
   const fraction = places > 0 ? digits.slice(digits.length - places) : "";
@@ -325,6 +331,11 @@ export type AllocationTableProps = {
   onEditValue: (ticker: string, text: string) => void;
   onClearAnalysis: (ticker: string) => void;
   onRemoveAsset: (row: AllocationRow) => void;
+  /** Soft row mark; `null` clears. */
+  onSetMarkColor: (
+    ticker: string,
+    markColor: AllocationMarkColor | null,
+  ) => void;
   onSaveReview: (input: {
     ticker: string;
     period: string;
@@ -340,6 +351,42 @@ export type AllocationTableProps = {
 
 const FOCUS_QUARTERS_KEY = "portfolio.allocation.focusQuarters";
 const FOCUS_QUARTER_COL = "bg-blue-400/[0.04]";
+
+/**
+ * Soft mark tint mixed into `--card` so sticky ticker and the rest of the
+ * row share the same opaque wash. Hover deepens the same hue slightly
+ * instead of swapping to muted grey.
+ */
+const MARK_ROW: Record<AllocationMarkColor, string> = {
+  blue: "bg-[color-mix(in_oklab,var(--color-blue-400)_7%,var(--card))] hover:bg-[color-mix(in_oklab,var(--color-blue-400)_10%,var(--card))]",
+  yellow:
+    "bg-[color-mix(in_oklab,var(--color-yellow-400)_10%,var(--card))] hover:bg-[color-mix(in_oklab,var(--color-yellow-400)_13%,var(--card))]",
+  red: "bg-[color-mix(in_oklab,var(--color-red-400)_7%,var(--card))] hover:bg-[color-mix(in_oklab,var(--color-red-400)_10%,var(--card))]",
+  orange:
+    "bg-[color-mix(in_oklab,var(--color-orange-400)_10%,var(--card))] hover:bg-[color-mix(in_oklab,var(--color-orange-400)_13%,var(--card))]",
+  green:
+    "bg-[color-mix(in_oklab,var(--color-green-400)_7%,var(--card))] hover:bg-[color-mix(in_oklab,var(--color-green-400)_10%,var(--card))]",
+};
+
+/** Same wash as {@link MARK_ROW}, driven by `group-hover` for the sticky cell. */
+const MARK_STICKY: Record<AllocationMarkColor, string> = {
+  blue: "bg-[color-mix(in_oklab,var(--color-blue-400)_7%,var(--card))] group-hover:bg-[color-mix(in_oklab,var(--color-blue-400)_10%,var(--card))]",
+  yellow:
+    "bg-[color-mix(in_oklab,var(--color-yellow-400)_10%,var(--card))] group-hover:bg-[color-mix(in_oklab,var(--color-yellow-400)_13%,var(--card))]",
+  red: "bg-[color-mix(in_oklab,var(--color-red-400)_7%,var(--card))] group-hover:bg-[color-mix(in_oklab,var(--color-red-400)_10%,var(--card))]",
+  orange:
+    "bg-[color-mix(in_oklab,var(--color-orange-400)_10%,var(--card))] group-hover:bg-[color-mix(in_oklab,var(--color-orange-400)_13%,var(--card))]",
+  green:
+    "bg-[color-mix(in_oklab,var(--color-green-400)_7%,var(--card))] group-hover:bg-[color-mix(in_oklab,var(--color-green-400)_10%,var(--card))]",
+};
+
+const MARK_DOT: Record<AllocationMarkColor, string> = {
+  blue: "bg-blue-400",
+  yellow: "bg-yellow-400",
+  red: "bg-red-400",
+  orange: "bg-orange-400",
+  green: "bg-green-400",
+};
 
 function initialFocusQuarters(): Set<string> {
   try {
@@ -370,6 +417,7 @@ export function AllocationTable({
   onEditValue,
   onClearAnalysis,
   onRemoveAsset,
+  onSetMarkColor,
   onSaveReview,
   onRemoveReview,
   missing,
@@ -535,6 +583,7 @@ export function AllocationTable({
                   key={row.ticker}
                   className={cn(
                     "group h-12",
+                    row.markColor ? MARK_ROW[row.markColor] : undefined,
                     dragging === row.ticker && "opacity-50",
                     dropTarget === row.ticker && "border-t-2 border-t-ring",
                   )}
@@ -601,14 +650,42 @@ export function AllocationTable({
                         <GripVertical className="size-3.5" aria-hidden="true" />
                       </button>
                     ) : (
-                      <span className="flex size-6 items-center justify-center text-xs tabular-nums text-muted-foreground">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          onSetMarkColor(
+                            row.ticker,
+                            nextAllocationMarkColor(row.markColor),
+                          )
+                        }
+                        aria-label={i18n._(
+                          t({
+                            id: "allocation.cycleMark",
+                            message: `Cycle highlight color for ${row.ticker}`,
+                          }),
+                        )}
+                        title={i18n._(
+                          t({
+                            id: "allocation.cycleMarkHint",
+                            message: "Click to cycle highlight color",
+                          }),
+                        )}
+                        className="flex size-6 items-center justify-center rounded-sm text-xs tabular-nums text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+                      >
                         {index + 1}
-                      </span>
+                      </button>
                     )}
                   </TableCell>
 
                   {visibleColumns.has("ticker") ? (
-                    <TableCell className="sticky left-0 z-10 bg-card px-2.5 py-2.5 group-hover:bg-[color-mix(in_oklab,var(--muted)_50%,var(--card))]">
+                    <TableCell
+                      className={cn(
+                        "sticky left-0 z-10 px-2.5 py-2.5",
+                        row.markColor
+                          ? MARK_STICKY[row.markColor]
+                          : "bg-card group-hover:bg-[color-mix(in_oklab,var(--muted)_50%,var(--card))]",
+                      )}
+                    >
                       <div className="flex items-center gap-1.5">
                         <Link
                           to="/allocation/$ticker"
@@ -903,6 +980,9 @@ export function AllocationTable({
                       onMove={(offset) => moveBy(row.ticker, offset)}
                       onClear={() => onClearAnalysis(row.ticker)}
                       onRemove={() => onRemoveAsset(row)}
+                      onSetMarkColor={(markColor) =>
+                        onSetMarkColor(row.ticker, markColor)
+                      }
                     />
                   </TableCell>
                 </TableRow>
@@ -1038,12 +1118,14 @@ function RowMenu({
   onMove,
   onClear,
   onRemove,
+  onSetMarkColor,
 }: {
   row: AllocationRow;
   freeOrder: boolean;
   onMove: (offset: number) => void;
   onClear: () => void;
   onRemove: () => void;
+  onSetMarkColor: (markColor: AllocationMarkColor | null) => void;
 }): ReactNode {
   const { i18n } = useLingui();
 
@@ -1072,6 +1154,54 @@ function RowMenu({
             <Trans id="allocation.viewDetails">View details</Trans>
           </Link>
         </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
+          <Trans id="allocation.markColor">Highlight</Trans>
+        </DropdownMenuLabel>
+        <div className="flex items-center gap-1.5 px-2 pb-1.5">
+          {ALLOCATION_MARK_COLORS.map((color) => {
+            const selected = row.markColor === color;
+
+            return (
+              <button
+                key={color}
+                type="button"
+                aria-label={i18n._(
+                  t({
+                    id: "allocation.markAs",
+                    message: `Mark ${row.ticker} ${color}`,
+                  }),
+                )}
+                aria-pressed={selected}
+                onClick={() => onSetMarkColor(color)}
+                className={cn(
+                  "flex size-5 items-center justify-center rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
+                  selected &&
+                    "ring-2 ring-foreground/40 ring-offset-1 ring-offset-popover",
+                )}
+              >
+                <span
+                  className={cn("size-3.5 rounded-full", MARK_DOT[color])}
+                  aria-hidden="true"
+                />
+              </button>
+            );
+          })}
+          <button
+            type="button"
+            aria-label={i18n._(
+              t({
+                id: "allocation.clearMark",
+                message: `Clear highlight on ${row.ticker}`,
+              }),
+            )}
+            disabled={row.markColor === null}
+            onClick={() => onSetMarkColor(null)}
+            className="flex size-5 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-40"
+          >
+            <X className="size-3.5" aria-hidden="true" />
+          </button>
+        </div>
         <DropdownMenuSeparator />
         {freeOrder ? (
           <>

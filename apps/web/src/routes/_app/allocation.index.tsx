@@ -1,7 +1,10 @@
 import { msg, t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
-import type { AllocationRow } from "@portifolio-tracker/shared";
+import type {
+  AllocationMarkColor,
+  AllocationRow,
+} from "@portifolio-tracker/shared";
 import { positiveDecimal, weightRatio } from "@portifolio-tracker/shared";
 import { createFileRoute } from "@tanstack/react-router";
 import {
@@ -12,7 +15,7 @@ import {
   RotateCcw,
   Search,
 } from "lucide-react";
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   AddAssetDialog,
@@ -197,16 +200,24 @@ function AllocationPage() {
     [manualPrices],
   );
 
-  const allocation = trpc.allocation.list.useQuery({
-    displayCurrency,
-    usdBrlRate: fx.effectiveRate,
-    quoteSource,
-    manualPrices:
-      quoteSource === "manual" && Object.keys(sanitizedManualPrices).length > 0
-        ? sanitizedManualPrices
-        : undefined,
-  });
+  const allocationListInput = useMemo(
+    () => ({
+      displayCurrency,
+      usdBrlRate: fx.effectiveRate,
+      quoteSource,
+      manualPrices:
+        quoteSource === "manual" &&
+        Object.keys(sanitizedManualPrices).length > 0
+          ? sanitizedManualPrices
+          : undefined,
+    }),
+    [displayCurrency, fx.effectiveRate, quoteSource, sanitizedManualPrices],
+  );
+
+  const allocation = trpc.allocation.list.useQuery(allocationListInput);
   const categories = trpc.categories.list.useQuery();
+  /** Latest in-flight mark write per ticker — older failures must not rollback. */
+  const markWriteGeneration = useRef(new Map<string, number>());
 
   const waitingForRate =
     !!allocation.error && isFxRateRequired(allocation.error) && fx.isPending;
@@ -251,6 +262,46 @@ function AllocationPage() {
   const upsertAsset = trpc.allocation.upsertAsset.useMutation({
     onSuccess: refresh,
     onError: reportError,
+  });
+  const setMarkColor = trpc.allocation.upsertAsset.useMutation({
+    onMutate: async ({ ticker, markColor }) => {
+      if (markColor === undefined) {
+        return undefined;
+      }
+
+      const generation = (markWriteGeneration.current.get(ticker) ?? 0) + 1;
+      markWriteGeneration.current.set(ticker, generation);
+
+      await utils.allocation.list.cancel(allocationListInput);
+      const previous = utils.allocation.list.getData(allocationListInput);
+
+      utils.allocation.list.setData(allocationListInput, (current) => {
+        if (!current) {
+          return current;
+        }
+
+        return {
+          ...current,
+          rows: current.rows.map((row) =>
+            row.ticker === ticker ? { ...row, markColor, tracked: true } : row,
+          ),
+        };
+      });
+
+      return { previous, ticker, generation };
+    },
+    onError: (error, _input, context) => {
+      if (
+        context &&
+        markWriteGeneration.current.get(context.ticker) ===
+          context.generation &&
+        context.previous
+      ) {
+        utils.allocation.list.setData(allocationListInput, context.previous);
+      }
+
+      reportError(error);
+    },
   });
   const removeAsset = trpc.allocation.removeAsset.useMutation({
     onSuccess: async (result) => {
@@ -483,10 +534,7 @@ function AllocationPage() {
           />
         </div>
 
-        <Select
-          value={activeCategoryFilter}
-          onValueChange={setCategoryFilter}
-        >
+        <Select value={activeCategoryFilter} onValueChange={setCategoryFilter}>
           <SelectTrigger
             size="sm"
             className="w-44"
@@ -676,6 +724,10 @@ function AllocationPage() {
             })
           }
           onRemoveAsset={(row) => removeAsset.mutate({ ticker: row.ticker })}
+          onSetMarkColor={(
+            ticker: string,
+            markColor: AllocationMarkColor | null,
+          ) => setMarkColor.mutate({ ticker, markColor })}
           onSaveReview={(input) => upsertReview.mutate(input)}
           onRemoveReview={(input) => removeReview.mutate(input)}
           missing={allocation.data.quotes.missing}

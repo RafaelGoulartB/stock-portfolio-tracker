@@ -8,6 +8,13 @@
       "when": 1788661538008,
       "tag": "0000_initial_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1788748853256,
+      "tag": "0001_broken_living_lightning",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,1 @@
+ALTER TABLE "allocation_assets" ADD COLUMN "mark_color" text;
