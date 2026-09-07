@@ -236,6 +236,41 @@ describe("buildAllocationRows", () => {
     expect(rows[0]?.score.ruleId).toBe("no-target");
   });
 
+  it("derives the cash target from every assigned asset target", () => {
+    const rows = buildAllocationRows({
+      positions: [
+        position({ ticker: "PETR4", weight: "0.70" }),
+        position({
+          ticker: "CASH",
+          assetClass: "cash",
+          currency: "BRL",
+          marketValue: "3000.00",
+          convertedMarketValue: "3000.00",
+          weight: "0.30",
+        }),
+      ],
+      assets: [
+        asset({ ticker: "PETR4", targetWeight: "0.75" }),
+        asset({ ticker: "CAVA", targetWeight: "0.10" }),
+      ],
+      reviews: [],
+      lastContributionByTicker: new Map(),
+      displayCurrency: "BRL",
+      today: TODAY,
+    });
+    const cash = rows.find((row) => row.ticker === "CASH");
+
+    expect(cash).toMatchObject({
+      assetClass: "cash",
+      tracked: true,
+      hasPosition: true,
+      targetWeight: "0.15000000",
+      gapWeight: "-0.15000000",
+      valueSource: "manual",
+      sortOrder: -1,
+    });
+  });
+
   it("drops closed positions but keeps the ones still tracked", () => {
     const rows = buildAllocationRows({
       positions: [

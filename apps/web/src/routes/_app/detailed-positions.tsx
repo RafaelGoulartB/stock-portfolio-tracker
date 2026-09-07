@@ -620,10 +620,20 @@ function PositionCell({
       content = position.currency;
       break;
     case "quantity":
-      content = formatQuantity(position.quantity);
+      content =
+        position.assetClass === "cash" ? (
+          <Dash />
+        ) : (
+          formatQuantity(position.quantity)
+        );
       break;
     case "averagePrice":
-      content = formatMoney(position.averagePrice, position.currency);
+      content =
+        position.assetClass === "cash" ? (
+          <Dash />
+        ) : (
+          formatMoney(position.averagePrice, position.currency)
+        );
       break;
     case "investedCost":
       content = formatMoney(
@@ -633,7 +643,7 @@ function PositionCell({
       break;
     case "marketPrice":
       content =
-        position.marketPrice == null ? (
+        position.assetClass === "cash" || position.marketPrice == null ? (
           <Dash missing={missing} />
         ) : (
           formatMoney(position.marketPrice, position.currency)

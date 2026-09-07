@@ -7,12 +7,13 @@ import {
 import { z } from "zod";
 
 export const BACKUP_FORMAT = "portifolio-tracker-backup";
-export const BACKUP_VERSION = 2;
+export const BACKUP_VERSION = 3;
 export const BACKUP_MEDIA_TYPE = "application/x-portifolio-backup+gzip";
 
 export const BACKUP_ENTITIES = [
   "categories",
   "allocationAssets",
+  "cashBalances",
   "assetReviews",
   "transactions",
   "assetCategories",
@@ -30,6 +31,7 @@ const databaseTimestamp = timestamp.transform((value) => new Date(value));
 const backupCountsSchema = z.strictObject({
   categories: z.number().int().nonnegative(),
   allocationAssets: z.number().int().nonnegative(),
+  cashBalances: z.number().int().nonnegative().default(0),
   assetReviews: z.number().int().nonnegative(),
   transactions: z.number().int().nonnegative(),
   assetCategories: z.number().int().nonnegative(),
@@ -39,7 +41,7 @@ const backupCountsSchema = z.strictObject({
 export const manifestSchema = z.object({
   type: z.literal("manifest"),
   format: z.literal(BACKUP_FORMAT),
-  version: z.union([z.literal(1), z.literal(2)]),
+  version: z.union([z.literal(1), z.literal(2), z.literal(3)]),
   exportedAt: timestamp,
   counts: backupCountsSchema,
 });
@@ -72,6 +74,15 @@ const allocationAssetRecord = z.strictObject({
     sortOrder: z.number().int(),
     markColor: z.string().nullable().optional(),
     createdAt: databaseTimestamp,
+    updatedAt: databaseTimestamp,
+  }),
+});
+
+const cashBalanceRecord = z.strictObject({
+  type: z.literal("record"),
+  entity: z.literal("cashBalances"),
+  data: z.strictObject({
+    amount: decimal,
     updatedAt: databaseTimestamp,
   }),
 });
@@ -145,6 +156,7 @@ const scoreConfigRecord = z.strictObject({
 export const backupRecordSchema = z.discriminatedUnion("entity", [
   categoryRecord,
   allocationAssetRecord,
+  cashBalanceRecord,
   assetReviewRecord,
   transactionRecord,
   assetCategoryRecord,
@@ -171,6 +183,7 @@ export function emptyBackupCounts(): BackupCounts {
   return {
     categories: 0,
     allocationAssets: 0,
+    cashBalances: 0,
     assetReviews: 0,
     transactions: 0,
     assetCategories: 0,

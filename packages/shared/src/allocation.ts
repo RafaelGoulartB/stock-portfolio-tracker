@@ -5,6 +5,9 @@ import { quoteSourceSchema } from "./quotes";
 import { gradeSchema, scoreBreakdownSchema } from "./score";
 import { assetClassSchema, tickerSchema } from "./transactions";
 
+/** Stable identity of the account's virtual, non-transaction cash position. */
+export const CASH_TICKER = "CASH";
+
 /** Calendar quarter of a review, `YYYYQ[1-4]`. Keys sort chronologically. */
 export const reviewPeriodSchema = z
   .string()
@@ -181,6 +184,16 @@ export const setManualValueInput = z.object({
 });
 
 export type SetManualValueInput = z.input<typeof setManualValueInput>;
+
+/** Updates the single BRL-denominated cash balance from a displayed amount. */
+export const setCashBalanceInput = z.object({
+  marketValue: nonNegativeDecimal,
+  displayCurrency: currencySchema,
+  /** Required when the displayed amount is USD. */
+  usdBrlRate: positiveDecimal.optional(),
+});
+
+export type SetCashBalanceInput = z.input<typeof setCashBalanceInput>;
 
 /**
  * Drops the analysis metadata of a ticker. Transactions and quarterly

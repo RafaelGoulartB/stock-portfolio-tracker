@@ -4,6 +4,9 @@ import {
   positionsListInput,
 } from "@portifolio-tracker/shared";
 import { TRPCError } from "@trpc/server";
+import { eq } from "drizzle-orm";
+import { db } from "../../db";
+import { cashBalances } from "../../db/schema";
 import {
   consolidatePositions,
   convertMoney,
@@ -11,6 +14,7 @@ import {
   filterTransactionsByAsOf,
   summarizePositions,
   valuePositions,
+  withCashPosition,
 } from "../../domain/positions";
 import {
   add,
@@ -99,17 +103,23 @@ export const positionsRouter = router({
   daily: protectedProcedure
     .input(dailyTrackingInput)
     .query(async ({ ctx, input }) => {
-      const [history, storedManualPrices] = await Promise.all([
+      const [history, storedManualPrices, cashRows] = await Promise.all([
         loadTransactions(ctx.user.id),
         loadStoredManualPrices(ctx.user.id),
+        db
+          .select({ amount: cashBalances.amount })
+          .from(cashBalances)
+          .where(eq(cashBalances.userId, ctx.user.id))
+          .limit(1),
       ]);
       const snapshotDate = dailySnapshotDate();
       const native = consolidatePositions(
         filterTransactionsByAsOf(history, snapshotDate),
       );
-      const needsRate = native.some(
-        (position) => position.currency !== input.displayCurrency,
-      );
+      const needsRate =
+        native.some(
+          (position) => position.currency !== input.displayCurrency,
+        ) || input.displayCurrency !== "BRL";
 
       if (needsRate && !input.usdBrlRate) {
         throw new TRPCError({
@@ -181,12 +191,17 @@ export const positionsRouter = router({
         });
       }
 
-      const valued = valuePositions(
-        converted,
-        quotes,
+      const valued = withCashPosition(
+        valuePositions(
+          converted,
+          quotes,
+          input.displayCurrency,
+          input.usdBrlRate ?? null,
+        ).filter((position) => Number(position.quantity) > 0),
+        cashRows[0]?.amount ?? "0",
         input.displayCurrency,
         input.usdBrlRate ?? null,
-      ).filter((position) => Number(position.quantity) > 0);
+      );
 
       let previousComparableValue = ZERO;
       let currentComparableValue = ZERO;

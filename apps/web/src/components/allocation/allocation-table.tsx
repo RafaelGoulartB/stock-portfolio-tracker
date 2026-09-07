@@ -10,6 +10,7 @@ import type {
 } from "@portifolio-tracker/shared";
 import {
   ALLOCATION_MARK_COLORS,
+  CASH_TICKER,
   nextAllocationMarkColor,
 } from "@portifolio-tracker/shared";
 import { Link } from "@tanstack/react-router";
@@ -612,7 +613,7 @@ export function AllocationTable({
                     dropTarget === row.ticker && "border-t-2 border-t-ring",
                   )}
                   onDragOver={
-                    freeOrder
+                    freeOrder && row.ticker !== CASH_TICKER
                       ? (event) => {
                           event.preventDefault();
                           setDropTarget(row.ticker);
@@ -620,7 +621,7 @@ export function AllocationTable({
                       : undefined
                   }
                   onDragLeave={
-                    freeOrder
+                    freeOrder && row.ticker !== CASH_TICKER
                       ? () =>
                           setDropTarget((current) =>
                             current === row.ticker ? null : current,
@@ -628,7 +629,7 @@ export function AllocationTable({
                       : undefined
                   }
                   onDrop={
-                    freeOrder
+                    freeOrder && row.ticker !== CASH_TICKER
                       ? (event) => {
                           event.preventDefault();
                           setDropTarget(null);
@@ -643,7 +644,7 @@ export function AllocationTable({
                   }
                 >
                   <TableCell className="px-1.5 py-2.5">
-                    {freeOrder ? (
+                    {freeOrder && row.ticker !== CASH_TICKER ? (
                       <button
                         type="button"
                         draggable
@@ -673,6 +674,10 @@ export function AllocationTable({
                       >
                         <GripVertical className="size-3.5" aria-hidden="true" />
                       </button>
+                    ) : row.ticker === CASH_TICKER ? (
+                      <span className="flex size-6 items-center justify-center text-xs tabular-nums text-muted-foreground">
+                        {index + 1}
+                      </span>
                     ) : (
                       <button
                         type="button"
@@ -716,13 +721,19 @@ export function AllocationTable({
                           assetClass={row.assetClass}
                           currency={row.currency}
                         />
-                        <Link
-                          to="/assets/$ticker"
-                          params={{ ticker: row.ticker }}
-                          className="font-semibold hover:underline underline-offset-2"
-                        >
-                          {row.ticker}
-                        </Link>
+                        {row.ticker === CASH_TICKER ? (
+                          <span className="font-semibold">
+                            <Trans id="allocation.cash">Cash</Trans>
+                          </span>
+                        ) : (
+                          <Link
+                            to="/assets/$ticker"
+                            params={{ ticker: row.ticker }}
+                            className="font-semibold hover:underline underline-offset-2"
+                          >
+                            {row.ticker}
+                          </Link>
+                        )}
                         {row.hasPosition ? null : (
                           <Badge
                             variant="outline"
@@ -748,21 +759,39 @@ export function AllocationTable({
 
                   {visibleColumns.has("targetWeight") ? (
                     <TableCell className="px-2.5 py-2.5">
-                      <InlineEditCell
-                        display={
-                          row.targetWeight === null
-                            ? null
-                            : formatWeightPrecise(row.targetWeight)
-                        }
-                        text={formatPercentInput(row.targetWeight, i18n.locale)}
-                        label={i18n._(
-                          t({
-                            id: "allocation.editTarget",
-                            message: `Target weight of ${row.ticker}, in percent`,
-                          }),
-                        )}
-                        onCommit={(text) => onEditTarget(row.ticker, text)}
-                      />
+                      {row.ticker === CASH_TICKER ? (
+                        <span
+                          className="block h-8 px-1.5 text-right text-sm tabular-nums leading-8"
+                          title={i18n._(
+                            t({
+                              id: "allocation.cashTargetHint",
+                              message:
+                                "Automatically fills the part not assigned to other assets.",
+                            }),
+                          )}
+                        >
+                          {formatWeightPrecise(row.targetWeight ?? "0")}
+                        </span>
+                      ) : (
+                        <InlineEditCell
+                          display={
+                            row.targetWeight === null
+                              ? null
+                              : formatWeightPrecise(row.targetWeight)
+                          }
+                          text={formatPercentInput(
+                            row.targetWeight,
+                            i18n.locale,
+                          )}
+                          label={i18n._(
+                            t({
+                              id: "allocation.editTarget",
+                              message: `Target weight of ${row.ticker}, in percent`,
+                            }),
+                          )}
+                          onCommit={(text) => onEditTarget(row.ticker, text)}
+                        />
+                      )}
                     </TableCell>
                   ) : null}
 
@@ -888,7 +917,9 @@ export function AllocationTable({
 
                   {visibleColumns.has("quantity") ? (
                     <TableCell className="px-2.5 py-2.5 text-right tabular-nums">
-                      {row.hasPosition ? (
+                      {row.assetClass === "cash" ? (
+                        <span className="text-muted-foreground">—</span>
+                      ) : row.hasPosition ? (
                         formatQuantity(row.quantity)
                       ) : (
                         <span className="text-muted-foreground">—</span>
@@ -932,21 +963,29 @@ export function AllocationTable({
                             }),
                           )}
                           title={
-                            row.valueSource === "manual"
+                            row.assetClass === "cash"
                               ? i18n._(
                                   t({
-                                    id: "allocation.valueManualTooltip",
+                                    id: "allocation.cashValueHint",
                                     message:
-                                      "No public quote. This value is set by you. Clear the cell to remove it.",
+                                      "Cash is entered manually and included in total net worth.",
                                   }),
                                 )
-                              : i18n._(
-                                  t({
-                                    id: "allocation.valueMissingTooltip",
-                                    message:
-                                      "No public quote. Enter the position's market value.",
-                                  }),
-                                )
+                              : row.valueSource === "manual"
+                                ? i18n._(
+                                    t({
+                                      id: "allocation.valueManualTooltip",
+                                      message:
+                                        "No public quote. This value is set by you. Clear the cell to remove it.",
+                                    }),
+                                  )
+                                : i18n._(
+                                    t({
+                                      id: "allocation.valueMissingTooltip",
+                                      message:
+                                        "No public quote. Enter the position's market value.",
+                                    }),
+                                  )
                           }
                           placeholder={i18n._(
                             t({
@@ -991,28 +1030,36 @@ export function AllocationTable({
                         focusQuarters.has(quarter.key) && FOCUS_QUARTER_COL,
                       )}
                     >
-                      <QuarterReviewCell
-                        ticker={row.ticker}
-                        quarter={quarter}
-                        review={reviewByPeriod.get(quarter.key)}
-                        saving={saving}
-                        onSave={onSaveReview}
-                        onRemove={onRemoveReview}
-                      />
+                      {row.ticker === CASH_TICKER ? (
+                        <span className="block text-center text-muted-foreground">
+                          —
+                        </span>
+                      ) : (
+                        <QuarterReviewCell
+                          ticker={row.ticker}
+                          quarter={quarter}
+                          review={reviewByPeriod.get(quarter.key)}
+                          saving={saving}
+                          onSave={onSaveReview}
+                          onRemove={onRemoveReview}
+                        />
+                      )}
                     </TableCell>
                   ))}
 
                   <TableCell className="px-1.5 py-2.5">
-                    <RowMenu
-                      row={row}
-                      freeOrder={freeOrder}
-                      onMove={(offset) => moveBy(row.ticker, offset)}
-                      onClear={() => onClearAnalysis(row.ticker)}
-                      onRemove={() => onRemoveAsset(row)}
-                      onSetMarkColor={(markColor) =>
-                        onSetMarkColor(row.ticker, markColor)
-                      }
-                    />
+                    {row.ticker === CASH_TICKER ? null : (
+                      <RowMenu
+                        row={row}
+                        freeOrder={freeOrder}
+                        onMove={(offset) => moveBy(row.ticker, offset)}
+                        onClear={() => onClearAnalysis(row.ticker)}
+                        onRemove={() => onRemoveAsset(row)}
+                        onSetMarkColor={(markColor) =>
+                          onSetMarkColor(row.ticker, markColor)
+                        }
+                      />
+                    )}
                   </TableCell>
                 </TableRow>
               );

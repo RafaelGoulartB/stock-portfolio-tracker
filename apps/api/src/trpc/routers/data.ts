@@ -5,6 +5,7 @@ import {
   allocationAssets,
   assetCategories,
   assetReviews,
+  cashBalances,
   categories,
   transactions,
   userScoreConfigs,
@@ -17,6 +18,7 @@ async function countForUser(
     | typeof allocationAssets
     | typeof assetReviews
     | typeof categories
+    | typeof cashBalances
     | typeof assetCategories
     | typeof userScoreConfigs,
   userId: string,
@@ -37,6 +39,7 @@ export const dataRouter = router({
       categoryCount,
       assetCategoryCount,
       scoreConfigCount,
+      cashBalanceCount,
     ] = await Promise.all([
       countForUser(transactions, ctx.user.id),
       countForUser(allocationAssets, ctx.user.id),
@@ -44,6 +47,7 @@ export const dataRouter = router({
       countForUser(categories, ctx.user.id),
       countForUser(assetCategories, ctx.user.id),
       countForUser(userScoreConfigs, ctx.user.id),
+      countForUser(cashBalances, ctx.user.id),
     ]);
 
     return {
@@ -53,6 +57,7 @@ export const dataRouter = router({
       categories: categoryCount,
       assetCategories: assetCategoryCount,
       scoreConfigs: scoreConfigCount,
+      cashBalances: cashBalanceCount,
     };
   }),
 
@@ -69,6 +74,9 @@ export const dataRouter = router({
         await tx
           .delete(allocationAssets)
           .where(eq(allocationAssets.userId, ctx.user.id));
+        await tx
+          .delete(cashBalances)
+          .where(eq(cashBalances.userId, ctx.user.id));
         await tx
           .delete(transactions)
           .where(eq(transactions.userId, ctx.user.id));

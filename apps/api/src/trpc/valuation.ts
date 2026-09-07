@@ -7,7 +7,7 @@ import type {
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { db } from "../db";
-import { allocationAssets } from "../db/schema";
+import { allocationAssets, cashBalances } from "../db/schema";
 import {
   type ConsolidationInput,
   consolidatePositions,
@@ -15,6 +15,7 @@ import {
   filterTransactionsByAsOf,
   type ValuationQuote,
   valuePositions,
+  withCashPosition,
 } from "../domain/positions";
 import {
   getQuoteProvider,
@@ -76,16 +77,24 @@ export async function loadStoredManualPrices(
 export async function loadValuedPortfolio(
   request: ValuationRequest,
 ): Promise<ValuationResult> {
-  const [transactions, storedManualPrices] = await Promise.all([
+  const [transactions, storedManualPrices, cashRows] = await Promise.all([
     loadTransactions(request.userId),
     loadStoredManualPrices(request.userId),
+    request.asOf
+      ? Promise.resolve([])
+      : db
+          .select({ amount: cashBalances.amount })
+          .from(cashBalances)
+          .where(eq(cashBalances.userId, request.userId))
+          .limit(1),
   ]);
   const native = consolidatePositions(
     filterTransactionsByAsOf(transactions, request.asOf ?? null),
   );
-  const needsRate = native.some(
-    (position) => position.currency !== request.displayCurrency,
-  );
+  const includeCash = request.asOf === undefined;
+  const needsRate =
+    native.some((position) => position.currency !== request.displayCurrency) ||
+    (includeCash && request.displayCurrency !== "BRL");
 
   if (needsRate && !request.usdBrlRate) {
     throw new TRPCError({
@@ -168,14 +177,23 @@ export async function loadValuedPortfolio(
     });
   }
 
+  const valued = valuePositions(
+    converted,
+    quotes,
+    request.displayCurrency,
+    request.usdBrlRate ?? null,
+  );
+
   return {
     transactions,
-    positions: valuePositions(
-      converted,
-      quotes,
-      request.displayCurrency,
-      request.usdBrlRate ?? null,
-    ),
+    positions: includeCash
+      ? withCashPosition(
+          valued,
+          cashRows[0]?.amount ?? "0",
+          request.displayCurrency,
+          request.usdBrlRate ?? null,
+        )
+      : valued,
     missing: missing.sort(),
     manual: manual.sort(),
   };

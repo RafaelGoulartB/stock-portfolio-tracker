@@ -34,6 +34,8 @@ export function AssetClassLabel({ assetClass }: { assetClass: AssetClass }) {
       return <Trans id="assetClass.crypto">Crypto</Trans>;
     case "fixed_income":
       return <Trans id="assetClass.fixedIncome">Fixed income</Trans>;
+    case "cash":
+      return <Trans id="assetClass.cash">Cash</Trans>;
     case "other":
       return <Trans id="assetClass.other">Other</Trans>;
   }
@@ -72,6 +74,8 @@ export function assetClassText(assetClass: AssetClass, i18n: I18n): string {
       return i18n._(
         msg({ id: "assetClass.fixedIncome", message: "Fixed income" }),
       );
+    case "cash":
+      return i18n._(msg({ id: "assetClass.cash", message: "Cash" }));
     case "other":
       return i18n._(msg({ id: "assetClass.other", message: "Other" }));
   }

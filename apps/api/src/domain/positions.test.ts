@@ -11,6 +11,7 @@ import {
   type TickerLedgerEntry,
   tickerCurrencies,
   valuePositions,
+  withCashPosition,
 } from "./positions";
 
 let sequence = 0;
@@ -469,6 +470,49 @@ describe("valuePositions", () => {
       totalUnrealizedPnl: "0.00",
       totalUnrealizedPnlPercent: null,
     });
+  });
+
+  it("includes cash in net worth and weights without inventing a return", () => {
+    const [stock] = valuePositions(
+      convertPositions(
+        consolidatePositions([
+          tx({ side: "buy", quantity: "10", price: "100" }),
+        ]),
+        "BRL",
+        null,
+      ),
+      new Map([
+        ["PETR4", { ticker: "PETR4", price: "100", asOf: "2026-09-07" }],
+      ]),
+      "BRL",
+      null,
+    );
+    if (!stock) throw new Error("expected stock position");
+    const positions = withCashPosition([stock], "500", "BRL", null);
+    const cash = positions.find((position) => position.assetClass === "cash");
+
+    expect(cash).toMatchObject({
+      ticker: "CASH",
+      convertedMarketValue: "500.00",
+      weight: "0.33333333",
+      quoteMissing: false,
+      convertedUnrealizedPnl: null,
+    });
+    expect(positions[0]?.weight).toBe("0.66666667");
+    expect(summarizePositions(positions, "BRL", null)).toMatchObject({
+      totalMarketValue: "1500.00",
+      quotedInvestedCost: "1000.00",
+      totalUnrealizedPnl: "0.00",
+    });
+  });
+
+  it("converts the BRL cash balance with the explicit rate", () => {
+    const [cash] = withCashPosition([], "500", "USD", "5");
+
+    expect(cash?.convertedMarketValue).toBe("100.00");
+    expect(() => withCashPosition([], "500", "USD", null)).toThrow(
+      "USD/BRL rate",
+    );
   });
 
   it("flags tickers without a quote instead of guessing", () => {

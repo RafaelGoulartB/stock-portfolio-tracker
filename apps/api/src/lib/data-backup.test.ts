@@ -54,7 +54,7 @@ describe("portable data backups", () => {
       },
     });
 
-    expect(manifest.version).toBe(2);
+    expect(manifest.version).toBe(3);
     if (record.entity !== "transactions") {
       throw new Error("expected transaction record");
     }
@@ -77,6 +77,7 @@ describe("portable data backups", () => {
     });
 
     expect(manifest.counts.scoreConfigs).toBe(0);
+    expect(manifest.counts.cashBalances).toBe(0);
   });
 
   it("hashes the exact newline-delimited representation", () => {
@@ -84,6 +85,22 @@ describe("portable data backups", () => {
     const hash = createBackupHash().update(line).digest("hex");
     expect(hash).toHaveLength(64);
     expect(hash).toBe(createBackupHash().update(line).digest("hex"));
+  });
+
+  it("keeps the cash balance as an exact decimal string", () => {
+    const record = backupRecordSchema.parse({
+      type: "record",
+      entity: "cashBalances",
+      data: {
+        amount: "12345.67890000",
+        updatedAt: "2026-09-07T12:00:00.000Z",
+      },
+    });
+
+    if (record.entity !== "cashBalances") {
+      throw new Error("expected cash balance record");
+    }
+    expect(record.data.amount).toBe("12345.67890000");
   });
 
   it("rejects decimal numbers that would lose database precision", () => {

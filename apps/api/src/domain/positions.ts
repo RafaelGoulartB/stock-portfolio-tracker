@@ -7,6 +7,7 @@ import type {
   TransactionSide,
   ValuedPosition,
 } from "@portifolio-tracker/shared";
+import { CASH_TICKER } from "@portifolio-tracker/shared";
 import {
   add,
   type Decimal,
@@ -47,6 +48,86 @@ const QUANTITY_PLACES = 8;
 const MONEY_PLACES = 2;
 /** Ratios (returns, weights) keep more digits than money. */
 const RATE_PLACES = 6;
+
+/** Builds the quote-free live position representing the account's BRL cash. */
+export function cashPosition(
+  amountBrl: string,
+  displayCurrency: Currency,
+  usdBrlRate: string | null,
+): ValuedPosition {
+  if (displayCurrency === "USD" && usdBrlRate === null) {
+    throw new Error("An USD/BRL rate is required to convert cash");
+  }
+
+  const converted = convertMoney(
+    amountBrl,
+    "BRL",
+    displayCurrency,
+    usdBrlRate ?? "1",
+  );
+
+  return {
+    ticker: CASH_TICKER,
+    assetClass: "cash",
+    currency: "BRL",
+    quantity: "1.00000000",
+    averagePrice: "0.00",
+    investedCost: "0.00",
+    realizedPnl: "0.00",
+    transactionCount: 0,
+    lastTradedAt: "",
+    displayCurrency,
+    convertedAveragePrice: "0.00",
+    convertedInvestedCost: "0.00",
+    convertedRealizedPnl: "0.00",
+    marketPrice: null,
+    marketValue: formatDecimal(toDecimal(amountBrl), MONEY_PLACES),
+    convertedMarketValue: converted,
+    unrealizedPnl: null,
+    convertedUnrealizedPnl: null,
+    unrealizedPnlPercent: null,
+    weight: null,
+    quoteAsOf: null,
+    quoteMissing: false,
+  };
+}
+
+/** Appends cash and recomputes every live weight against total net worth. */
+export function withCashPosition(
+  positions: readonly ValuedPosition[],
+  amountBrl: string,
+  displayCurrency: Currency,
+  usdBrlRate: string | null,
+): ValuedPosition[] {
+  const result = [
+    ...positions
+      .filter(
+        (position) =>
+          position.ticker !== CASH_TICKER && position.assetClass !== "cash",
+      )
+      .map((position) => ({ ...position })),
+    cashPosition(amountBrl, displayCurrency, usdBrlRate),
+  ];
+  const total = result.reduce(
+    (sum, position) =>
+      position.convertedMarketValue === null
+        ? sum
+        : add(sum, toDecimal(position.convertedMarketValue)),
+    ZERO,
+  );
+
+  for (const position of result) {
+    position.weight =
+      position.convertedMarketValue === null || isZero(total)
+        ? "0.00000000"
+        : formatDecimal(
+            div(toDecimal(position.convertedMarketValue), total),
+            WEIGHT_PLACES,
+          );
+  }
+
+  return result;
+}
 
 export type TickerLedgerEntry = ConsolidationInput & {
   id: string;
@@ -445,7 +526,10 @@ export function summarizePositions(
         // Fixed income is a user-maintained balance, not a quoted investment.
         // Its value belongs to the portfolio total, but never to a calculated
         // return or cost-basis comparison.
-        if (position.assetClass !== "fixed_income") {
+        if (
+          position.assetClass !== "fixed_income" &&
+          position.assetClass !== "cash"
+        ) {
           quotedInvestedCost = add(
             quotedInvestedCost,
             toDecimal(position.convertedInvestedCost),
@@ -469,6 +553,7 @@ export function summarizePositions(
   const returnEligibleMarketValue = positions.reduce((total, position) => {
     if (
       position.assetClass === "fixed_income" ||
+      position.assetClass === "cash" ||
       !("convertedMarketValue" in position) ||
       position.convertedMarketValue === null
     ) {

@@ -126,6 +126,17 @@ export const allocationAssets = pgTable(
   ],
 );
 
+/** Current BRL cash balance. Absence is the virtual zero balance. */
+export const cashBalances = pgTable("cash_balances", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  amount: numeric("amount", DECIMAL).notNull().default("0"),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 /** One quarterly review of an asset: a grade, notes, fair value, or any mix. */
 export const assetReviews = pgTable(
   "asset_reviews",
@@ -247,6 +258,7 @@ export type UserRow = typeof users.$inferSelect;
 export type SessionRow = typeof sessions.$inferSelect;
 export type TransactionRow = typeof transactions.$inferSelect;
 export type AllocationAssetRow = typeof allocationAssets.$inferSelect;
+export type CashBalanceRow = typeof cashBalances.$inferSelect;
 export type AssetReviewRow = typeof assetReviews.$inferSelect;
 export type CategoryRow = typeof categories.$inferSelect;
 export type AssetCategoryRow = typeof assetCategories.$inferSelect;

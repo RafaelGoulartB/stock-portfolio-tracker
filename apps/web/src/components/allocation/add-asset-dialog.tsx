@@ -179,11 +179,13 @@ export function AddAssetDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {ASSET_CLASSES.map((value) => (
-                    <SelectItem key={value} value={value}>
-                      {ASSET_CLASS_LABELS[value]}
-                    </SelectItem>
-                  ))}
+                  {ASSET_CLASSES.filter((value) => value !== "cash").map(
+                    (value) => (
+                      <SelectItem key={value} value={value}>
+                        {ASSET_CLASS_LABELS[value]}
+                      </SelectItem>
+                    ),
+                  )}
                 </SelectContent>
               </Select>
             </div>

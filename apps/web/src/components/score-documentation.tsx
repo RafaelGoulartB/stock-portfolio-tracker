@@ -654,7 +654,8 @@ export function ScoreDocumentation() {
               >
                 <Trans id="documentation.score.absoluteCapDescription">
                   Block new contributions when current weight is greater than{" "}
-                  {scoreCap} of the portfolio.
+                  {scoreCap} of the portfolio, unless the asset has an explicit
+                  target above that ceiling.
                 </Trans>
               </Rule>
               <Rule

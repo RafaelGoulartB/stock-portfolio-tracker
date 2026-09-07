@@ -409,7 +409,9 @@ export function ImportHoldingsDialog({
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            {ASSET_CLASSES.map((value) => (
+                            {ASSET_CLASSES.filter(
+                              (value) => value !== "cash",
+                            ).map((value) => (
                               <SelectItem key={value} value={value}>
                                 {ASSET_CLASS_LABELS[value]}
                               </SelectItem>
@@ -672,11 +674,13 @@ export function BookHoldingsPanel({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {ASSET_CLASSES.map((value) => (
-                        <SelectItem key={value} value={value}>
-                          {ASSET_CLASS_LABELS[value]}
-                        </SelectItem>
-                      ))}
+                      {ASSET_CLASSES.filter((value) => value !== "cash").map(
+                        (value) => (
+                          <SelectItem key={value} value={value}>
+                            {ASSET_CLASS_LABELS[value]}
+                          </SelectItem>
+                        ),
+                      )}
                     </SelectContent>
                   </Select>
                 </TableCell>

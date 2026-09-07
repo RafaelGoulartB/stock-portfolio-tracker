@@ -10,6 +10,7 @@ import type {
   ValuedPosition,
 } from "@portifolio-tracker/shared";
 import {
+  CASH_TICKER,
   DEFAULT_SCORE_CONFIG,
   quarterEndDate,
 } from "@portifolio-tracker/shared";
@@ -47,6 +48,7 @@ export type WatchQuote = { price: string; currency: Currency };
 
 const WEIGHT_PLACES = 8;
 const MONEY_PLACES = 2;
+const ONE = toDecimal("1");
 /**
  * Rank of a ticker that has no metadata row yet: it never went through the
  * free-order mode, so it trails the rows the user placed by hand.
@@ -307,18 +309,32 @@ export function buildAllocationRows(input: AllocationInput): AllocationRow[] {
   const positionByTicker = new Map(
     openPositions.map((position) => [position.ticker, position]),
   );
+  const assignedTarget = input.assets.reduce(
+    (total, asset) =>
+      asset.ticker === CASH_TICKER || asset.targetWeight === null
+        ? total
+        : add(total, toDecimal(asset.targetWeight)),
+    ZERO,
+  );
+  const cashTarget = formatDecimal(
+    assignedTarget >= ONE ? ZERO : sub(ONE, assignedTarget),
+    WEIGHT_PLACES,
+  );
   const tickers = new Set([
     ...openPositions.map((position) => position.ticker),
     ...assetByTicker.keys(),
   ]);
 
   const rows = [...tickers].map((ticker): AllocationRow => {
+    const isCash = ticker === CASH_TICKER;
     const position = positionByTicker.get(ticker);
     const asset = assetByTicker.get(ticker);
     const watchQuote = input.watchQuotes?.get(ticker);
     const currency =
       position?.currency ?? asset?.currency ?? input.displayCurrency;
-    const marketPrice = position?.marketPrice ?? watchQuote?.price ?? null;
+    const marketPrice = isCash
+      ? null
+      : (position?.marketPrice ?? watchQuote?.price ?? null);
     // Period keys sort chronologically, so plain text order is enough.
     const reviews = (reviewsByTicker.get(ticker) ?? []).sort((a, b) =>
       a.period.localeCompare(b.period),
@@ -331,7 +347,7 @@ export function buildAllocationRows(input: AllocationInput): AllocationRow[] {
       toDecimal(position?.weight ?? "0"),
       WEIGHT_PLACES,
     );
-    const targetWeight = asset?.targetWeight ?? null;
+    const targetWeight = isCash ? cashTarget : (asset?.targetWeight ?? null);
     const lastContributionAt =
       input.lastContributionByTicker.get(ticker) ?? null;
     const marketValue = position?.convertedMarketValue ?? null;
@@ -353,7 +369,7 @@ export function buildAllocationRows(input: AllocationInput): AllocationRow[] {
       assetClass: position?.assetClass ?? asset?.assetClass ?? "other",
       currency,
       displayCurrency: input.displayCurrency,
-      tracked: asset !== undefined,
+      tracked: isCash || asset !== undefined,
       hasPosition: position !== undefined,
       quantity: position?.quantity ?? "0",
       averagePrice: position?.averagePrice ?? "0",
@@ -380,14 +396,14 @@ export function buildAllocationRows(input: AllocationInput): AllocationRow[] {
       fairValuePeriod: latest?.period ?? null,
       fairValueRef: latest?.fairValueRef ?? null,
       discount,
-      valueSource,
-      manualPrice: asset?.manualPrice ?? null,
+      valueSource: isCash ? "manual" : valueSource,
+      manualPrice: isCash ? null : (asset?.manualPrice ?? null),
       averageGrade: grades.average,
       gradedQuarters: grades.quarters,
       lastContributionAt,
       valuationRef: asset?.valuationRef ?? null,
       markColor: asset?.markColor ?? null,
-      sortOrder: asset?.sortOrder ?? UNRANKED,
+      sortOrder: isCash ? -1 : (asset?.sortOrder ?? UNRANKED),
       quoteMissing: position?.quoteMissing ?? false,
       score: scoreAsset(
         {

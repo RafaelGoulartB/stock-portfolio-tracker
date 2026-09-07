@@ -110,12 +110,21 @@ describe("scoreAsset", () => {
 
   it("blocks past the absolute weight cap", () => {
     const result = scoreAsset(
-      input({ targetWeight: "0.08", currentWeight: "0.06" }),
+      input({ targetWeight: "0.04", currentWeight: "0.06" }),
     );
 
     expect(result.ruleId).toBe("weight-cap");
     expect(result.value).toBe("0.00000000");
     expect(result.blocked).toBe(true);
+  });
+
+  it("honors an explicit target above the absolute weight cap", () => {
+    const result = scoreAsset(
+      input({ targetWeight: "0.10", currentWeight: "0.0665" }),
+    );
+
+    expect(result.ruleId).toBe("gap-weighted");
+    expect(result.value).toBe("0.03350000");
   });
 
   it("blocks past the target overweight factor", () => {
@@ -165,7 +174,7 @@ describe("scoreAsset", () => {
       config,
     );
     const capped = scoreAsset(
-      input({ targetWeight: "0.04", currentWeight: "0.03" }),
+      input({ targetWeight: "0.02", currentWeight: "0.03" }),
       config,
     );
 

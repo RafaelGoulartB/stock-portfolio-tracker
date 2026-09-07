@@ -5,7 +5,12 @@ import type {
   AllocationMarkColor,
   AllocationRow,
 } from "@portifolio-tracker/shared";
-import { positiveDecimal, weightRatio } from "@portifolio-tracker/shared";
+import {
+  CASH_TICKER,
+  nonNegativeDecimal,
+  positiveDecimal,
+  weightRatio,
+} from "@portifolio-tracker/shared";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   ChevronDown,
@@ -344,6 +349,10 @@ function AllocationPage() {
     onSuccess: refreshPortfolioValuations,
     onError: reportError,
   });
+  const setCashBalance = trpc.allocation.setCashBalance.useMutation({
+    onSuccess: refreshPortfolioValuations,
+    onError: reportError,
+  });
 
   const saving =
     upsertAsset.isPending ||
@@ -351,7 +360,8 @@ function AllocationPage() {
     reorder.isPending ||
     upsertReview.isPending ||
     removeReview.isPending ||
-    setManualValue.isPending;
+    setManualValue.isPending ||
+    setCashBalance.isPending;
 
   const allRows = allocation.data?.rows ?? [];
   const categoryOptions = categories.data?.categories ?? [];
@@ -451,6 +461,29 @@ function AllocationPage() {
 
   /** Market value of an unquoted position. Empty clears the stored override. */
   function editValue(ticker: string, text: string) {
+    if (ticker === CASH_TICKER) {
+      const parsed = text.trim().length === 0 ? "0" : parseDecimalInput(text);
+
+      if (parsed === null || !nonNegativeDecimal.safeParse(parsed).success) {
+        toast.error(
+          i18n._(
+            msg({
+              id: "allocation.invalidCashValue",
+              message: "Enter a cash value of zero or more.",
+            }),
+          ),
+        );
+        return;
+      }
+
+      setCashBalance.mutate({
+        marketValue: parsed,
+        displayCurrency,
+        usdBrlRate: fx.effectiveRate,
+      });
+      return;
+    }
+
     if (text.trim().length === 0) {
       setManualValue.mutate({
         ticker,

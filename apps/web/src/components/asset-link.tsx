@@ -1,3 +1,4 @@
+import { CASH_TICKER } from "@portifolio-tracker/shared";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
@@ -13,6 +14,10 @@ export function AssetLink({
   className?: string;
   title?: string;
 }) {
+  if (ticker === CASH_TICKER) {
+    return <span className={className}>{children ?? ticker}</span>;
+  }
+
   return (
     <Link
       to="/assets/$ticker"

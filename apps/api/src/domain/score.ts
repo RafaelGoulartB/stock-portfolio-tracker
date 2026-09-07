@@ -152,6 +152,8 @@ export const SCORE_RULES: readonly ScoreRule[] = [
     id: "weight-cap",
     blocking: true,
     matches: (context, config) =>
+      context.target !== null &&
+      context.target <= toDecimal(config.absoluteWeightCap) &&
       context.weight > toDecimal(config.absoluteWeightCap),
     score: () => ZERO,
   },

@@ -14,6 +14,7 @@ export const ASSET_CLASSES = [
   "bdr",
   "crypto",
   "fixed_income",
+  "cash",
   "other",
 ] as const;
 export const assetClassSchema = z.enum(ASSET_CLASSES);
@@ -27,6 +28,7 @@ export const ASSET_CLASS_LABELS: Record<AssetClass, string> = {
   bdr: "BDR",
   crypto: "Crypto",
   fixed_income: "Fixed income",
+  cash: "Cash",
   other: "Other",
 };
 
@@ -67,6 +69,15 @@ export const createTransactionInput = z
     notes: z.string().trim().max(280, "Use at most 280 characters").optional(),
   })
   .superRefine((input, ctx) => {
+    if (input.assetClass === "cash") {
+      ctx.addIssue({
+        code: "custom",
+        path: ["assetClass"],
+        message: "Cash is maintained from Allocation",
+      });
+      return;
+    }
+
     if (input.assetClass === "fixed_income") {
       if (input.value === undefined) {
         ctx.addIssue({

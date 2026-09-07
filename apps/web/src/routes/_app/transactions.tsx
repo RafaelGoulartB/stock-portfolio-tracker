@@ -379,7 +379,9 @@ function TransactionsPage() {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              {ASSET_CLASSES.map((assetClass) => (
+                              {ASSET_CLASSES.filter(
+                                (assetClass) => assetClass !== "cash",
+                              ).map((assetClass) => (
                                 <SelectItem key={assetClass} value={assetClass}>
                                   <AssetClassLabel assetClass={assetClass} />
                                 </SelectItem>

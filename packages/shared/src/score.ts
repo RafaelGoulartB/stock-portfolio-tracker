@@ -30,7 +30,7 @@ export type GradeBand = z.infer<typeof gradeBandSchema>;
 export const scoreConfigSchema = z.object({
   /** Bumped whenever the defaults below change, for traceability. */
   version: z.string(),
-  /** Weight (`0`–`1`) above which an asset stops taking contributions. */
+  /** Weight above which a normally-sized target stops taking contributions. */
   absoluteWeightCap: nonNegativeDecimal,
   /** Blocks contributions once weight exceeds `target * this`. */
   overweightBlockFactor: nonNegativeDecimal,
@@ -81,7 +81,7 @@ export type ScoreConfigUpdate = z.infer<typeof scoreConfigUpdateSchema>;
  * formula's `IFERROR` fallback.
  */
 export const DEFAULT_SCORE_CONFIG: ScoreConfig = {
-  version: "2026-09-06",
+  version: "2026-09-07",
   absoluteWeightCap: "0.05",
   overweightBlockFactor: "1.3",
   trimFactor: "1.2",
@@ -102,7 +102,8 @@ export const DEFAULT_SCORE_CONFIG: ScoreConfig = {
  *
  * - `no-target` — no target weight set, so there is nothing to close.
  * - `trim-overweight` — expensive *and* well past target: negative score.
- * - `weight-cap` — past the portfolio-wide weight ceiling.
+ * - `weight-cap` — past the portfolio ceiling when its target does not
+ *   explicitly exceed that ceiling.
  * - `target-overweight` — past its own target by more than the block factor.
  * - `cooldown` — bought too recently.
  * - `gap-weighted` — the normal case: remaining gap scaled by grade.

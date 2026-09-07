@@ -1397,14 +1397,16 @@ function HoldingsCard({
                   <AssetClassLabel assetClass={position.assetClass} />
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {position.assetClass === "fixed_income" ? (
+                  {position.assetClass === "fixed_income" ||
+                  position.assetClass === "cash" ? (
                     <Dash />
                   ) : (
                     formatQuantity(position.quantity)
                   )}
                 </TableCell>
                 <TableCell className="text-right text-muted-foreground tabular-nums">
-                  {position.assetClass === "fixed_income" ? (
+                  {position.assetClass === "fixed_income" ||
+                  position.assetClass === "cash" ? (
                     <Dash />
                   ) : (
                     formatMoney(position.averagePrice, position.currency)
@@ -1412,6 +1414,7 @@ function HoldingsCard({
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
                   {position.assetClass === "fixed_income" ||
+                  position.assetClass === "cash" ||
                   position.marketPrice == null ? (
                     <Dash />
                   ) : (
@@ -1430,6 +1433,7 @@ function HoldingsCard({
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
                   {position.assetClass === "fixed_income" ||
+                  position.assetClass === "cash" ||
                   position.convertedUnrealizedPnl == null ? (
                     <Dash />
                   ) : (

@@ -4,6 +4,7 @@ import {
   allocationHistoryInput,
   allocationListInput,
   allocationMarkColorSchema,
+  CASH_TICKER,
   type Currency,
   FX_EXECUTION_IOF,
   FX_EXECUTION_SPREAD,
@@ -11,6 +12,7 @@ import {
   removeAllocationAssetInput,
   removeAssetReviewInput,
   reorderAllocationInput,
+  setCashBalanceInput,
   setManualValueInput,
   upsertAllocationAssetInput,
   upsertAssetReviewInput,
@@ -18,7 +20,12 @@ import {
 import { TRPCError } from "@trpc/server";
 import { and, asc, desc, eq, inArray, max, sql } from "drizzle-orm";
 import { db } from "../../db";
-import { allocationAssets, assetReviews, transactions } from "../../db/schema";
+import {
+  allocationAssets,
+  assetReviews,
+  cashBalances,
+  transactions,
+} from "../../db/schema";
 import {
   type AllocationAssetMeta,
   buildAllocationRows,
@@ -32,7 +39,14 @@ import {
 import { usdBrlExecutionRate } from "../../domain/fx-execution";
 import { consolidatePositions } from "../../domain/positions";
 import { loadScoreConfig } from "../../domain/score-config";
-import { isZero, toDecimal } from "../../lib/decimal";
+import {
+  add,
+  formatDecimal,
+  isZero,
+  mul,
+  toDecimal,
+  ZERO,
+} from "../../lib/decimal";
 import {
   getQuoteProvider,
   getQuoteWithManualFallback,
@@ -292,7 +306,11 @@ export const allocationRouter = router({
 
       return {
         rows,
-        summary: summarizeAllocation(rows, input.displayCurrency),
+        summary: summarizeAllocation(
+          rows,
+          input.displayCurrency,
+          scorePolicy.config,
+        ),
         scoreConfig: scorePolicy.config,
         fx: {
           displayCurrency: input.displayCurrency,
@@ -395,6 +413,35 @@ export const allocationRouter = router({
   upsertAsset: protectedProcedure
     .input(upsertAllocationAssetInput)
     .mutation(async ({ ctx, input }) => {
+      if (input.ticker === CASH_TICKER) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cash is managed by its dedicated allocation row",
+        });
+      }
+      if (input.targetWeight !== undefined) {
+        const targets = await db
+          .select({
+            ticker: allocationAssets.ticker,
+            targetWeight: allocationAssets.targetWeight,
+          })
+          .from(allocationAssets)
+          .where(eq(allocationAssets.userId, ctx.user.id));
+        const total = targets.reduce(
+          (sum, row) =>
+            row.ticker === input.ticker || row.targetWeight === null
+              ? sum
+              : add(sum, toDecimal(row.targetWeight)),
+          input.targetWeight === null ? ZERO : toDecimal(input.targetWeight),
+        );
+
+        if (total > toDecimal("1")) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Allocation targets cannot exceed 100%",
+          });
+        }
+      }
       const traded = await tradedIdentity(ctx.user.id, input.ticker);
       const patch = {
         ...(input.assetClass !== undefined
@@ -508,6 +555,39 @@ export const allocationRouter = router({
       return row ?? { ticker: input.ticker, manualPrice };
     }),
 
+  /** Stores the account's single cash balance, converting USD input to BRL. */
+  setCashBalance: protectedProcedure
+    .input(setCashBalanceInput)
+    .mutation(async ({ ctx, input }) => {
+      if (input.displayCurrency === "USD" && input.usdBrlRate === undefined) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "An USD/BRL rate is required to set a USD cash value",
+        });
+      }
+
+      const amount = formatDecimal(
+        input.displayCurrency === "USD"
+          ? mul(
+              toDecimal(input.marketValue),
+              toDecimal(input.usdBrlRate ?? "1"),
+            )
+          : toDecimal(input.marketValue),
+        8,
+      );
+
+      const [row] = await db
+        .insert(cashBalances)
+        .values({ userId: ctx.user.id, amount })
+        .onConflictDoUpdate({
+          target: cashBalances.userId,
+          set: { amount, updatedAt: new Date() },
+        })
+        .returning({ amount: cashBalances.amount });
+
+      return { amount: row?.amount ?? amount, currency: "BRL" as const };
+    }),
+
   /**
    * Stops tracking a ticker. A ticker with trades keeps its position row on
    * the screen (and its reviews); a watch-only asset leaves for good, taking
@@ -516,6 +596,12 @@ export const allocationRouter = router({
   removeAsset: protectedProcedure
     .input(removeAllocationAssetInput)
     .mutation(async ({ ctx, input }) => {
+      if (input.ticker === CASH_TICKER) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cash always exists and cannot be removed",
+        });
+      }
       const traded = await tradedIdentity(ctx.user.id, input.ticker);
 
       await db
@@ -545,7 +631,8 @@ export const allocationRouter = router({
   reorder: protectedProcedure
     .input(reorderAllocationInput)
     .mutation(async ({ ctx, input }) => {
-      if (input.tickers.length === 0) {
+      const tickers = input.tickers.filter((ticker) => ticker !== CASH_TICKER);
+      if (tickers.length === 0) {
         return { ordered: 0 };
       }
 
@@ -559,7 +646,7 @@ export const allocationRouter = router({
         .where(
           and(
             eq(transactions.userId, ctx.user.id),
-            inArray(transactions.ticker, input.tickers),
+            inArray(transactions.ticker, tickers),
           ),
         );
       const identityByTicker = new Map(
@@ -575,7 +662,7 @@ export const allocationRouter = router({
       await db
         .insert(allocationAssets)
         .values(
-          input.tickers.map((ticker, index) => ({
+          tickers.map((ticker, index) => ({
             userId: ctx.user.id,
             ticker,
             assetClass: identityByTicker.get(ticker)?.assetClass ?? "other",
@@ -591,13 +678,19 @@ export const allocationRouter = router({
           },
         });
 
-      return { ordered: input.tickers.length };
+      return { ordered: tickers.length };
     }),
 
   /** Grades and/or annotates one quarter of one asset. */
   upsertReview: protectedProcedure
     .input(upsertAssetReviewInput)
     .mutation(async ({ ctx, input }) => {
+      if (input.ticker === CASH_TICKER) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cash does not have quarterly reviews",
+        });
+      }
       await ensureAsset(ctx.user.id, input.ticker);
 
       const patch = {
@@ -642,6 +735,12 @@ export const allocationRouter = router({
   removeReview: protectedProcedure
     .input(removeAssetReviewInput)
     .mutation(async ({ ctx, input }) => {
+      if (input.ticker === CASH_TICKER) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cash does not have quarterly reviews",
+        });
+      }
       await db
         .delete(assetReviews)
         .where(

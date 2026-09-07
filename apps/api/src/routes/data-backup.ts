@@ -7,6 +7,7 @@ import {
   allocationAssets,
   assetCategories,
   assetReviews,
+  cashBalances,
   categories,
   transactions,
   userScoreConfigs,
@@ -83,13 +84,15 @@ async function* exportBackup(userId: string): AsyncGenerator<string> {
       const tableName =
         entity === "allocationAssets"
           ? "allocation_assets"
-          : entity === "assetReviews"
-            ? "asset_reviews"
-            : entity === "assetCategories"
-              ? "asset_categories"
-              : entity === "scoreConfigs"
-                ? "user_score_configs"
-                : entity;
+          : entity === "cashBalances"
+            ? "cash_balances"
+            : entity === "assetReviews"
+              ? "asset_reviews"
+              : entity === "assetCategories"
+                ? "asset_categories"
+                : entity === "scoreConfigs"
+                  ? "user_score_configs"
+                  : entity;
       const [result] = await connection`
         select count(*)::text as value
         from ${connection(tableName)}
@@ -140,6 +143,19 @@ async function* exportBackup(userId: string): AsyncGenerator<string> {
         yield emit({
           type: "record",
           entity: "allocationAssets",
+          data: serializeRow(data),
+        });
+      }
+    }
+
+    for await (const rows of connection`
+      select amount, updated_at as "updatedAt"
+      from cash_balances where user_id = ${userId} order by user_id
+    `.cursor(BATCH_SIZE)) {
+      for (const data of rows) {
+        yield emit({
+          type: "record",
+          entity: "cashBalances",
           data: serializeRow(data),
         });
       }
@@ -259,6 +275,7 @@ async function importBackup(body: ReadableStream<Uint8Array>, userId: string) {
     await tx
       .delete(allocationAssets)
       .where(eq(allocationAssets.userId, userId));
+    await tx.delete(cashBalances).where(eq(cashBalances.userId, userId));
     await tx.delete(transactions).where(eq(transactions.userId, userId));
     await tx.delete(categories).where(eq(categories.userId, userId));
     await tx
@@ -268,6 +285,7 @@ async function importBackup(body: ReadableStream<Uint8Array>, userId: string) {
     const categoryIdByRef = new Map<string, string>();
     let categoryBatch: RecordData<"categories">[] = [];
     let allocationBatch: RecordData<"allocationAssets">[] = [];
+    let cashBatch: RecordData<"cashBalances">[] = [];
     let reviewBatch: RecordData<"assetReviews">[] = [];
     let transactionBatch: RecordData<"transactions">[] = [];
     let assignmentBatch: RecordData<"assetCategories">[] = [];
@@ -287,6 +305,14 @@ async function importBackup(body: ReadableStream<Uint8Array>, userId: string) {
           .insert(allocationAssets)
           .values(allocationBatch.map((row) => ({ ...row, userId })));
         allocationBatch = [];
+      } else if (entity === "cashBalances" && cashBatch.length > 0) {
+        if (cashBatch.length > 1) {
+          throw new Error("Backup contains more than one cash balance");
+        }
+        await tx
+          .insert(cashBalances)
+          .values(cashBatch.map((row) => ({ ...row, userId })));
+        cashBatch = [];
       } else if (entity === "assetReviews" && reviewBatch.length > 0) {
         await tx
           .insert(assetReviews)
@@ -366,6 +392,10 @@ async function importBackup(body: ReadableStream<Uint8Array>, userId: string) {
         case "allocationAssets":
           allocationBatch.push(record.data);
           if (allocationBatch.length >= BATCH_SIZE) await flush(record.entity);
+          break;
+        case "cashBalances":
+          cashBatch.push(record.data);
+          if (cashBatch.length >= BATCH_SIZE) await flush(record.entity);
           break;
         case "assetReviews":
           reviewBatch.push(record.data);
