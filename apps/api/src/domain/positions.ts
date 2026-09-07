@@ -48,6 +48,45 @@ const MONEY_PLACES = 2;
 /** Ratios (returns, weights) keep more digits than money. */
 const RATE_PLACES = 6;
 
+export type TickerLedgerEntry = ConsolidationInput & {
+  id: string;
+  notes: string | null;
+};
+
+export type TickerLedgerTrade = {
+  id: string;
+  ticker: string;
+  assetClass: AssetClass;
+  currency: Currency;
+  side: TransactionSide;
+  quantity: string;
+  price: string;
+  fees: string;
+  total: string;
+  tradedAt: string;
+  notes: string | null;
+  /** Realized P&L of this sell at the then-current moving average. Null on buys. */
+  realizedPnl: string | null;
+  quantityAfter: string;
+  averagePriceAfter: string;
+};
+
+export type TickerLedger = {
+  ticker: string;
+  currency: Currency | null;
+  trades: TickerLedgerTrade[];
+  buyCount: number;
+  sellCount: number;
+  buyQuantity: string;
+  sellQuantity: string;
+  buyTotal: string;
+  sellTotal: string;
+  realizedPnl: string;
+  investedCost: string;
+  quantity: string;
+  averagePrice: string;
+};
+
 /** Chronological order; `createdAt` breaks ties inside the same trade day. */
 function byTradeOrder(a: ConsolidationInput, b: ConsolidationInput): number {
   if (a.tradedAt !== b.tradedAt) {
@@ -55,6 +94,83 @@ function byTradeOrder(a: ConsolidationInput, b: ConsolidationInput): number {
   }
 
   return a.createdAt.getTime() - b.createdAt.getTime();
+}
+
+function emptyAccumulator(entry: ConsolidationInput): Accumulator {
+  return {
+    ticker: entry.ticker,
+    assetClass: entry.assetClass,
+    currency: entry.currency,
+    quantity: ZERO,
+    costBasis: ZERO,
+    realizedPnl: ZERO,
+    transactionCount: 0,
+    lastTradedAt: entry.tradedAt,
+  };
+}
+
+function averagePriceOf(position: Accumulator): Decimal {
+  return isZero(position.quantity)
+    ? ZERO
+    : div(position.costBasis, position.quantity);
+}
+
+/**
+ * Cash moved by the trade: fees increase a buy and reduce a sell. Always
+ * two decimal places — this is the amount that hit the brokerage.
+ */
+export function tradeCashTotal(entry: {
+  side: TransactionSide;
+  quantity: string;
+  price: string;
+  fees: string;
+}): string {
+  const gross = mul(toDecimal(entry.quantity), toDecimal(entry.price));
+  const fees = toDecimal(entry.fees);
+
+  return formatDecimal(
+    entry.side === "buy" ? add(gross, fees) : sub(gross, fees),
+    MONEY_PLACES,
+  );
+}
+
+/**
+ * Applies one trade to the running average. Returns the realized P&L of
+ * this trade (`ZERO` on a buy).
+ */
+function applyTrade(current: Accumulator, entry: ConsolidationInput): Decimal {
+  const quantity = toDecimal(entry.quantity);
+  const price = toDecimal(entry.price);
+  const fees = toDecimal(entry.fees);
+
+  current.assetClass = entry.assetClass;
+  current.transactionCount += 1;
+  current.lastTradedAt = entry.tradedAt;
+
+  if (entry.side === "buy") {
+    current.quantity = add(current.quantity, quantity);
+    current.costBasis = add(current.costBasis, add(mul(quantity, price), fees));
+
+    return ZERO;
+  }
+
+  const sold = current.quantity > quantity ? quantity : current.quantity;
+  const releasedCost = isZero(current.quantity)
+    ? ZERO
+    : div(mul(current.costBasis, sold), current.quantity);
+  const proceeds = sub(mul(quantity, price), fees);
+  const realized = sub(proceeds, releasedCost);
+
+  current.realizedPnl = add(current.realizedPnl, realized);
+  current.quantity = sub(current.quantity, quantity);
+  current.costBasis = sub(current.costBasis, releasedCost);
+
+  if (current.quantity <= ZERO) {
+    current.quantity = ZERO;
+    current.costBasis = ZERO;
+  }
+
+  return realized;
 }
 
 /**
@@ -80,51 +196,8 @@ export function consolidatePositions(
 
   for (const entry of [...input].sort(byTradeOrder)) {
     const key = `${entry.ticker}|${entry.currency}`;
-    const quantity = toDecimal(entry.quantity);
-    const price = toDecimal(entry.price);
-    const fees = toDecimal(entry.fees);
-
-    const current: Accumulator = byKey.get(key) ?? {
-      ticker: entry.ticker,
-      assetClass: entry.assetClass,
-      currency: entry.currency,
-      quantity: ZERO,
-      costBasis: ZERO,
-      realizedPnl: ZERO,
-      transactionCount: 0,
-      lastTradedAt: entry.tradedAt,
-    };
-
-    current.assetClass = entry.assetClass;
-    current.transactionCount += 1;
-    current.lastTradedAt = entry.tradedAt;
-
-    if (entry.side === "buy") {
-      current.quantity = add(current.quantity, quantity);
-      current.costBasis = add(
-        current.costBasis,
-        add(mul(quantity, price), fees),
-      );
-    } else {
-      const sold = current.quantity > quantity ? quantity : current.quantity;
-      const releasedCost = isZero(current.quantity)
-        ? ZERO
-        : div(mul(current.costBasis, sold), current.quantity);
-      const proceeds = sub(mul(quantity, price), fees);
-
-      current.realizedPnl = add(
-        current.realizedPnl,
-        sub(proceeds, releasedCost),
-      );
-      current.quantity = sub(current.quantity, quantity);
-      current.costBasis = sub(current.costBasis, releasedCost);
-
-      if (current.quantity <= ZERO) {
-        current.quantity = ZERO;
-        current.costBasis = ZERO;
-      }
-    }
-
+    const current = byKey.get(key) ?? emptyAccumulator(entry);
+    applyTrade(current, entry);
     byKey.set(key, current);
   }
 
@@ -134,12 +207,7 @@ export function consolidatePositions(
       assetClass: position.assetClass,
       currency: position.currency,
       quantity: formatDecimal(position.quantity, QUANTITY_PLACES),
-      averagePrice: formatDecimal(
-        isZero(position.quantity)
-          ? ZERO
-          : div(position.costBasis, position.quantity),
-        MONEY_PLACES,
-      ),
+      averagePrice: formatDecimal(averagePriceOf(position), MONEY_PLACES),
       investedCost: formatDecimal(position.costBasis, MONEY_PLACES),
       realizedPnl: formatDecimal(position.realizedPnl, MONEY_PLACES),
       transactionCount: position.transactionCount,
@@ -150,6 +218,105 @@ export function consolidatePositions(
         a.ticker.localeCompare(b.ticker) ||
         a.currency.localeCompare(b.currency),
     );
+}
+
+/**
+ * Walks one ticker's trades in order and emits the moving-average ledger:
+ * running quantity, average after each fill, and realized P&L on sells.
+ * Newest trade first so the detail screen reads like a history.
+ */
+export function buildTickerLedger(
+  ticker: string,
+  input: readonly TickerLedgerEntry[],
+): TickerLedger {
+  const rows = input
+    .filter((entry) => entry.ticker === ticker)
+    .sort(byTradeOrder);
+  const empty: TickerLedger = {
+    ticker,
+    currency: null,
+    trades: [],
+    buyCount: 0,
+    sellCount: 0,
+    buyQuantity: formatDecimal(ZERO, QUANTITY_PLACES),
+    sellQuantity: formatDecimal(ZERO, QUANTITY_PLACES),
+    buyTotal: formatDecimal(ZERO, MONEY_PLACES),
+    sellTotal: formatDecimal(ZERO, MONEY_PLACES),
+    realizedPnl: formatDecimal(ZERO, MONEY_PLACES),
+    investedCost: formatDecimal(ZERO, MONEY_PLACES),
+    quantity: formatDecimal(ZERO, QUANTITY_PLACES),
+    averagePrice: formatDecimal(ZERO, MONEY_PLACES),
+  };
+
+  if (rows.length === 0) {
+    return empty;
+  }
+
+  const first = rows[0];
+
+  if (!first) {
+    return empty;
+  }
+
+  const current = emptyAccumulator(first);
+  const trades: TickerLedgerTrade[] = [];
+  let buyCount = 0;
+  let sellCount = 0;
+  let buyQuantity = ZERO;
+  let sellQuantity = ZERO;
+  let buyTotal = ZERO;
+  let sellTotal = ZERO;
+
+  for (const entry of rows) {
+    const realized = applyTrade(current, entry);
+    const cash = toDecimal(tradeCashTotal(entry));
+
+    if (entry.side === "buy") {
+      buyCount += 1;
+      buyQuantity = add(buyQuantity, toDecimal(entry.quantity));
+      buyTotal = add(buyTotal, cash);
+    } else {
+      sellCount += 1;
+      sellQuantity = add(sellQuantity, toDecimal(entry.quantity));
+      sellTotal = add(sellTotal, cash);
+    }
+
+    trades.push({
+      id: entry.id,
+      ticker: entry.ticker,
+      assetClass: current.assetClass,
+      currency: entry.currency,
+      side: entry.side,
+      quantity: entry.quantity,
+      price: entry.price,
+      fees: entry.fees,
+      total: tradeCashTotal(entry),
+      tradedAt: entry.tradedAt,
+      notes: entry.notes,
+      realizedPnl:
+        entry.side === "sell" ? formatDecimal(realized, MONEY_PLACES) : null,
+      quantityAfter: formatDecimal(current.quantity, QUANTITY_PLACES),
+      averagePriceAfter: formatDecimal(averagePriceOf(current), MONEY_PLACES),
+    });
+  }
+
+  trades.reverse();
+
+  return {
+    ticker,
+    currency: current.currency,
+    trades,
+    buyCount,
+    sellCount,
+    buyQuantity: formatDecimal(buyQuantity, QUANTITY_PLACES),
+    sellQuantity: formatDecimal(sellQuantity, QUANTITY_PLACES),
+    buyTotal: formatDecimal(buyTotal, MONEY_PLACES),
+    sellTotal: formatDecimal(sellTotal, MONEY_PLACES),
+    realizedPnl: formatDecimal(current.realizedPnl, MONEY_PLACES),
+    investedCost: formatDecimal(current.costBasis, MONEY_PLACES),
+    quantity: formatDecimal(current.quantity, QUANTITY_PLACES),
+    averagePrice: formatDecimal(averagePriceOf(current), MONEY_PLACES),
+  };
 }
 
 /** BRL per 1 USD, as a decimal string. */

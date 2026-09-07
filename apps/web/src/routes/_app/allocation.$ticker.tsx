@@ -1,18 +1,15 @@
 import { t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
-import type { AllocationRow, AssetReview } from "@portifolio-tracker/shared";
-import {
-  positiveDecimal,
-  quarterEndDate,
-  tickerSchema,
-} from "@portifolio-tracker/shared";
+import { positiveDecimal, tickerSchema } from "@portifolio-tracker/shared";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { type ReactNode, useMemo } from "react";
+import { toast } from "sonner";
 import { scoreReason } from "@/components/allocation/allocation-table";
 import { AssetDetailChart } from "@/components/allocation/asset-detail-chart";
-import { gradeToneClass } from "@/components/allocation/quarter-review-cell";
+import { AssetMovements } from "@/components/allocation/asset-movements";
+import { AssetReviews } from "@/components/allocation/asset-reviews";
 import { AssetClassLabel, CurrencyBadge } from "@/components/asset-labels";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -75,6 +72,32 @@ function AssetDetailPage() {
     },
     { enabled: parsedTicker.success },
   );
+  const ledger = trpc.transactions.forTicker.useQuery(
+    { ticker },
+    { enabled: parsedTicker.success },
+  );
+  const utils = trpc.useUtils();
+
+  async function refresh() {
+    await Promise.all([
+      utils.allocation.list.invalidate(),
+      utils.allocation.history.invalidate(),
+    ]);
+  }
+
+  function reportError(error: unknown) {
+    toast.error(queryErrorMessage(error));
+  }
+
+  const upsertReview = trpc.allocation.upsertReview.useMutation({
+    onSuccess: refresh,
+    onError: reportError,
+  });
+  const removeReview = trpc.allocation.removeReview.useMutation({
+    onSuccess: refresh,
+    onError: reportError,
+  });
+  const reviewSaving = upsertReview.isPending || removeReview.isPending;
 
   const waitingForRate =
     !!allocation.error && isFxRateRequired(allocation.error) && fx.isPending;
@@ -88,7 +111,7 @@ function AssetDetailPage() {
   );
 
   return (
-    <div className="relative left-1/2 w-screen max-w-[100vw] -translate-x-1/2 space-y-5 px-3 sm:px-4 lg:px-6">
+    <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-3">
         <Button type="button" variant="ghost" size="sm" asChild>
           <Link to="/allocation">
@@ -283,54 +306,43 @@ function AssetDetailPage() {
             />
           ) : null}
 
-          <section className="space-y-3">
-            <h2 className="text-lg font-semibold tracking-tight">
-              <Trans id="allocation.detailReviews">Quarterly reviews</Trans>
-            </h2>
-            {reviews.length === 0 ? (
+          {reviews.length === 0 ? (
+            <section className="space-y-3">
+              <h2 className="text-lg font-semibold tracking-tight">
+                <Trans id="allocation.detailReviews">Quarterly reviews</Trans>
+              </h2>
               <p className="text-sm text-muted-foreground">
                 <Trans id="allocation.detailReviewsEmpty">
                   No grades, notes or fair values yet. Open a quarter on the
                   allocation table to add the first review.
                 </Trans>
               </p>
-            ) : (
-              <ol className="space-y-3">
-                {reviews.map((review) => (
-                  <ReviewCard
-                    key={review.period}
-                    review={review}
-                    row={row}
-                    close={closeOn(history.data?.series, review.period)}
-                  />
-                ))}
-              </ol>
-            )}
-          </section>
+            </section>
+          ) : (
+            <AssetReviews
+              reviews={reviews}
+              row={row}
+              series={history.data?.series}
+              locale={i18n.locale}
+              saving={reviewSaving}
+              onSave={(input) => upsertReview.mutate(input)}
+              onRemove={(input) => removeReview.mutate(input)}
+            />
+          )}
+
+          {ledger.isPending ? <Skeleton className="h-72 w-full" /> : null}
+          {ledger.error ? (
+            <p className="text-sm text-destructive">
+              {queryErrorMessage(ledger.error)}
+            </p>
+          ) : null}
+          {ledger.data ? (
+            <AssetMovements row={row} ledger={ledger.data} />
+          ) : null}
         </>
       ) : null}
     </div>
   );
-}
-
-function closeOn(
-  series: { asOf: string; close: string }[] | undefined,
-  period: string,
-): string | null {
-  if (!series || series.length === 0) {
-    return null;
-  }
-
-  const end = quarterEndDate(period);
-  let close: string | null = null;
-
-  for (const point of series) {
-    if (point.asOf <= end) {
-      close = point.close;
-    }
-  }
-
-  return close;
 }
 
 function Stat({
@@ -354,80 +366,5 @@ function Stat({
         <p className="mt-0.5 text-[11px] text-muted-foreground">{hint}</p>
       ) : null}
     </div>
-  );
-}
-
-function ReviewCard({
-  review,
-  row,
-  close,
-}: {
-  review: AssetReview;
-  row: AllocationRow;
-  close: string | null;
-}): ReactNode {
-  const { i18n } = useLingui();
-  const quarter = toQuarter(review.period);
-  const discount =
-    review.fairValue === null || close === null
-      ? null
-      : String(
-          (Number(review.fairValue) - Number(close)) / Number(review.fairValue),
-        );
-
-  return (
-    <li className="rounded-lg border bg-card p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className="font-semibold">{formatQuarterTitle(quarter)}</p>
-          <div className="flex flex-wrap items-center gap-2 text-sm">
-            {review.grade === null ? (
-              <span className="text-muted-foreground">
-                <Trans id="allocation.detailNoGrade">No grade</Trans>
-              </span>
-            ) : (
-              <span
-                className={cn(
-                  "inline-flex min-w-8 justify-center rounded-sm px-1.5 py-0.5 text-xs font-medium tabular-nums",
-                  gradeToneClass(review.grade),
-                )}
-              >
-                {formatDecimalInput(review.grade, i18n.locale)}
-              </span>
-            )}
-            {review.fairValue === null ? (
-              <span className="text-muted-foreground">
-                <Trans id="allocation.detailNoFairValue">No fair value</Trans>
-              </span>
-            ) : (
-              <span className="tabular-nums">
-                {formatMoney(review.fairValue, row.currency)}
-              </span>
-            )}
-            {discount === null ? null : (
-              <span className={cn("tabular-nums", pnlClassName(discount))}>
-                {formatSignedWeightPrecise(discount)}
-              </span>
-            )}
-          </div>
-        </div>
-        {review.fairValueRef ? (
-          <a
-            href={review.fairValueRef}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-          >
-            <ExternalLink className="size-3" aria-hidden="true" />
-            <Trans id="allocation.reviewFairValueRefOpen">Open reference</Trans>
-          </a>
-        ) : null}
-      </div>
-      {review.notes ? (
-        <p className="mt-3 whitespace-pre-wrap text-sm text-muted-foreground">
-          {review.notes}
-        </p>
-      ) : null}
-    </li>
   );
 }

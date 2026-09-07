@@ -1,25 +1,17 @@
 import { t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
-import { Trans } from "@lingui/react/macro";
 import type { AssetReview } from "@portifolio-tracker/shared";
+import { useState } from "react";
 import {
-  fairValueRefSchema,
-  fairValueSchema,
-  GRADE_MAX,
-  GRADE_MIN,
-} from "@portifolio-tracker/shared";
-import { ExternalLink } from "lucide-react";
-import { useEffect, useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+  ReviewEditorForm,
+  type ReviewSaveInput,
+} from "@/components/allocation/review-editor-form";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { Textarea } from "@/components/ui/textarea";
-import { formatDecimalInput, parseDecimalInput } from "@/lib/numeric-input";
+import { formatDecimalInput } from "@/lib/numeric-input";
 import type { Quarter } from "@/lib/quarters";
 import { formatQuarterTitle } from "@/lib/quarters";
 import { cn } from "@/lib/utils";
@@ -57,14 +49,7 @@ export type QuarterReviewCellProps = {
   quarter: Quarter;
   review: AssetReview | undefined;
   saving?: boolean;
-  onSave: (input: {
-    ticker: string;
-    period: string;
-    grade: string | null;
-    notes: string | null;
-    fairValue: string | null;
-    fairValueRef: string | null;
-  }) => void;
+  onSave: (input: ReviewSaveInput) => void;
   onRemove: (input: { ticker: string; period: string }) => void;
 };
 
@@ -82,109 +67,12 @@ export function QuarterReviewCell({
 }: QuarterReviewCellProps) {
   const { i18n } = useLingui();
   const [open, setOpen] = useState(false);
-  const [grade, setGrade] = useState("");
-  const [notes, setNotes] = useState("");
-  const [fairValue, setFairValue] = useState("");
-  const [fairValueRef, setFairValueRef] = useState("");
-  const [invalidGrade, setInvalidGrade] = useState(false);
-  const [invalidFairValue, setInvalidFairValue] = useState(false);
-  const [invalidFairValueRef, setInvalidFairValueRef] = useState(false);
-
-  // The editor is seeded on open, so an incoming refetch never overwrites
-  // what is being typed.
-  useEffect(() => {
-    if (open) {
-      setGrade(formatDecimalInput(review?.grade ?? null, i18n.locale));
-      setNotes(review?.notes ?? "");
-      setFairValue(formatDecimalInput(review?.fairValue ?? null, i18n.locale));
-      setFairValueRef(review?.fairValueRef ?? "");
-      setInvalidGrade(false);
-      setInvalidFairValue(false);
-      setInvalidFairValueRef(false);
-    }
-  }, [
-    open,
-    review?.grade,
-    review?.notes,
-    review?.fairValue,
-    review?.fairValueRef,
-    i18n.locale,
-  ]);
 
   const hasNotes = (review?.notes ?? "").trim().length > 0;
   const hasFairValue = review?.fairValue != null;
   const hasFairValueRef = (review?.fairValueRef ?? "").trim().length > 0;
   const hasMarker = hasNotes || hasFairValue || hasFairValueRef;
   const title = `${ticker} · ${formatQuarterTitle(quarter)}`;
-
-  function save() {
-    const parsedGrade =
-      grade.trim().length === 0 ? null : parseDecimalInput(grade);
-    const parsedFairValue =
-      fairValue.trim().length === 0 ? null : parseDecimalInput(fairValue);
-    const trimmedRef = fairValueRef.trim();
-    const parsedFairValueRef = trimmedRef.length === 0 ? null : trimmedRef;
-
-    let hasError = false;
-
-    if (
-      grade.trim().length > 0 &&
-      (parsedGrade === null ||
-        Number(parsedGrade) < GRADE_MIN ||
-        Number(parsedGrade) > GRADE_MAX)
-    ) {
-      setInvalidGrade(true);
-      hasError = true;
-    }
-
-    if (
-      fairValue.trim().length > 0 &&
-      (parsedFairValue === null ||
-        !fairValueSchema.safeParse(parsedFairValue).success)
-    ) {
-      setInvalidFairValue(true);
-      hasError = true;
-    }
-
-    if (
-      parsedFairValueRef !== null &&
-      !fairValueRefSchema.safeParse(parsedFairValueRef).success
-    ) {
-      setInvalidFairValueRef(true);
-      hasError = true;
-    }
-
-    if (hasError) {
-      return;
-    }
-
-    const trimmedNotes = notes.trim();
-
-    if (
-      parsedGrade === null &&
-      trimmedNotes.length === 0 &&
-      parsedFairValue === null &&
-      parsedFairValueRef === null
-    ) {
-      if (review) {
-        onRemove({ ticker, period: quarter.key });
-      }
-
-      setOpen(false);
-
-      return;
-    }
-
-    onSave({
-      ticker,
-      period: quarter.key,
-      grade: parsedGrade,
-      notes: trimmedNotes.length === 0 ? null : trimmedNotes,
-      fairValue: parsedFairValue,
-      fairValueRef: parsedFairValueRef,
-    });
-    setOpen(false);
-  }
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -216,145 +104,21 @@ export function QuarterReviewCell({
         </button>
       </PopoverTrigger>
       <PopoverContent align="center" className="w-80 space-y-3">
-        <div className="space-y-0.5">
-          <p className="text-sm font-semibold">{title}</p>
-          <p className="text-xs text-muted-foreground">
-            <Trans id="allocation.reviewHint">
-              The average of the newest graded quarters scales the score. Fair
-              value feeds the discount from the newest quarter that has one.
-            </Trans>
-          </p>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor={`grade-${ticker}-${quarter.key}`} className="text-xs">
-            <Trans id="allocation.reviewGrade">Grade (0–10)</Trans>
-          </Label>
-          <Input
-            id={`grade-${ticker}-${quarter.key}`}
-            value={grade}
-            inputMode="decimal"
-            aria-invalid={invalidGrade}
-            placeholder="8"
-            className="h-8"
-            onChange={(event) => {
-              setGrade(event.target.value);
-              setInvalidGrade(false);
-            }}
-          />
-          {invalidGrade ? (
-            <p className="text-xs text-destructive">
-              <Trans id="allocation.reviewGradeInvalid">
-                Use a grade between 0 and 10.
-              </Trans>
-            </p>
-          ) : null}
-        </div>
-
-        <div className="space-y-1.5">
-          <Label
-            htmlFor={`fair-value-${ticker}-${quarter.key}`}
-            className="text-xs"
-          >
-            <Trans id="allocation.reviewFairValue">Fair value</Trans>
-          </Label>
-          <Input
-            id={`fair-value-${ticker}-${quarter.key}`}
-            value={fairValue}
-            inputMode="decimal"
-            aria-invalid={invalidFairValue}
-            placeholder="45,50"
-            className="h-8"
-            onChange={(event) => {
-              setFairValue(event.target.value);
-              setInvalidFairValue(false);
-            }}
-          />
-          {invalidFairValue ? (
-            <p className="text-xs text-destructive">
-              <Trans id="allocation.reviewFairValueInvalid">
-                Use a positive fair value.
-              </Trans>
-            </p>
-          ) : null}
-        </div>
-
-        <div className="space-y-1.5">
-          <Label
-            htmlFor={`fair-value-ref-${ticker}-${quarter.key}`}
-            className="text-xs"
-          >
-            <Trans id="allocation.reviewFairValueRef">Reference link</Trans>
-          </Label>
-          <Input
-            id={`fair-value-ref-${ticker}-${quarter.key}`}
-            value={fairValueRef}
-            inputMode="url"
-            type="url"
-            aria-invalid={invalidFairValueRef}
-            placeholder="https://…"
-            className="h-8"
-            onChange={(event) => {
-              setFairValueRef(event.target.value);
-              setInvalidFairValueRef(false);
-            }}
-          />
-          {invalidFairValueRef ? (
-            <p className="text-xs text-destructive">
-              <Trans id="allocation.reviewFairValueRefInvalid">
-                Use a full http(s) link.
-              </Trans>
-            </p>
-          ) : null}
-          {hasFairValueRef && review?.fairValueRef ? (
-            <a
-              href={review.fairValueRef}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-            >
-              <ExternalLink className="size-3" aria-hidden="true" />
-              <Trans id="allocation.reviewFairValueRefOpen">Open reference</Trans>
-            </a>
-          ) : null}
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor={`notes-${ticker}-${quarter.key}`} className="text-xs">
-            <Trans id="allocation.reviewNotes">Notes</Trans>
-          </Label>
-          <Textarea
-            id={`notes-${ticker}-${quarter.key}`}
-            value={notes}
-            rows={4}
-            placeholder={i18n._(
-              t({
-                id: "allocation.reviewNotesPlaceholder",
-                message: "What happened in the quarter?",
-              }),
-            )}
-            className="max-h-56 text-sm"
-            onChange={(event) => setNotes(event.target.value)}
-          />
-        </div>
-
-        <div className="flex items-center justify-between gap-2">
-          <Button
-            type="button"
-            size="sm"
-            variant="ghost"
-            disabled={!review || saving}
-            onClick={() => {
-              onRemove({ ticker, period: quarter.key });
-              setOpen(false);
-            }}
-          >
-            <Trans id="allocation.reviewClear">Clear</Trans>
-          </Button>
-          <Button type="button" size="sm" disabled={saving} onClick={save}>
-            <Trans id="allocation.reviewSave">Save</Trans>
-          </Button>
-        </div>
+        <p className="text-sm font-semibold">{title}</p>
+        <ReviewEditorForm
+          ticker={ticker}
+          period={quarter.key}
+          review={review}
+          saving={saving}
+          onSave={(input) => {
+            onSave(input);
+            setOpen(false);
+          }}
+          onRemove={(input) => {
+            onRemove(input);
+            setOpen(false);
+          }}
+        />
       </PopoverContent>
     </Popover>
   );

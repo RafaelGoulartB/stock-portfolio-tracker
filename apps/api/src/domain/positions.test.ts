@@ -1,12 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   availableQuantity,
+  buildTickerLedger,
   type ConsolidationInput,
   consolidatePositions,
   convertMoney,
   convertPositions,
   filterTransactionsByAsOf,
   summarizePositions,
+  type TickerLedgerEntry,
   tickerCurrencies,
   valuePositions,
 } from "./positions";
@@ -119,6 +121,107 @@ describe("consolidatePositions", () => {
       "ITUB4",
       "VALE3",
     ]);
+  });
+});
+
+function ledgerTx(
+  partial: Partial<TickerLedgerEntry> & Pick<TickerLedgerEntry, "side">,
+): TickerLedgerEntry {
+  const base = tx(partial);
+
+  return {
+    ...base,
+    id: `trade-${base.createdAt.getTime()}`,
+    notes: partial.notes ?? null,
+    ...partial,
+  };
+}
+
+describe("buildTickerLedger", () => {
+  it("returns an empty ledger when the ticker has no trades", () => {
+    expect(buildTickerLedger("PETR4", [])).toMatchObject({
+      ticker: "PETR4",
+      currency: null,
+      trades: [],
+      buyCount: 0,
+      sellCount: 0,
+      realizedPnl: "0.00",
+      investedCost: "0.00",
+    });
+  });
+
+  it("books realized P&L on a sell at the moving average", () => {
+    const ledger = buildTickerLedger("PETR4", [
+      ledgerTx({ side: "buy", quantity: "100", price: "10" }),
+      ledgerTx({
+        side: "sell",
+        quantity: "40",
+        price: "15",
+        fees: "10",
+        tradedAt: "2026-01-02",
+      }),
+    ]);
+
+    expect(ledger).toMatchObject({
+      currency: "BRL",
+      buyCount: 1,
+      sellCount: 1,
+      buyTotal: "1000.00",
+      sellTotal: "590.00",
+      realizedPnl: "190.00",
+      investedCost: "600.00",
+      quantity: "60.00000000",
+      averagePrice: "10.00",
+    });
+    expect(ledger.trades).toHaveLength(2);
+    expect(ledger.trades[0]).toMatchObject({
+      side: "sell",
+      realizedPnl: "190.00",
+      quantityAfter: "60.00000000",
+      averagePriceAfter: "10.00",
+    });
+    expect(ledger.trades[1]).toMatchObject({
+      side: "buy",
+      realizedPnl: null,
+      quantityAfter: "100.00000000",
+      averagePriceAfter: "10.00",
+    });
+  });
+
+  it("matches consolidatePositions realized P&L across several sells", () => {
+    const rows = [
+      ledgerTx({ side: "buy", quantity: "10", price: "100" }),
+      ledgerTx({
+        side: "sell",
+        quantity: "4",
+        price: "120",
+        tradedAt: "2026-01-02",
+      }),
+      ledgerTx({
+        side: "buy",
+        quantity: "6",
+        price: "80",
+        tradedAt: "2026-01-03",
+      }),
+      ledgerTx({
+        side: "sell",
+        quantity: "5",
+        price: "90",
+        tradedAt: "2026-01-04",
+      }),
+    ];
+    const [position] = consolidatePositions(rows);
+    const ledger = buildTickerLedger("PETR4", rows);
+
+    expect(ledger.realizedPnl).toBe(position?.realizedPnl);
+    expect(ledger.investedCost).toBe(position?.investedCost);
+    expect(ledger.quantity).toBe(position?.quantity);
+    expect(
+      ledger.trades
+        .filter((trade) => trade.realizedPnl !== null)
+        .reduce((sum, trade) => sum + Number(trade.realizedPnl), 0)
+        .toFixed(2),
+    ).toBe(ledger.realizedPnl);
   });
 });
 

@@ -4,6 +4,7 @@ import {
   createTransactionInput,
   deleteTransactionInput,
   type Transaction,
+  tickerLedgerInput,
 } from "@portifolio-tracker/shared";
 import { TRPCError } from "@trpc/server";
 import { and, asc, desc, eq } from "drizzle-orm";
@@ -11,10 +12,13 @@ import { db } from "../../db";
 import { transactions } from "../../db/schema";
 import {
   availableQuantity,
+  buildTickerLedger,
   type ConsolidationInput,
+  type TickerLedgerEntry,
   tickerCurrencies,
+  tradeCashTotal,
 } from "../../domain/positions";
-import { add, formatDecimal, mul, sub, toDecimal } from "../../lib/decimal";
+import { formatDecimal, toDecimal } from "../../lib/decimal";
 import { protectedProcedure, router } from "../trpc";
 
 const columns = {
@@ -53,17 +57,6 @@ export async function loadTransactions(
   });
 }
 
-/** Cash moved by the trade: fees increase a buy and reduce a sell. */
-function tradeTotal(row: ConsolidationInput): string {
-  const gross = mul(toDecimal(row.quantity), toDecimal(row.price));
-  const fees = toDecimal(row.fees);
-
-  return formatDecimal(
-    row.side === "buy" ? add(gross, fees) : sub(gross, fees),
-    2,
-  );
-}
-
 function toDto(row: ConsolidationInput & { id: string; notes: string | null }) {
   // Rows written before the BR/US stock split read back as `stock`.
   const rawClass: string = row.assetClass;
@@ -81,7 +74,7 @@ function toDto(row: ConsolidationInput & { id: string; notes: string | null }) {
     fees: row.fees,
     tradedAt: row.tradedAt,
     notes: row.notes,
-    total: tradeTotal(row),
+    total: tradeCashTotal(row),
   } satisfies Transaction;
 }
 
@@ -95,6 +88,37 @@ export const transactionsRouter = router({
 
     return rows.map(toDto);
   }),
+
+  /**
+   * Buys and sells of one ticker, with moving-average realized P&L on each
+   * sell. Used by the allocation asset page.
+   */
+  forTicker: protectedProcedure
+    .input(tickerLedgerInput)
+    .query(async ({ ctx, input }) => {
+      const rows = await db
+        .select(columns)
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.userId, ctx.user.id),
+            eq(transactions.ticker, input.ticker),
+          ),
+        );
+
+      const entries: TickerLedgerEntry[] = rows.map((row) => {
+        const rawClass: string = row.assetClass;
+
+        return {
+          ...row,
+          assetClass: (rawClass === "stock"
+            ? "stock_br"
+            : row.assetClass) as AssetClass,
+        };
+      });
+
+      return buildTickerLedger(input.ticker, entries);
+    }),
 
   create: protectedProcedure
     .input(createTransactionInput)

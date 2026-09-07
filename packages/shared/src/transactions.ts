@@ -75,6 +75,46 @@ export const transactionSchema = z.object({
 
 export type Transaction = z.infer<typeof transactionSchema>;
 
+export const tickerLedgerInput = z.object({ ticker: tickerSchema });
+
+export const tickerLedgerTradeSchema = z.object({
+  id: z.string(),
+  ticker: z.string(),
+  assetClass: assetClassSchema,
+  currency: currencySchema,
+  side: transactionSideSchema,
+  quantity: z.string(),
+  price: z.string(),
+  fees: z.string(),
+  total: z.string(),
+  tradedAt: z.string(),
+  notes: z.string().nullable(),
+  /** Realized P&L of this sell at the then-current moving average. */
+  realizedPnl: z.string().nullable(),
+  quantityAfter: z.string(),
+  averagePriceAfter: z.string(),
+});
+
+export type TickerLedgerTrade = z.infer<typeof tickerLedgerTradeSchema>;
+
+export const tickerLedgerSchema = z.object({
+  ticker: z.string(),
+  currency: currencySchema.nullable(),
+  trades: z.array(tickerLedgerTradeSchema),
+  buyCount: z.number(),
+  sellCount: z.number(),
+  buyQuantity: z.string(),
+  sellQuantity: z.string(),
+  buyTotal: z.string(),
+  sellTotal: z.string(),
+  realizedPnl: z.string(),
+  investedCost: z.string(),
+  quantity: z.string(),
+  averagePrice: z.string(),
+});
+
+export type TickerLedger = z.infer<typeof tickerLedgerSchema>;
+
 export const positionSchema = z.object({
   ticker: z.string(),
   assetClass: assetClassSchema,
