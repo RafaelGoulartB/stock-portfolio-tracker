@@ -13,29 +13,25 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
+  ChevronDown,
+  ChevronUp,
   Plus,
   ScanSearch,
   Wallet,
 } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
-import { Cell, Pie, PieChart, Sector } from "recharts";
-import { AssetClassLabel } from "@/components/asset-labels";
+import { AssetClassLabel, assetClassText } from "@/components/asset-labels";
 import { AssetLogo } from "@/components/asset-logo";
 import { Button } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  type ChartConfig,
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-} from "@/components/ui/chart";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -57,6 +53,7 @@ import {
 } from "@/components/ui/table";
 import { trpc } from "@/lib/api";
 import {
+  formatCompactMoney,
   formatMoney,
   formatQuantity,
   formatSignedMoney,
@@ -74,22 +71,6 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/_app/positions")({
   component: PositionsPage,
 });
-
-/** Categorical palette, assigned by market value so the ranking is stable. */
-const CHART_COLORS = [
-  "var(--chart-1)",
-  "var(--chart-2)",
-  "var(--chart-3)",
-  "var(--chart-4)",
-  "var(--chart-5)",
-  "var(--chart-6)",
-  "var(--chart-7)",
-  "var(--chart-8)",
-  "var(--chart-9)",
-  "var(--chart-10)",
-];
-
-const UNQUOTED_COLOR = "var(--muted-foreground)";
 
 function PositionsPage() {
   // Subscribes this page to locale changes; amounts and dates below are
@@ -139,24 +120,6 @@ function PositionsPage() {
       data?.positions.filter((position) => Number(position.quantity) > 0) ?? [],
     [data],
   );
-
-  /** One color per ticker, shared by the donut, the legend and the table. */
-  const colorByTicker = useMemo(() => {
-    const quoted = open
-      .filter((position) => position.convertedMarketValue != null)
-      .sort(
-        (a, b) =>
-          Number(b.convertedMarketValue ?? 0) -
-          Number(a.convertedMarketValue ?? 0),
-      );
-
-    return new Map(
-      quoted.map((position, index) => [
-        position.ticker,
-        CHART_COLORS[index % CHART_COLORS.length],
-      ]),
-    );
-  }, [open]);
 
   const snapshotLabel = selected?.asOf
     ? formatTradeDate(selected.asOf)
@@ -221,25 +184,17 @@ function PositionsPage() {
             <EmptyState />
           ) : (
             <>
-              <div className="grid gap-5 lg:grid-cols-5">
-                <AllocationCard
-                  className="h-full lg:col-span-3"
-                  positions={open}
-                  summary={data.summary}
-                  colorByTicker={colorByTicker}
-                  snapshotLabel={snapshotLabel}
-                />
-                <DeepFinderTeaser
-                  className="h-full lg:col-span-2"
-                  positions={open}
-                  summary={data.summary}
-                />
-              </div>
+              <AllocationCard
+                positions={open}
+                summary={data.summary}
+                snapshotLabel={snapshotLabel}
+              />
+
+              <DeepFinderTeaser positions={open} summary={data.summary} />
 
               <HoldingsCard
                 positions={open}
                 summary={data.summary}
-                colorByTicker={colorByTicker}
                 missing={data.quotes.missing}
               />
             </>
@@ -458,107 +413,207 @@ function nativeTotalsLabel(breakdown: string): string {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Allocation donut                                                           */
+/* Allocation                                                                 */
 /* -------------------------------------------------------------------------- */
 
-type SliceDatum = {
+/** How the composition panel buckets the portfolio. */
+type AllocationGroupBy = "class" | "currency";
+
+/** Assets listed before the panel asks to be expanded. */
+const COLLAPSED_ASSET_ROWS = 24;
+
+type GroupRow = {
+  key: string;
+  label: string;
+  /** Share of quoted equity, `0`–`1`. */
+  share: number;
+  shareLabel: string;
+  display: string;
+  count: number;
+  /** Row ids in the bucket, so hovering it can highlight the asset list. */
+  assetIds: Set<string>;
+};
+
+type AssetRow = {
+  /** Ticker and currency, matching the holdings table row identity. */
+  id: string;
   ticker: string;
   assetClass: AssetClass;
   currency: Currency;
-  value: number;
-  color: string;
+  /** Share of quoted equity, `0`–`1`. */
+  share: number;
+  shareLabel: string;
   display: string;
-  shareLabel: string | null;
 };
 
-/** Hovered slice grows so the active asset pops out of the ring. */
-function DonutActiveShape(props: {
-  cx?: number;
-  cy?: number;
-  innerRadius?: number;
-  outerRadius?: number;
-  startAngle?: number;
-  endAngle?: number;
-  fill?: string;
+/** Same row identity the holdings table uses: a ticker per currency. */
+function assetRowId(position: ValuedPosition): string {
+  return `${position.ticker}|${position.currency}`;
+}
+
+/**
+ * One bar on a full-width track. The track is the comparison baseline, so
+ * every bar of a list has to share the same track width — keep the wrapper
+ * flexible and let the grid column decide how wide that is.
+ */
+function ShareBar({
+  fraction,
+  className,
+}: {
+  fraction: number;
+  className?: string;
 }) {
   return (
-    <Sector
-      cx={props.cx ?? 0}
-      cy={props.cy ?? 0}
-      innerRadius={props.innerRadius ?? 0}
-      outerRadius={(props.outerRadius ?? 0) + 6}
-      startAngle={props.startAngle ?? 0}
-      endAngle={props.endAngle ?? 0}
-      cornerRadius={3}
-      fill={props.fill}
-    />
+    <span
+      className={cn(
+        "block h-2 overflow-hidden rounded-[3px] bg-muted",
+        className,
+      )}
+      aria-hidden="true"
+    >
+      <span
+        className="block h-full rounded-r-[3px] bg-chart-1"
+        // A sliver keeps sub-percent rows visible instead of blank.
+        style={{ width: `${Math.max(fraction * 100, 1.2)}%` }}
+      />
+    </span>
+  );
+}
+
+/** Heading and scale caption shared by both allocation sections. */
+function PanelHeading({
+  title,
+  caption,
+}: {
+  title: ReactNode;
+  caption: ReactNode;
+}) {
+  return (
+    <div>
+      <h3 className="text-xs font-medium text-muted-foreground">{title}</h3>
+      <p className="mt-0.5 text-xs text-muted-foreground/70">{caption}</p>
+    </div>
   );
 }
 
 function AllocationCard({
-  className,
   positions,
   summary,
-  colorByTicker,
   snapshotLabel,
 }: {
-  className?: string;
   positions: ValuedPosition[];
   summary: PortfolioSummary;
-  colorByTicker: Map<string, string>;
   snapshotLabel: string;
 }) {
-  useLingui();
-  // `hovered` previews a slice, `pinned` keeps it after the pointer leaves.
-  const [hovered, setHovered] = useState<number | undefined>(undefined);
-  const [pinned, setPinned] = useState<number | undefined>(undefined);
-  const activeIndex = hovered ?? pinned;
+  const { i18n } = useLingui();
+  const [groupBy, setGroupBy] = useState<AllocationGroupBy>("class");
+  // `hovered` previews a bucket, `pinned` keeps it after the pointer leaves.
+  const [hovered, setHovered] = useState<string | undefined>(undefined);
+  const [pinned, setPinned] = useState<string | undefined>(undefined);
+  const [expanded, setExpanded] = useState(false);
+  const activeGroup = hovered ?? pinned;
 
-  const slices: SliceDatum[] = useMemo(
+  const quoted = useMemo(
+    () => positions.filter((position) => position.convertedMarketValue != null),
+    [positions],
+  );
+
+  const total = useMemo(
     () =>
-      positions
-        .filter((position) => position.convertedMarketValue != null)
-        .sort(
-          (a, b) =>
-            Number(b.convertedMarketValue ?? 0) -
-            Number(a.convertedMarketValue ?? 0),
-        )
-        .map((position) => ({
-          ticker: position.ticker,
-          assetClass: position.assetClass,
-          currency: position.currency,
-          value: Number(position.convertedMarketValue ?? 0),
-          color: colorByTicker.get(position.ticker) ?? UNQUOTED_COLOR,
+      quoted.reduce(
+        (sum, position) => sum + Number(position.convertedMarketValue ?? 0),
+        0,
+      ),
+    [quoted],
+  );
+
+  const assets: AssetRow[] = useMemo(
+    () =>
+      quoted
+        .map((position) => {
+          const value = Number(position.convertedMarketValue ?? 0);
+          const share =
+            position.weight != null
+              ? Number(position.weight)
+              : total > 0
+                ? value / total
+                : 0;
+
+          return {
+            id: assetRowId(position),
+            ticker: position.ticker,
+            assetClass: position.assetClass,
+            currency: position.currency,
+            share,
+            shareLabel: formatWeight(String(share)),
+            display: formatCompactMoney(value, summary.displayCurrency),
+          };
+        })
+        .sort((a, b) => b.share - a.share),
+    [quoted, total, summary.displayCurrency],
+  );
+
+  const groups: GroupRow[] = useMemo(() => {
+    const buckets = new Map<
+      string,
+      { label: string; value: number; count: number; assetIds: Set<string> }
+    >();
+
+    for (const position of quoted) {
+      const key = groupBy === "class" ? position.assetClass : position.currency;
+      const bucket = buckets.get(key) ?? {
+        label:
+          groupBy === "class"
+            ? assetClassText(position.assetClass, i18n)
+            : position.currency,
+        value: 0,
+        count: 0,
+        assetIds: new Set<string>(),
+      };
+
+      bucket.value += Number(position.convertedMarketValue ?? 0);
+      bucket.count += 1;
+      bucket.assetIds.add(assetRowId(position));
+      buckets.set(key, bucket);
+    }
+
+    return [...buckets]
+      .map(([key, bucket]) => {
+        const share = total > 0 ? bucket.value / total : 0;
+
+        return {
+          key,
+          label: bucket.label,
+          share,
+          shareLabel: formatWeight(String(share)),
           display: formatMoney(
-            position.convertedMarketValue ?? "0.00",
+            bucket.value.toFixed(2),
             summary.displayCurrency,
           ),
-          shareLabel:
-            position.weight == null ? null : formatWeight(position.weight),
-        })),
-    [positions, colorByTicker, summary.displayCurrency],
-  );
+          count: bucket.count,
+          assetIds: bucket.assetIds,
+        };
+      })
+      .sort((a, b) => b.share - a.share);
+  }, [quoted, groupBy, total, summary.displayCurrency, i18n]);
 
-  const chartConfig: ChartConfig = useMemo(
-    () =>
-      Object.fromEntries(
-        slices.map((slice) => [
-          slice.ticker,
-          { label: slice.ticker, color: slice.color },
-        ]),
-      ),
-    [slices],
-  );
+  const activeAssetIds = activeGroup
+    ? groups.find((group) => group.key === activeGroup)?.assetIds
+    : undefined;
 
-  const sliceByTicker = useMemo(
-    () => new Map(slices.map((slice) => [slice.ticker, slice])),
-    [slices],
-  );
+  // Bars in the asset list are relative to the largest holding: shares of the
+  // whole portfolio are too small to compare at this scale.
+  const largestShare = assets[0]?.share ?? 0;
+  const visibleAssets = expanded
+    ? assets
+    : assets.slice(0, COLLAPSED_ASSET_ROWS);
 
-  const active = activeIndex == null ? undefined : slices[activeIndex];
+  function toggleGroup(key: string) {
+    setPinned((current) => (current === key ? undefined : key));
+  }
 
   return (
-    <Card className={cn("h-full", className)}>
+    <Card>
       <CardHeader>
         <CardTitle>
           <Trans id="positions.allocation">Allocation</Trans>
@@ -568,142 +623,201 @@ function AllocationCard({
             Market value at {snapshotLabel} and share of quoted equity.
           </Trans>
         </CardDescription>
+        {quoted.length > 0 ? (
+          <CardAction>
+            <fieldset className="inline-flex rounded-lg border bg-muted/40 p-1">
+              <legend className="sr-only">
+                <Trans id="positions.allocGroupBy">Group by</Trans>
+              </legend>
+              <Button
+                type="button"
+                size="sm"
+                aria-pressed={groupBy === "class"}
+                variant={groupBy === "class" ? "default" : "ghost"}
+                className={cn(groupBy !== "class" && "text-muted-foreground")}
+                onClick={() => {
+                  setGroupBy("class");
+                  setPinned(undefined);
+                }}
+              >
+                <Trans id="positions.allocByClass">Class</Trans>
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                aria-pressed={groupBy === "currency"}
+                variant={groupBy === "currency" ? "default" : "ghost"}
+                className={cn(
+                  groupBy !== "currency" && "text-muted-foreground",
+                )}
+                onClick={() => {
+                  setGroupBy("currency");
+                  setPinned(undefined);
+                }}
+              >
+                <Trans id="positions.allocByCurrency">Currency</Trans>
+              </Button>
+            </fieldset>
+          </CardAction>
+        ) : null}
       </CardHeader>
       <CardContent>
-        {slices.length === 0 ? (
+        {quoted.length === 0 ? (
           <p className="py-10 text-center text-sm text-muted-foreground">
             <Trans id="positions.noQuotes">
               No market quotes for this snapshot yet.
             </Trans>
           </p>
         ) : (
-          <div className="space-y-4">
-            <div className="relative">
-              <ChartContainer
-                config={chartConfig}
-                className="mx-auto aspect-square max-h-[232px] w-full"
-              >
-                <PieChart>
-                  <ChartTooltip
-                    cursor={false}
-                    content={
-                      <ChartTooltipContent
-                        hideLabel
-                        formatter={(_value, name) => {
-                          const slice = sliceByTicker.get(String(name));
-
-                          if (!slice) {
-                            return null;
-                          }
-
-                          return (
-                            <div className="flex w-full items-center gap-2">
-                              <span
-                                className="size-2.5 shrink-0 rounded-[2px]"
-                                style={{ backgroundColor: slice.color }}
-                              />
-                              <span className="font-medium">
-                                {slice.ticker}
-                              </span>
-                              <span className="ml-3 tabular-nums">
-                                {slice.display}
-                              </span>
-                              {slice.shareLabel ? (
-                                <span className="text-muted-foreground tabular-nums">
-                                  {slice.shareLabel}
-                                </span>
-                              ) : null}
-                            </div>
-                          );
-                        }}
-                      />
-                    }
-                  />
-                  <Pie
-                    data={slices}
-                    dataKey="value"
-                    nameKey="ticker"
-                    innerRadius="66%"
-                    outerRadius="94%"
-                    paddingAngle={1.5}
-                    stroke="var(--card)"
-                    strokeWidth={2}
-                    activeShape={<DonutActiveShape />}
-                    onMouseEnter={(_, index) => setHovered(index)}
-                    onMouseLeave={() => setHovered(undefined)}
-                  >
-                    {slices.map((slice, index) => (
-                      <Cell
-                        key={slice.ticker}
-                        fill={slice.color}
-                        // Hovering the legend dims everything but one asset.
-                        opacity={
-                          activeIndex == null || activeIndex === index
-                            ? 1
-                            : 0.35
-                        }
-                      />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ChartContainer>
-
-              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-                <p className="text-xs text-muted-foreground">
-                  {active?.ticker ?? <Trans id="positions.total">Total</Trans>}
-                </p>
-                <p className="text-lg font-semibold tabular-nums">
-                  {active
-                    ? active.display
-                    : formatMoney(
-                        summary.totalMarketValue,
-                        summary.displayCurrency,
+          <div className="space-y-7">
+            <section className="space-y-3">
+              <PanelHeading
+                title={
+                  groupBy === "class" ? (
+                    <Trans id="positions.allocGroupsClass">By class</Trans>
+                  ) : (
+                    <Trans id="positions.allocGroupsCurrency">
+                      By currency
+                    </Trans>
+                  )
+                }
+                caption={
+                  <Trans id="positions.allocGroupsCaption">
+                    Share of quoted equity.
+                  </Trans>
+                }
+              />
+              {/* Auto-fit keeps the row full whatever the bucket count is. The
+                  negative margin lets the hover surface bleed out so labels
+                  still line up with the heading. */}
+              <ul className="-mx-2 grid grid-cols-[repeat(auto-fit,minmax(210px,1fr))] gap-x-10 gap-y-2">
+                {groups.map((group) => (
+                  <li key={group.key}>
+                    <button
+                      type="button"
+                      className={cn(
+                        "w-full cursor-pointer rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted/60",
+                        pinned === group.key && "bg-muted/60",
+                        activeGroup && activeGroup !== group.key
+                          ? "opacity-40"
+                          : "",
                       )}
-                </p>
-                <p className="text-xs text-muted-foreground tabular-nums">
-                  {active?.shareLabel ?? ""}
-                </p>
-              </div>
-            </div>
+                      aria-pressed={pinned === group.key}
+                      onClick={() => toggleGroup(group.key)}
+                      onMouseEnter={() => setHovered(group.key)}
+                      onMouseLeave={() => setHovered(undefined)}
+                      onFocus={() => setHovered(group.key)}
+                      onBlur={() => setHovered(undefined)}
+                    >
+                      <span className="flex items-baseline justify-between gap-3 text-sm">
+                        <span className="truncate font-medium">
+                          {group.label}
+                        </span>
+                        <span className="shrink-0 font-medium tabular-nums">
+                          {group.shareLabel}
+                        </span>
+                      </span>
+                      <ShareBar className="mt-1.5" fraction={group.share} />
+                      <span className="mt-1 flex items-baseline justify-between gap-3 text-xs text-muted-foreground">
+                        <span className="tabular-nums">
+                          {i18n._(
+                            t({
+                              id: "positions.allocGroupCount",
+                              message: plural(
+                                { count: group.count },
+                                { one: "# asset", other: "# assets" },
+                              ),
+                            }),
+                          )}
+                        </span>
+                        <span className="shrink-0 tabular-nums">
+                          {group.display}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
 
-            <ul className="grid gap-x-4 gap-y-1.5 sm:grid-cols-2">
-              {slices.map((slice, index) => (
-                <li key={slice.ticker}>
-                  <button
-                    type="button"
-                    className={`flex w-full cursor-pointer items-center gap-2 rounded px-1 py-0.5 text-xs transition-colors hover:bg-muted ${
-                      pinned === index ? "bg-muted" : ""
-                    }`}
-                    aria-pressed={pinned === index}
-                    onClick={() =>
-                      setPinned((current) =>
-                        current === index ? undefined : index,
-                      )
-                    }
-                    onMouseEnter={() => setHovered(index)}
-                    onMouseLeave={() => setHovered(undefined)}
-                    onFocus={() => setHovered(index)}
-                    onBlur={() => setHovered(undefined)}
+            <section className="space-y-3 border-t pt-6">
+              <PanelHeading
+                title={
+                  <Trans id="positions.allocAssets">
+                    By asset · {assets.length}
+                  </Trans>
+                }
+                caption={
+                  <Trans id="positions.allocAssetsCaption">
+                    Bars relative to the largest position.
+                  </Trans>
+                }
+              />
+              {/* Two columns at most: a third one starves the bars. */}
+              <ul className="-mx-2 grid gap-x-8 gap-y-0.5 md:grid-cols-2">
+                {visibleAssets.map((asset) => (
+                  <li
+                    key={asset.id}
+                    className={cn(
+                      "flex items-center gap-2.5 rounded-md px-2 py-1 text-sm transition-opacity",
+                      activeAssetIds && !activeAssetIds.has(asset.id)
+                        ? "opacity-30"
+                        : "",
+                    )}
                   >
-                    <span
-                      className="size-2 shrink-0 rounded-full"
-                      style={{ backgroundColor: slice.color }}
-                      aria-hidden="true"
-                    />
                     <AssetLogo
-                      ticker={slice.ticker}
-                      assetClass={slice.assetClass}
-                      currency={slice.currency}
-                      className="size-5 rounded-sm"
+                      ticker={asset.ticker}
+                      assetClass={asset.assetClass}
+                      currency={asset.currency}
+                      className="size-6 shrink-0 rounded-sm"
                     />
-                    <span className="truncate font-medium">{slice.ticker}</span>
-                    <span className="ml-auto text-muted-foreground tabular-nums">
-                      {slice.shareLabel}
+                    <span
+                      className="w-[76px] shrink-0 truncate font-medium"
+                      title={asset.ticker}
+                    >
+                      {asset.ticker}
                     </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+                    <ShareBar
+                      className="min-w-8 flex-1"
+                      fraction={
+                        largestShare > 0 ? asset.share / largestShare : 0
+                      }
+                    />
+                    <span className="w-11 shrink-0 text-right tabular-nums">
+                      {asset.shareLabel}
+                    </span>
+                    {/* The amount is a bonus: it only shows where the bar can
+                        spare the width, and the holdings table always has it. */}
+                    <span className="hidden w-20 shrink-0 text-right text-muted-foreground tabular-nums xl:block">
+                      {asset.display}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {assets.length > COLLAPSED_ASSET_ROWS ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-muted-foreground"
+                  onClick={() => setExpanded((current) => !current)}
+                >
+                  {expanded ? (
+                    <>
+                      <ChevronUp className="size-4" aria-hidden="true" />
+                      <Trans id="positions.allocShowLess">Show fewer</Trans>
+                    </>
+                  ) : (
+                    <>
+                      <ChevronDown className="size-4" aria-hidden="true" />
+                      <Trans id="positions.allocShowAll">
+                        Show all {assets.length}
+                      </Trans>
+                    </>
+                  )}
+                </Button>
+              ) : null}
+            </section>
           </div>
         )}
       </CardContent>
@@ -804,7 +918,7 @@ function DeepFinderTeaser({
           </Trans>
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col gap-5">
+      <CardContent className="flex flex-1 flex-col gap-5 lg:grid lg:grid-cols-3 lg:items-start lg:gap-10">
         {showSkeleton ? (
           <div className="space-y-2">
             <Skeleton className="h-8 w-44" />
@@ -826,8 +940,9 @@ function DeepFinderTeaser({
             </p>
           </div>
         )}
-        <div className="flex min-h-0 flex-1 flex-col gap-5">
+        <div className="flex min-h-0 flex-1 flex-col gap-5 lg:col-span-2 lg:flex-row lg:gap-10">
           <MoverList
+            className="lg:flex-1"
             title={<Trans id="positions.teaserGainers">Top gainers</Trans>}
             empty={
               <Trans id="positions.teaserEmptyUp">
@@ -845,6 +960,7 @@ function DeepFinderTeaser({
                 No falling holdings this month.
               </Trans>
             }
+            className="lg:flex-1"
             rows={movers.losers}
             currency={currency}
             loading={showSkeleton}
@@ -852,7 +968,7 @@ function DeepFinderTeaser({
         </div>
       </CardContent>
       <CardFooter className="mt-auto">
-        <Button asChild className="w-full">
+        <Button asChild className="w-full sm:w-auto">
           <Link to="/deep-finder">
             <ScanSearch className="size-4" aria-hidden="true" />
             <Trans id="positions.openDeepFinder">Open Deep Finder</Trans>
@@ -864,12 +980,14 @@ function DeepFinderTeaser({
 }
 
 function MoverList({
+  className,
   title,
   empty,
   rows,
   currency,
   loading,
 }: {
+  className?: string;
   title: ReactNode;
   empty: ReactNode;
   rows: MoverRow[];
@@ -877,7 +995,7 @@ function MoverList({
   loading: boolean;
 }) {
   return (
-    <section>
+    <section className={className}>
       <h3 className="text-xs font-medium text-muted-foreground">{title}</h3>
       {loading ? (
         <ul className="mt-2 space-y-2">
@@ -983,12 +1101,10 @@ function ariaSort(
 function HoldingsCard({
   positions,
   summary,
-  colorByTicker,
   missing,
 }: {
   positions: ValuedPosition[];
   summary: PortfolioSummary;
-  colorByTicker: Map<string, string>;
   missing: string[];
 }) {
   const { i18n } = useLingui();
@@ -1146,14 +1262,6 @@ function HoldingsCard({
               <TableRow key={`${position.ticker}|${position.currency}`}>
                 <TableCell className="font-medium">
                   <span className="flex items-center gap-2">
-                    <span
-                      className="size-2 shrink-0 rounded-full"
-                      style={{
-                        backgroundColor:
-                          colorByTicker.get(position.ticker) ?? "var(--border)",
-                      }}
-                      aria-hidden="true"
-                    />
                     <AssetLogo
                       ticker={position.ticker}
                       assetClass={position.assetClass}
@@ -1223,20 +1331,12 @@ function HoldingsCard({
                   ) : (
                     <span className="flex items-center justify-end gap-2">
                       {formatWeight(position.weight)}
-                      <span
-                        className="h-1.5 w-14 shrink-0 overflow-hidden rounded-full bg-muted"
-                        aria-hidden="true"
-                      >
-                        <span
-                          className="block h-full rounded-full"
-                          style={{
-                            width: `${weightBarWidth(position.weight, maxWeight)}%`,
-                            backgroundColor:
-                              colorByTicker.get(position.ticker) ??
-                              "var(--border)",
-                          }}
-                        />
-                      </span>
+                      <ShareBar
+                        className="w-14 shrink-0"
+                        fraction={
+                          weightBarWidth(position.weight, maxWeight) / 100
+                        }
+                      />
                     </span>
                   )}
                 </TableCell>
@@ -1427,10 +1527,8 @@ function PositionsSkeleton() {
   return (
     <div className="space-y-5">
       <Skeleton className="h-[136px]" />
-      <div className="grid gap-5 lg:grid-cols-5">
-        <Skeleton className="h-[360px] lg:col-span-2" />
-        <Skeleton className="h-[360px] lg:col-span-3" />
-      </div>
+      <Skeleton className="h-[420px]" />
+      <Skeleton className="h-[248px]" />
       <Skeleton className="h-72" />
     </div>
   );
