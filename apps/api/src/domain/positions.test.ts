@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  availableBeforeOversell,
   availableQuantity,
   buildTickerLedger,
   type ConsolidationInput,
@@ -339,6 +340,27 @@ describe("availableQuantity", () => {
 
     expect(availableQuantity(log, "PETR4")).toBe("18.00000000");
     expect(availableQuantity(log, "MGLU3")).toBe("0.00000000");
+  });
+});
+
+describe("availableBeforeOversell", () => {
+  it("rejects a backdated sale that a later buy would otherwise hide", () => {
+    const log = [
+      tx({ side: "sell", quantity: "5", tradedAt: "2026-01-01" }),
+      tx({ side: "buy", quantity: "10", tradedAt: "2026-01-02" }),
+    ];
+
+    expect(availableBeforeOversell(log, "PETR4")).toBe("0.00000000");
+    expect(availableQuantity(log, "PETR4")).toBe("10.00000000");
+  });
+
+  it("accepts sales that are covered at their point in the ledger", () => {
+    const log = [
+      tx({ side: "buy", quantity: "10", tradedAt: "2026-01-01" }),
+      tx({ side: "sell", quantity: "5", tradedAt: "2026-01-02" }),
+    ];
+
+    expect(availableBeforeOversell(log, "PETR4")).toBeNull();
   });
 });
 

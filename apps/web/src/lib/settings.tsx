@@ -20,6 +20,7 @@ const FX_SOURCE_KEY = "portfolio.fxSource";
 const FX_MANUAL_RATE_KEY = "portfolio.fxManualRate";
 const QUOTE_SOURCE_KEY = "portfolio.quoteSource";
 const QUOTE_MANUAL_PRICES_KEY = "portfolio.quoteManualPrices";
+const SHOW_LOGOS_KEY = "portfolio.showLogos";
 
 const FX_SOURCES = Object.keys(FX_SOURCE_LABELS) as FxSource[];
 const QUOTE_SOURCES = Object.keys(QUOTE_SOURCE_LABELS) as QuoteSource[];
@@ -43,6 +44,15 @@ function storedText(key: string): string {
     return localStorage.getItem(key) ?? "";
   } catch {
     return "";
+  }
+}
+
+function storedBoolean(key: string, fallback: boolean): boolean {
+  try {
+    const stored = localStorage.getItem(key);
+    return stored === null ? fallback : stored === "true";
+  } catch {
+    return fallback;
   }
 }
 
@@ -93,6 +103,8 @@ export type PortfolioSettings = {
   /** Per-ticker native-currency prices for the manual quote source. */
   manualPrices: Record<string, string>;
   setManualPrice: (ticker: string, price: string) => void;
+  showLogos: boolean;
+  setShowLogos: (show: boolean) => void;
 };
 
 const SettingsContext = createContext<PortfolioSettings | null>(null);
@@ -117,6 +129,9 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   );
   const [manualPrices, setManualPricesState] = useState<Record<string, string>>(
     () => storedJsonRecord(QUOTE_MANUAL_PRICES_KEY),
+  );
+  const [showLogos, setShowLogosState] = useState(() =>
+    storedBoolean(SHOW_LOGOS_KEY, true),
   );
 
   const setDisplayCurrency = useCallback((currency: Currency) => {
@@ -160,6 +175,11 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const setShowLogos = useCallback((show: boolean) => {
+    setShowLogosState(show);
+    storeValue(SHOW_LOGOS_KEY, String(show));
+  }, []);
+
   const value = useMemo(
     () => ({
       displayCurrency,
@@ -172,6 +192,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setQuoteSource,
       manualPrices,
       setManualPrice,
+      showLogos,
+      setShowLogos,
     }),
     [
       displayCurrency,
@@ -184,6 +206,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       setQuoteSource,
       manualPrices,
       setManualPrice,
+      showLogos,
+      setShowLogos,
     ],
   );
 

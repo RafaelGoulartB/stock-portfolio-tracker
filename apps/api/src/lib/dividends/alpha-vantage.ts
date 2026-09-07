@@ -21,6 +21,17 @@ type CacheEntry = {
 
 const CACHE_TTL_MS = 24 * 60 * 60 * 1_000;
 const cache = new Map<string, CacheEntry>();
+const pending = new Map<string, Promise<DividendEvent[]>>();
+
+function pruneExpired() {
+  const now = Date.now();
+
+  for (const [key, entry] of cache) {
+    if (entry.expiresAt <= now) {
+      cache.delete(key);
+    }
+  }
+}
 
 function nullableDay(value: string | undefined): string | null {
   return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
@@ -53,13 +64,39 @@ export class AlphaVantageDividendProvider implements DividendProvider {
       return filterRange(cached.events, request);
     }
 
+    const inFlight = pending.get(request.ticker);
+    if (inFlight) {
+      return filterRange(await inFlight, request);
+    }
+
+    const result = this.fetchAndCache(request);
+    pending.set(request.ticker, result);
+
+    try {
+      return filterRange(await result, request);
+    } finally {
+      pending.delete(request.ticker);
+    }
+  }
+
+  private async fetchAndCache(
+    request: DividendRequest,
+  ): Promise<DividendEvent[]> {
+    const apiKey = this.apiKey;
+    if (!apiKey) {
+      throw new DividendUnavailableError(
+        request.ticker,
+        "Set ALPHA_VANTAGE_API_KEY to use Alpha Vantage",
+      );
+    }
+
     let response: Response;
 
     try {
       const url = new URL("https://www.alphavantage.co/query");
       url.searchParams.set("function", "DIVIDENDS");
       url.searchParams.set("symbol", request.ticker);
-      url.searchParams.set("apikey", this.apiKey);
+      url.searchParams.set("apikey", apiKey);
       response = await fetch(url, { signal: AbortSignal.timeout(12_000) });
     } catch (error) {
       throw new DividendUnavailableError(
@@ -127,6 +164,7 @@ export class AlphaVantageDividendProvider implements DividendProvider {
       })
       .sort((a, b) => b.exDate.localeCompare(a.exDate));
 
+    pruneExpired();
     cache.set(request.ticker, {
       expiresAt: Date.now() + CACHE_TTL_MS,
       events,

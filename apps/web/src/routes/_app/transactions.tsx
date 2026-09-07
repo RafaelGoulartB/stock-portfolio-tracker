@@ -99,7 +99,8 @@ const emptyForm = (): FormValues => ({
 function TransactionsPage() {
   const { i18n } = useLingui();
   const utils = trpc.useUtils();
-  const list = trpc.transactions.list.useQuery();
+  const [page, setPage] = useState(0);
+  const list = trpc.transactions.list.useQuery({ page, pageSize: 100 });
   const [mode, setMode] = useState<EntryMode>("trade");
   const [openingDate, setOpeningDate] = useState(today);
   const [bookEpoch, setBookEpoch] = useState(0);
@@ -114,8 +115,12 @@ function TransactionsPage() {
     await Promise.all([
       utils.transactions.list.invalidate(),
       utils.positions.list.invalidate(),
+      utils.positions.daily.invalidate(),
+      utils.positions.finder.invalidate(),
       utils.allocation.list.invalidate(),
       utils.performance.history.invalidate(),
+      utils.dividends.history.invalidate(),
+      utils.transactions.forTicker.invalidate(),
     ]);
   }
 
@@ -135,6 +140,7 @@ function TransactionsPage() {
         }),
       );
       form.reset({ ...emptyForm(), tradedAt: transaction.tradedAt });
+      setPage(0);
       await refresh();
     },
     onError: (error) => toast.error(createTradeErrorMessage(error)),
@@ -150,6 +156,7 @@ function TransactionsPage() {
         }),
       );
       setBookEpoch((value) => value + 1);
+      setPage(0);
       await refresh();
     },
     onError: (error) => toast.error(bookHoldingsErrorMessage(error)),
@@ -165,6 +172,7 @@ function TransactionsPage() {
           }),
         ),
       );
+      setPage(0);
       await refresh();
     },
     onError: (error) => toast.error(removeTradeErrorMessage(error)),
@@ -197,18 +205,52 @@ function TransactionsPage() {
           </p>
         ) : null}
 
-        {list.data?.length === 0 ? (
+        {list.data?.total === 0 ? (
           <p className="py-6 text-center text-sm text-muted-foreground">
             <Trans id="transactions.empty">Nothing registered yet.</Trans>
           </p>
         ) : null}
 
-        {list.data && list.data.length > 0 ? (
-          <HistoryTable
-            transactions={list.data}
-            onRemove={(id) => remove.mutate({ id })}
-            removingId={remove.isPending ? remove.variables?.id : undefined}
-          />
+        {list.data && list.data.items.length > 0 ? (
+          <div className="space-y-4">
+            <HistoryTable
+              transactions={list.data.items}
+              onRemove={(id) => remove.mutate({ id })}
+              removingId={remove.isPending ? remove.variables?.id : undefined}
+            />
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm text-muted-foreground">
+                <Trans id="transactions.pageSummary">
+                  {page * list.data.pageSize + 1}–
+                  {Math.min((page + 1) * list.data.pageSize, list.data.total)}{" "}
+                  of {list.data.total}
+                </Trans>
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={page === 0 || list.isFetching}
+                  onClick={() => setPage((value) => Math.max(0, value - 1))}
+                >
+                  <Trans id="transactions.previous">Previous</Trans>
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={
+                    list.isFetching ||
+                    (page + 1) * list.data.pageSize >= list.data.total
+                  }
+                  onClick={() => setPage((value) => value + 1)}
+                >
+                  <Trans id="transactions.next">Next</Trans>
+                </Button>
+              </div>
+            </div>
+          </div>
         ) : null}
       </CardContent>
     </Card>

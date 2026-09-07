@@ -54,7 +54,7 @@ import {
 } from "../../lib/quotes";
 import { protectedProcedure, router } from "../trpc";
 import { loadValuedPortfolio } from "../valuation";
-import { loadTransactions } from "./transactions";
+import { loadTransactionsForTickers } from "./transactions";
 
 const API_TIME_ZONE = "America/Sao_Paulo";
 
@@ -110,6 +110,35 @@ async function loadAssets(userId: string): Promise<AllocationAssetMeta[]> {
     markColor: parseMarkColor(row.markColor),
     sortOrder: row.sortOrder,
   }));
+}
+
+async function loadAsset(
+  userId: string,
+  ticker: string,
+): Promise<AllocationAssetMeta | null> {
+  const [row] = await db
+    .select()
+    .from(allocationAssets)
+    .where(
+      and(
+        eq(allocationAssets.userId, userId),
+        eq(allocationAssets.ticker, ticker),
+      ),
+    )
+    .limit(1);
+
+  return row
+    ? {
+        ticker: row.ticker,
+        assetClass: normalizeAssetClass(row.assetClass),
+        currency: row.currency,
+        targetWeight: row.targetWeight,
+        valuationRef: row.valuationRef,
+        manualPrice: row.manualPrice,
+        markColor: parseMarkColor(row.markColor),
+        sortOrder: row.sortOrder,
+      }
+    : null;
 }
 
 async function loadReviews(userId: string): Promise<StoredReview[]> {
@@ -274,6 +303,7 @@ export const allocationRouter = router({
         usdBrlRate: input.usdBrlRate,
         quoteSource: input.quoteSource,
         manualPrices: requestManuals,
+        storedManualPrices: storedManualPrices(assets),
       });
 
       const invested = new Set(
@@ -338,9 +368,9 @@ export const allocationRouter = router({
   history: protectedProcedure
     .input(allocationHistoryInput)
     .query(async ({ ctx, input }) => {
-      const [traded, assets, reviews] = await Promise.all([
+      const [traded, asset, reviews] = await Promise.all([
         tradedIdentity(ctx.user.id, input.ticker),
-        loadAssets(ctx.user.id),
+        loadAsset(ctx.user.id, input.ticker),
         db
           .select({
             period: assetReviews.period,
@@ -355,7 +385,6 @@ export const allocationRouter = router({
           )
           .orderBy(asc(assetReviews.period)),
       ]);
-      const asset = assets.find((row) => row.ticker === input.ticker);
       const assetClass = traded?.assetClass ?? asset?.assetClass;
       const currency = traded?.currency ?? asset?.currency;
 
@@ -502,7 +531,9 @@ export const allocationRouter = router({
         return { ticker: input.ticker, manualPrice: null };
       }
 
-      const native = consolidatePositions(await loadTransactions(ctx.user.id));
+      const native = consolidatePositions(
+        await loadTransactionsForTickers(ctx.user.id, [input.ticker]),
+      );
       const position = native.find(
         (row) =>
           row.ticker === input.ticker && !isZero(toDecimal(row.quantity)),

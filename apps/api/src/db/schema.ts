@@ -76,6 +76,12 @@ export const transactions = pgTable(
   (table) => [
     index("transactions_user_ticker_idx").on(table.userId, table.ticker),
     index("transactions_user_traded_at_idx").on(table.userId, table.tradedAt),
+    index("transactions_user_history_order_idx").on(
+      table.userId,
+      table.tradedAt,
+      table.createdAt,
+      table.id,
+    ),
   ],
 );
 

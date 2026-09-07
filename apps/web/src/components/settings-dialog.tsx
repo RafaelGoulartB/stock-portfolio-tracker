@@ -40,6 +40,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import { formatQuantity, formatTradeDate } from "@/lib/format";
 import { useFxQuote } from "@/lib/fx";
 import { useSettings } from "@/lib/settings";
@@ -225,6 +226,8 @@ function GeneralSettings() {
     setManualRate,
     quoteSource,
     setQuoteSource,
+    showLogos,
+    setShowLogos,
   } = useSettings();
   const fx = useFxQuote();
 
@@ -363,6 +366,28 @@ function GeneralSettings() {
             </Trans>
           )}
         </p>
+      </Field>
+
+      <Field
+        label={
+          <Label htmlFor="settings-show-logos">
+            <Trans id="settings.showLogos">Show company logos</Trans>
+          </Label>
+        }
+      >
+        <div className="flex items-center justify-between gap-4 rounded-md border p-3">
+          <p className="text-xs text-muted-foreground">
+            <Trans id="settings.showLogosHint">
+              Turn this off to use ticker initials and make no Logo.dev image
+              requests.
+            </Trans>
+          </p>
+          <Switch
+            id="settings-show-logos"
+            checked={showLogos}
+            onCheckedChange={setShowLogos}
+          />
+        </div>
       </Field>
     </div>
   );

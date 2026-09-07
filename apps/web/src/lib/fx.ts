@@ -24,6 +24,7 @@ export function useFxQuote(asOf?: string | null) {
     {
       enabled: fxSource === "manual" ? manualRateValid : true,
       staleTime: 6 * 60 * 60 * 1_000,
+      gcTime: 6 * 60 * 60 * 1_000,
     },
   );
 

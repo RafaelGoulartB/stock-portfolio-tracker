@@ -43,6 +43,13 @@
       "when": 1788820000000,
       "tag": "0005_split_contribution_plan_impacts",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788820258998,
+      "tag": "0006_sticky_malcolm_colcord",
+      "breakpoints": true
     }
   ]
 }

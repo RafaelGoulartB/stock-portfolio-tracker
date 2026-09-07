@@ -735,6 +735,38 @@ export function availableQuantity(
   return formatDecimal(total, QUANTITY_PLACES);
 }
 
+/**
+ * Returns the balance immediately before the first invalid sale, if any.
+ * A final net balance is insufficient: a backdated sale cannot be covered by
+ * a buy that happens later in the ledger.
+ */
+export function availableBeforeOversell(
+  input: readonly ConsolidationInput[],
+  ticker: string,
+): string | null {
+  let quantity = ZERO;
+
+  for (const entry of [...input].sort(byTradeOrder)) {
+    if (entry.ticker !== ticker) {
+      continue;
+    }
+
+    const amount = toDecimal(entry.quantity);
+
+    if (entry.side === "sell") {
+      if (amount > quantity) {
+        return formatDecimal(quantity, QUANTITY_PLACES);
+      }
+
+      quantity = sub(quantity, amount);
+    } else {
+      quantity = add(quantity, amount);
+    }
+  }
+
+  return null;
+}
+
 /** Native currencies already used by a ticker, e.g. to enforce one per ticker. */
 export function tickerCurrencies(
   input: readonly ConsolidationInput[],

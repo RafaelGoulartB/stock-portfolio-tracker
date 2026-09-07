@@ -18,6 +18,18 @@ const HISTORY_TTL_MS = 7 * 24 * 60 * 60 * 1_000;
 const SERIES_TTL_MS = 6 * 60 * 60 * 1_000;
 const cache = new Map<string, CacheEntry>();
 const seriesCache = new Map<string, SeriesCacheEntry>();
+const pendingQuotes = new Map<string, Promise<MarketQuote>>();
+const pendingSeries = new Map<string, Promise<QuoteSeriesPoint[]>>();
+
+function pruneExpired<T extends { expiresAt: number }>(cache: Map<string, T>) {
+  const now = Date.now();
+
+  for (const [key, entry] of cache) {
+    if (entry.expiresAt <= now) {
+      cache.delete(key);
+    }
+  }
+}
 
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
@@ -168,18 +180,33 @@ export class YahooProvider implements QuoteProvider {
       return hit.quote;
     }
 
-    const quote =
-      request.asOf == null
-        ? await this.spotQuote(symbol, request)
-        : await this.historicalQuote(symbol, request, request.asOf);
+    const pending = pendingQuotes.get(key);
+    if (pending) {
+      return pending;
+    }
 
-    cache.set(key, {
-      quote,
-      expiresAt:
-        Date.now() + (request.asOf == null ? SPOT_TTL_MS : HISTORY_TTL_MS),
-    });
+    const result = (async () => {
+      const quote =
+        request.asOf == null
+          ? await this.spotQuote(symbol, request)
+          : await this.historicalQuote(symbol, request, request.asOf);
 
-    return quote;
+      pruneExpired(cache);
+      cache.set(key, {
+        quote,
+        expiresAt:
+          Date.now() + (request.asOf == null ? SPOT_TTL_MS : HISTORY_TTL_MS),
+      });
+
+      return quote;
+    })();
+    pendingQuotes.set(key, result);
+
+    try {
+      return await result;
+    } finally {
+      pendingQuotes.delete(key);
+    }
   }
 
   /**
@@ -207,37 +234,51 @@ export class YahooProvider implements QuoteProvider {
       return hit.points;
     }
 
-    const result = await fetchChart(
-      symbol,
-      request.ticker,
-      dayToUnix(request.start),
-      dayToUnix(request.end) + 86400,
-    );
-    const timestamps = result.timestamp ?? [];
-    const closes = result.indicators?.quote?.[0]?.close ?? [];
-    const points: QuoteSeriesPoint[] = [];
+    const pending = pendingSeries.get(key);
+    if (pending) {
+      return pending;
+    }
 
-    for (let index = 0; index < timestamps.length; index += 1) {
-      const timestamp = timestamps[index];
-      const close = closes[index];
+    const result = (async () => {
+      const chart = await fetchChart(
+        symbol,
+        request.ticker,
+        dayToUnix(request.start),
+        dayToUnix(request.end) + 86400,
+      );
+      const timestamps = chart.timestamp ?? [];
+      const closes = chart.indicators?.quote?.[0]?.close ?? [];
+      const points: QuoteSeriesPoint[] = [];
 
-      if (timestamp == null || close == null || close <= 0) {
-        continue;
+      for (let index = 0; index < timestamps.length; index += 1) {
+        const timestamp = timestamps[index];
+        const close = closes[index];
+
+        if (timestamp == null || close == null || close <= 0) {
+          continue;
+        }
+
+        points.push({
+          asOf: unixToDay(timestamp),
+          close: toPriceString(close, request.ticker),
+        });
       }
 
-      points.push({
-        asOf: unixToDay(timestamp),
-        close: toPriceString(close, request.ticker),
-      });
+      if (points.length === 0) {
+        throw new QuoteUnavailableError(request.ticker);
+      }
+
+      pruneExpired(seriesCache);
+      seriesCache.set(key, { points, expiresAt: Date.now() + SERIES_TTL_MS });
+      return points;
+    })();
+    pendingSeries.set(key, result);
+
+    try {
+      return await result;
+    } finally {
+      pendingSeries.delete(key);
     }
-
-    if (points.length === 0) {
-      throw new QuoteUnavailableError(request.ticker);
-    }
-
-    seriesCache.set(key, { points, expiresAt: Date.now() + SERIES_TTL_MS });
-
-    return points;
   }
 
   private async spotQuote(
@@ -369,4 +410,6 @@ export class YahooProvider implements QuoteProvider {
 export function clearQuoteCache(): void {
   cache.clear();
   seriesCache.clear();
+  pendingQuotes.clear();
+  pendingSeries.clear();
 }

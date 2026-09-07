@@ -162,6 +162,21 @@ export const transactionSchema = z.object({
 
 export type Transaction = z.infer<typeof transactionSchema>;
 
+/** A bounded, stable page of the account transaction history. */
+export const transactionListInput = z.object({
+  page: z.number().int().min(0).default(0),
+  pageSize: z.number().int().min(1).max(100).default(100),
+});
+
+export const transactionListSchema = z.object({
+  items: z.array(transactionSchema),
+  total: z.number().int().nonnegative(),
+  page: z.number().int().nonnegative(),
+  pageSize: z.number().int().positive(),
+});
+
+export type TransactionList = z.infer<typeof transactionListSchema>;
+
 export const tickerLedgerInput = z.object({ ticker: tickerSchema });
 
 export const tickerLedgerTradeSchema = z.object({

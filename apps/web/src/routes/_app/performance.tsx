@@ -171,7 +171,7 @@ function PerformancePage() {
       manualRate: manualRateValid ? manualRate : undefined,
     },
     // A month-end history only changes when a new close lands.
-    { staleTime: 30 * 60 * 1_000 },
+    { staleTime: 30 * 60 * 1_000, gcTime: 30 * 60 * 1_000 },
   );
 
   const data = history.data;

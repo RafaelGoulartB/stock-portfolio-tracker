@@ -1,4 +1,4 @@
-# Database Capacity and Transfer Plan
+# Database Capacity, Transfer, and Logo Request Plan
 
 ## Purpose
 
@@ -17,6 +17,58 @@ The provider and plan must be checked before treating these estimates as quota
 billing figures. Providers differ on whether WAL, backups, replicas, and
 traffic inside the same region count toward their limits.
 
+## Review scope and evidence (2026-09-07)
+
+This review inspected the current source and installed TanStack Query code,
+checked Logo.dev's public documentation, and ran read-only size/statistics
+queries against the configured Neon database on 2026-09-07. No production
+traffic was measured. The benchmark below is retained from the earlier study;
+it was not rerun against today's schema. The owner confirmed Neon as the
+provider during this review; the account's actual plan and usage have not been
+inspected.
+The 500 MB budget corresponds to the public Free plan's 0.5 GB allowance.
+
+The highest-confidence opportunity is reducing database result traffic:
+ordinary navigation and small writes repeatedly select the full account
+ledger. Logo images already bypass both the API and PostgreSQL, but their
+browser cache is temporary, not a permanent download-once implementation.
+
+The current database measured 8,429,568 bytes (8,232 kB), about 1.6% of the
+public Free-plan 0.5 GB storage allowance. `pg_stat_user_tables` reported 32
+live transaction rows and 24 dead transaction rows; the largest relations were
+each 64 kB. These counters are approximate and do not measure network transfer,
+but they confirm storage and bloat are not the present operational constraint.
+The migration-created baseline is most of the current size. Recheck after a
+material import or sustained production use.
+
+### Neon-specific implications
+
+The public Free plan currently includes 0.5 GB storage per project, 100
+CU-hours per project per month, and 5 GB public network transfer per project
+per month. Check the account console for its actual entitlement and remaining
+usage. Sources checked on 2026-09-07: [Neon pricing](https://neon.com/pricing)
+and [network transfer](https://neon.com/docs/introduction/network-transfer).
+
+Neon counts outbound database traffic through its proxy, including both direct
+and pooled connections. The important path here is PostgreSQL to the API;
+compressing browser JSON or changing logo delivery does not reduce that meter.
+Backup exports also read account data through this path. At the earlier
+estimate of 2.1 MB per 10,000-row ledger read, 5 GB corresponds to roughly
+2,380 such reads, or 79 per day over 30 days, before protocol overhead and all
+other queries. Multiple full-history queries per screen can consume that
+allowance sooner; this is illustrative arithmetic, not observed usage.
+
+Neon Free suspends inactive compute after five minutes. Therefore, auditing
+the deployment's `/health` polling is an immediate priority alongside query
+pagination: this app's health route executes SQL, so frequent polling can
+prevent scale-to-zero even when nobody uses the portfolio. A constant 0.25 CU
+for 30 days would use 180 CU-hours; that is a conditional example, not the
+configured compute size. Use process liveness for frequent platform probes and
+retain a separate database readiness check with deliberate frequency. Do not
+introduce a frequent SQL timer solely to remove expired sessions; prefer
+rate-limited cleanup on actual session issuance or an infrequent scheduled
+maintenance window. Source: [Neon scale to zero](https://neon.com/docs/introduction/scale-to-zero).
+
 ## Current persistence model
 
 The application persists only:
@@ -25,7 +77,8 @@ The application persists only:
 - transactions;
 - allocation assets;
 - quarterly asset reviews;
-- categories and asset-category assignments.
+- categories and asset-category assignments;
+- the current cash balance and per-user score and contribution-plan policies.
 
 Spot quotes, historical price series, dividend events, FX rates, portfolio
 positions, and performance snapshots are fetched or calculated on demand and
@@ -33,7 +86,9 @@ are not stored. This is favorable for the storage quota.
 
 ## PostgreSQL 16 benchmark
 
-The current migrations were applied to a temporary PostgreSQL 16.15 database.
+The migrations present at the time of the earlier benchmark were applied to a
+temporary PostgreSQL 16.15 database. Later schema additions require a new
+measurement before using these figures as current physical capacity.
 Measurements used `pg_total_relation_size`, so they include the table, indexes,
 and TOAST auxiliary storage.
 
@@ -175,19 +230,27 @@ efficient because it performs one history validation for the batch.
 Replace the full `loadTransactions(userId)` call in transaction creation with
 queries scoped to the affected ticker.
 
-The validation needs only:
+The initial scope reduction needs only that ticker's ledger, including:
 
 - the currencies already used by that user's ticker; and
-- for a sale, the aggregate available quantity for that ticker.
+- the chronologically ordered quantities needed to validate a sale at its
+  ledger position, including the effect on subsequent transactions.
 
-Prefer SQL aggregates where possible. If domain calculation remains in
-TypeScript, load only the ticker ledger, not the user's complete portfolio.
+Do not replace chronological validation with a final net-quantity aggregate:
+a backdated sale can leave a negative intermediate balance despite a positive
+current balance. Today validation reads occur before the write transaction
+and `availableQuantity` checks the net balance. Treat backdated and concurrent
+writes as correctness requirements of this work, using atomic validation and
+appropriate per-account/ticker serialization. Keep financial rules in the
+domain layer. Apply scoped reads to `bookHoldings` (the batch's tickers) and
+`allocation.setManualValue` (one ticker) as well.
 
 Acceptance criteria:
 
 - creating a transaction does not select unrelated tickers;
 - query result size depends on one ticker rather than the complete portfolio;
 - mixed-currency protection and overselling protection remain covered by tests;
+- backdated trades and concurrent sales cannot create invalid ledger balances;
 - a benchmark with 10,000 unrelated transactions shows a bounded validation
   result.
 
@@ -217,6 +280,11 @@ Acceptance criteria:
 
 - allocation list response size is bounded by assets times the quarter cap;
 - scoring receives every review required by `DEFAULT_SCORE_CONFIG`;
+- use the effective user score policy: `averageGrade` takes the newest N
+  **graded** reviews, not N calendar quarters; sparse grades may be older than
+  the visible window;
+- preserve the latest non-null fair value and its reference even when older
+  than the visible window; a simple date cutoff would change discounts;
 - asset detail can still access older reviews;
 - no scoring threshold is duplicated in a router or screen.
 
@@ -235,6 +303,74 @@ Potential approaches, in increasing order of complexity:
 Do not introduce a projection until query measurements show that scoped reads
 and pagination are insufficient. Moving-average cost behavior and one-currency-
 per-ticker invariants must remain authoritative in the domain layer.
+
+Concrete reductions in the current code:
+
+- `transactions.ts:loadTransactions` selects `notes` and `id` through the same
+  column object as the list DTO. Consolidation does not use notes. Split the
+  calculation projection from the display projection; retain identity where
+  required to make trade ordering deterministic.
+- `allocation.list` loads allocation metadata, then `loadValuedPortfolio`
+  reads that table again for manual prices. Pass the already-loaded values
+  explicitly, preserving stored-price and client-override precedence.
+- `allocation.history` loads all allocation assets to find one ticker. Scope
+  that metadata query to the requested ticker.
+- `allocation.$ticker.tsx` queries the complete allocation list as well as
+  ticker history and ledger. A dedicated detail response can reduce transfer,
+  but contribution scores and weights still need portfolio-wide denominators;
+  do not calculate a different score from the ticker alone.
+- Positions also mounts a Finder query for its chart. Both independently call
+  `loadValuedPortfolio`. HTTP batching in `lib/api.ts` reduces HTTP overhead,
+  not these repeated SQL reads. Consider request-scoped read deduplication for
+  identical account/input reads within a read-only batch after measuring it.
+
+Historical reports need opening balances and cost history before the visible
+date range. Pushing an upper `asOf` bound into SQL can be safe; dropping all
+transactions before the chart start is not generally safe.
+
+### P1: Match frontend cache lifetime to data freshness
+
+`apps/web/src/lib/api.ts` sets `staleTime: 10_000`, disables focus refetch and
+retries, and does not configure `gcTime`. Ten seconds is a freshness window,
+not a polling interval: stale queries can fetch again when mounted or
+reconnected. The installed Query Core 5.102.8 defaults to removing inactive
+queries after five minutes (`src/removable.ts`).
+
+Performance overrides freshness to 30 minutes; Dividends and FX use six hours.
+Their entries can nevertheless be discarded after five inactive minutes and
+need a new request on return. Cache is in memory and is lost on page reload.
+Provider cache hits do not bypass ledger reads or session lookup in the API.
+
+Proposed starting policies, to validate against memory and acceptable age:
+
+- Categories and configuration: 5–15 minute freshness, 30 minute inactive
+  retention, immediate mutation invalidation.
+- Transaction pages: 1–5 minute freshness and 15–30 minute retention after
+  pagination. Preserve refresh and account-switch behavior.
+- Live portfolio views: consider 30–60 second freshness first, with an explicit
+  refresh and truthful quote timestamps. The Yahoo spot cache already lasts
+  15 minutes; reading SQL again does not necessarily obtain a newer quote.
+- Performance: retain inactive responses for at least its 30 minute freshness
+  window. Dividends/FX: evaluate retention up to their six-hour window with a
+  bounded number of historical-range keys.
+
+Before increasing lifetimes, complete mutation invalidation. For example,
+`routes/_app/transactions.tsx:refresh` currently omits `positions.daily`,
+`positions.finder`, `dividends.history`, and `transactions.forTicker`.
+Longer freshness would make stale financial values more visible. Preserve
+`lib/session.ts` clearing all queries on account changes and define how another
+tab's writes become visible. Do not persist private portfolio query caches as
+part of this optimization.
+
+Several live screens also issue queries while `fx.effectiveRate` is undefined,
+then issue a different query when FX resolves. Measure cold-load traces and
+gate only operations that require that rate. Preserve native-currency and
+manual-fallback behavior; a missing provider rate must not cause an indefinite
+loading screen or block a portfolio that can be valued without conversion.
+
+Acceptance: navigating back within the chosen freshness window performs no
+new request for the same query key; mutations update every affected screen;
+BRL/USD, absent FX, reload, and account switching remain correct.
 
 ### P1: Clean expired sessions periodically
 
@@ -319,6 +455,138 @@ define:
 - compression or monthly aggregation;
 - deletion and vacuum behavior;
 - expected storage and transfer per user-year.
+
+## Logo.dev: current behavior and improvements
+
+Evidence: `apps/web/src/components/asset-logo.tsx` is the shared component used
+by portfolio tables and asset detail. It requests `img.logo.dev` directly with
+a normalized ticker/exchange identity, stable query parameters, WebP,
+`size=64`, `retina=true`, `loading="lazy"`, and asynchronous decoding. Unsupported
+asset classes and a missing publishable key already produce local initials.
+
+There is no app-owned logo cache in IndexedDB, Cache Storage, localStorage, or
+a service worker in the inspected source. The existing reuse is the browser's
+HTTP cache. Logo.dev currently documents 24-hour freshness and a ten-minute
+stale-while-revalidate allowance. Expiry, eviction, a different device/profile,
+or a changed URL can cause another network request. A component rerender does
+not by itself imply another billable request. See
+[Logo.dev caching](https://www.logo.dev/docs/platform/caching).
+
+The public Community plan currently lists 500,000 monthly requests; verify the
+actual account dashboard before treating that as the project's entitlement.
+API credits are a separate meter. Self-hosting is listed for paid plans;
+copying images to an API proxy, filesystem, or object store is not the proposed
+free-plan solution. The documented browser cache already avoids storing logos
+in PostgreSQL. See [pricing](https://www.logo.dev/pricing) and
+[self-hosting](https://www.logo.dev/docs/platform/self-hosting).
+
+### P1: Avoid repeated failed-logo attempts
+
+`failedSrc` is local React state. It prevents retry only for that mounted
+component; a new instance for the same failed URL tries again, subject to any
+HTTP caching of the error response. The current code does not share failure
+state between views.
+
+Add a small bounded failure registry keyed by the complete normalized URL,
+with a short retry TTL (for example, five minutes) and local initials while
+suppressed. A module-level map is enough to cover SPA navigation; persistence
+would be a separate decision. Do not permanently blacklist a ticker: image
+`onError` cannot distinguish missing logos from offline, quota, or transient
+failures. Check the registry before setting `src`; multiple simultaneous first
+mounts still need measurement rather than a promise of one request.
+
+Acceptance: navigating to a second view after an image failure does not retry
+within the TTL; a later mount can retry after expiry; different URL identities
+remain independent; errors never hide ticker text or cause layout shifts.
+
+### P2: Offer optional logo suppression if usage warrants it
+
+A local, reversible “show company logos” preference can eliminate logo
+requests entirely when off. Render the existing initials without assigning an
+image URL. Keep attribution when required, update English and pt-BR messages,
+and verify keyboard behavior. This is the most predictable request-saving
+control if the account actually approaches its quota.
+
+Keep stable URLs and lazy loading. Do not preload all tracked logos or append
+per-render timestamps. If very large tables are measured, pagination or
+virtualization can avoid mounting offscreen images; lazy loading already
+helps, so do not introduce virtualization only for hypothetical logo savings.
+
+### P2: Right-size images for bytes, not request count
+
+The component displays 28 CSS pixels but requests size 64 with retina enabled.
+Evaluate a smaller shared image variant against sharpness on 1x/2x screens.
+Smaller files reduce browser bandwidth, not the number of Logo API requests.
+Changing the URL also causes an initial cache miss; avoid unnecessary variants
+between screens. No exact byte savings are claimed without image measurements.
+
+Do not assume an indefinite custom browser cache is permitted or needed from
+the self-hosting documentation. Any proposed policy beyond the documented
+HTTP lifetime needs its own freshness, storage-eviction, and provider-terms
+review. No such cache is needed for the initial improvements above.
+
+## Other bounded opportunities
+
+- External providers: Yahoo quotes/series, dividends, and Frankfurter use
+  process-local Maps and cache successful responses after the fetch completes.
+  Concurrent misses for one key can therefore issue duplicate upstream calls.
+  Share in-flight promises by the full provider identity, remove them on both
+  success and failure, and bound/prune completed caches. TTL checks alone do
+  not remove expired keys that are never visited again. Keep manual fallback
+  values out of shared public quote entries and retain failure distinctions.
+  This saves provider traffic and memory, not PostgreSQL storage; replicas and
+  restarts still have separate cold caches. No Redis or database cache is
+  justified by the current evidence.
+- `/health` performs `SELECT 1` on each request (`apps/api/src/index.ts`). If
+  external monitoring polls every 30 seconds, that alone would issue 86,400
+  database queries in 30 days per monitor. This is a hypothetical load, not a
+  measured deployment setting. Separate process liveness from DB readiness
+  only if actual monitoring frequency or provider compute billing justifies it;
+  preserve a truthful DB readiness check.
+- Existing transaction indexes cover `(user_id, ticker)` and
+  `(user_id, traded_at)`. Use these scoped paths first. Evaluate a pagination
+  ordering index with `EXPLAIN` before adding it; indexes cost storage and writes.
+  A faster query returning the same full ledger does not reduce result bytes.
+- HTTP compression, if absent at the deployment proxy, can reduce
+  API-to-browser JSON traffic. It does not reduce PostgreSQL-to-API results or
+  Logo.dev request counts. Inspect deployment behavior before adding middleware.
+
+## Recommended execution order and measurements
+
+| Order | Change | Main quota affected | Expected result / effort |
+| --- | --- | --- | --- |
+| 0 | Audit Neon health polling and actual quota consumption | Compute hours | High if frequent SQL probes prevent suspension; deployment configuration remains unverified |
+| 1 | Paginate transactions and scope mutation reads | DB and API transfer | High benefit as history grows; medium effort, chronological-write validation needs extra care |
+| 2 | Remove unused notes and repeated metadata reads | DB transfer | Low implementation effort; benefit depends on note size and navigation |
+| 3 | Complete invalidation, then tune freshness and retention | DB/API requests | Potentially high navigation benefit; medium effort |
+| 4 | Bound allocation review payload while preserving scoring inputs | DB/API transfer | High for long review histories; medium effort |
+| 5 | Shared temporary logo-failure suppression | Logo requests | Low effort; benefit depends on failed-logo frequency |
+| 6 | Session cleanup, explicit pool, provider in-flight deduplication | Storage/connections/provider traffic | Operational hardening; low to medium effort |
+| 7 | Optional logo switch, image-size tuning, projections only if justified | Logo requests/bytes or DB transfer | Driven by measured remaining pressure |
+
+The prior estimate gives 3.47 MB JSON for 10,000 transaction rows. At the same
+average row size, a 100-row page would be about 34.7 KB: approximately 99% fewer
+transaction payload bytes for the initial page, not 99% less total app traffic.
+This is an extrapolation, not a new benchmark. Full-ledger reports still need
+historical inputs unless a separately justified design replaces those reads.
+
+For logos, a planning approximation is active browser profiles × unique logo
+URLs actually loaded × cold/expired-cache cycles. For example, 100 profiles ×
+50 logos × 30 daily cycles is about 150,000 requests/month before failures,
+eviction, or URL variants. It is not a usage measurement or a guaranteed bound.
+
+Before implementation, record a baseline for a cold visit, immediate repeat,
+return after 30 seconds, and return after six inactive minutes across
+Transactions, Positions, Allocation, and one asset detail. Count SQL rows and
+bytes separately from HTTP requests and provider calls. Capture logo network
+requests with browser cache enabled, including a missing logo and cross-screen
+navigation; compare with provider-reported usage. Do not use “Disable cache”
+results as representative repeat-user consumption.
+
+Retain financial history, decimal precision, and account isolation. Storage
+reduction should start with expired sessions and observed bloat, not deleting
+transactions/reviews or persisting derived data elsewhere. Exact quota runway
+remains unknown until the Neon account plan and current usage are supplied.
 
 ## Verification after implementation
 

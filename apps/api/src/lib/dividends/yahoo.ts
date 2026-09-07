@@ -11,6 +11,17 @@ const CACHE_TTL_MS = 6 * 60 * 60 * 1_000;
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
 const cache = new Map<string, { events: DividendEvent[]; expiresAt: number }>();
+const pending = new Map<string, Promise<DividendEvent[]>>();
+
+function pruneExpired() {
+  const now = Date.now();
+
+  for (const [key, entry] of cache) {
+    if (entry.expiresAt <= now) {
+      cache.delete(key);
+    }
+  }
+}
 
 function dayToUnix(day: string): number {
   const [year, month, date] = day.split("-").map(Number);
@@ -46,6 +57,26 @@ export class YahooDividendProvider implements DividendProvider {
       return hit.events;
     }
 
+    const inFlight = pending.get(key);
+    if (inFlight) {
+      return inFlight;
+    }
+
+    const result = this.fetchAndCache(request, symbol, key);
+    pending.set(key, result);
+
+    try {
+      return await result;
+    } finally {
+      pending.delete(key);
+    }
+  }
+
+  private async fetchAndCache(
+    request: DividendRequest,
+    symbol: string,
+    key: string,
+  ): Promise<DividendEvent[]> {
     let response: Response;
 
     try {
@@ -123,6 +154,7 @@ export class YahooDividendProvider implements DividendProvider {
       )
       .sort((a, b) => b.exDate.localeCompare(a.exDate));
 
+    pruneExpired();
     cache.set(key, { events, expiresAt: Date.now() + CACHE_TTL_MS });
     return events;
   }
@@ -130,4 +162,5 @@ export class YahooDividendProvider implements DividendProvider {
 
 export function clearYahooDividendCache(): void {
   cache.clear();
+  pending.clear();
 }

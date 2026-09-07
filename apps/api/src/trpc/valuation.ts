@@ -32,6 +32,8 @@ export type ValuationRequest = {
   quoteSource: QuoteSource;
   /** Per-ticker native prices for the `manual` source, any casing. */
   manualPrices?: Record<string, string>;
+  /** Already-loaded persisted manual prices, used by Allocation to avoid a duplicate query. */
+  storedManualPrices?: Record<string, string>;
   /** `YYYY-MM-DD` snapshot; omitted values the live portfolio. */
   asOf?: string;
 };
@@ -79,7 +81,7 @@ export async function loadValuedPortfolio(
 ): Promise<ValuationResult> {
   const [transactions, storedManualPrices, cashRows] = await Promise.all([
     loadTransactions(request.userId),
-    loadStoredManualPrices(request.userId),
+    request.storedManualPrices ?? loadStoredManualPrices(request.userId),
     request.asOf
       ? Promise.resolve([])
       : db

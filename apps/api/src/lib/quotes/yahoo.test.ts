@@ -88,6 +88,25 @@ describe("YahooProvider", () => {
     expect(fetchMock).toHaveBeenCalledOnce();
   });
 
+  it("shares concurrent requests for the same quote", async () => {
+    const fetchMock = stubFetch(chartFixture([]));
+    vi.stubGlobal("fetch", fetchMock);
+    const provider = new YahooProvider();
+    const request = {
+      ticker: "PETR4",
+      assetClass: "stock_br" as const,
+      currency: "BRL" as const,
+    };
+
+    const [first, second] = await Promise.all([
+      provider.getQuote(request),
+      provider.getQuote(request),
+    ]);
+
+    expect(first).toEqual(second);
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
   it("includes the previous close for daily performance", async () => {
     vi.stubGlobal(
       "fetch",

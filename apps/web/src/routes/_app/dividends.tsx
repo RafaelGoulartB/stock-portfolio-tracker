@@ -99,7 +99,7 @@ function DividendsPage() {
       displayCurrency,
       usdBrlRate: fx.effectiveRate,
     },
-    { staleTime: 6 * 60 * 60 * 1_000 },
+    { staleTime: 6 * 60 * 60 * 1_000, gcTime: 6 * 60 * 60 * 1_000 },
   );
 
   return (

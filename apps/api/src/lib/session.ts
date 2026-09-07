@@ -20,6 +20,8 @@ export async function createSession(userId: string): Promise<IssuedSession> {
   const token = randomBytes(32).toString("base64url");
   const expiresAt = new Date(Date.now() + SESSION_TTL_MS);
 
+  // Login is infrequent, unlike a timer that would keep Neon compute awake.
+  await deleteExpiredSessions();
   await db.insert(sessions).values({ id: hashToken(token), userId, expiresAt });
 
   return { token, expiresAt };
