@@ -518,7 +518,7 @@ export function AllocationTable({
                   className={cn(
                     "h-10 px-2.5 whitespace-nowrap",
                     id === "ticker"
-                      ? "sticky left-0 z-10 bg-muted/50"
+                      ? "sticky left-0 z-10 w-36 max-w-36 bg-muted/50"
                       : "text-right",
                   )}
                 >
@@ -709,27 +709,28 @@ export function AllocationTable({
                   {visibleColumns.has("ticker") ? (
                     <TableCell
                       className={cn(
-                        "sticky left-0 z-10 px-2.5 py-2.5",
+                        "sticky left-0 z-10 w-36 max-w-36 px-2.5 py-2.5",
                         row.markColor
                           ? MARK_STICKY[row.markColor]
                           : "bg-card group-hover:bg-[color-mix(in_oklab,var(--muted)_50%,var(--card))]",
                       )}
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex min-w-0 items-center gap-2">
                         <AssetLogo
                           ticker={row.ticker}
                           assetClass={row.assetClass}
                           currency={row.currency}
                         />
                         {row.ticker === CASH_TICKER ? (
-                          <span className="font-semibold">
+                          <span className="min-w-0 truncate font-semibold">
                             <Trans id="allocation.cash">Cash</Trans>
                           </span>
                         ) : (
                           <Link
                             to="/assets/$ticker"
                             params={{ ticker: row.ticker }}
-                            className="font-semibold hover:underline underline-offset-2"
+                            title={row.ticker}
+                            className="min-w-0 truncate font-semibold hover:underline underline-offset-2"
                           >
                             {row.ticker}
                           </Link>
@@ -737,14 +738,14 @@ export function AllocationTable({
                         {row.hasPosition ? null : (
                           <Badge
                             variant="outline"
-                            className="h-4 px-1 text-[10px] font-normal"
+                            className="h-4 shrink-0 px-1 text-[10px] font-normal"
                           >
                             <Trans id="allocation.watchBadge">Watch</Trans>
                           </Badge>
                         )}
                         {missing.includes(row.ticker) ? (
                           <TriangleAlert
-                            className="size-3 text-amber-600 dark:text-amber-400"
+                            className="size-3 shrink-0 text-amber-600 dark:text-amber-400"
                             aria-label={i18n._(
                               t({
                                 id: "allocation.quoteMissing",
@@ -1089,7 +1090,7 @@ export function AllocationTable({
                     return (
                       <TableCell
                         key={id}
-                        className="sticky left-0 z-10 bg-muted px-2.5 py-2.5 font-medium"
+                        className="sticky left-0 z-10 w-36 max-w-36 bg-muted px-2.5 py-2.5 font-medium"
                       >
                         <Trans id="allocation.total">Total</Trans>
                       </TableCell>
