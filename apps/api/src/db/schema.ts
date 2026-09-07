@@ -254,6 +254,27 @@ export const userScoreConfigs = pgTable("user_score_configs", {
     .defaultNow(),
 });
 
+/**
+ * Per-user contribution-planner policy. Missing row means
+ * `DEFAULT_CONTRIBUTION_PLAN_CONFIG` from `@portifolio-tracker/shared`.
+ */
+export const userContributionPlanConfigs = pgTable(
+  "user_contribution_plan_configs",
+  {
+    userId: uuid("user_id")
+      .primaryKey()
+      .references(() => users.id, { onDelete: "cascade" }),
+    version: text("version").notNull(),
+    smallBookImpact: numeric("small_book_impact", DECIMAL).notNull(),
+    largeBookImpact: numeric("large_book_impact", DECIMAL).notNull(),
+    maxShare: numeric("max_share", DECIMAL).notNull(),
+    maxAssets: integer("max_assets").notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+);
+
 export type UserRow = typeof users.$inferSelect;
 export type SessionRow = typeof sessions.$inferSelect;
 export type TransactionRow = typeof transactions.$inferSelect;
@@ -263,3 +284,5 @@ export type AssetReviewRow = typeof assetReviews.$inferSelect;
 export type CategoryRow = typeof categories.$inferSelect;
 export type AssetCategoryRow = typeof assetCategories.$inferSelect;
 export type UserScoreConfigRow = typeof userScoreConfigs.$inferSelect;
+export type UserContributionPlanConfigRow =
+  typeof userContributionPlanConfigs.$inferSelect;

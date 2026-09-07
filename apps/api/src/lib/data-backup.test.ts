@@ -54,7 +54,7 @@ describe("portable data backups", () => {
       },
     });
 
-    expect(manifest.version).toBe(3);
+    expect(manifest.version).toBe(5);
     if (record.entity !== "transactions") {
       throw new Error("expected transaction record");
     }
@@ -78,6 +78,7 @@ describe("portable data backups", () => {
 
     expect(manifest.counts.scoreConfigs).toBe(0);
     expect(manifest.counts.cashBalances).toBe(0);
+    expect(manifest.counts.contributionPlanConfigs).toBe(0);
   });
 
   it("hashes the exact newline-delimited representation", () => {
@@ -85,6 +86,49 @@ describe("portable data backups", () => {
     const hash = createBackupHash().update(line).digest("hex");
     expect(hash).toHaveLength(64);
     expect(hash).toBe(createBackupHash().update(line).digest("hex"));
+  });
+
+  it("keeps contribution plan knobs as decimal strings", () => {
+    const record = backupRecordSchema.parse({
+      type: "record",
+      entity: "contributionPlanConfigs",
+      data: {
+        version: "custom",
+        smallBookImpact: "0.02000000",
+        largeBookImpact: "0.00500000",
+        maxShare: "0.70000000",
+        maxAssets: 5,
+        updatedAt: "2026-09-07T12:00:00.000Z",
+      },
+    });
+
+    if (record.entity !== "contributionPlanConfigs") {
+      throw new Error("expected contribution plan config record");
+    }
+    expect(record.data.smallBookImpact).toBe("0.02000000");
+    expect(record.data.largeBookImpact).toBe("0.00500000");
+    expect(record.data.maxShare).toBe("0.70000000");
+    expect(record.data.maxAssets).toBe(5);
+  });
+
+  it("maps a v4 planner record with a single impact onto the two book knobs", () => {
+    const record = backupRecordSchema.parse({
+      type: "record",
+      entity: "contributionPlanConfigs",
+      data: {
+        version: "custom",
+        minWeightImpact: "0.00250000",
+        maxShare: "0.70000000",
+        maxAssets: 5,
+        updatedAt: "2026-09-07T12:00:00.000Z",
+      },
+    });
+
+    if (record.entity !== "contributionPlanConfigs") {
+      throw new Error("expected contribution plan config record");
+    }
+    expect(record.data.smallBookImpact).toBe("0.02");
+    expect(record.data.largeBookImpact).toBe("0.005");
   });
 
   it("keeps the cash balance as an exact decimal string", () => {

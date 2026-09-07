@@ -2,12 +2,13 @@ import { createHash } from "node:crypto";
 import {
   ASSET_CLASSES,
   CURRENCIES,
+  DEFAULT_CONTRIBUTION_PLAN_CONFIG,
   TRANSACTION_SIDES,
 } from "@portifolio-tracker/shared";
 import { z } from "zod";
 
 export const BACKUP_FORMAT = "portifolio-tracker-backup";
-export const BACKUP_VERSION = 3;
+export const BACKUP_VERSION = 5;
 export const BACKUP_MEDIA_TYPE = "application/x-portifolio-backup+gzip";
 
 export const BACKUP_ENTITIES = [
@@ -18,6 +19,7 @@ export const BACKUP_ENTITIES = [
   "transactions",
   "assetCategories",
   "scoreConfigs",
+  "contributionPlanConfigs",
 ] as const;
 
 export type BackupEntity = (typeof BACKUP_ENTITIES)[number];
@@ -36,12 +38,19 @@ const backupCountsSchema = z.strictObject({
   transactions: z.number().int().nonnegative(),
   assetCategories: z.number().int().nonnegative(),
   scoreConfigs: z.number().int().nonnegative().default(0),
+  contributionPlanConfigs: z.number().int().nonnegative().default(0),
 });
 
 export const manifestSchema = z.object({
   type: z.literal("manifest"),
   format: z.literal(BACKUP_FORMAT),
-  version: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+  version: z.union([
+    z.literal(1),
+    z.literal(2),
+    z.literal(3),
+    z.literal(4),
+    z.literal(5),
+  ]),
   exportedAt: timestamp,
   counts: backupCountsSchema,
 });
@@ -153,6 +162,37 @@ const scoreConfigRecord = z.strictObject({
   }),
 });
 
+const contributionPlanConfigRecord = z.strictObject({
+  type: z.literal("record"),
+  entity: z.literal("contributionPlanConfigs"),
+  data: z.union([
+    z.strictObject({
+      version: z.string().min(1),
+      smallBookImpact: decimal,
+      largeBookImpact: decimal,
+      maxShare: decimal,
+      maxAssets: z.number().int().positive(),
+      updatedAt: databaseTimestamp,
+    }),
+    z
+      .strictObject({
+        version: z.string().min(1),
+        minWeightImpact: decimal,
+        maxShare: decimal,
+        maxAssets: z.number().int().positive(),
+        updatedAt: databaseTimestamp,
+      })
+      .transform((row) => ({
+        version: row.version,
+        smallBookImpact: DEFAULT_CONTRIBUTION_PLAN_CONFIG.smallBookImpact,
+        largeBookImpact: DEFAULT_CONTRIBUTION_PLAN_CONFIG.largeBookImpact,
+        maxShare: row.maxShare,
+        maxAssets: row.maxAssets,
+        updatedAt: row.updatedAt,
+      })),
+  ]),
+});
+
 export const backupRecordSchema = z.discriminatedUnion("entity", [
   categoryRecord,
   allocationAssetRecord,
@@ -161,6 +201,7 @@ export const backupRecordSchema = z.discriminatedUnion("entity", [
   transactionRecord,
   assetCategoryRecord,
   scoreConfigRecord,
+  contributionPlanConfigRecord,
 ]);
 
 export type BackupRecord = z.infer<typeof backupRecordSchema>;
@@ -188,6 +229,7 @@ export function emptyBackupCounts(): BackupCounts {
     transactions: 0,
     assetCategories: 0,
     scoreConfigs: 0,
+    contributionPlanConfigs: 0,
   };
 }
 

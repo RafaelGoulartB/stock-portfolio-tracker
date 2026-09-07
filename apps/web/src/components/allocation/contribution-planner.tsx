@@ -3,6 +3,7 @@ import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import type { AllocationRow, Currency } from "@portifolio-tracker/shared";
 import {
+  DEFAULT_CONTRIBUTION_PLAN_CONFIG,
   FX_EXECUTION_IOF,
   FX_EXECUTION_SPREAD,
 } from "@portifolio-tracker/shared";
@@ -33,30 +34,21 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { trpc } from "@/lib/api";
 import { formatMoney, formatQuantity, formatWeightPrecise } from "@/lib/format";
 import { parseDecimalInput } from "@/lib/numeric-input";
+import { planContribution } from "../../../../api/src/domain/contribution-plan";
 
-/** How many candidates a contribution is spread over. `0` means every one. */
-const SPREAD_OPTIONS = [1, 2, 3, 4, 5, 0] as const;
+/** How many candidates a contribution is spread over. `auto` uses the policy. */
+const SPREAD_OPTIONS = ["auto", "1", "2", "3", "4", "5", "0"] as const;
+
+type SpreadChoice = (typeof SPREAD_OPTIONS)[number];
 
 export type ContributionFx = {
   usdBrlRate: string | null;
   executionUsdBrlRate: string | null;
   executionSpread: string;
   executionIof: string;
-};
-
-export type ContributionSlice = {
-  ticker: string;
-  currency: Currency;
-  /** Share of the contribution, `0`–`1`. */
-  share: number;
-  /** Suggested amount in the display currency. */
-  amount: number;
-  /** Suggested unit count, `null` when the asset has no price. */
-  units: number | null;
-  /** True when units used the VET rate instead of spot. */
-  executionFxApplied: boolean;
 };
 
 /** Converts a display-currency slice into the asset's native contribution currency. */
@@ -95,7 +87,7 @@ function formatContributionMoney(
 }
 
 function sumContributionTotals(
-  slices: readonly ContributionSlice[],
+  slices: readonly { amount: string; currency: Currency }[],
   displayCurrency: Currency,
   usdBrlRate: number | null,
   executionUsdBrlRate: number | null,
@@ -107,7 +99,7 @@ function sumContributionTotals(
 
   for (const slice of slices) {
     const nativeAmount = contributionAmountInAssetCurrency(
-      slice.amount,
+      Number(slice.amount),
       slice.currency,
       displayCurrency,
       usdBrlRate,
@@ -131,79 +123,47 @@ function sumContributionTotals(
 }
 
 /**
- * Splits an amount across the top-scoring assets, proportionally to their
- * scores. Amounts are a *suggestion*, never an accounting record: they are
- * computed with plain numbers and rounded to cents, with the rounding
- * remainder reported separately so nothing silently disappears. Money that
- * actually moves is entered as a transaction, where decimals stay exact.
- *
- * Unit counts for USD assets shown in BRL use the execution (VET) price so
- * spread and IOF are in the suggested size. Portfolio valuation still uses
- * the spot dollar.
- */
-export function planContribution(
-  rows: readonly AllocationRow[],
-  amount: number,
-  spread: number,
-): { slices: ContributionSlice[]; allocated: number } {
-  const candidates = rows
-    .filter((row) => Number(row.score.value) > 0)
-    .sort((a, b) => Number(b.score.value) - Number(a.score.value));
-  const chosen = spread > 0 ? candidates.slice(0, spread) : candidates;
-  const total = chosen.reduce((sum, row) => sum + Number(row.score.value), 0);
-
-  if (chosen.length === 0 || total <= 0 || amount <= 0) {
-    return { slices: [], allocated: 0 };
-  }
-
-  let allocated = 0;
-  const slices = chosen.map((row) => {
-    const share = Number(row.score.value) / total;
-    const sliceAmount = Math.round(amount * share * 100) / 100;
-    const price =
-      row.executionPrice === null ? null : Number(row.executionPrice);
-
-    allocated += sliceAmount;
-
-    return {
-      ticker: row.ticker,
-      currency: row.currency,
-      share,
-      amount: sliceAmount,
-      units: price && price > 0 ? sliceAmount / price : null,
-      executionFxApplied: row.executionFxApplied,
-    };
-  });
-
-  return { slices, allocated: Math.round(allocated * 100) / 100 };
-}
-
-/**
  * Opens the contribution planner in a dialog so the allocation screen stays
  * focused on the table.
  */
 export function ContributionPlannerButton({
   rows,
   displayCurrency,
+  portfolioValue,
   fx,
   disabled = false,
 }: {
   rows: AllocationRow[];
   displayCurrency: Currency;
+  portfolioValue: string;
   fx?: ContributionFx | null;
   disabled?: boolean;
 }) {
   const { i18n } = useLingui();
+  const policy = trpc.contributionPlanConfig.get.useQuery();
   const [open, setOpen] = useState(false);
   const [amountText, setAmountText] = useState("");
-  const [spread, setSpread] = useState<number>(3);
+  const [spread, setSpread] = useState<SpreadChoice>("auto");
 
-  const amount = Number(parseDecimalInput(amountText) ?? "0");
-  const { slices, allocated } = useMemo(
-    () => planContribution(rows, amount, spread),
-    [rows, amount, spread],
+  const amount = parseDecimalInput(amountText) ?? "0";
+  const config = policy.data?.config ?? DEFAULT_CONTRIBUTION_PLAN_CONFIG;
+  const plan = useMemo(
+    () =>
+      planContribution({
+        rows: rows.map((row) => ({
+          ticker: row.ticker,
+          currency: row.currency,
+          score: row.score.value,
+          executionPrice: row.executionPrice,
+          executionFxApplied: row.executionFxApplied,
+        })),
+        amount,
+        portfolioValue,
+        config,
+        spread: spread === "auto" ? null : Number(spread),
+      }),
+    [rows, amount, portfolioValue, config, spread],
   );
-  const remainder = Math.round((amount - allocated) * 100) / 100;
   const candidates = rows.filter((row) => Number(row.score.value) > 0).length;
   const executionUsdBrlRate = Number(fx?.executionUsdBrlRate);
   const validExecutionUsdBrlRate =
@@ -214,19 +174,22 @@ export function ContributionPlannerButton({
   const validUsdBrlRate =
     Number.isFinite(usdBrlRate) && usdBrlRate > 0 ? usdBrlRate : null;
   const totals = sumContributionTotals(
-    slices,
+    plan.slices,
     displayCurrency,
     validUsdBrlRate,
     validExecutionUsdBrlRate,
   );
-  const hasUsdSlices = slices.some((slice) => slice.currency === "USD");
-  const hasBrlSlices = slices.some((slice) => slice.currency === "BRL");
-  const hasCrossCurrencySlice = slices.some(
+  const hasUsdSlices = plan.slices.some((slice) => slice.currency === "USD");
+  const hasBrlSlices = plan.slices.some((slice) => slice.currency === "BRL");
+  const hasCrossCurrencySlice = plan.slices.some(
     (slice) => slice.currency !== displayCurrency,
   );
   const spreadPercent =
     Number(fx?.executionSpread ?? FX_EXECUTION_SPREAD) * 100;
   const iofPercent = Number(fx?.executionIof ?? FX_EXECUTION_IOF) * 100;
+  const remainderValue = Math.abs(Number(plan.remainder));
+  const needRemainder =
+    remainderValue >= 0.01 && plan.slices.some((slice) => slice.cappedByNeed);
 
   return (
     <Dialog
@@ -236,7 +199,7 @@ export function ContributionPlannerButton({
 
         if (!next) {
           setAmountText("");
-          setSpread(3);
+          setSpread("auto");
         }
       }}
     >
@@ -256,9 +219,9 @@ export function ContributionPlannerButton({
           </DialogTitle>
           <DialogDescription>
             <Trans id="allocation.plannerDescription">
-              Enter how much you are contributing and the amount is split
-              proportionally to the score. Suggestion only — nothing is saved
-              until you register the trade.
+              Enter how much you are contributing and the amount is split so
+              each slice can still move portfolio weight. Suggestion only —
+              nothing is saved until you register the trade.
             </Trans>
           </DialogDescription>
         </DialogHeader>
@@ -293,16 +256,20 @@ export function ContributionPlannerButton({
                 <Trans id="allocation.plannerSpread">Spread over</Trans>
               </Label>
               <Select
-                value={String(spread)}
-                onValueChange={(value) => setSpread(Number(value))}
+                value={spread}
+                onValueChange={(value) => setSpread(value as SpreadChoice)}
               >
                 <SelectTrigger id="allocation-spread" className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   {SPREAD_OPTIONS.map((option) => (
-                    <SelectItem key={option} value={String(option)}>
-                      {option === 0 ? (
+                    <SelectItem key={option} value={option}>
+                      {option === "auto" ? (
+                        <Trans id="allocation.plannerAuto">
+                          Automatic ({plan.selectedCount || plan.targetCount})
+                        </Trans>
+                      ) : option === "0" ? (
                         <Trans id="allocation.plannerAll">
                           Every candidate ({candidates})
                         </Trans>
@@ -318,7 +285,7 @@ export function ContributionPlannerButton({
             </div>
           </div>
 
-          {slices.length === 0 ? (
+          {plan.slices.length === 0 ? (
             <p className="rounded-lg border bg-muted/40 px-4 py-6 text-center text-sm text-muted-foreground">
               {candidates === 0 ? (
                 <Trans id="allocation.plannerNoCandidates">
@@ -332,81 +299,124 @@ export function ContributionPlannerButton({
               )}
             </p>
           ) : (
-            <ul className="max-h-72 space-y-2 overflow-auto pr-1">
-              {slices.map((slice) => {
-                const usdAmount =
-                  slice.currency === "USD"
-                    ? contributionAmountInAssetCurrency(
-                        slice.amount,
-                        "USD",
-                        displayCurrency,
-                        validUsdBrlRate,
-                        validExecutionUsdBrlRate,
-                      )
-                    : null;
+            <>
+              <p className="text-xs text-muted-foreground">
+                {plan.spreadMode === "auto" && plan.relativeSize === null ? (
+                  <Trans id="allocation.plannerAutoEmpty">
+                    Empty portfolio — spreading over {plan.selectedCount}{" "}
+                    assets, up to {config.maxAssets}.
+                  </Trans>
+                ) : plan.spreadMode === "auto" &&
+                  plan.relativeSize !== null &&
+                  plan.weightImpact !== null ? (
+                  <Trans id="allocation.plannerAutoReason">
+                    Contribution is {formatWeightPrecise(plan.relativeSize)} of
+                    the portfolio, so automatic spread is {plan.selectedCount}{" "}
+                    (minimum impact {formatWeightPrecise(plan.weightImpact)}).
+                  </Trans>
+                ) : null}
+              </p>
+              <ul className="max-h-72 space-y-2 overflow-auto pr-1">
+                {plan.slices.map((slice) => {
+                  const usdAmount =
+                    slice.currency === "USD"
+                      ? contributionAmountInAssetCurrency(
+                          Number(slice.amount),
+                          "USD",
+                          displayCurrency,
+                          validUsdBrlRate,
+                          validExecutionUsdBrlRate,
+                        )
+                      : null;
 
-                return (
-                  <li
-                    key={slice.ticker}
-                    className="flex items-center gap-3 rounded-lg border bg-muted/30 px-3 py-2.5"
-                  >
-                    <AssetLink
-                      ticker={slice.ticker}
-                      className="w-16 shrink-0 truncate text-sm font-semibold"
+                  return (
+                    <li
+                      key={slice.ticker}
+                      className="flex items-center gap-3 rounded-lg border bg-muted/30 px-3 py-2.5"
                     >
-                      {slice.ticker}
-                    </AssetLink>
-                    <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                      <span
-                        className="block h-full rounded-full bg-foreground/60"
-                        style={{ width: `${Math.round(slice.share * 100)}%` }}
-                      />
-                    </span>
-                    <span className="w-14 shrink-0 text-right text-xs text-muted-foreground tabular-nums">
-                      {formatWeightPrecise(String(slice.share))}
-                    </span>
-                    <span className="w-32 shrink-0 text-right tabular-nums">
-                      <span className="block text-sm">
-                        {formatMoney(slice.amount.toFixed(2), displayCurrency)}
-                      </span>
-                      {slice.currency === "USD" && displayCurrency === "BRL" ? (
-                        <span className="block text-xs text-muted-foreground">
-                          <span className="sr-only">
-                            <Trans id="allocation.plannerUsdEquivalent">
-                              USD equivalent
-                            </Trans>
-                            :{" "}
+                      <div className="w-16 shrink-0">
+                        <AssetLink
+                          ticker={slice.ticker}
+                          className="block truncate text-sm font-semibold"
+                        >
+                          {slice.ticker}
+                        </AssetLink>
+                        {slice.cappedByShare || slice.cappedByNeed ? (
+                          <span className="block text-[10px] text-muted-foreground">
+                            {slice.cappedByShare ? (
+                              <Trans id="allocation.plannerCappedShare">
+                                Share cap
+                              </Trans>
+                            ) : (
+                              <Trans id="allocation.plannerCappedNeed">
+                                Need cap
+                              </Trans>
+                            )}
                           </span>
-                          ≈ {formatContributionMoney(usdAmount, "USD")}
+                        ) : null}
+                      </div>
+                      <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                        <span
+                          className="block h-full rounded-full bg-foreground/60"
+                          style={{
+                            width: `${Math.round(Number(slice.share) * 100)}%`,
+                          }}
+                        />
+                      </span>
+                      <span className="w-14 shrink-0 text-right text-xs text-muted-foreground tabular-nums">
+                        {formatWeightPrecise(slice.share)}
+                      </span>
+                      <span className="w-32 shrink-0 text-right tabular-nums">
+                        <span className="block text-sm">
+                          {formatMoney(slice.amount, displayCurrency)}
                         </span>
-                      ) : null}
-                    </span>
-                    <span className="w-20 shrink-0 text-right text-xs text-muted-foreground tabular-nums">
-                      {slice.units === null ? (
-                        "—"
-                      ) : (
-                        <Trans id="allocation.plannerUnits">
-                          {formatQuantity(slice.units.toFixed(4))} un.
-                        </Trans>
-                      )}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
+                        {slice.currency === "USD" &&
+                        displayCurrency === "BRL" ? (
+                          <span className="block text-xs text-muted-foreground">
+                            <span className="sr-only">
+                              <Trans id="allocation.plannerUsdEquivalent">
+                                USD equivalent
+                              </Trans>
+                              :{" "}
+                            </span>
+                            ≈ {formatContributionMoney(usdAmount, "USD")}
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="w-20 shrink-0 text-right text-xs text-muted-foreground tabular-nums">
+                        {slice.units === null ? (
+                          "—"
+                        ) : (
+                          <Trans id="allocation.plannerUnits">
+                            {formatQuantity(slice.units)} un.
+                          </Trans>
+                        )}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
           )}
 
-          {slices.length > 0 && Math.abs(remainder) >= 0.01 ? (
+          {plan.slices.length > 0 && remainderValue >= 0.01 ? (
             <p className="text-xs text-muted-foreground">
-              <Trans id="allocation.plannerRemainder">
-                Rounding leaves{" "}
-                {formatMoney(remainder.toFixed(2), displayCurrency)}{" "}
-                unallocated.
-              </Trans>
+              {needRemainder ? (
+                <Trans id="allocation.plannerNeedRemainder">
+                  Scored need is smaller than this contribution.{" "}
+                  {formatMoney(plan.remainder, displayCurrency)} stays
+                  unallocated.
+                </Trans>
+              ) : (
+                <Trans id="allocation.plannerRemainder">
+                  Rounding leaves {formatMoney(plan.remainder, displayCurrency)}{" "}
+                  unallocated.
+                </Trans>
+              )}
             </p>
           ) : null}
 
-          {slices.length > 0 ? (
+          {plan.slices.length > 0 ? (
             <div className="grid gap-3 rounded-lg border bg-muted/30 px-4 py-3">
               <p className="text-xs font-medium text-muted-foreground">
                 <Trans id="allocation.plannerTotals">Contribution totals</Trans>

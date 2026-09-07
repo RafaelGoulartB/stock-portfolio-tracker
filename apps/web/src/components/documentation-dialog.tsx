@@ -2,10 +2,6 @@ import { msg } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import {
-  FX_EXECUTION_IOF,
-  FX_EXECUTION_SPREAD,
-} from "@portifolio-tracker/shared";
-import {
   BookOpen,
   Calculator,
   ChartLine,
@@ -15,12 +11,12 @@ import {
   WalletCards,
 } from "lucide-react";
 import { useState } from "react";
+import { ContributionPlanDocumentation } from "@/components/contribution-plan-documentation";
 import {
   Callout,
   Definition,
   DocumentBody,
   Formula,
-  Rule,
   Topic,
 } from "@/components/documentation-primitives";
 import { ScoreDocumentation } from "@/components/score-documentation";
@@ -70,17 +66,6 @@ const SECTIONS: readonly SectionDefinition[] = [
     icon: Search,
   },
 ];
-
-const fxSpread = percent(FX_EXECUTION_SPREAD);
-const fxIof = percent(FX_EXECUTION_IOF);
-const fxMarkup = (
-  ((1 + Number(FX_EXECUTION_SPREAD)) * (1 + Number(FX_EXECUTION_IOF)) - 1) *
-  100
-).toFixed(4);
-
-function percent(value: string): string {
-  return `${Number(value) * 100}%`;
-}
 
 /** Header shortcut for the app-specific calculation and policy reference. */
 export function DocumentationDialog() {
@@ -135,7 +120,7 @@ export function DocumentationDialog() {
             {section === "score" ? (
               <ScoreDocumentation />
             ) : section === "contributions" ? (
-              <ContributionDocumentation />
+              <ContributionPlanDocumentation />
             ) : section === "positions" ? (
               <PositionDocumentation />
             ) : section === "performance" ? (
@@ -272,7 +257,8 @@ function DocumentationSectionDescription({
     case "contributions":
       return (
         <Trans id="documentation.section.contributionsDescription">
-          Allocation slices, suggested units, and the USD execution rate.
+          How a contribution is split across names, and the thresholds you can
+          tune.
         </Trans>
       );
     case "positions":
@@ -294,124 +280,6 @@ function DocumentationSectionDescription({
         </Trans>
       );
   }
-}
-
-function ContributionDocumentation() {
-  return (
-    <DocumentBody>
-      <Callout
-        icon={Calculator}
-        title={
-          <Trans id="documentation.contribution.suggestionTitle">
-            A suggestion, not a transaction
-          </Trans>
-        }
-      >
-        <Trans id="documentation.contribution.suggestionDescription">
-          The planner estimates how to split a new amount. It never changes the
-          portfolio; only a registered trade changes positions and cost basis.
-        </Trans>
-      </Callout>
-
-      <Topic
-        title={
-          <Trans id="documentation.contribution.splitTitle">
-            How the amount is split
-          </Trans>
-        }
-      >
-        <ol className="grid gap-2">
-          <Rule
-            number="1"
-            title={
-              <Trans id="documentation.contribution.chooseCandidates">
-                Choose candidates
-              </Trans>
-            }
-          >
-            <Trans id="documentation.contribution.chooseCandidatesDescription">
-              Keep only assets with a score above zero, rank them from highest
-              to lowest, and select the requested top count or every candidate.
-            </Trans>
-          </Rule>
-          <Rule
-            number="2"
-            title={
-              <Trans id="documentation.contribution.proportionalShare">
-                Assign a proportional share
-              </Trans>
-            }
-          >
-            <Trans id="documentation.contribution.proportionalShareDescription">
-              Each selected asset receives its score divided by the sum of the
-              selected scores.
-            </Trans>
-            <Formula>asset share = asset score / selected score total</Formula>
-          </Rule>
-          <Rule
-            number="3"
-            title={
-              <Trans id="documentation.contribution.moneyAndUnits">
-                Suggest money and units
-              </Trans>
-            }
-          >
-            <Trans id="documentation.contribution.moneyAndUnitsDescription">
-              Each money slice is rounded independently to cents. Any rounding
-              difference is disclosed as an unallocated remainder. Units are the
-              slice divided by the asset&apos;s execution price.
-            </Trans>
-          </Rule>
-        </ol>
-      </Topic>
-
-      <Topic
-        title={
-          <Trans id="documentation.contribution.vetTitle">
-            USD execution rate (VET)
-          </Trans>
-        }
-      >
-        <p>
-          <Trans id="documentation.contribution.vetDescription">
-            When a USD asset is sized in BRL, the suggested unit count includes
-            the configured broker spread and IOF. These costs are compounded,
-            not added. The planner reports USD asset contributions in USD using
-            this VET; BRL assets remain in the BRL total.
-          </Trans>
-        </p>
-        <Formula>
-          execution USD/BRL = spot × (1 + {fxSpread} spread) × (1 + {fxIof} IOF)
-        </Formula>
-        <p>
-          <Trans id="documentation.contribution.vetPolicy">
-            With the current policy, the execution rate is {fxMarkup}% above
-            spot. VET is used for suggested units and USD asset contribution
-            amounts. The planner splits its final totals by asset currency
-            instead of converting the full contribution into both currencies.
-            Portfolio value, allocation weights, results, and every other FX
-            conversion continue to use spot.
-          </Trans>
-        </p>
-      </Topic>
-
-      <Topic
-        title={
-          <Trans id="documentation.contribution.missingPrices">
-            Missing prices
-          </Trans>
-        }
-      >
-        <p>
-          <Trans id="documentation.contribution.missingPricesDescription">
-            A slice can still receive a money amount when its score is positive,
-            but suggested units stay unavailable until a live or manual price is
-            present. The application never substitutes zero for a missing quote.
-          </Trans>
-        </p>
-      </Topic>
-    </DocumentBody>
-  );
 }
 
 function PositionDocumentation() {

@@ -10,6 +10,7 @@ import {
   cashBalances,
   categories,
   transactions,
+  userContributionPlanConfigs,
   userScoreConfigs,
 } from "../db/schema";
 import {
@@ -92,7 +93,9 @@ async function* exportBackup(userId: string): AsyncGenerator<string> {
                 ? "asset_categories"
                 : entity === "scoreConfigs"
                   ? "user_score_configs"
-                  : entity;
+                  : entity === "contributionPlanConfigs"
+                    ? "user_contribution_plan_configs"
+                    : entity;
       const [result] = await connection`
         select count(*)::text as value
         from ${connection(tableName)}
@@ -225,6 +228,23 @@ async function* exportBackup(userId: string): AsyncGenerator<string> {
       }
     }
 
+    for await (const rows of connection`
+      select version, small_book_impact as "smallBookImpact",
+        large_book_impact as "largeBookImpact",
+        max_share as "maxShare", max_assets as "maxAssets",
+        updated_at as "updatedAt"
+      from user_contribution_plan_configs where user_id = ${userId}
+      order by user_id
+    `.cursor(BATCH_SIZE)) {
+      for (const data of rows) {
+        yield emit({
+          type: "record",
+          entity: "contributionPlanConfigs",
+          data: serializeRow(data),
+        });
+      }
+    }
+
     yield encodeBackupLine({
       type: "checksum",
       algorithm: "sha256",
@@ -281,6 +301,9 @@ async function importBackup(body: ReadableStream<Uint8Array>, userId: string) {
     await tx
       .delete(userScoreConfigs)
       .where(eq(userScoreConfigs.userId, userId));
+    await tx
+      .delete(userContributionPlanConfigs)
+      .where(eq(userContributionPlanConfigs.userId, userId));
 
     const categoryIdByRef = new Map<string, string>();
     let categoryBatch: RecordData<"categories">[] = [];
@@ -290,6 +313,8 @@ async function importBackup(body: ReadableStream<Uint8Array>, userId: string) {
     let transactionBatch: RecordData<"transactions">[] = [];
     let assignmentBatch: RecordData<"assetCategories">[] = [];
     let scoreConfigBatch: RecordData<"scoreConfigs">[] = [];
+    let contributionPlanConfigBatch: RecordData<"contributionPlanConfigs">[] =
+      [];
 
     const flush = async (entity: BackupEntity) => {
       if (entity === "categories" && categoryBatch.length > 0) {
@@ -342,6 +367,21 @@ async function importBackup(body: ReadableStream<Uint8Array>, userId: string) {
           .insert(userScoreConfigs)
           .values(scoreConfigBatch.map((row) => ({ ...row, userId })));
         scoreConfigBatch = [];
+      } else if (
+        entity === "contributionPlanConfigs" &&
+        contributionPlanConfigBatch.length > 0
+      ) {
+        if (contributionPlanConfigBatch.length > 1) {
+          throw new Error(
+            "Backup contains more than one contribution plan config",
+          );
+        }
+        await tx
+          .insert(userContributionPlanConfigs)
+          .values(
+            contributionPlanConfigBatch.map((row) => ({ ...row, userId })),
+          );
+        contributionPlanConfigBatch = [];
       }
     };
 
@@ -412,6 +452,12 @@ async function importBackup(body: ReadableStream<Uint8Array>, userId: string) {
         case "scoreConfigs":
           scoreConfigBatch.push(record.data);
           if (scoreConfigBatch.length >= BATCH_SIZE) await flush(record.entity);
+          break;
+        case "contributionPlanConfigs":
+          contributionPlanConfigBatch.push(record.data);
+          if (contributionPlanConfigBatch.length >= BATCH_SIZE) {
+            await flush(record.entity);
+          }
           break;
       }
     }

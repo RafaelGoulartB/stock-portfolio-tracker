@@ -14,175 +14,6 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
-#: src/components/asset-labels.tsx:17
-#~ msgid "assetClass.stock"
-#~ msgstr "Stock"
-
-#. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:149
-#~ msgid "positions.colAvgPrice"
-#~ msgstr "Avg. price"
-
-#. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:143
-#~ msgid "positions.colCurrency"
-#~ msgstr "Ccy"
-
-#. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:175
-#~ msgid "positions.closed"
-#~ msgstr "Closed"
-
-#. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:152
-#~ msgid "positions.colInvested"
-#~ msgstr "Invested"
-
-#. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:158
-#~ msgid "positions.colLastTrade"
-#~ msgstr "Last trade"
-
-#. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:155
-#~ msgid "positions.colRealized"
-#~ msgstr "Realized P&L"
-
-#. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:843
-#~ msgid "positions.assets"
-#~ msgstr "Assets"
-
-#. placeholder {0}: formatQuantity(summary.usdBrlRate)
-#. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:868
-#~ msgid "positions.consolidationRate"
-#~ msgstr "Consolidated at 1 USD = {0} BRL."
-
-#. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:874
-#~ msgid "positions.nativeBreakdown"
-#~ msgstr "Native totals: {breakdown}."
-
-#. js-lingui-explicit-id
-#: src/routes/_app.tsx:81
-#~ msgid "nav.transactions"
-#~ msgstr "Transactions"
-
-#. js-lingui-explicit-id
-#: src/components/allocation/add-asset-dialog.tsx:251
-#~ msgid "allocation.addDiscount"
-#~ msgstr "Discount (%)"
-
-#. placeholder {0}: row.ticker
-#. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:558
-#~ msgid "allocation.editDiscount"
-#~ msgstr "Discount to fair value of {0}, in percent"
-
-#. js-lingui-explicit-id
-#: src/components/allocation/add-asset-dialog.tsx:118
-#~ msgid "allocation.addDiscountInvalid"
-#~ msgstr "Use a discount above -100%."
-
-#. js-lingui-explicit-id
-#: src/routes/_app/allocation.tsx:359
-#~ msgid "allocation.invalidValuation"
-#~ msgstr "Use at most 24 characters"
-
-#. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:104
-#~ msgid "allocation.colValuation"
-#~ msgstr "Valuation"
-
-#. placeholder {0}: row.ticker
-#. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:623
-#~ msgid "allocation.editValuation"
-#~ msgstr "Valuation reference of {0}"
-
-#. js-lingui-explicit-id
-#: src/components/theme-lab-dialog.tsx:84
-#~ msgid "themeLab.reset"
-#~ msgstr "Clear preview"
-
-#. js-lingui-explicit-id
-#: src/components/theme-lab-dialog.tsx:71
-#~ msgid "themeLab.dark"
-#~ msgstr "Dark"
-
-#. js-lingui-explicit-id
-#: src/components/theme-lab-dialog.tsx:65
-#~ msgid "themeLab.light"
-#~ msgstr "Light"
-
-#. js-lingui-explicit-id
-#: src/components/theme-lab-dialog.tsx:57
-#~ msgid "themeLab.description"
-#~ msgstr "Pick a palette to paint the live app. Close this panel and browse pages, then reopen it from the palette button."
-
-#. js-lingui-explicit-id
-#: src/components/theme-lab-dialog.tsx:53
-#~ msgid "themeLab.temporary"
-#~ msgstr "Temporary"
-
-#. js-lingui-explicit-id
-#: src/components/theme-lab-dialog.tsx:39
-#~ msgid "themeLab.open"
-#~ msgstr "Theme lab"
-
-#. js-lingui-explicit-id
-#: src/components/theme-lab-dialog.tsx:51
-#~ msgid "themeLab.title"
-#~ msgstr "Theme lab"
-
-#. placeholder {0}: summary.displayCurrency
-#. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:768
-#~ msgid "positions.openResultHint"
-#~ msgstr "Market value minus the moving average cost, in {0}."
-
-#. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:728
-#~ msgid "positions.openResult"
-#~ msgstr "Open result by asset"
-
-#. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:731
-#~ msgid "positions.openResultMoved"
-#~ msgstr "The full bar chart lives on Deep Finder, where every ticker has room and you can switch lookback windows."
-
-#. js-lingui-explicit-id
-#: src/routes/_app/allocation.$ticker.tsx:415
-#~ msgid "allocation.detailNoFairValue"
-#~ msgstr "No fair value"
-
-#. js-lingui-explicit-id
-#: src/routes/_app/allocation.$ticker.tsx:401
-#~ msgid "allocation.detailNoGrade"
-#~ msgstr "No grade"
-
-#. js-lingui-explicit-id
-#: src/components/allocation/contribution-planner.tsx:390
-#~ msgid "allocation.plannerVetUnavailable"
-#~ msgstr "USD conversion is unavailable until a VET rate is available."
-
-#. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:315
-#~ msgid "documentation.score.coreCalculation"
-#~ msgstr "Core calculation"
-
-#. js-lingui-explicit-id
-#: src/routes/_app/daily.tsx:326
-#~ msgid "daily.colClass"
-#~ msgstr "Class"
-
-#. js-lingui-explicit-id
-#: src/routes/_app/daily.tsx:329
-#~ msgid "daily.colQuantity"
-#~ msgstr "Quantity"
-
-#. js-lingui-explicit-id
 #. placeholder {0}: formatMonthLabel(month, locale)
 #: src/routes/_app/detailed-positions.tsx:852
 #: src/routes/_app/positions.tsx:246
@@ -228,13 +59,13 @@ msgstr "{0} holdings added to the list"
 #. placeholder {2}: visibleSummary.candidates
 #. placeholder {3}: visibleSummary.blocked
 #. placeholder {4}: visibleSummary.scoreVersion
-#: src/routes/_app/allocation.index.tsx:782
+#: src/routes/_app/allocation.index.tsx:784
 msgid "allocation.footnote"
 msgstr "{0} invested · {1} watch-only · {2} taking contributions · {3} blocked · score rules {4}"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: values.ticker
-#: src/routes/_app/allocation.index.tsx:525
+#: src/routes/_app/allocation.index.tsx:526
 msgid "allocation.added"
 msgstr "{0} is now on the table"
 
@@ -272,8 +103,8 @@ msgid "settings.devSeed.success"
 msgstr "{0} trades, {1} allocation rows, {2} reviews added"
 
 #. js-lingui-explicit-id
-#. placeholder {0}: formatQuantity(slice.units.toFixed(4))
-#: src/components/allocation/contribution-planner.tsx:388
+#. placeholder {0}: formatQuantity(slice.units)
+#: src/components/allocation/contribution-planner.tsx:390
 msgid "allocation.plannerUnits"
 msgstr "{0} un."
 
@@ -283,7 +114,7 @@ msgid "performance.atCostCount"
 msgstr "{count, plural, one {# asset carried at cost} other {# assets carried at cost}}"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:841
+#: src/routes/_app/positions.tsx:894
 msgid "positions.allocGroupCount"
 msgstr "{count, plural, one {# asset} other {# assets}}"
 
@@ -338,7 +169,7 @@ msgid "transactions.booked"
 msgstr "{count} holdings booked as buys"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:662
+#: src/routes/_app/allocation.index.tsx:664
 msgid "allocation.quartersOption"
 msgstr "{count} quarters"
 
@@ -353,7 +184,7 @@ msgid "transactions.registered"
 msgstr "{side} of {quantity} {ticker} registered"
 
 #. js-lingui-explicit-id
-#: src/components/settings-data.tsx:181
+#: src/components/settings-data.tsx:182
 msgid "settings.data.rowCount"
 msgstr "{totalRows} rows"
 
@@ -399,12 +230,12 @@ msgid "deepFinder.window3m"
 msgstr "3 months"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/contribution-planner.tsx:282
+#: src/components/allocation/contribution-planner.tsx:245
 msgid "allocation.plannerAmountPlaceholder"
 msgstr "5000"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:444
+#: src/components/documentation-dialog.tsx:312
 msgid "documentation.positions.buysDescription"
 msgstr "A buy adds its gross value and fees to the cost still held. Average price is always the remaining cost basis divided by the remaining quantity."
 
@@ -414,8 +245,8 @@ msgid "categories.nameTaken"
 msgstr "A category with this name already exists."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/contribution-planner.tsx:439
-#: src/components/allocation/contribution-planner.tsx:455
+#: src/components/allocation/contribution-planner.tsx:449
+#: src/components/allocation/contribution-planner.tsx:465
 msgid "allocation.plannerFxUnavailable"
 msgstr "A currency total is unavailable until the required FX rate is available."
 
@@ -425,19 +256,19 @@ msgid "documentation.score.adjustedTargetDescription"
 msgstr "A discount raises the target used for this decision; a premium lowers it."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:464
+#: src/components/contribution-plan-documentation.tsx:521
+msgid "documentation.contribution.exampleCapTitle"
+msgstr "A large cheque with one very high score"
+
+#. js-lingui-explicit-id
+#: src/components/documentation-dialog.tsx:332
 msgid "documentation.positions.salesDescription"
 msgstr "A sale releases cost at the moving average that existed immediately before that sale. Fees reduce the proceeds. Selling does not reprice the units that remain."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:406
+#: src/components/contribution-plan-documentation.tsx:576
 msgid "documentation.contribution.missingPricesDescription"
 msgstr "A slice can still receive a money amount when its score is positive, but suggested units stay unavailable until a live or manual price is present. The application never substitutes zero for a missing quote."
-
-#. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:305
-msgid "documentation.contribution.suggestionTitle"
-msgstr "A suggestion, not a transaction"
 
 #. js-lingui-explicit-id
 #: src/routes/_app/transactions.tsx:507
@@ -466,7 +297,7 @@ msgstr "Account data"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.ticker
-#: src/components/allocation/allocation-table.tsx:1235
+#: src/components/allocation/allocation-table.tsx:1236
 msgid "allocation.rowMenu"
 msgstr "Actions for {0}"
 
@@ -536,12 +367,12 @@ msgid "deepFinder.filterAll"
 msgstr "All"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:594
+#: src/routes/_app/allocation.index.tsx:596
 msgid "allocation.categoryAll"
 msgstr "All categories"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:687
+#: src/routes/_app/allocation.index.tsx:689
 msgid "allocation.all"
 msgstr "All data"
 
@@ -561,12 +392,12 @@ msgid "categories.filterAll"
 msgstr "All tickers"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:538
+#: src/routes/_app/allocation.index.tsx:539
 msgid "allocation.title"
 msgstr "Allocation"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:738
+#: src/routes/_app/positions.tsx:791
 msgid "positions.allocation"
 msgstr "Allocation"
 
@@ -576,12 +407,7 @@ msgid "nav.allocation"
 msgstr "Allocation"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:274
-msgid "documentation.section.contributionsDescription"
-msgstr "Allocation slices, suggested units, and the USD execution rate."
-
-#. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:500
+#: src/components/documentation-dialog.tsx:368
 msgid "documentation.positions.missingQuote"
 msgstr "Allocation weights use quoted market value in the display currency. An open position without a live or manual quote is flagged and left out of the quoted-value denominator rather than valued at zero. Its current-weight input to the score consequently falls back to zero, while its suggested unit count remains unavailable until it has a price."
 
@@ -606,7 +432,7 @@ msgid "allocation.reasonOverweight"
 msgstr "Already past its own target by more than the block factor."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:717
+#: src/components/documentation-dialog.tsx:585
 msgid "documentation.comparisons.dividendStatus"
 msgstr "Amounts are gross estimates: withholding, broker adjustments, and confirmed settlement are not modeled. Future ex-dates are announced; a past ex-date with a future payment date is scheduled; otherwise the event is labeled estimated paid. That last status is an inference, not payment confirmation."
 
@@ -626,7 +452,7 @@ msgid "dividends.upcomingDescription"
 msgstr "Announced events for positions that appear eligible."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:576
+#: src/components/documentation-dialog.tsx:444
 msgid "documentation.performance.annualizedReturn"
 msgstr "Annualized return"
 
@@ -646,7 +472,7 @@ msgid "allocation.colTicker"
 msgstr "Asset"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:324
+#: src/routes/_app/allocation.index.tsx:325
 msgid "allocation.removed"
 msgstr "Asset removed from the table"
 
@@ -658,7 +484,7 @@ msgstr "Assets"
 #. js-lingui-explicit-id
 #: src/routes/_app/daily.tsx:299
 msgid "daily.assets"
-msgstr "Assets today"
+msgstr "Assets"
 
 #. js-lingui-explicit-id
 #: src/routes/_app/performance.tsx:1340
@@ -677,7 +503,7 @@ msgid "performance.contributorsHint"
 msgstr "Assets with the largest open result, and what each one adds to the portfolio return."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:340
+#: src/components/contribution-plan-documentation.tsx:401
 msgid "documentation.contribution.proportionalShare"
 msgstr "Assign a proportional share"
 
@@ -685,6 +511,12 @@ msgstr "Assign a proportional share"
 #: src/routes/login.tsx:167
 msgid "login.passwordHint"
 msgstr "At least 8 characters"
+
+#. js-lingui-explicit-id
+#. placeholder {0}: plan.selectedCount || plan.targetCount
+#: src/components/allocation/contribution-planner.tsx:269
+msgid "allocation.plannerAuto"
+msgstr "Automatic ({0})"
 
 #. js-lingui-explicit-id
 #: src/routes/_app/dividends.tsx:188
@@ -697,7 +529,7 @@ msgid "dividends.alphaHint"
 msgstr "Automatic mode is currently using Yahoo only. Set ALPHA_VANTAGE_API_KEY on the API to enrich US events with payment dates and future declarations."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:766
+#: src/components/allocation/allocation-table.tsx:767
 msgid "allocation.cashTargetHint"
 msgstr "Automatically fills the part not assigned to other assets."
 
@@ -707,13 +539,13 @@ msgid "allocation.detailAvgPrice"
 msgstr "Average cost"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1305
+#: src/routes/_app/positions.tsx:1369
 msgid "positions.holdingsHint"
 msgstr "Average cost and prices stay in the native currency of each asset; market value and result are consolidated."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.gradedQuarters
-#: src/components/allocation/allocation-table.tsx:1013
+#: src/components/allocation/allocation-table.tsx:1014
 msgid "allocation.gradeTooltip"
 msgstr "Average of {0} graded quarters"
 
@@ -735,7 +567,7 @@ msgid "detailedPositions.colAvgPrice"
 msgstr "Avg. cost"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1333
+#: src/routes/_app/positions.tsx:1397
 msgid "positions.colAvgCost"
 msgstr "Avg. cost"
 
@@ -755,7 +587,7 @@ msgid "settings.data.importSuccess"
 msgstr "Backup imported successfully."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:868
+#: src/routes/_app/positions.tsx:921
 msgid "positions.allocAssetsCaption"
 msgstr "Bars relative to the largest position."
 
@@ -766,7 +598,7 @@ msgid "assetClass.bdr"
 msgstr "BDR"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1033
+#: src/routes/_app/positions.tsx:1097
 msgid "positions.teaserHint"
 msgstr "Biggest percent moves over the last month. Open Deep Finder for every ticker and lookback window."
 
@@ -783,7 +615,7 @@ msgstr "Block new contributions when current weight is greater than {overweightL
 #. js-lingui-explicit-id
 #: src/components/score-documentation.tsx:655
 msgid "documentation.score.absoluteCapDescription"
-msgstr "Block new contributions when current weight is greater than {scoreCap} of the portfolio."
+msgstr "Block new contributions when current weight is greater than {scoreCap} of the portfolio, unless the asset has an explicit target above that ceiling."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: preview.cooldownDays
@@ -841,33 +673,33 @@ msgid "side.buy"
 msgstr "Buy"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:438
+#: src/components/documentation-dialog.tsx:306
 msgid "documentation.positions.buysTitle"
 msgstr "Buys and average price"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:540
+#: src/components/documentation-dialog.tsx:408
 msgid "documentation.performance.cashFlowsDescription"
 msgstr "Buys are positive invested cash, including fees. Sales are negative invested cash, using proceeds after fees. Each flow is weighted by the fraction of calendar days left in that month, so a contribution on the last day barely affects the month's return base."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: listedAssets.length
-#: src/routes/_app/positions.tsx:863
+#: src/routes/_app/positions.tsx:916
 msgid "positions.allocAssets"
 msgstr "By asset · {0}"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:792
+#: src/routes/_app/positions.tsx:845
 msgid "positions.allocGroupsCategory"
 msgstr "By category"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:786
+#: src/routes/_app/positions.tsx:839
 msgid "positions.allocGroupsClass"
 msgstr "By class"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:788
+#: src/routes/_app/positions.tsx:841
 msgid "positions.allocGroupsCurrency"
 msgstr "By currency"
 
@@ -884,8 +716,8 @@ msgstr "Cancel"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/review-editor-form.tsx:287
-#: src/components/settings-data.tsx:295
-#: src/components/settings-data.tsx:356
+#: src/components/settings-data.tsx:296
+#: src/components/settings-data.tsx:357
 msgid "common.cancel"
 msgstr "Cancel"
 
@@ -900,6 +732,11 @@ msgid "allocation.addCancel"
 msgstr "Cancel"
 
 #. js-lingui-explicit-id
+#: src/components/contribution-plan-documentation.tsx:417
+msgid "documentation.contribution.shareCap"
+msgstr "Cap concentration and scored need"
+
+#. js-lingui-explicit-id
 #: src/components/asset-labels.tsx:38
 #: src/components/asset-labels.tsx:78
 msgid "assetClass.cash"
@@ -911,12 +748,12 @@ msgid "allocation.cash"
 msgstr "Cash"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:534
+#: src/components/documentation-dialog.tsx:402
 msgid "documentation.performance.cashFlowsTitle"
 msgstr "Cash flows and timing"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:968
+#: src/components/allocation/allocation-table.tsx:969
 msgid "allocation.cashValueHint"
 msgstr "Cash is entered manually and included in total net worth."
 
@@ -941,7 +778,7 @@ msgid "performance.colCategory"
 msgstr "Category"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:724
+#: src/routes/_app/positions.tsx:777
 msgid "positions.allocByCategory"
 msgstr "Category"
 
@@ -998,7 +835,7 @@ msgid "categories.changeColor"
 msgstr "Change color"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:667
+#: src/components/documentation-dialog.tsx:535
 msgid "documentation.comparisons.costViewDescription"
 msgstr "Change is the open position's market value minus moving-average cost."
 
@@ -1009,14 +846,9 @@ msgid "transactions.bookNumbersInvalid"
 msgstr "Check quantity and average price for {0}."
 
 #. js-lingui-explicit-id
-#: src/components/settings-data.tsx:200
+#: src/components/settings-data.tsx:201
 msgid "settings.data.chooseImport"
 msgstr "Choose backup"
-
-#. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:327
-msgid "documentation.contribution.chooseCandidates"
-msgstr "Choose candidates"
 
 #. js-lingui-explicit-id
 #: src/components/transactions/book-holdings-panel.tsx:319
@@ -1044,12 +876,12 @@ msgid "detailedPositions.colClass"
 msgstr "Class"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:715
+#: src/routes/_app/positions.tsx:768
 msgid "positions.allocByClass"
 msgstr "Class"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1327
+#: src/routes/_app/positions.tsx:1391
 msgid "positions.colClass"
 msgstr "Class"
 
@@ -1077,14 +909,14 @@ msgstr "Clear"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.ticker
-#: src/components/allocation/allocation-table.tsx:1287
+#: src/components/allocation/allocation-table.tsx:1288
 msgid "allocation.clearMark"
 msgstr "Clear highlight on {0}"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1315
+#: src/components/allocation/allocation-table.tsx:1316
 msgid "allocation.clearAnalysis"
-msgstr "Clear target & discount"
+msgstr "Clear target"
 
 #. js-lingui-explicit-id
 #: src/routes/_app/deep-finder.tsx:603
@@ -1112,7 +944,7 @@ msgid "settings.appearance.description"
 msgstr "Color scheme and palette used across the dashboard."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:672
+#: src/routes/_app/allocation.index.tsx:674
 msgid "allocation.columns"
 msgstr "Columns"
 
@@ -1122,7 +954,7 @@ msgid "detailedPositions.columns"
 msgstr "Columns"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:681
+#: src/routes/_app/allocation.index.tsx:683
 msgid "allocation.compact"
 msgstr "Compact"
 
@@ -1130,6 +962,12 @@ msgstr "Compact"
 #: src/routes/_app/detailed-positions.tsx:315
 msgid "detailedPositions.compact"
 msgstr "Compact"
+
+#. js-lingui-explicit-id
+#. placeholder {0}: preview.maxAssets
+#: src/components/contribution-plan-documentation.tsx:365
+msgid "documentation.contribution.chooseCountDescription"
+msgstr "Compare the contribution C with the quoted portfolio V. The minimum weight impact interpolates from {smallImpact} at {smallBook} to {largeImpact} at {largeBook}. Round the ratio so a second name opens at 1.5× a minimum slice, then clamp between 1 and {0}. An empty book is treated as a large relative size so the first cheque can diversify. A manual override skips this step."
 
 #. js-lingui-explicit-id
 #: src/routes/_app/deep-finder.tsx:290
@@ -1142,19 +980,24 @@ msgid "daily.previousCloseComparison"
 msgstr "Compared with the previous close."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:252
+#: src/components/documentation-dialog.tsx:237
 msgid "documentation.section.comparisons"
 msgstr "Comparisons and income"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:649
+#: src/components/documentation-dialog.tsx:517
 msgid "documentation.comparisons.missingDataTitle"
 msgstr "Comparisons preserve missing data"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:558
+#: src/components/documentation-dialog.tsx:426
 msgid "documentation.performance.compoundingTitle"
 msgstr "Compounding, annualization, and drawdown"
+
+#. js-lingui-explicit-id
+#: src/components/contribution-plan-documentation.tsx:246
+msgid "documentation.contribution.thresholdsTitle"
+msgstr "Configurable thresholds"
 
 #. js-lingui-explicit-id
 #: src/components/score-documentation.tsx:330
@@ -1167,7 +1010,7 @@ msgid "performance.colContribution"
 msgstr "Contribution"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/contribution-planner.tsx:270
+#: src/components/allocation/contribution-planner.tsx:233
 msgid "allocation.plannerAmount"
 msgstr "Contribution"
 
@@ -1182,22 +1025,40 @@ msgid "documentation.score.cooldown"
 msgstr "Contribution cooldown"
 
 #. js-lingui-explicit-id
+#. placeholder {0}: formatWeightPrecise(plan.relativeSize)
+#. placeholder {1}: plan.selectedCount
+#. placeholder {2}: formatWeightPrecise(plan.weightImpact)
+#: src/components/allocation/contribution-planner.tsx:312
+msgid "allocation.plannerAutoReason"
+msgstr "Contribution is {0} of the portfolio, so automatic spread is {1} (minimum impact {2})."
+
+#. js-lingui-explicit-id
 #: src/routes/_app/performance.tsx:1326
 msgid "performance.categoryTableHint"
 msgstr "Contribution is how many percentage points of the portfolio result come from each category."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:238
+#: src/components/documentation-dialog.tsx:223
 msgid "documentation.section.contributions"
 msgstr "Contribution planner"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/contribution-planner.tsx:255
+#: src/components/allocation/contribution-planner.tsx:218
 msgid "allocation.plannerTitle"
 msgstr "Contribution planner"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:235
+#: src/components/contribution-plan-documentation.tsx:120
+msgid "documentation.contribution.resetSuccess"
+msgstr "Contribution planner settings restored to defaults."
+
+#. js-lingui-explicit-id
+#: src/components/contribution-plan-documentation.tsx:94
+msgid "documentation.contribution.saveSuccess"
+msgstr "Contribution planner settings saved."
+
+#. js-lingui-explicit-id
+#: src/components/documentation-dialog.tsx:220
 msgid "documentation.section.score"
 msgstr "Contribution score"
 
@@ -1212,24 +1073,24 @@ msgid "documentation.score.saveSuccess"
 msgstr "Contribution score settings saved."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/contribution-planner.tsx:417
+#: src/components/allocation/contribution-planner.tsx:427
 msgid "allocation.plannerTotalBrl"
 msgstr "Contribution to BRL assets"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/contribution-planner.tsx:427
+#: src/components/allocation/contribution-planner.tsx:437
 msgid "allocation.plannerTotalUsd"
 msgstr "Contribution to USD assets"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/contribution-planner.tsx:412
+#: src/components/allocation/contribution-planner.tsx:422
 msgid "allocation.plannerTotals"
 msgstr "Contribution totals"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: spreadPercent.toFixed(1)
 #. placeholder {1}: iofPercent.toFixed(2)
-#: src/components/allocation/contribution-planner.tsx:489
+#: src/components/allocation/contribution-planner.tsx:499
 msgid "allocation.plannerFxTooltip"
 msgstr "Contribution totals are split by asset currency. USD assets budgeted in BRL use the execution rate (spot × {0}% spread × {1}% IOF) for their amount and units; BRL assets budgeted in USD use spot. Portfolio value still uses the spot dollar."
 
@@ -1250,7 +1111,7 @@ msgid "performance.colInvested"
 msgstr "Cost basis"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:244
+#: src/components/documentation-dialog.tsx:229
 msgid "documentation.section.positions"
 msgstr "Cost basis and P&L"
 
@@ -1265,7 +1126,7 @@ msgid "allocation.detailInvestedHint"
 msgstr "Cost still held at the average price."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:664
+#: src/components/documentation-dialog.tsx:532
 msgid "documentation.comparisons.costView"
 msgstr "Cost view"
 
@@ -1291,7 +1152,7 @@ msgid "settings.data.deleteError"
 msgstr "Could not delete the application data."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:730
+#: src/routes/_app/allocation.index.tsx:732
 #: src/routes/_app/detailed-positions.tsx:350
 #: src/routes/_app/positions.tsx:166
 msgid "positions.fxFailed"
@@ -1313,6 +1174,11 @@ msgid "settings.data.importError"
 msgstr "Could not import this backup."
 
 #. js-lingui-explicit-id
+#: src/components/contribution-plan-documentation.tsx:156
+msgid "documentation.contribution.loadErrorTitle"
+msgstr "Could not load planner settings"
+
+#. js-lingui-explicit-id
 #: src/components/score-documentation.tsx:182
 msgid "documentation.score.loadErrorTitle"
 msgstr "Could not load score settings"
@@ -1323,14 +1189,29 @@ msgid "error.loadFailed"
 msgstr "Could not load this data. Try again."
 
 #. js-lingui-explicit-id
+#: src/components/contribution-plan-documentation.tsx:131
+msgid "documentation.contribution.resetError"
+msgstr "Could not restore planner defaults."
+
+#. js-lingui-explicit-id
 #: src/components/score-documentation.tsx:157
 msgid "documentation.score.resetError"
 msgstr "Could not restore score defaults."
 
 #. js-lingui-explicit-id
+#: src/components/contribution-plan-documentation.tsx:105
+msgid "documentation.contribution.saveError"
+msgstr "Could not save planner settings."
+
+#. js-lingui-explicit-id
 #: src/components/score-documentation.tsx:128
 msgid "documentation.score.saveError"
 msgstr "Could not save score settings."
+
+#. js-lingui-explicit-id
+#: src/components/contribution-plan-documentation.tsx:355
+msgid "documentation.contribution.chooseCount"
+msgstr "Count how many names the cheque can move"
 
 #. js-lingui-explicit-id
 #: src/routes/login.tsx:107
@@ -1370,7 +1251,7 @@ msgid "performance.cumulativeTitle"
 msgstr "Cumulative return"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:565
+#: src/components/documentation-dialog.tsx:433
 msgid "documentation.performance.cumulativeReturn"
 msgstr "Cumulative return"
 
@@ -1380,7 +1261,7 @@ msgid "detailedPositions.colCurrency"
 msgstr "Currency"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:718
+#: src/routes/_app/positions.tsx:771
 msgid "positions.allocByCurrency"
 msgstr "Currency"
 
@@ -1397,7 +1278,7 @@ msgid "allocation.addCurrency"
 msgstr "Currency"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:485
+#: src/components/documentation-dialog.tsx:353
 msgid "documentation.positions.currencyTitle"
 msgstr "Currency consolidation"
 
@@ -1418,7 +1299,12 @@ msgid "documentation.score.customPolicy"
 msgstr "Custom contribution policy"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:691
+#: src/components/contribution-plan-documentation.tsx:193
+msgid "documentation.contribution.customPolicy"
+msgstr "Custom contribution split"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/allocation.index.tsx:693
 msgid "allocation.customize"
 msgstr "Customize columns"
 
@@ -1457,7 +1343,7 @@ msgid "daily.title"
 msgstr "Daily performance"
 
 #. js-lingui-explicit-id
-#: src/components/settings-data.tsx:232
+#: src/components/settings-data.tsx:233
 msgid "settings.data.dangerTitle"
 msgstr "Danger zone"
 
@@ -1516,12 +1402,12 @@ msgid "nav.deepFinder"
 msgstr "Deep Finder"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:654
+#: src/components/documentation-dialog.tsx:522
 msgid "documentation.comparisons.missingDataDescription"
 msgstr "Deep Finder and income estimates report unavailable observations explicitly. A missing quote, baseline, FX rate, or provider event is never silently converted to zero."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:292
+#: src/components/documentation-dialog.tsx:278
 msgid "documentation.section.comparisonsDescription"
 msgstr "Deep Finder baselines and estimated dividend entitlement."
 
@@ -1529,6 +1415,12 @@ msgstr "Deep Finder baselines and estimated dividend entitlement."
 #: src/components/settings-appearance.tsx:104
 msgid "settings.appearance.themeDefault"
 msgstr "Default"
+
+#. js-lingui-explicit-id
+#. placeholder {0}: preview.maxAssets
+#: src/components/contribution-plan-documentation.tsx:470
+msgid "documentation.contribution.examplesDescription"
+msgstr "Defaults: {smallImpact} on books up to {smallBook}, {largeImpact} from {largeBook}, {shareCap} share cap, {0} names maximum."
 
 #. js-lingui-explicit-id
 #: src/routes/_app/categories.tsx:359
@@ -1542,12 +1434,12 @@ msgid "transactions.delete"
 msgstr "Delete"
 
 #. js-lingui-explicit-id
-#: src/components/settings-data.tsx:250
+#: src/components/settings-data.tsx:251
 msgid "settings.data.deleteAll"
 msgstr "Delete all application data"
 
 #. js-lingui-explicit-id
-#: src/components/settings-data.tsx:320
+#: src/components/settings-data.tsx:321
 msgid "settings.data.deleteTitle"
 msgstr "Delete all data?"
 
@@ -1557,7 +1449,7 @@ msgid "categories.deleteTitle"
 msgstr "Delete category?"
 
 #. js-lingui-explicit-id
-#: src/components/settings-data.tsx:369
+#: src/components/settings-data.tsx:370
 msgid "settings.data.deleteConfirm"
 msgstr "Delete everything"
 
@@ -1601,22 +1493,27 @@ msgid "settings.description"
 msgstr "Display currency, exchange-rate source, and market-quote source used to consolidate the portfolio."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:701
+#: src/components/contribution-plan-documentation.tsx:332
+msgid "documentation.contribution.field.maxAssetsHint"
+msgstr "Diversification ceiling for a relatively large contribution."
+
+#. js-lingui-explicit-id
+#: src/components/documentation-dialog.tsx:569
 msgid "documentation.comparisons.dividendTitle"
 msgstr "Dividend entitlement"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:110
+#: src/components/documentation-dialog.tsx:95
 msgid "documentation.open"
 msgstr "Documentation"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:125
+#: src/components/documentation-dialog.tsx:110
 msgid "documentation.title"
 msgstr "Documentation"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:162
+#: src/components/documentation-dialog.tsx:147
 msgid "documentation.topics"
 msgstr "Documentation topics"
 
@@ -1626,7 +1523,7 @@ msgid "login.noAccount"
 msgstr "Don't have an account yet?"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:587
+#: src/components/documentation-dialog.tsx:455
 msgid "documentation.performance.drawdown"
 msgstr "Drawdown"
 
@@ -1636,14 +1533,14 @@ msgid "categories.namePlaceholder"
 msgstr "e.g. Growth, Income, Satellite"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:359
-msgid "documentation.contribution.moneyAndUnitsDescription"
-msgstr "Each money slice is rounded independently to cents. Any rounding difference is disclosed as an unallocated remainder. Units are the slice divided by the asset's execution price."
+#: src/components/contribution-plan-documentation.tsx:406
+msgid "documentation.contribution.proportionalShareDescription"
+msgstr "Each invited asset starts with its score divided by the sum of the invited scores."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:345
-msgid "documentation.contribution.proportionalShareDescription"
-msgstr "Each selected asset receives its score divided by the sum of the selected scores."
+#: src/components/contribution-plan-documentation.tsx:453
+msgid "documentation.contribution.moneyAndUnitsDescription"
+msgstr "Each money slice is rounded independently to cents. Any rounding difference is disclosed as an unallocated remainder. Units are the slice divided by the asset's execution price."
 
 #. js-lingui-explicit-id
 #: src/routes/login.tsx:135
@@ -1651,22 +1548,29 @@ msgid "login.email"
 msgstr "Email"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:470
+#. placeholder {0}: plan.selectedCount
+#. placeholder {1}: config.maxAssets
+#: src/components/allocation/contribution-planner.tsx:305
+msgid "allocation.plannerAutoEmpty"
+msgstr "Empty portfolio — spreading over {0} assets, up to {1}."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/allocation.index.tsx:471
 msgid "allocation.invalidCashValue"
 msgstr "Enter a cash value of zero or more."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:503
+#: src/routes/_app/allocation.index.tsx:504
 msgid "allocation.invalidValue"
 msgstr "Enter a market value, e.g. 50000"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:449
+#: src/routes/_app/allocation.index.tsx:450
 msgid "allocation.invalidPercent"
 msgstr "Enter a percentage, e.g. 1,5 or -20"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/contribution-planner.tsx:329
+#: src/components/allocation/contribution-planner.tsx:296
 msgid "allocation.plannerAwaitingAmount"
 msgstr "Enter an amount to see the suggested split."
 
@@ -1676,9 +1580,9 @@ msgid "transactions.bookHint"
 msgstr "Enter average cost and quantity for many tickers at once, or import a CSV/TXT. Each row becomes a buy on the opening date."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/contribution-planner.tsx:258
+#: src/components/allocation/contribution-planner.tsx:221
 msgid "allocation.plannerDescription"
-msgstr "Enter how much you are contributing and the amount is split proportionally to the score. Suggestion only — nothing is saved until you register the trade."
+msgstr "Enter how much you are contributing and the amount is split so each slice can still move portfolio weight. Suggestion only — nothing is saved until you register the trade."
 
 #. js-lingui-explicit-id
 #: src/routes/_app/transactions.tsx:236
@@ -1697,7 +1601,7 @@ msgid "dividends.subtitle"
 msgstr "Estimated dividends based on the shares held before each ex-date. Payment dates appear when the provider publishes them."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:707
+#: src/components/documentation-dialog.tsx:575
 msgid "documentation.comparisons.dividendDescription"
 msgstr "Estimated eligible quantity is the consolidated position from trades strictly before the ex-date. Trades on the ex-date are excluded because that session no longer carries the entitlement."
 
@@ -1738,7 +1642,7 @@ msgid "allocation.detailMovementsHint"
 msgstr "Every buy and sell that moved this position."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/contribution-planner.tsx:306
+#: src/components/allocation/contribution-planner.tsx:273
 msgid "allocation.plannerAll"
 msgstr "Every candidate ({candidates})"
 
@@ -1753,7 +1657,7 @@ msgid "transactions.openingDateHint"
 msgstr "Every row is booked as a buy on this date."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:428
+#: src/components/documentation-dialog.tsx:296
 msgid "documentation.positions.movingAverageDescription"
 msgstr "Every ticker is consolidated chronologically with moving average cost. Transactions on the same day use their creation order. Each ticker can use only one native currency, and currencies are never averaged together."
 
@@ -1781,7 +1685,7 @@ msgid "settings.data.backupDescription"
 msgstr "Export a portable, compressed copy of all portfolio data in this account."
 
 #. js-lingui-explicit-id
-#: src/components/settings-data.tsx:191
+#: src/components/settings-data.tsx:192
 msgid "settings.data.export"
 msgstr "Export backup"
 
@@ -1805,7 +1709,7 @@ msgstr "Fair value"
 #. js-lingui-explicit-id
 #. placeholder {0}: formatMoney(row.fairValue, row.currency)
 #. placeholder {1}: row.fairValuePeriod ?? ""
-#: src/components/allocation/allocation-table.tsx:835
+#: src/components/allocation/allocation-table.tsx:836
 msgid "allocation.discountTooltipFairOnly"
 msgstr "Fair value {0} ({1})"
 
@@ -1815,7 +1719,7 @@ msgid "documentation.score.fairValueDiscount"
 msgstr "Fair-value discount"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1057
+#: src/routes/_app/positions.tsx:1121
 msgid "positions.teaserFalling"
 msgstr "falling"
 
@@ -1841,7 +1745,7 @@ msgid "transactions.feesHint"
 msgstr "Fees are added to a buy and subtracted from a sell."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:584
+#: src/routes/_app/allocation.index.tsx:586
 msgid "allocation.categoryFilter"
 msgstr "Filter by category"
 
@@ -1864,7 +1768,7 @@ msgstr "Fixed income"
 #. js-lingui-explicit-id
 #: src/routes/_app/daily.tsx:88
 msgid "daily.subtitle"
-msgstr "Follow today's portfolio movement and see which assets are driving the change."
+msgstr "Follow the portfolio's latest daily movement and see which assets are driving the change."
 
 #. js-lingui-explicit-id
 #: src/components/settings-dialog.tsx:361
@@ -1872,7 +1776,7 @@ msgid "positions.quoteSourceHint"
 msgstr "Free delayed quotes used for market values and allocation."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:714
+#: src/routes/_app/allocation.index.tsx:716
 msgid "allocation.freeOrder"
 msgstr "Free order"
 
@@ -1941,17 +1845,17 @@ msgid "dividends.historyDescription"
 msgstr "Gross estimates. Confirm net credits against your broker statement."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:749
+#: src/routes/_app/positions.tsx:802
 msgid "positions.allocGroupBy"
 msgstr "Group by"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1253
+#: src/components/allocation/allocation-table.tsx:1254
 msgid "allocation.markColor"
 msgstr "Highlight"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:598
+#: src/components/documentation-dialog.tsx:466
 msgid "documentation.performance.historyTitle"
 msgstr "Historical prices, FX, and gaps"
 
@@ -1971,9 +1875,14 @@ msgid "deepFinder.tableTitle"
 msgstr "Holdings"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1302
+#: src/routes/_app/positions.tsx:1366
 msgid "positions.holdings"
 msgstr "Holdings"
+
+#. js-lingui-explicit-id
+#: src/components/documentation-dialog.tsx:259
+msgid "documentation.section.contributionsDescription"
+msgstr "How a contribution is split across names, and the thresholds you can tune."
 
 #. js-lingui-explicit-id
 #: src/routes/_app/performance.tsx:908
@@ -1981,7 +1890,7 @@ msgid "performance.monthlyHint"
 msgstr "How each month performed on its own, contributions weighted by the days they were invested."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/contribution-planner.tsx:472
+#: src/components/allocation/contribution-planner.tsx:482
 msgid "allocation.plannerFxAria"
 msgstr "How FX is used for contribution amounts and units"
 
@@ -1991,7 +1900,7 @@ msgid "documentation.score.field.gradeWindowHint"
 msgstr "How many of the newest graded quarters the average grade uses."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:318
+#: src/components/contribution-plan-documentation.tsx:346
 msgid "documentation.contribution.splitTitle"
 msgstr "How the amount is split"
 
@@ -2001,12 +1910,12 @@ msgid "performance.compositionHint"
 msgstr "How the mix of categories evolved, in {currency}."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:267
+#: src/components/documentation-dialog.tsx:252
 msgid "documentation.section.scoreDescription"
 msgstr "How the next-contribution priority is calculated, and the thresholds you can tune."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:613
+#: src/components/documentation-dialog.tsx:481
 msgid "documentation.performance.fallbackDescription"
 msgstr "If a position has no historical price, it is carried at its remaining cost basis to keep the portfolio curve continuous. The page counts and discloses these cost-fallback positions. A month with a non-positive return base has no calculated return."
 
@@ -2026,13 +1935,13 @@ msgid "transactions.importTitle"
 msgstr "Import holdings"
 
 #. js-lingui-explicit-id
-#: src/components/settings-data.tsx:273
+#: src/components/settings-data.tsx:274
 msgid "settings.data.importDescription"
 msgstr "Importing replaces all current portfolio data with this backup. The operation is atomic: an invalid or incomplete file leaves current data unchanged."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.score.cooldownUntil
-#: src/components/allocation/allocation-table.tsx:905
+#: src/components/allocation/allocation-table.tsx:906
 #: src/routes/_app/allocation.$ticker.tsx:299
 msgid "allocation.cooldownIcon"
 msgstr "In cooldown until {0}"
@@ -2040,7 +1949,7 @@ msgstr "In cooldown until {0}"
 #. js-lingui-explicit-id
 #: src/components/settings-data.tsx:174
 msgid "settings.data.scopeDescription"
-msgstr "Includes transactions, allocation assets, reviews, categories, assignments, and contribution-score settings. Passwords and active sessions are excluded."
+msgstr "Includes transactions, allocation assets, cash balance, reviews, categories, assignments, contribution-score settings, and contribution-planner settings. Passwords and active sessions are excluded."
 
 #. js-lingui-explicit-id
 #: src/routes/_app/dividends.tsx:110
@@ -2109,9 +2018,14 @@ msgid "positions.investedCost"
 msgstr "Invested cost"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:332
-msgid "documentation.contribution.chooseCandidatesDescription"
-msgstr "Keep only assets with a score above zero, rank them from highest to lowest, and select the requested top count or every candidate."
+#: src/components/contribution-plan-documentation.tsx:381
+msgid "documentation.contribution.inviteNames"
+msgstr "Invite names with enough scored need"
+
+#. js-lingui-explicit-id
+#: src/components/contribution-plan-documentation.tsx:386
+msgid "documentation.contribution.inviteNamesDescription"
+msgstr "Keep assets with a score above zero, ranked highest first. Automatic mode then skips a name whose scored need is smaller than a minimum-impact slice of the current book, so a dominant score cannot sprinkle crumbs. If nobody qualifies, the top name still sits at the table. Manual and \"every candidate\" keep the ranked list intact."
 
 #. js-lingui-explicit-id
 #: src/components/language-switcher.tsx:33
@@ -2119,6 +2033,11 @@ msgstr "Keep only assets with a score above zero, rank them from highest to lowe
 #: src/components/user-menu.tsx:112
 msgid "shell.language"
 msgstr "Language"
+
+#. js-lingui-explicit-id
+#: src/components/contribution-plan-documentation.tsx:275
+msgid "documentation.contribution.field.largeImpact"
+msgstr "Large-book weight impact"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/allocation-table.tsx:106
@@ -2169,7 +2088,7 @@ msgid "nav.main"
 msgstr "Main"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1577
+#: src/routes/_app/positions.tsx:1641
 msgid "positions.manualPrices"
 msgstr "Manual prices"
 
@@ -2180,7 +2099,7 @@ msgstr "Manual prices are entered per ticker on the Positions page."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.ticker
-#: src/components/allocation/allocation-table.tsx:1264
+#: src/components/allocation/allocation-table.tsx:1265
 msgid "allocation.markAs"
 msgstr "Mark {0} {color}"
 
@@ -2201,7 +2120,7 @@ msgstr "Market"
 #. placeholder {0}: formatMoney(row.marketPrice, row.currency)
 #. placeholder {1}: formatMoney(row.fairValue, row.currency)
 #. placeholder {2}: row.fairValuePeriod ?? ""
-#: src/components/allocation/allocation-table.tsx:841
+#: src/components/allocation/allocation-table.tsx:842
 msgid "allocation.discountTooltip"
 msgstr "Market {0} vs fair value {1} ({2})"
 
@@ -2236,7 +2155,7 @@ msgid "positions.marketValue"
 msgstr "Market value"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1344
+#: src/routes/_app/positions.tsx:1408
 msgid "positions.colMarketValue"
 msgstr "Market value"
 
@@ -2246,13 +2165,13 @@ msgid "positions.unrealizedPnlHint"
 msgstr "Market value against the cost of quoted assets."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:741
+#: src/routes/_app/positions.tsx:794
 msgid "positions.allocationHint"
 msgstr "Market value at {snapshotLabel} and share of quoted equity."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.ticker
-#: src/components/allocation/allocation-table.tsx:960
+#: src/components/allocation/allocation-table.tsx:961
 msgid "allocation.editValue"
 msgstr "Market value of {0}"
 
@@ -2277,22 +2196,48 @@ msgid "performance.maxDrawdown"
 msgstr "Max drawdown"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:186
+#: src/components/contribution-plan-documentation.tsx:307
+msgid "documentation.contribution.field.maxAssets"
+msgstr "Maximum assets"
+
+#. js-lingui-explicit-id
+#: src/components/contribution-plan-documentation.tsx:290
+msgid "documentation.contribution.field.maxShare"
+msgstr "Maximum share per asset"
+
+#. js-lingui-explicit-id
+#: src/components/documentation-dialog.tsx:171
 msgid "documentation.methodology"
 msgstr "Methodology"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:400
+#: src/components/contribution-plan-documentation.tsx:280
+msgid "documentation.contribution.field.largeImpactHint"
+msgstr "Minimum portfolio-weight move on a book of {largeBook} or more. Between the two sizes the impact is interpolated in log space."
+
+#. js-lingui-explicit-id
+#: src/components/contribution-plan-documentation.tsx:266
+msgid "documentation.contribution.field.smallImpactHint"
+msgstr "Minimum portfolio-weight move on a book of {smallBook} or less. A second name needs about 1.5× this slice."
+
+#. js-lingui-explicit-id
+#: src/components/contribution-plan-documentation.tsx:570
 msgid "documentation.contribution.missingPrices"
 msgstr "Missing prices"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:726
+#: src/components/documentation-dialog.tsx:594
 msgid "documentation.comparisons.dividendFx"
 msgstr "Mixed-currency totals use the currently selected USD/BRL rate, not a historical payment-date rate. When no conversion rate is available, the native amount remains visible and the event is excluded from the converted total."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:604
+#. placeholder {0}: preview.maxAssets
+#: src/components/contribution-plan-documentation.tsx:438
+msgid "documentation.contribution.waterfallDescription"
+msgstr "Money the first club cannot absorb still flows down the ranked list, one name at a time, up to {0}. A name is skipped when its scored need is below one cent. Only leftover after that walk is disclosed as unallocated."
+
+#. js-lingui-explicit-id
+#: src/components/documentation-dialog.tsx:472
 msgid "documentation.performance.historyDescription"
 msgstr "Month ends use the last available market close on or before the snapshot day. Positions are converted with the USD/BRL rate of that snapshot, and transaction flows use the rate of their own trade day. A manual FX rate has no history, so the same manual rate is applied to every month."
 
@@ -2318,7 +2263,7 @@ msgid "performance.monthlyTitle"
 msgstr "Monthly return"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:520
+#: src/components/documentation-dialog.tsx:388
 msgid "documentation.performance.monthlyTitle"
 msgstr "Monthly time-weighted performance"
 
@@ -2333,7 +2278,7 @@ msgid "categories.move"
 msgstr "Move"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1308
+#: src/components/allocation/allocation-table.tsx:1309
 msgid "allocation.moveDown"
 msgstr "Move down"
 
@@ -2344,17 +2289,17 @@ msgid "categories.moveTo"
 msgstr "Move to…"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1304
+#: src/components/allocation/allocation-table.tsx:1305
 msgid "allocation.moveUp"
 msgstr "Move up"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:280
+#: src/components/documentation-dialog.tsx:266
 msgid "documentation.section.positionsDescription"
 msgstr "Moving average cost, fees, sales, and currency consolidation."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:423
+#: src/components/documentation-dialog.tsx:291
 msgid "documentation.positions.movingAverageTitle"
 msgstr "Moving average, never FIFO"
 
@@ -2364,7 +2309,7 @@ msgid "allocation.detailResultHint"
 msgstr "Moving-average cost. Realized P&L locks in on sells; the open result is the remaining lot versus the market."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:570
+#: src/components/documentation-dialog.tsx:438
 msgid "documentation.performance.cumulativeReturnDescription"
 msgstr "Multiply one plus each valid monthly return, then subtract one."
 
@@ -2384,12 +2329,17 @@ msgid "transactions.fixedIncomeName"
 msgstr "Name"
 
 #. js-lingui-explicit-id
+#: src/components/contribution-plan-documentation.tsx:325
+msgid "documentation.contribution.unit.assets"
+msgstr "names"
+
+#. js-lingui-explicit-id
 #: src/routes/_app/categories.tsx:265
 msgid "categories.listHint"
 msgstr "Names are yours. Deleting a category leaves its tickers uncategorized."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:491
+#: src/components/documentation-dialog.tsx:359
 msgid "documentation.positions.currencyDescription"
 msgstr "Native amounts remain in the asset's currency. The portfolio then converts them to the selected BRL or USD display currency using the current spot rate. Consequently, converted realized P&L on live position screens is an approximation at today's consolidation rate, not historical-FX tax accounting."
 
@@ -2399,9 +2349,14 @@ msgid "positions.nativeTotals"
 msgstr "Native totals: {breakdown}"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1580
+#: src/routes/_app/positions.tsx:1644
 msgid "positions.manualPricesHint"
 msgstr "Native-currency price per unit. Manual prices apply to every month."
+
+#. js-lingui-explicit-id
+#: src/components/allocation/contribution-planner.tsx:351
+msgid "allocation.plannerCappedNeed"
+msgstr "Need cap"
 
 #. js-lingui-explicit-id
 #: src/routes/_app/performance.tsx:509
@@ -2434,9 +2389,9 @@ msgid "dividends.nextDate"
 msgstr "Next relevant date"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/contribution-planner.tsx:324
+#: src/components/allocation/contribution-planner.tsx:291
 msgid "allocation.plannerNoCandidates"
-msgstr "No asset is taking contributions right now. Set a target, review a discount, or wait for a cooldown to expire."
+msgstr "No asset is taking contributions right now. Set a target, review a fair value, or wait for a cooldown to expire."
 
 #. js-lingui-explicit-id
 #: src/components/allocation/asset-movements.tsx:278
@@ -2459,7 +2414,7 @@ msgid "dividends.calendarEmpty"
 msgstr "No events this month."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1077
+#: src/routes/_app/positions.tsx:1141
 msgid "positions.teaserEmptyDown"
 msgstr "No falling holdings this month."
 
@@ -2490,12 +2445,12 @@ msgid "daily.noQuoteDate"
 msgstr "No live quotes available."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:749
+#: src/components/allocation/allocation-table.tsx:750
 msgid "allocation.quoteMissing"
 msgstr "No market quote for this ticker"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:776
+#: src/routes/_app/positions.tsx:829
 msgid "positions.noQuotes"
 msgstr "No market quotes for this snapshot yet."
 
@@ -2505,7 +2460,7 @@ msgid "detailedPositions.empty"
 msgstr "No positions match these filters."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1638
+#: src/routes/_app/positions.tsx:1702
 msgid "positions.empty"
 msgstr "No positions yet. Register your first trade to see it here."
 
@@ -2521,12 +2476,12 @@ msgid "allocation.detailChartEmpty"
 msgstr "No price history for this ticker yet."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:983
+#: src/components/allocation/allocation-table.tsx:984
 msgid "allocation.valueMissingTooltip"
 msgstr "No public quote. Enter the position's market value."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:976
+#: src/components/allocation/allocation-table.tsx:977
 msgid "allocation.valueManualTooltip"
 msgstr "No public quote. This value is set by you. Clear the cell to remove it."
 
@@ -2537,12 +2492,12 @@ msgstr "No quote"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: missing.join(", ")
-#: src/routes/_app/positions.tsx:1498
+#: src/routes/_app/positions.tsx:1562
 msgid "positions.missingQuotes"
 msgstr "No quote for {0}. Values and shares cover quoted assets only."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1066
+#: src/routes/_app/positions.tsx:1130
 msgid "positions.teaserEmptyUp"
 msgstr "No rising holdings this month."
 
@@ -2602,18 +2557,18 @@ msgid "transactions.empty"
 msgstr "Nothing registered yet."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1074
+#: src/components/allocation/allocation-table.tsx:1075
 msgid "allocation.empty"
 msgstr "Nothing to allocate yet. Register a trade or add an asset to follow."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1092
+#: src/routes/_app/positions.tsx:1156
 msgid "positions.openDeepFinder"
 msgstr "Open Deep Finder"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.ticker
-#: src/components/allocation/allocation-table.tsx:861
+#: src/components/allocation/allocation-table.tsx:862
 msgid "allocation.openFairValueRef"
 msgstr "Open fair value reference for {0}"
 
@@ -2646,7 +2601,7 @@ msgid "positions.unrealizedPnl"
 msgstr "Open result"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1358
+#: src/routes/_app/positions.tsx:1422
 msgid "positions.colOpenResult"
 msgstr "Open result"
 
@@ -2781,7 +2736,7 @@ msgid "nav.performance"
 msgstr "Performance"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:249
+#: src/components/documentation-dialog.tsx:234
 msgid "documentation.section.performance"
 msgstr "Performance"
 
@@ -2792,24 +2747,30 @@ msgid "deepFinder.periodMove"
 msgstr "Period move"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:674
+#: src/components/documentation-dialog.tsx:542
 msgid "documentation.comparisons.periodViews"
 msgstr "Period views"
 
 #. js-lingui-explicit-id
-#: src/components/settings-data.tsx:332
+#: src/components/settings-data.tsx:333
 msgid "settings.data.deleteWarning"
 msgstr "Permanent deletion"
 
 #. js-lingui-explicit-id
-#: src/components/settings-data.tsx:235
+#: src/components/settings-data.tsx:236
 msgid "settings.data.dangerDescription"
 msgstr "Permanently delete every portfolio row in this account. Your login account remains available."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/contribution-planner.tsx:246
+#: src/components/allocation/contribution-planner.tsx:209
 msgid "allocation.plannerOpen"
 msgstr "Plan contribution"
+
+#. js-lingui-explicit-id
+#. placeholder {0}: policy.data.config.version
+#: src/components/contribution-plan-documentation.tsx:197
+msgid "documentation.contribution.policyVersion"
+msgstr "Policy version {0}"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: policy.data.config.version
@@ -2900,7 +2861,7 @@ msgid "dividends.previousPage"
 msgstr "Previous page"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1336
+#: src/routes/_app/positions.tsx:1400
 msgid "positions.colPrice"
 msgstr "Price"
 
@@ -2926,7 +2887,7 @@ msgid "detailedPositions.colQuantity"
 msgstr "Quantity"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1330
+#: src/routes/_app/positions.tsx:1394
 msgid "positions.colQuantity"
 msgstr "Quantity"
 
@@ -2944,7 +2905,7 @@ msgid "transactions.colQuantity"
 msgstr "Quantity"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:937
+#: src/components/allocation/allocation-table.tsx:938
 msgid "allocation.valueQuotedTooltip"
 msgstr "Quantity × market price"
 
@@ -2971,7 +2932,7 @@ msgid "documentation.score.unit.quarters"
 msgstr "quarters"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:643
+#: src/routes/_app/allocation.index.tsx:645
 msgid "allocation.quarterCount"
 msgstr "Quarters shown"
 
@@ -2984,6 +2945,16 @@ msgstr "Quote date"
 #: src/routes/_app/positions.tsx:343
 msgid "positions.marketValueHint"
 msgstr "Quoted equity at {snapshotLabel}."
+
+#. js-lingui-explicit-id
+#: src/components/contribution-plan-documentation.tsx:493
+msgid "documentation.contribution.exampleLargeTitle"
+msgstr "R$ 2,000 into a R$ 1,000,000 book"
+
+#. js-lingui-explicit-id
+#: src/components/contribution-plan-documentation.tsx:480
+msgid "documentation.contribution.exampleSmallTitle"
+msgstr "R$ 2,000 into a R$ 50,000 book"
 
 #. js-lingui-explicit-id
 #: src/components/score-documentation.tsx:310
@@ -3042,10 +3013,15 @@ msgid "documentation.score.loadErrorDescription"
 msgstr "Refresh the page and try again. Allocation continues to use the last known policy on the server."
 
 #. js-lingui-explicit-id
+#: src/components/contribution-plan-documentation.tsx:161
+msgid "documentation.contribution.loadErrorDescription"
+msgstr "Refresh the page and try again. The planner continues to use the last known policy on the server."
+
+#. js-lingui-explicit-id
 #: src/components/allocation/asset-movements.tsx:284
 #: src/routes/_app/detailed-positions.tsx:258
 #: src/routes/_app/positions.tsx:155
-#: src/routes/_app/positions.tsx:1645
+#: src/routes/_app/positions.tsx:1709
 msgid "positions.registerTrade"
 msgstr "Register a trade"
 
@@ -3133,14 +3109,19 @@ msgid "allocation.dragHandle"
 msgstr "Reorder {0}. Use the arrow keys to move it."
 
 #. js-lingui-explicit-id
-#: src/components/settings-data.tsx:268
+#: src/components/settings-data.tsx:269
 msgid "settings.data.importTitle"
 msgstr "Replace account data?"
 
 #. js-lingui-explicit-id
-#: src/components/settings-data.tsx:303
+#: src/components/settings-data.tsx:304
 msgid "settings.data.importConfirm"
 msgstr "Replace and import"
+
+#. js-lingui-explicit-id
+#: src/components/contribution-plan-documentation.tsx:216
+msgid "documentation.contribution.resetDefaults"
+msgstr "Reset defaults"
 
 #. js-lingui-explicit-id
 #: src/components/score-documentation.tsx:236
@@ -3148,7 +3129,7 @@ msgid "documentation.score.resetDefaults"
 msgstr "Reset defaults"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:707
+#: src/routes/_app/allocation.index.tsx:709
 msgid "allocation.reset"
 msgstr "Reset to standard"
 
@@ -3158,7 +3139,7 @@ msgid "detailedPositions.reset"
 msgstr "Reset to standard"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:581
+#: src/components/documentation-dialog.tsx:449
 msgid "documentation.performance.annualizedReturnDescription"
 msgstr "Restate cumulative growth to a 12-month rate. It is intentionally not shown for windows shorter than 6 months."
 
@@ -3169,7 +3150,7 @@ msgid "positions.realizedPnlHint"
 msgstr "Result already locked in by your sells."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:624
+#: src/components/documentation-dialog.tsx:492
 msgid "documentation.performance.contributionTitle"
 msgstr "Result contribution"
 
@@ -3204,7 +3185,7 @@ msgid "performance.windowReturn"
 msgstr "Return in the window"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1054
+#: src/routes/_app/positions.tsx:1118
 msgid "positions.teaserRising"
 msgstr "rising"
 
@@ -3214,8 +3195,8 @@ msgid "deepFinder.filterUp"
 msgstr "Rising"
 
 #. js-lingui-explicit-id
-#. placeholder {0}: formatMoney(remainder.toFixed(2), displayCurrency)
-#: src/components/allocation/contribution-planner.tsx:401
+#. placeholder {0}: formatMoney(plan.remainder, displayCurrency)
+#: src/components/allocation/contribution-planner.tsx:411
 msgid "allocation.plannerRemainder"
 msgstr "Rounding leaves {0} unallocated."
 
@@ -3235,13 +3216,18 @@ msgid "documentation.score.ruleLadderDescription"
 msgstr "Rules run in this exact order and the first match wins. This priority is part of the method; only the thresholds above are editable."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:458
+#: src/components/documentation-dialog.tsx:326
 msgid "documentation.positions.salesTitle"
 msgstr "Sales and realized P&L"
 
 #. js-lingui-explicit-id
 #: src/routes/_app/categories.tsx:635
 msgid "categories.save"
+msgstr "Save"
+
+#. js-lingui-explicit-id
+#: src/components/contribution-plan-documentation.tsx:230
+msgid "documentation.contribution.save"
 msgstr "Save"
 
 #. js-lingui-explicit-id
@@ -3255,7 +3241,7 @@ msgid "allocation.reviewSave"
 msgstr "Save"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1619
+#: src/routes/_app/positions.tsx:1683
 msgid "positions.savePrices"
 msgstr "Save prices"
 
@@ -3276,7 +3262,13 @@ msgid "documentation.score.noTargetDescription"
 msgstr "Score is zero because there is no allocation target to close."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:570
+#. placeholder {0}: formatMoney(plan.remainder, displayCurrency)
+#: src/components/allocation/contribution-planner.tsx:405
+msgid "allocation.plannerNeedRemainder"
+msgstr "Scored need is smaller than this contribution. {0} stays unallocated."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/allocation.index.tsx:572
 msgid "allocation.searchLabel"
 msgstr "Search assets"
 
@@ -3301,7 +3293,7 @@ msgid "detailedPositions.search"
 msgstr "Search ticker or class…"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:573
+#: src/routes/_app/allocation.index.tsx:575
 msgid "allocation.search"
 msgstr "Search ticker…"
 
@@ -3338,7 +3330,7 @@ msgid "side.sell"
 msgstr "Sell"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:827
+#: src/components/allocation/allocation-table.tsx:828
 msgid "allocation.discountEmptyTooltip"
 msgstr "Set a fair value on a quarterly review"
 
@@ -3353,7 +3345,7 @@ msgid "register.description"
 msgstr "Set up an account to start tracking your trades."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:991
+#: src/components/allocation/allocation-table.tsx:992
 msgid "allocation.valuePlaceholder"
 msgstr "Set value"
 
@@ -3369,12 +3361,17 @@ msgid "settings.title"
 msgstr "Settings"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1371
+#: src/routes/_app/positions.tsx:1435
 msgid "positions.colShare"
 msgstr "Share"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:798
+#: src/components/allocation/contribution-planner.tsx:347
+msgid "allocation.plannerCappedShare"
+msgstr "Share cap"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/positions.tsx:851
 msgid "positions.allocGroupsCaption"
 msgstr "Share of quoted equity."
 
@@ -3392,7 +3389,7 @@ msgstr "Shares"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: listedAssets.length
-#: src/routes/_app/positions.tsx:931
+#: src/routes/_app/positions.tsx:995
 msgid "positions.allocShowAll"
 msgstr "Show all {0}"
 
@@ -3402,17 +3399,17 @@ msgid "detailedPositions.showClosed"
 msgstr "Show closed positions"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:613
+#: src/routes/_app/allocation.index.tsx:615
 msgid "allocation.quartersBack"
 msgstr "Show earlier quarters"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:926
+#: src/routes/_app/positions.tsx:990
 msgid "positions.allocShowLess"
 msgstr "Show fewer"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:631
+#: src/routes/_app/allocation.index.tsx:633
 msgid "allocation.quartersForward"
 msgstr "Show later quarters"
 
@@ -3467,6 +3464,11 @@ msgid "settings.devSeed.skipped"
 msgstr "Skipped: {0}"
 
 #. js-lingui-explicit-id
+#: src/components/contribution-plan-documentation.tsx:261
+msgid "documentation.contribution.field.smallImpact"
+msgstr "Small-book weight impact"
+
+#. js-lingui-explicit-id
 #: src/routes/_app/detailed-positions.tsx:838
 #: src/routes/_app/positions.tsx:232
 msgid "positions.month"
@@ -3497,17 +3499,17 @@ msgstr "Source"
 #. js-lingui-explicit-id
 #. placeholder {0}: fx.usdBrlRate
 #. placeholder {1}: fx.executionUsdBrlRate
-#: src/components/allocation/contribution-planner.tsx:500
+#: src/components/allocation/contribution-planner.tsx:510
 msgid "allocation.plannerFxRates"
 msgstr "Spot {0} → execution {1}"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/contribution-planner.tsx:293
+#: src/components/allocation/contribution-planner.tsx:256
 msgid "allocation.plannerSpread"
 msgstr "Spread over"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:684
+#: src/routes/_app/allocation.index.tsx:686
 msgid "allocation.standard"
 msgstr "Standard"
 
@@ -3523,7 +3525,7 @@ msgid "dividends.status"
 msgstr "Status"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1323
+#: src/components/allocation/allocation-table.tsx:1324
 msgid "allocation.removeAsset"
 msgstr "Stop following"
 
@@ -3534,12 +3536,12 @@ msgid "allocation.unfocusQuarter"
 msgstr "Stop marking {0} as the quarter you are working on"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:354
+#: src/components/contribution-plan-documentation.tsx:448
 msgid "documentation.contribution.moneyAndUnits"
 msgstr "Suggest money and units"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1030
+#: src/routes/_app/positions.tsx:1094
 msgid "positions.teaserTitle"
 msgstr "Summary"
 
@@ -3568,7 +3570,7 @@ msgstr "Target overweight block"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.ticker
-#: src/components/allocation/allocation-table.tsx:787
+#: src/components/allocation/allocation-table.tsx:788
 msgid "allocation.editTarget"
 msgstr "Target weight of {0}, in percent"
 
@@ -3578,7 +3580,7 @@ msgid "documentation.score.targetCap"
 msgstr "Target-relative cap"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:541
+#: src/routes/_app/allocation.index.tsx:542
 msgid "allocation.subtitle"
 msgstr "Targets, quarterly grades and the contribution score in one place. Edit any cell in the table; the score reranks on save."
 
@@ -3593,22 +3595,22 @@ msgid "categories.unknownTicker"
 msgstr "That ticker is not in your portfolio."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:679
+#: src/components/documentation-dialog.tsx:547
 msgid "documentation.comparisons.periodViewsDescription"
 msgstr "The app compares today's open quantity at today's price with that same quantity at the baseline close. This isolates price movement and is not the realized performance of trades made during the period."
 
 #. js-lingui-explicit-id
 #: src/components/allocation/review-editor-form.tsx:249
 msgid "allocation.reviewHint"
-msgstr "The average of the newest graded quarters scales the score."
+msgstr "The average of the newest graded quarters scales the score. Fair value feeds the discount from the newest quarter that has one."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:690
+#: src/components/documentation-dialog.tsx:558
 msgid "documentation.comparisons.baselineDescription"
 msgstr "The baseline is the last available close on or before the nominal window start. Year to date starts from December 31 of the prior year. The summary percentage is value-weighted: total change divided by total baseline value, not an average of ticker percentages."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:630
+#: src/components/documentation-dialog.tsx:498
 msgid "documentation.performance.contributionDescription"
 msgstr "The contribution shown for an asset or class is its unrealized P&L divided by the entire portfolio's invested cost. It answers how many percentage points that item adds to the portfolio's open result; it is not the item's own return percentage."
 
@@ -3630,19 +3632,24 @@ msgid "documentation.score.gradeDescription"
 msgstr "The grade is the average of the newest {0} quarters that actually contain a grade. Notes-only reviews are ignored. An asset with no grades uses a ×{1} multiplier. Bands must be ascending by minimum grade."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:589
+#: src/components/contribution-plan-documentation.tsx:498
+msgid "documentation.contribution.exampleLargeDescription"
+msgstr "The large-book impact is {largeImpact}, so a minimum slice is R$ 5,000. Two thousand reais stays in one name; N = 2 only from about R$ 7,500."
+
+#. js-lingui-explicit-id
+#: src/components/documentation-dialog.tsx:457
 msgid "documentation.performance.drawdownDescription"
 msgstr "The percentage distance of the compounded return index from its previous peak. Maximum drawdown is the deepest such decline."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:525
+#: src/components/documentation-dialog.tsx:393
 msgid "documentation.performance.monthlyDescription"
 msgstr "The performance page uses Modified Dietz so deposits and withdrawals do not masquerade as investment return. Each month is calculated separately and then compounded."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:310
-msgid "documentation.contribution.suggestionDescription"
-msgstr "The planner estimates how to split a new amount. It never changes the portfolio; only a registered trade changes positions and cost basis."
+#: src/components/contribution-plan-documentation.tsx:235
+msgid "documentation.contribution.intro"
+msgstr "The planner turns a contribution amount into suggested slices. The score still ranks who deserves capital; this method decides how many names that cheque can meaningfully move, and how much any one of them may take. Nothing is recorded until you register the trade."
 
 #. js-lingui-explicit-id
 #: src/components/score-documentation.tsx:321
@@ -3653,6 +3660,11 @@ msgstr "The rule ladder then either blocks, trims, or scales that gap by the gra
 #: src/components/score-documentation.tsx:255
 msgid "documentation.score.intro"
 msgstr "The score answers how strongly an asset should compete for the next contribution. It is expressed in portfolio-weight units: a score of 0.0075 means 0.75 percentage points. Positive values are buy candidates, zero means skip, and a negative value is a trim signal. Thresholds below are yours to tune and persist with the account."
+
+#. js-lingui-explicit-id
+#: src/components/contribution-plan-documentation.tsx:485
+msgid "documentation.contribution.exampleSmallDescription"
+msgstr "The small-book impact is {smallImpact}, so a minimum slice is R$ 1,000. Rounding 2,000 / 1,000 opens a second name."
 
 #. js-lingui-explicit-id
 #: src/components/theme-switcher.tsx:34
@@ -3672,7 +3684,12 @@ msgid "documentation.score.thresholdsDescription"
 msgstr "These knobs feed every rule below. Values are saved to the database for this account."
 
 #. js-lingui-explicit-id
-#: src/components/settings-data.tsx:323
+#: src/components/contribution-plan-documentation.tsx:251
+msgid "documentation.contribution.thresholdsDescription"
+msgstr "These knobs feed the split below. Values are saved to the database for this account."
+
+#. js-lingui-explicit-id
+#: src/components/settings-data.tsx:324
 msgid "settings.data.deleteDescription"
 msgstr "This cannot be undone. Export a backup first if you may need this data again."
 
@@ -3697,6 +3714,11 @@ msgid "transactions.fixedIncomeValueHint"
 msgstr "This value is maintained by you. Update it later from the Allocation page; no return is calculated for fixed income."
 
 #. js-lingui-explicit-id
+#: src/components/contribution-plan-documentation.tsx:512
+msgid "documentation.contribution.exampleCrumbDescription"
+msgstr "Three names at 0.001 on a R$ 1,000,000 book with a R$ 50,000 cheque: each need is filled in score order, then leftover that nobody can absorb stays unallocated."
+
+#. js-lingui-explicit-id
 #: src/routes/_app/categories.tsx:533
 msgid "categories.colTicker"
 msgstr "Ticker"
@@ -3717,7 +3739,7 @@ msgid "detailedPositions.colTicker"
 msgstr "Ticker"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1320
+#: src/routes/_app/positions.tsx:1384
 msgid "positions.colTicker"
 msgstr "Ticker"
 
@@ -3766,7 +3788,7 @@ msgid "performance.cumulativeHint"
 msgstr "Time-weighted return since the start of the window, so contributions never inflate it."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:286
+#: src/components/documentation-dialog.tsx:272
 msgid "documentation.section.performanceDescription"
 msgstr "Time-weighted returns, compounding, and missing-price policy."
 
@@ -3776,17 +3798,22 @@ msgid "performance.timeWeighted"
 msgstr "Time-weighted, contributions removed."
 
 #. js-lingui-explicit-id
+#: src/components/contribution-plan-documentation.tsx:507
+msgid "documentation.contribution.exampleCrumbTitle"
+msgstr "Tiny scored need and leftover capital"
+
+#. js-lingui-explicit-id
 #: src/components/app-nav.tsx:97
 msgid "nav.tools"
 msgstr "Tools"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/contribution-planner.tsx:310
+#: src/components/allocation/contribution-planner.tsx:277
 msgid "allocation.plannerTop"
 msgstr "Top {option} assets"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1064
+#: src/routes/_app/positions.tsx:1128
 msgid "positions.teaserGainers"
 msgstr "Top gainers"
 
@@ -3796,7 +3823,7 @@ msgid "performance.topGains"
 msgstr "Top gains"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:1075
+#: src/routes/_app/positions.tsx:1139
 msgid "positions.teaserLosers"
 msgstr "Top losers"
 
@@ -3807,7 +3834,7 @@ msgstr "Top losses"
 
 #. js-lingui-explicit-id
 #: src/routes/_app/detailed-positions.tsx:569
-#: src/routes/_app/positions.tsx:1476
+#: src/routes/_app/positions.tsx:1540
 msgid "positions.total"
 msgstr "Total"
 
@@ -3818,7 +3845,7 @@ msgid "transactions.colTotal"
 msgstr "Total"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1094
+#: src/components/allocation/allocation-table.tsx:1095
 msgid "allocation.total"
 msgstr "Total"
 
@@ -3868,7 +3895,7 @@ msgid "documentation.score.field.trimFactor"
 msgstr "Trim threshold"
 
 #. js-lingui-explicit-id
-#: src/components/settings-data.tsx:335
+#: src/components/settings-data.tsx:336
 msgid "settings.data.deleteInstruction"
 msgstr "Type DELETE below to confirm."
 
@@ -3879,7 +3906,7 @@ msgid "dividends.unavailable"
 msgstr "Unavailable tickers: {0}."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:597
+#: src/routes/_app/allocation.index.tsx:599
 msgid "allocation.categoryNone"
 msgstr "Uncategorized"
 
@@ -3891,7 +3918,7 @@ msgid "categories.uncategorized"
 msgstr "Uncategorized"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:474
+#: src/routes/_app/positions.tsx:502
 msgid "positions.allocUncategorized"
 msgstr "Uncategorized"
 
@@ -3928,17 +3955,17 @@ msgstr "US stock"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: formatQuantity(validExecutionUsdBrlRate.toFixed(4))
-#: src/components/allocation/contribution-planner.tsx:444
+#: src/components/allocation/contribution-planner.tsx:454
 msgid "allocation.plannerVetRate"
 msgstr "USD asset amounts use VET at {0} BRL per USD."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/contribution-planner.tsx:375
+#: src/components/allocation/contribution-planner.tsx:377
 msgid "allocation.plannerUsdEquivalent"
 msgstr "USD equivalent"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:370
+#: src/components/contribution-plan-documentation.tsx:538
 msgid "documentation.contribution.vetTitle"
 msgstr "USD execution rate (VET)"
 
@@ -4010,17 +4037,17 @@ msgid "performance.valuedAt"
 msgstr "Valued at {asOf}."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/contribution-planner.tsx:481
+#: src/components/allocation/contribution-planner.tsx:491
 msgid "allocation.plannerFxHint"
 msgstr "VET / FX costs"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1248
+#: src/components/allocation/allocation-table.tsx:1249
 msgid "allocation.viewDetails"
 msgstr "View details"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:678
+#: src/routes/_app/allocation.index.tsx:680
 msgid "allocation.presets"
 msgstr "View presets"
 
@@ -4040,7 +4067,7 @@ msgid "deepFinder.windowCost"
 msgstr "Vs cost"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:742
+#: src/components/allocation/allocation-table.tsx:743
 #: src/routes/_app/allocation.$ticker.tsx:180
 msgid "allocation.watchBadge"
 msgstr "Watch"
@@ -4048,7 +4075,12 @@ msgstr "Watch"
 #. js-lingui-explicit-id
 #: src/components/allocation/add-asset-dialog.tsx:143
 msgid "allocation.addDescription"
-msgstr "Watch-only assets have no invested amount. They stay in the table with their target and discount, so the score can already rank them."
+msgstr "Watch-only assets have no invested amount. They stay in the table with their target; set a fair value on a quarterly review so the score can already rank them."
+
+#. js-lingui-explicit-id
+#: src/components/contribution-plan-documentation.tsx:433
+msgid "documentation.contribution.waterfall"
+msgstr "Waterfall leftover capital"
 
 #. js-lingui-explicit-id
 #: src/routes/_app/performance.tsx:1349
@@ -4066,14 +4098,24 @@ msgid "performance.contributorsTitle"
 msgstr "What moves the result"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:376
+#: src/components/contribution-plan-documentation.tsx:544
 msgid "documentation.contribution.vetDescription"
 msgstr "When a USD asset is sized in BRL, the suggested unit count includes the configured broker spread and IOF. These costs are compounded, not added. The planner reports USD asset contributions in USD using this VET; BRL assets remain in the BRL total."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:475
+#: src/components/documentation-dialog.tsx:343
 msgid "documentation.positions.zeroQuantity"
 msgstr "When quantity reaches zero, the remaining cost basis is reset to zero. Unrealized P&L on an open position is current market value minus its remaining cost basis."
+
+#. js-lingui-explicit-id
+#: src/components/contribution-plan-documentation.tsx:526
+msgid "documentation.contribution.exampleCapDescription"
+msgstr "When the unconstrained split would give one name more than {shareCap}, that name is pinned at the cap and the rest is redistributed by score."
+
+#. js-lingui-explicit-id
+#: src/components/contribution-plan-documentation.tsx:295
+msgid "documentation.contribution.field.maxShareHint"
+msgstr "When two or more names sit at the table, no single asset receives more than this fraction of the contribution."
 
 #. js-lingui-explicit-id
 #: src/routes/_app/deep-finder.tsx:318
@@ -4081,9 +4123,19 @@ msgid "deepFinder.window"
 msgstr "Window"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:387
+#: src/components/contribution-plan-documentation.tsx:557
 msgid "documentation.contribution.vetPolicy"
 msgstr "With the current policy, the execution rate is {fxMarkup}% above spot. VET is used for suggested units and USD asset contribution amounts. The planner splits its final totals by asset currency instead of converting the full contribution into both currencies. Portfolio value, allocation weights, results, and every other FX conversion continue to use spot."
+
+#. js-lingui-explicit-id
+#: src/components/contribution-plan-documentation.tsx:423
+msgid "documentation.contribution.shareCapDescription"
+msgstr "With two or more names, nobody receives more than {shareCap} of the contribution. Independently, nobody receives more than their scored need. Excess is redistributed to invited names that still have room."
+
+#. js-lingui-explicit-id
+#: src/components/contribution-plan-documentation.tsx:465
+msgid "documentation.contribution.examplesTitle"
+msgstr "Worked examples"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: formatSignedPercent(summary.worstMonth.returnPercent)

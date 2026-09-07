@@ -173,8 +173,9 @@ export function SettingsData() {
             <AlertDescription>
               <Trans id="settings.data.scopeDescription">
                 Includes transactions, allocation assets, cash balance, reviews,
-                categories, assignments, and contribution-score settings.
-                Passwords and active sessions are excluded.
+                categories, assignments, contribution-score settings, and
+                contribution-planner settings. Passwords and active sessions are
+                excluded.
               </Trans>
               {totalRows !== null ? (
                 <span>

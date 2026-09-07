@@ -551,6 +551,7 @@ function AllocationPage() {
             displayCurrency={
               allocation.data?.summary.displayCurrency ?? displayCurrency
             }
+            portfolioValue={allocation.data?.summary.totalMarketValue ?? "0"}
             fx={allocation.data?.fx}
             disabled={!allocation.data}
           />

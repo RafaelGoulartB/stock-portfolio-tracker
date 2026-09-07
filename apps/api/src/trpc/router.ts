@@ -1,6 +1,7 @@
 import { allocationRouter } from "./routers/allocation";
 import { authRouter } from "./routers/auth";
 import { categoriesRouter } from "./routers/categories";
+import { contributionPlanConfigRouter } from "./routers/contribution-plan-config";
 import { dataRouter } from "./routers/data";
 import { devSeedRouter } from "./routers/dev-seed";
 import { dividendsRouter } from "./routers/dividends";
@@ -17,6 +18,7 @@ export const appRouter = router({
   auth: authRouter,
   allocation: allocationRouter,
   categories: categoriesRouter,
+  contributionPlanConfig: contributionPlanConfigRouter,
   data: dataRouter,
   dividends: dividendsRouter,
   fx: fxRouter,
