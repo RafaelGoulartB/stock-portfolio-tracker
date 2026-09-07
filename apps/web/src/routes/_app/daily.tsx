@@ -3,16 +3,9 @@ import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import { positiveDecimal } from "@portifolio-tracker/shared";
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
-  RefreshCw,
-  TrendingDown,
-  TrendingUp,
-} from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, RefreshCw } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
-import { AssetClassLabel } from "@/components/asset-labels";
+import { AssetLogo } from "@/components/asset-logo";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -34,9 +27,9 @@ import {
 import { type RouterOutputs, trpc } from "@/lib/api";
 import {
   formatMoney,
-  formatQuantity,
   formatSignedMoney,
   formatSignedPercent,
+  formatSignedWeightPrecise,
   formatTradeDate,
   pnlClassName,
 } from "@/lib/format";
@@ -50,7 +43,7 @@ export const Route = createFileRoute("/_app/daily")({
 
 type DailyData = RouterOutputs["positions"]["daily"];
 type DailyPosition = DailyData["positions"][number];
-type SortKey = "ticker" | "value" | "change";
+type SortKey = "ticker" | "value" | "change" | "impact";
 type SortDirection = "asc" | "desc";
 
 function DailyPage() {
@@ -322,12 +315,6 @@ function DailyTable({ data, locale }: { data: DailyData; locale: string }) {
                 direction={sortDir}
                 onToggle={() => toggleSort("ticker")}
               />
-              <TableHead className="text-muted-foreground">
-                <Trans id="daily.colClass">Class</Trans>
-              </TableHead>
-              <TableHead className="text-right text-muted-foreground">
-                <Trans id="daily.colQuantity">Quantity</Trans>
-              </TableHead>
               <TableHead className="text-right text-muted-foreground">
                 <Trans id="daily.colPreviousClose">Previous close</Trans>
               </TableHead>
@@ -348,6 +335,15 @@ function DailyTable({ data, locale }: { data: DailyData; locale: string }) {
                 align="right"
                 onToggle={() => toggleSort("change")}
               />
+              <SortableHead
+                label={
+                  <Trans id="daily.colPortfolioImpact">Portfolio impact</Trans>
+                }
+                active={sortKey === "impact"}
+                direction={sortDir}
+                align="right"
+                onToggle={() => toggleSort("impact")}
+              />
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -355,12 +351,13 @@ function DailyTable({ data, locale }: { data: DailyData; locale: string }) {
               <DailyRow
                 key={`${position.ticker}|${position.currency}`}
                 position={position}
+                portfolioValue={data.summary.marketValue}
               />
             ))}
           </TableBody>
           <TableFooter>
             <TableRow>
-              <TableCell colSpan={5} className="font-medium">
+              <TableCell colSpan={3} className="font-medium">
                 <Trans id="daily.total">Comparable total</Trans>
               </TableCell>
               <TableCell className="text-right font-medium tabular-nums">
@@ -379,6 +376,19 @@ function DailyTable({ data, locale }: { data: DailyData; locale: string }) {
                     )
                   : "—"}
               </TableCell>
+              <TableCell
+                className={`text-right font-semibold tabular-nums ${pnlClassName(data.summary.dailyChange)}`}
+              >
+                {data.summary.comparablePositions > 0 &&
+                Number(data.summary.marketValue) !== 0
+                  ? formatSignedWeightPrecise(
+                      String(
+                        Number(data.summary.dailyChange) /
+                          Number(data.summary.marketValue),
+                      ),
+                    )
+                  : "—"}
+              </TableCell>
             </TableRow>
           </TableFooter>
         </Table>
@@ -387,15 +397,29 @@ function DailyTable({ data, locale }: { data: DailyData; locale: string }) {
   );
 }
 
-function DailyRow({ position }: { position: DailyPosition }) {
+function DailyRow({
+  position,
+  portfolioValue,
+}: {
+  position: DailyPosition;
+  portfolioValue: string;
+}) {
+  const portfolioImpact =
+    position.dailyChange != null && Number(portfolioValue) !== 0
+      ? Number(position.dailyChange) / Number(portfolioValue)
+      : null;
+
   return (
     <TableRow>
-      <TableCell className="font-medium">{position.ticker}</TableCell>
-      <TableCell className="text-muted-foreground">
-        <AssetClassLabel assetClass={position.assetClass} />
-      </TableCell>
-      <TableCell className="text-right tabular-nums">
-        {formatQuantity(position.quantity)}
+      <TableCell className="font-medium">
+        <span className="flex items-center gap-2">
+          <AssetLogo
+            ticker={position.ticker}
+            assetClass={position.assetClass}
+            currency={position.currency}
+          />
+          {position.ticker}
+        </span>
       </TableCell>
       <TableCell className="text-right text-muted-foreground tabular-nums">
         {position.previousClose == null
@@ -422,17 +446,21 @@ function DailyRow({ position }: { position: DailyPosition }) {
           <span
             className={`flex items-center justify-end gap-2 ${pnlClassName(position.dailyChange)}`}
           >
-            {Number(position.dailyChange) > 0 ? (
-              <TrendingUp className="size-4" aria-hidden="true" />
-            ) : Number(position.dailyChange) < 0 ? (
-              <TrendingDown className="size-4" aria-hidden="true" />
-            ) : null}
             {signedOrZero(position.dailyChange, position.displayCurrency)}
             {position.dailyChangePercent ? (
               <span className="text-xs opacity-80">
                 {formatSignedPercent(position.dailyChangePercent)}
               </span>
             ) : null}
+          </span>
+        )}
+      </TableCell>
+      <TableCell className="text-right tabular-nums">
+        {portfolioImpact == null ? (
+          <span className="text-muted-foreground">—</span>
+        ) : (
+          <span className={pnlClassName(position.dailyChange ?? "0")}>
+            {formatSignedWeightPrecise(String(portfolioImpact))}
           </span>
         )}
       </TableCell>
