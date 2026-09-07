@@ -9,7 +9,7 @@ import {
 import { TRPCError } from "@trpc/server";
 import { and, asc, desc, eq } from "drizzle-orm";
 import { db } from "../../db";
-import { transactions } from "../../db/schema";
+import { allocationAssets, transactions } from "../../db/schema";
 import {
   availableQuantity,
   buildTickerLedger,
@@ -123,45 +123,81 @@ export const transactionsRouter = router({
   create: protectedProcedure
     .input(createTransactionInput)
     .mutation(async ({ ctx, input }) => {
+      const trade = input;
       const history = await loadTransactions(ctx.user.id);
 
-      // One ticker, one currency: costs in BRL and USD must never be averaged
-      // together, so the first currency used by a ticker wins.
-      const used = tickerCurrencies(history, input.ticker);
-
-      if (used.length > 0 && !used.includes(input.currency)) {
+      if (
+        trade.assetClass === "fixed_income" &&
+        history.some((entry) => entry.ticker === trade.ticker)
+      ) {
         throw new TRPCError({
-          code: "PRECONDITION_FAILED",
-          message: `Ticker ${input.ticker} is tracked in ${used.join(", ")}. Register this trade in the same currency.`,
+          code: "CONFLICT",
+          message:
+            "A fixed-income balance with this name already exists. Update its value from Allocation.",
         });
       }
 
-      if (input.side === "sell") {
-        const held = availableQuantity(history, input.ticker);
+      // One ticker, one currency: costs in BRL and USD must never be averaged
+      // together, so the first currency used by a ticker wins.
+      const used = tickerCurrencies(history, trade.ticker);
 
-        if (toDecimal(input.quantity) > toDecimal(held)) {
+      if (used.length > 0 && !used.includes(trade.currency)) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: `Ticker ${trade.ticker} is tracked in ${used.join(", ")}. Register this trade in the same currency.`,
+        });
+      }
+
+      if (trade.side === "sell") {
+        const held = availableQuantity(history, trade.ticker);
+
+        if (toDecimal(trade.quantity) > toDecimal(held)) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: `You only hold ${formatDecimal(toDecimal(held), 8)} ${input.ticker}`,
+            message: `You only hold ${formatDecimal(toDecimal(held), 8)} ${trade.ticker}`,
           });
         }
       }
 
-      const [row] = await db
-        .insert(transactions)
-        .values({
-          userId: ctx.user.id,
-          ticker: input.ticker,
-          assetClass: input.assetClass,
-          currency: input.currency,
-          side: input.side,
-          quantity: input.quantity,
-          price: input.price,
-          fees: input.fees,
-          tradedAt: input.tradedAt,
-          notes: input.notes && input.notes.length > 0 ? input.notes : null,
-        })
-        .returning(columns);
+      const row = await db.transaction(async (tx) => {
+        const [created] = await tx
+          .insert(transactions)
+          .values({
+            userId: ctx.user.id,
+            ticker: trade.ticker,
+            assetClass: trade.assetClass,
+            currency: trade.currency,
+            side: trade.side,
+            quantity: trade.quantity,
+            price: trade.price,
+            fees: trade.fees,
+            tradedAt: trade.tradedAt,
+            notes: trade.notes && trade.notes.length > 0 ? trade.notes : null,
+          })
+          .returning(columns);
+
+        if (!created) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        }
+
+        if (trade.assetClass === "fixed_income") {
+          await tx
+            .insert(allocationAssets)
+            .values({
+              userId: ctx.user.id,
+              ticker: trade.ticker,
+              assetClass: trade.assetClass,
+              currency: trade.currency,
+              manualPrice: trade.price,
+            })
+            .onConflictDoUpdate({
+              target: [allocationAssets.userId, allocationAssets.ticker],
+              set: { manualPrice: trade.price, updatedAt: new Date() },
+            });
+        }
+
+        return created;
+      });
 
       if (!row) {
         throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
@@ -249,7 +285,11 @@ export const transactionsRouter = router({
             eq(transactions.userId, ctx.user.id),
           ),
         )
-        .returning({ id: transactions.id });
+        .returning({
+          id: transactions.id,
+          ticker: transactions.ticker,
+          assetClass: transactions.assetClass,
+        });
 
       if (!deleted) {
         throw new TRPCError({
@@ -258,6 +298,30 @@ export const transactionsRouter = router({
         });
       }
 
-      return deleted;
+      if (deleted.assetClass === "fixed_income") {
+        const [remaining] = await db
+          .select({ id: transactions.id })
+          .from(transactions)
+          .where(
+            and(
+              eq(transactions.userId, ctx.user.id),
+              eq(transactions.ticker, deleted.ticker),
+            ),
+          )
+          .limit(1);
+
+        if (!remaining) {
+          await db
+            .delete(allocationAssets)
+            .where(
+              and(
+                eq(allocationAssets.userId, ctx.user.id),
+                eq(allocationAssets.ticker, deleted.ticker),
+              ),
+            );
+        }
+      }
+
+      return { id: deleted.id };
     }),
 });

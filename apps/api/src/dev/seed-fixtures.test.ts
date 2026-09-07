@@ -12,6 +12,29 @@ import {
 } from "./seed-fixtures";
 
 describe("dev seed fixtures", () => {
+  it("accepts a fixed-income balance without quantity or unit price", () => {
+    const result = createTransactionInput.safeParse({
+      ticker: "Tesouro Selic 2031",
+      assetClass: "fixed_income",
+      currency: "BRL",
+      side: "buy",
+      quantity: "",
+      price: "",
+      value: "18803.13",
+      fees: "0",
+      tradedAt: "2025-12-31",
+    });
+
+    expect(result.success).toBe(true);
+    expect(result.success && result.data).toMatchObject({
+      ticker: "TESOURO SELIC 2031",
+      side: "buy",
+      quantity: "1",
+      price: "18803.13",
+      fees: "0",
+    });
+  });
+
   it("covers at least 25 tickers with mixed research history", () => {
     const tickers = new Set(DEV_SEED_ASSETS.map((asset) => asset.ticker));
 

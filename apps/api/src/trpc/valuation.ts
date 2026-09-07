@@ -5,6 +5,9 @@ import type {
   ValuedPosition,
 } from "@portifolio-tracker/shared";
 import { TRPCError } from "@trpc/server";
+import { eq } from "drizzle-orm";
+import { db } from "../db";
+import { allocationAssets } from "../db/schema";
 import {
   type ConsolidationInput,
   consolidatePositions,
@@ -54,7 +57,16 @@ export type ValuationResult = {
 export async function loadValuedPortfolio(
   request: ValuationRequest,
 ): Promise<ValuationResult> {
-  const transactions = await loadTransactions(request.userId);
+  const [transactions, storedManualPrices] = await Promise.all([
+    loadTransactions(request.userId),
+    db
+      .select({
+        ticker: allocationAssets.ticker,
+        manualPrice: allocationAssets.manualPrice,
+      })
+      .from(allocationAssets)
+      .where(eq(allocationAssets.userId, request.userId)),
+  ]);
   const native = consolidatePositions(
     filterTransactionsByAsOf(transactions, request.asOf ?? null),
   );
@@ -84,12 +96,19 @@ export async function loadValuedPortfolio(
     });
   }
 
-  const manualPrices = Object.fromEntries(
-    Object.entries(request.manualPrices ?? {}).map(([ticker, price]) => [
-      ticker.toUpperCase(),
-      price,
-    ]),
-  );
+  const manualPrices = {
+    ...Object.fromEntries(
+      storedManualPrices
+        .filter((asset) => asset.manualPrice !== null)
+        .map((asset) => [asset.ticker, asset.manualPrice as string]),
+    ),
+    ...Object.fromEntries(
+      Object.entries(request.manualPrices ?? {}).map(([ticker, price]) => [
+        ticker.toUpperCase(),
+        price,
+      ]),
+    ),
+  };
   const provider = getQuoteProvider(request.quoteSource);
   const quotes = new Map<string, ValuationQuote>();
   const missing: string[] = [];

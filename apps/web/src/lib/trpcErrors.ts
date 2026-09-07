@@ -46,6 +46,12 @@ const currencyMismatch = msg({
   message: "This ticker is already tracked in another currency.",
 });
 
+const fixedIncomeExists = msg({
+  id: "transactions.fixedIncomeExists",
+  message:
+    "This fixed-income balance already exists. Update its value from Allocation.",
+});
+
 const bookBatchInvalid = msg({
   id: "transactions.bookBatchInvalid",
   message: "Could not book these holdings. Check for duplicates or bad rows.",
@@ -102,6 +108,10 @@ export function authErrorMessage(
 }
 
 export function createTradeErrorMessage(error: unknown): string {
+  if (codeOf(error) === "CONFLICT") {
+    return i18n._(fixedIncomeExists);
+  }
+
   if (codeOf(error) === "PRECONDITION_FAILED") {
     return i18n._(currencyMismatch);
   }

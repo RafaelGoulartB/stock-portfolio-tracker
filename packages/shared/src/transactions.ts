@@ -40,20 +40,96 @@ export const tickerSchema = z
   .trim()
   .toUpperCase()
   .min(1, "Ticker is required")
-  .max(16, "Use at most 16 characters")
-  .regex(/^[A-Z0-9][A-Z0-9.-]*$/, "Use letters, digits, dots or hyphens");
+  .max(120, "Use at most 120 characters")
+  .refine((value) => !/[\r\n\t]/.test(value), "Use a single-line asset name");
 
-export const createTransactionInput = z.object({
-  ticker: tickerSchema,
-  assetClass: assetClassSchema,
-  currency: currencySchema.default(DEFAULT_CURRENCY),
-  side: transactionSideSchema,
-  quantity: positiveDecimal,
-  price: positiveDecimal,
-  fees: nonNegativeDecimal.default("0"),
-  tradedAt: isoDate,
-  notes: z.string().trim().max(280, "Use at most 280 characters").optional(),
-});
+/** Empty fields are omitted by the fixed-income form. */
+const optionalPositiveDecimal = z
+  .union([positiveDecimal, z.literal("")])
+  .optional()
+  .transform((value) => (value === "" ? undefined : value));
+
+export const createTransactionInput = z
+  .object({
+    ticker: tickerSchema,
+    assetClass: assetClassSchema,
+    currency: currencySchema.default(DEFAULT_CURRENCY),
+    side: transactionSideSchema.optional(),
+    quantity: optionalPositiveDecimal,
+    price: optionalPositiveDecimal,
+    /**
+     * Fixed-income positions are tracked as a single user-maintained value.
+     * Quantity and unit price remain an internal implementation detail.
+     */
+    value: positiveDecimal.optional(),
+    fees: nonNegativeDecimal.optional(),
+    tradedAt: isoDate,
+    notes: z.string().trim().max(280, "Use at most 280 characters").optional(),
+  })
+  .superRefine((input, ctx) => {
+    if (input.assetClass === "fixed_income") {
+      if (input.value === undefined) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["value"],
+          message: "Value is required",
+        });
+      }
+
+      if (input.side !== undefined && input.side !== "buy") {
+        ctx.addIssue({
+          code: "custom",
+          path: ["side"],
+          message: "Fixed income cannot be sold as a trade",
+        });
+      }
+
+      return;
+    }
+
+    if (input.side === undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["side"],
+        message: "Side is required",
+      });
+    }
+
+    if (input.quantity === undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["quantity"],
+        message: "Quantity is required",
+      });
+    }
+
+    if (input.price === undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["price"],
+        message: "Unit price is required",
+      });
+    }
+  })
+  .transform((input) => {
+    if (input.assetClass === "fixed_income") {
+      return {
+        ...input,
+        side: "buy" as const,
+        quantity: "1",
+        price: input.value as string,
+        fees: "0",
+      };
+    }
+
+    return {
+      ...input,
+      side: input.side as TransactionSide,
+      quantity: input.quantity as string,
+      price: input.price as string,
+      fees: input.fees ?? "0",
+    };
+  });
 
 export type CreateTransactionInput = z.input<typeof createTransactionInput>;
 

@@ -11,7 +11,7 @@ import {
   TRANSACTION_SIDES,
   type Transaction,
 } from "@portifolio-tracker/shared";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Loader2, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -89,6 +89,7 @@ const emptyForm = (): FormValues => ({
   side: "buy",
   quantity: "",
   price: "",
+  value: "",
   fees: "0",
   tradedAt: today(),
   notes: "",
@@ -106,11 +107,14 @@ function TransactionsPage() {
     resolver: zodResolver(createTransactionInput),
     defaultValues: emptyForm(),
   });
+  const isFixedIncome = form.watch("assetClass") === "fixed_income";
 
   async function refresh() {
     await Promise.all([
       utils.transactions.list.invalidate(),
       utils.positions.list.invalidate(),
+      utils.allocation.list.invalidate(),
+      utils.performance.history.invalidate(),
     ]);
   }
 
@@ -287,11 +291,19 @@ function TransactionsPage() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>
-                          <Trans id="transactions.ticker">Ticker</Trans>
+                          {isFixedIncome ? (
+                            <Trans id="transactions.fixedIncomeName">
+                              Name
+                            </Trans>
+                          ) : (
+                            <Trans id="transactions.ticker">Ticker</Trans>
+                          )}
                         </FormLabel>
                         <FormControl>
                           <Input
-                            placeholder="PETR4"
+                            placeholder={
+                              isFixedIncome ? "Tesouro Selic 2031" : "PETR4"
+                            }
                             autoComplete="off"
                             className="uppercase"
                             {...field}
@@ -303,35 +315,39 @@ function TransactionsPage() {
                   />
 
                   <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="side"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>
-                            <Trans id="transactions.side">Side</Trans>
-                          </FormLabel>
-                          <Select
-                            value={field.value}
-                            onValueChange={field.onChange}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="w-full">
-                                <SelectValue />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {TRANSACTION_SIDES.map((side) => (
-                                <SelectItem key={side} value={side}>
-                                  <SideLabel side={side} />
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    {!isFixedIncome ? (
+                      <FormField
+                        control={form.control}
+                        name="side"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              <Trans id="transactions.side">Side</Trans>
+                            </FormLabel>
+                            <Select
+                              value={field.value}
+                              onValueChange={field.onChange}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="w-full">
+                                  <SelectValue />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {TRANSACTION_SIDES.map((side) => (
+                                  <SelectItem key={side} value={side}>
+                                    <SideLabel side={side} />
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    ) : (
+                      <div />
+                    )}
 
                     <FormField
                       control={form.control}
@@ -351,6 +367,8 @@ function TransactionsPage() {
                                 form.setValue("currency", "USD");
                               } else if (value === "stock_br") {
                                 form.setValue("currency", "BRL");
+                              } else if (value === "fixed_income") {
+                                form.setValue("side", "buy");
                               }
                             }}
                           >
@@ -373,49 +391,88 @@ function TransactionsPage() {
                     />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
+                  {isFixedIncome ? (
                     <FormField
                       control={form.control}
-                      name="quantity"
+                      name="value"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>
-                            <Trans id="transactions.quantity">Quantity</Trans>
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              inputMode="decimal"
-                              placeholder="100"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="price"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>
-                            <Trans id="transactions.unitPrice">
-                              Unit price
+                            <Trans id="transactions.currentValue">
+                              Current value
                             </Trans>
                           </FormLabel>
                           <FormControl>
                             <Input
                               inputMode="decimal"
-                              placeholder="32.15"
+                              placeholder="10000.00"
                               {...field}
                             />
                           </FormControl>
+                          <FormDescription>
+                            <Trans id="transactions.fixedIncomeValueHint">
+                              This value is maintained by you. Update it later
+                              from the Allocation page; no return is calculated
+                              for fixed income.
+                            </Trans>
+                            <Link
+                              to="/allocation"
+                              className="mt-1 block w-fit text-primary underline-offset-4 hover:underline"
+                            >
+                              <Trans id="transactions.updateFixedIncomeValue">
+                                Update current value
+                              </Trans>
+                            </Link>
+                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
                     />
-                  </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-4">
+                      <FormField
+                        control={form.control}
+                        name="quantity"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              <Trans id="transactions.quantity">Quantity</Trans>
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                inputMode="decimal"
+                                placeholder="100"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="price"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              <Trans id="transactions.unitPrice">
+                                Unit price
+                              </Trans>
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                inputMode="decimal"
+                                placeholder="32.15"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-2 gap-4">
                     <FormField
@@ -454,25 +511,29 @@ function TransactionsPage() {
                       )}
                     />
 
-                    <FormField
-                      control={form.control}
-                      name="fees"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>
-                            <Trans id="transactions.fees">Fees</Trans>
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              inputMode="decimal"
-                              placeholder="0"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    {isFixedIncome ? (
+                      <div />
+                    ) : (
+                      <FormField
+                        control={form.control}
+                        name="fees"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>
+                              <Trans id="transactions.fees">Fees</Trans>
+                            </FormLabel>
+                            <FormControl>
+                              <Input
+                                inputMode="decimal"
+                                placeholder="0"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
                   </div>
 
                   <FormField
@@ -532,7 +593,13 @@ function TransactionsPage() {
                         aria-hidden="true"
                       />
                     ) : null}
-                    <Trans id="transactions.register">Register trade</Trans>
+                    {isFixedIncome ? (
+                      <Trans id="transactions.registerFixedIncome">
+                        Register fixed income
+                      </Trans>
+                    ) : (
+                      <Trans id="transactions.register">Register trade</Trans>
+                    )}
                   </Button>
                 </form>
               </Form>
@@ -616,7 +683,7 @@ function HistoryTable({
           <TableHead className="text-right">
             <Trans id="transactions.colTotal">Total</Trans>
           </TableHead>
-          <TableHead className="w-10" />
+          <TableHead className="w-[104px]" />
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -657,13 +724,19 @@ function HistoryTable({
                 <CurrencyBadge currency={transaction.currency} />
               </TableCell>
               <TableCell className="text-right tabular-nums">
-                {formatQuantity(transaction.quantity)}
+                {transaction.assetClass === "fixed_income"
+                  ? "—"
+                  : formatQuantity(transaction.quantity)}
               </TableCell>
               <TableCell className="text-right tabular-nums">
-                {formatMoney(transaction.price, transaction.currency)}
+                {transaction.assetClass === "fixed_income"
+                  ? "—"
+                  : formatMoney(transaction.price, transaction.currency)}
               </TableCell>
               <TableCell className="text-right tabular-nums text-muted-foreground">
-                {formatMoney(transaction.fees, transaction.currency)}
+                {transaction.assetClass === "fixed_income"
+                  ? "—"
+                  : formatMoney(transaction.fees, transaction.currency)}
               </TableCell>
               <TableCell className="text-right tabular-nums">
                 {formatMoney(transaction.total, transaction.currency)}
@@ -671,13 +744,15 @@ function HistoryTable({
               <TableCell>
                 <Button
                   type="button"
-                  variant="ghost"
-                  size="icon"
+                  variant="outline"
+                  size="sm"
                   aria-label={removeLabel}
+                  title={removeLabel}
                   disabled={removingId === transaction.id}
                   onClick={() => onRemove(transaction.id)}
                 >
                   <Trash2 className="size-4" aria-hidden="true" />
+                  <Trans id="transactions.delete">Delete</Trans>
                 </Button>
               </TableCell>
             </TableRow>

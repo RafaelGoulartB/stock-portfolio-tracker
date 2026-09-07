@@ -442,10 +442,15 @@ export function summarizePositions(
 
       if (marketValue != null) {
         totalMarketValue = add(totalMarketValue, toDecimal(marketValue));
-        quotedInvestedCost = add(
-          quotedInvestedCost,
-          toDecimal(position.convertedInvestedCost),
-        );
+        // Fixed income is a user-maintained balance, not a quoted investment.
+        // Its value belongs to the portfolio total, but never to a calculated
+        // return or cost-basis comparison.
+        if (position.assetClass !== "fixed_income") {
+          quotedInvestedCost = add(
+            quotedInvestedCost,
+            toDecimal(position.convertedInvestedCost),
+          );
+        }
         quotedPositions += 1;
       } else {
         unquotedPositions += 1;
@@ -461,7 +466,18 @@ export function summarizePositions(
     }))
     .sort((a, b) => a.currency.localeCompare(b.currency));
 
-  const totalUnrealizedPnl = sub(totalMarketValue, quotedInvestedCost);
+  const returnEligibleMarketValue = positions.reduce((total, position) => {
+    if (
+      position.assetClass === "fixed_income" ||
+      !("convertedMarketValue" in position) ||
+      position.convertedMarketValue === null
+    ) {
+      return total;
+    }
+
+    return add(total, toDecimal(position.convertedMarketValue));
+  }, ZERO);
+  const totalUnrealizedPnl = sub(returnEligibleMarketValue, quotedInvestedCost);
 
   return {
     openPositions,
@@ -560,6 +576,7 @@ export function valuePositions(
       MONEY_PLACES,
     );
     const investedCost = toDecimal(position.investedCost);
+    const isManualFixedIncome = position.assetClass === "fixed_income";
     const unrealizedPnl = sub(toDecimal(marketValue), investedCost);
 
     return {
@@ -572,17 +589,22 @@ export function valuePositions(
         displayCurrency,
         usdBrlRate ?? "1",
       ),
-      unrealizedPnl: formatDecimal(unrealizedPnl, MONEY_PLACES),
-      convertedUnrealizedPnl: convertMoney(
-        formatDecimal(unrealizedPnl, MONEY_PLACES),
-        position.currency,
-        displayCurrency,
-        usdBrlRate ?? "1",
-      ),
-      // Both amounts share the native currency, so the ratio needs no rate.
-      unrealizedPnlPercent: isZero(investedCost)
+      unrealizedPnl: isManualFixedIncome
         ? null
-        : formatDecimal(div(unrealizedPnl, investedCost), RATE_PLACES),
+        : formatDecimal(unrealizedPnl, MONEY_PLACES),
+      convertedUnrealizedPnl: isManualFixedIncome
+        ? null
+        : convertMoney(
+            formatDecimal(unrealizedPnl, MONEY_PLACES),
+            position.currency,
+            displayCurrency,
+            usdBrlRate ?? "1",
+          ),
+      // Both amounts share the native currency, so the ratio needs no rate.
+      unrealizedPnlPercent:
+        isManualFixedIncome || isZero(investedCost)
+          ? null
+          : formatDecimal(div(unrealizedPnl, investedCost), RATE_PLACES),
       // Weights need the portfolio total first; filled in below.
       weight: null,
       quoteAsOf: quote.asOf,

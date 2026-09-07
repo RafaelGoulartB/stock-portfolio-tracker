@@ -435,6 +435,42 @@ describe("valuePositions", () => {
     });
   });
 
+  it("keeps a fixed-income balance out of calculated returns", () => {
+    const native = consolidatePositions([
+      tx({
+        ticker: "TESOURO SELIC 2031",
+        assetClass: "fixed_income",
+        side: "buy",
+        quantity: "1",
+        price: "10000",
+      }),
+    ]);
+    const [valued] = valuePositions(
+      convertPositions(native, "BRL", null),
+      new Map([
+        [
+          "TESOURO SELIC 2031",
+          { ticker: "TESOURO SELIC 2031", price: "10500", asOf: "2026-09-07" },
+        ],
+      ]),
+      "BRL",
+      null,
+    );
+
+    expect(valued).toMatchObject({
+      marketValue: "10500.00",
+      unrealizedPnl: null,
+      convertedUnrealizedPnl: null,
+      unrealizedPnlPercent: null,
+    });
+    expect(summarizePositions([valued], "BRL", null)).toMatchObject({
+      totalMarketValue: "10500.00",
+      quotedInvestedCost: "0.00",
+      totalUnrealizedPnl: "0.00",
+      totalUnrealizedPnlPercent: null,
+    });
+  });
+
   it("flags tickers without a quote instead of guessing", () => {
     const native = consolidatePositions([
       tx({ ticker: "ITUB4", side: "buy", quantity: "100", price: "20" }),

@@ -10,6 +10,7 @@
 import { createTransactionInput } from "@portifolio-tracker/shared";
 import { TRPCError } from "@trpc/server";
 import { eq, max } from "drizzle-orm";
+import type { z } from "zod";
 import { db } from "../../db";
 import { allocationAssets, assetReviews, transactions } from "../../db/schema";
 import {
@@ -53,7 +54,7 @@ export const devSeedRouter = router({
     // Replays the same guards as the production create endpoint so the
     // seed batch can never corrupt the one-currency-per-ticker invariant
     // or oversell a holding when the account already has trades.
-    const accepted: typeof DEV_SEED_FIXTURES = [];
+    const accepted: z.output<typeof createTransactionInput>[] = [];
     const staged: ConsolidationInput[] = [];
     const skippedTickers = new Set<string>();
     const existingTradeTickers = new Set(

@@ -763,15 +763,18 @@ const CATALOG: SeedName[] = [
   {
     asset: asset("CDB-2027", "fixed_income", "BRL", "0.05"),
     trades: [
-      trade(
-        "CDB-2027",
-        "fixed_income",
-        "BRL",
-        "buy",
-        "10",
-        "1000.00",
-        "2024-07-01",
-      ),
+      {
+        ...trade(
+          "CDB-2027",
+          "fixed_income",
+          "BRL",
+          "buy",
+          "10",
+          "1000.00",
+          "2024-07-01",
+        ),
+        value: "10000.00",
+      },
     ],
     reviews: [
       review("CDB-2027", "2024Q3", {
