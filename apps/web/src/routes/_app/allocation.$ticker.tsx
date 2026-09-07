@@ -2,7 +2,12 @@ import { t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import { positiveDecimal, tickerSchema } from "@portifolio-tracker/shared";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  useNavigate,
+  useParams,
+  useRouter,
+} from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { type ReactNode, useMemo } from "react";
 import { toast } from "sonner";
@@ -36,9 +41,13 @@ export const Route = createFileRoute("/_app/allocation/$ticker")({
   component: AssetDetailPage,
 });
 
-function AssetDetailPage() {
+export function AssetDetailPage() {
   const { i18n } = useLingui();
-  const { ticker: rawTicker } = Route.useParams();
+  const router = useRouter();
+  const navigate = useNavigate();
+  const { ticker: rawTicker } = useParams({ strict: false }) as {
+    ticker: string;
+  };
   const parsedTicker = tickerSchema.safeParse(rawTicker);
   const ticker = parsedTicker.success
     ? parsedTicker.data
@@ -111,14 +120,21 @@ function AssetDetailPage() {
     [row],
   );
 
+  function goBack() {
+    if (router.history.canGoBack()) {
+      router.history.back();
+      return;
+    }
+
+    void navigate({ to: "/positions" });
+  }
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="button" variant="ghost" size="sm" asChild>
-          <Link to="/allocation">
-            <ArrowLeft aria-hidden="true" />
-            <Trans id="allocation.detailBack">Allocation</Trans>
-          </Link>
+        <Button type="button" variant="ghost" size="sm" onClick={goBack}>
+          <ArrowLeft aria-hidden="true" />
+          <Trans id="allocation.detailBack">Back</Trans>
         </Button>
       </div>
 
@@ -140,7 +156,7 @@ function AssetDetailPage() {
         <Card>
           <CardContent className="py-10 text-center text-sm text-muted-foreground">
             <Trans id="allocation.detailMissing">
-              {ticker} is not on the allocation table.
+              No details are available for {ticker}.
             </Trans>
           </CardContent>
         </Card>
@@ -320,8 +336,7 @@ function AssetDetailPage() {
               </h2>
               <p className="text-sm text-muted-foreground">
                 <Trans id="allocation.detailReviewsEmpty">
-                  No grades, notes or fair values yet. Open a quarter on the
-                  allocation table to add the first review.
+                  No grades, notes or fair values have been added yet.
                 </Trans>
               </p>
             </section>

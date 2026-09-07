@@ -717,7 +717,7 @@ export function AllocationTable({
                           currency={row.currency}
                         />
                         <Link
-                          to="/allocation/$ticker"
+                          to="/assets/$ticker"
                           params={{ ticker: row.ticker }}
                           className="font-semibold hover:underline underline-offset-2"
                         >
@@ -1196,7 +1196,7 @@ function RowMenu({
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-52">
         <DropdownMenuItem asChild>
-          <Link to="/allocation/$ticker" params={{ ticker: row.ticker }}>
+          <Link to="/assets/$ticker" params={{ ticker: row.ticker }}>
             <Eye aria-hidden="true" />
             <Trans id="allocation.viewDetails">View details</Trans>
           </Link>

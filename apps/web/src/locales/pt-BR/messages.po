@@ -345,7 +345,7 @@ msgstr "{side} de {quantity} {ticker} registrada"
 #. js-lingui-explicit-id
 #: src/routes/_app/allocation.$ticker.tsx:142
 msgid "allocation.detailMissing"
-msgstr "{ticker} não está na tabela de alocação."
+msgstr "Não há detalhes disponíveis para {ticker}."
 
 #. js-lingui-explicit-id
 #: src/components/settings-data.tsx:181
@@ -558,7 +558,7 @@ msgstr "Todos os tickers"
 #. js-lingui-explicit-id
 #: src/routes/_app/allocation.$ticker.tsx:120
 msgid "allocation.detailBack"
-msgstr "Alocação"
+msgstr "Voltar"
 
 #. js-lingui-explicit-id
 #: src/routes/_app/allocation.index.tsx:496
@@ -2440,7 +2440,7 @@ msgstr "Nenhuma queda neste mês."
 #. js-lingui-explicit-id
 #: src/routes/_app/allocation.$ticker.tsx:322
 msgid "allocation.detailReviewsEmpty"
-msgstr "Ainda não há notas, anotações ou fair values. Abra um trimestre na tabela de alocação para adicionar a primeira revisão."
+msgstr "Ainda não foram adicionadas notas, anotações ou fair values."
 
 #. js-lingui-explicit-id
 #: src/components/transactions/book-holdings-panel.tsx:223

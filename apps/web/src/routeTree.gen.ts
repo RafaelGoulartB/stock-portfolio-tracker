@@ -23,6 +23,7 @@ import { Route as AppPositionsRouteImport } from './routes/_app/positions'
 import { Route as AppTransactionsRouteImport } from './routes/_app/transactions'
 import { Route as AppAllocationIndexRouteImport } from './routes/_app/allocation.index'
 import { Route as AppAllocationTickerRouteImport } from './routes/_app/allocation.$ticker'
+import { Route as AppAssetsTickerRouteImport } from './routes/_app/assets.$ticker'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -93,6 +94,11 @@ const AppAllocationTickerRoute = AppAllocationTickerRouteImport.update({
   path: '/$ticker',
   getParentRoute: () => AppAllocationRoute,
 } as any)
+const AppAssetsTickerRoute = AppAssetsTickerRouteImport.update({
+  id: '/assets/$ticker',
+  path: '/assets/$ticker',
+  getParentRoute: () => AppRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -107,6 +113,7 @@ export interface FileRoutesByFullPath {
   '/positions': typeof AppPositionsRoute
   '/transactions': typeof AppTransactionsRoute
   '/allocation/$ticker': typeof AppAllocationTickerRoute
+  '/assets/$ticker': typeof AppAssetsTickerRoute
   '/allocation/': typeof AppAllocationIndexRoute
 }
 export interface FileRoutesByTo {
@@ -121,6 +128,7 @@ export interface FileRoutesByTo {
   '/positions': typeof AppPositionsRoute
   '/transactions': typeof AppTransactionsRoute
   '/allocation/$ticker': typeof AppAllocationTickerRoute
+  '/assets/$ticker': typeof AppAssetsTickerRoute
   '/allocation': typeof AppAllocationIndexRoute
 }
 export interface FileRoutesById {
@@ -138,6 +146,7 @@ export interface FileRoutesById {
   '/_app/positions': typeof AppPositionsRoute
   '/_app/transactions': typeof AppTransactionsRoute
   '/_app/allocation/$ticker': typeof AppAllocationTickerRoute
+  '/_app/assets/$ticker': typeof AppAssetsTickerRoute
   '/_app/allocation/': typeof AppAllocationIndexRoute
 }
 export interface FileRouteTypes {
@@ -155,6 +164,7 @@ export interface FileRouteTypes {
     | '/positions'
     | '/transactions'
     | '/allocation/$ticker'
+    | '/assets/$ticker'
     | '/allocation/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -169,6 +179,7 @@ export interface FileRouteTypes {
     | '/positions'
     | '/transactions'
     | '/allocation/$ticker'
+    | '/assets/$ticker'
     | '/allocation'
   id:
     | '__root__'
@@ -185,6 +196,7 @@ export interface FileRouteTypes {
     | '/_app/positions'
     | '/_app/transactions'
     | '/_app/allocation/$ticker'
+    | '/_app/assets/$ticker'
     | '/_app/allocation/'
   fileRoutesById: FileRoutesById
 }
@@ -294,6 +306,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAllocationTickerRouteImport
       parentRoute: typeof AppAllocationRoute
     }
+    '/_app/assets/$ticker': {
+      id: '/_app/assets/$ticker'
+      path: '/assets/$ticker'
+      fullPath: '/assets/$ticker'
+      preLoaderRoute: typeof AppAssetsTickerRouteImport
+      parentRoute: typeof AppRoute
+    }
   }
 }
 
@@ -321,6 +340,7 @@ interface AppRouteChildren {
   AppPerformanceRoute: typeof AppPerformanceRoute
   AppPositionsRoute: typeof AppPositionsRoute
   AppTransactionsRoute: typeof AppTransactionsRoute
+  AppAssetsTickerRoute: typeof AppAssetsTickerRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -333,6 +353,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppPerformanceRoute: AppPerformanceRoute,
   AppPositionsRoute: AppPositionsRoute,
   AppTransactionsRoute: AppTransactionsRoute,
+  AppAssetsTickerRoute: AppAssetsTickerRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

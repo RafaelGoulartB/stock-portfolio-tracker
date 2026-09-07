@@ -12,6 +12,7 @@ import { ArrowDown, ArrowUp, ArrowUpDown, ScanSearch } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
 import { Bar, BarChart, Cell, ReferenceLine, XAxis, YAxis } from "recharts";
 import { AssetClassLabel } from "@/components/asset-labels";
+import { AssetLink } from "@/components/asset-link";
 import { AssetLogo } from "@/components/asset-logo";
 import { Button } from "@/components/ui/button";
 import {
@@ -678,7 +679,7 @@ function ResultTable({
                       assetClass={row.assetClass}
                       currency={row.currency}
                     />
-                    {row.ticker}
+                    <AssetLink ticker={row.ticker}>{row.ticker}</AssetLink>
                     {missingSet.has(row.ticker) ? (
                       <span className="text-xs font-normal text-muted-foreground">
                         <Trans id="deepFinder.unquoted">No quote</Trans>

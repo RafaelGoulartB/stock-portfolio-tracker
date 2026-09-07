@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
 import { AssetClassLabel } from "@/components/asset-labels";
+import { AssetLink } from "@/components/asset-link";
 import { AssetLogo } from "@/components/asset-logo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -599,14 +600,17 @@ function PositionCell({
   switch (id) {
     case "ticker":
       content = (
-        <span className="flex items-center gap-2 font-semibold">
+        <AssetLink
+          ticker={position.ticker}
+          className="flex items-center gap-2 font-semibold"
+        >
           <AssetLogo
             ticker={position.ticker}
             assetClass={position.assetClass}
             currency={position.currency}
           />
           {position.ticker}
-        </span>
+        </AssetLink>
       );
       break;
     case "assetClass":

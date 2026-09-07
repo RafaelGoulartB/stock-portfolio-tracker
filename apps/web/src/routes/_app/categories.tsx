@@ -11,6 +11,7 @@ import { Pencil, Plus, Search, Tags, Trash2 } from "lucide-react";
 import { type FormEvent, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AssetClassLabel, CurrencyBadge } from "@/components/asset-labels";
+import { AssetLink } from "@/components/asset-link";
 import { AssetLogo } from "@/components/asset-logo";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -719,12 +720,14 @@ function AssetTableRow({
       </TableCell>
       <TableCell className="font-medium">
         <div className="flex flex-wrap items-center gap-2">
-          <AssetLogo
-            ticker={asset.ticker}
-            assetClass={asset.assetClass}
-            currency={asset.currency}
-          />
-          {asset.ticker}
+          <AssetLink ticker={asset.ticker} className="flex items-center gap-2">
+            <AssetLogo
+              ticker={asset.ticker}
+              assetClass={asset.assetClass}
+              currency={asset.currency}
+            />
+            {asset.ticker}
+          </AssetLink>
           {category ? (
             <Badge variant="outline" className="gap-1.5 font-normal">
               <span

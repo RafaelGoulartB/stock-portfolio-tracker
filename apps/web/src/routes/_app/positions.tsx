@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
 import { AssetClassLabel, assetClassText } from "@/components/asset-labels";
+import { AssetLink } from "@/components/asset-link";
 import { AssetLogo } from "@/components/asset-logo";
 import { Button } from "@/components/ui/button";
 import {
@@ -887,12 +888,13 @@ function AllocationCard({
                       currency={asset.currency}
                       className="size-6 shrink-0 rounded-sm"
                     />
-                    <span
+                    <AssetLink
+                      ticker={asset.ticker}
                       className="w-[76px] shrink-0 truncate font-medium"
                       title={asset.ticker}
                     >
                       {asset.ticker}
-                    </span>
+                    </AssetLink>
                     <ShareBar
                       className="min-w-8 flex-1"
                       fraction={
@@ -1131,7 +1133,9 @@ function MoverList({
         <ul className="mt-2 space-y-2">
           {rows.map((row) => (
             <li key={row.ticker} className="flex items-baseline gap-3 text-sm">
-              <span className="font-medium">{row.ticker}</span>
+              <AssetLink ticker={row.ticker} className="font-medium">
+                {row.ticker}
+              </AssetLink>
               <span
                 className={cn(
                   "ml-auto tabular-nums",
@@ -1377,14 +1381,17 @@ function HoldingsCard({
             {rows.map((position) => (
               <TableRow key={`${position.ticker}|${position.currency}`}>
                 <TableCell className="font-medium">
-                  <span className="flex items-center gap-2">
+                  <AssetLink
+                    ticker={position.ticker}
+                    className="flex items-center gap-2"
+                  >
                     <AssetLogo
                       ticker={position.ticker}
                       assetClass={position.assetClass}
                       currency={position.currency}
                     />
                     {position.ticker}
-                  </span>
+                  </AssetLink>
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   <AssetClassLabel assetClass={position.assetClass} />

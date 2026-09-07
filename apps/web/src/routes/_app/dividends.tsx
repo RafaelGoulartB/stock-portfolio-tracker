@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { AssetLink } from "@/components/asset-link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -411,7 +412,9 @@ function UpcomingCard({ data }: { data: DividendData }) {
                   </span>
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-medium">{event.ticker}</p>
+                  <AssetLink ticker={event.ticker} className="font-medium">
+                    {event.ticker}
+                  </AssetLink>
                   <p className="text-xs text-muted-foreground">
                     {event.paymentDate ? (
                       <Trans id="dividends.paymentDate">Payment date</Trans>
@@ -551,7 +554,12 @@ function IncomeCalendar({ events }: { events: DividendEvent[] }) {
                     {eventDay(event).slice(8, 10)}
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">{event.ticker}</p>
+                    <AssetLink
+                      ticker={event.ticker}
+                      className="text-sm font-medium"
+                    >
+                      {event.ticker}
+                    </AssetLink>
                     <p className="text-xs text-muted-foreground">
                       {event.paymentDate ? (
                         <Trans id="dividends.payment">Payment</Trans>
@@ -597,7 +605,7 @@ function DividendDetailsDialog({
                   <CircleDollarSign aria-hidden="true" />
                 </DialogTitleIcon>
                 <span>
-                  {event.ticker} ·{" "}
+                  <AssetLink ticker={event.ticker}>{event.ticker}</AssetLink> ·{" "}
                   <Trans id="dividends.details">Income details</Trans>
                 </span>
               </DialogTitle>
@@ -734,7 +742,9 @@ function HistoryTable({ data }: { data: DividendData }) {
           <TableBody>
             {visibleEvents.map((event) => (
               <TableRow key={event.id}>
-                <TableCell className="font-medium">{event.ticker}</TableCell>
+                <TableCell className="font-medium">
+                  <AssetLink ticker={event.ticker}>{event.ticker}</AssetLink>
+                </TableCell>
                 <TableCell>{formatTradeDate(event.exDate)}</TableCell>
                 <TableCell>
                   {event.paymentDate ? formatTradeDate(event.paymentDate) : "—"}

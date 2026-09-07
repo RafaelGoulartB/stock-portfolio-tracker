@@ -22,6 +22,7 @@ import {
   CurrencyBadge,
   SideLabel,
 } from "@/components/asset-labels";
+import { AssetLink } from "@/components/asset-link";
 import { BookHoldingsPanel } from "@/components/transactions/book-holdings-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -701,7 +702,9 @@ function HistoryTable({
                 {formatTradeDate(transaction.tradedAt)}
               </TableCell>
               <TableCell className="font-medium">
-                {transaction.ticker}
+                <AssetLink ticker={transaction.ticker}>
+                  {transaction.ticker}
+                </AssetLink>
                 {transaction.notes ? (
                   <span className="block text-xs font-normal text-muted-foreground">
                     {transaction.notes}

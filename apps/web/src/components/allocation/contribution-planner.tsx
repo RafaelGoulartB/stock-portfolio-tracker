@@ -8,6 +8,7 @@ import {
 } from "@portifolio-tracker/shared";
 import { Calculator, Info } from "lucide-react";
 import { useMemo, useState } from "react";
+import { AssetLink } from "@/components/asset-link";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -349,9 +350,12 @@ export function ContributionPlannerButton({
                     key={slice.ticker}
                     className="flex items-center gap-3 rounded-lg border bg-muted/30 px-3 py-2.5"
                   >
-                    <span className="w-16 shrink-0 text-sm font-semibold">
+                    <AssetLink
+                      ticker={slice.ticker}
+                      className="w-16 shrink-0 truncate text-sm font-semibold"
+                    >
                       {slice.ticker}
-                    </span>
+                    </AssetLink>
                     <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
                       <span
                         className="block h-full rounded-full bg-foreground/60"

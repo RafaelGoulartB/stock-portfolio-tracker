@@ -24,6 +24,7 @@ import {
   YAxis,
 } from "recharts";
 import { AssetClassLabel, assetClassText } from "@/components/asset-labels";
+import { AssetLink } from "@/components/asset-link";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -1521,7 +1522,9 @@ function ContributorList({
               key={asset.ticker}
               className="flex items-baseline gap-3 text-sm"
             >
-              <span className="font-medium">{asset.ticker}</span>
+              <AssetLink ticker={asset.ticker} className="font-medium">
+                {asset.ticker}
+              </AssetLink>
               <span className="text-xs text-muted-foreground">
                 <AssetClassLabel assetClass={asset.assetClass} />
               </span>
