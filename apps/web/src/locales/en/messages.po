@@ -1113,7 +1113,7 @@ msgstr "Compact"
 #. js-lingui-explicit-id
 #: src/routes/_app/daily.tsx:364
 msgid "daily.total"
-msgstr "Comparable total"
+msgstr "Portfolio total"
 
 #. js-lingui-explicit-id
 #: src/routes/_app/deep-finder.tsx:289

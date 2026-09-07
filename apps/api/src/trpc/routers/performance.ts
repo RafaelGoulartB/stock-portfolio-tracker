@@ -16,8 +16,13 @@ import {
   filterTransactionsByAsOf,
 } from "../../domain/positions";
 import { getFxProvider } from "../../lib/fx";
-import { getQuoteProvider, QuoteUnavailableError } from "../../lib/quotes";
+import {
+  getQuoteProvider,
+  getSeriesWithManualFallback,
+  QuoteUnavailableError,
+} from "../../lib/quotes";
 import { protectedProcedure, router } from "../trpc";
+import { loadStoredManualPrices } from "../valuation";
 import { loadTransactions } from "./transactions";
 
 /**
@@ -87,7 +92,10 @@ export const performanceRouter = router({
   history: protectedProcedure
     .input(performanceHistoryInput)
     .query(async ({ ctx, input }) => {
-      const history = await loadTransactions(ctx.user.id);
+      const [history, storedManualPrices] = await Promise.all([
+        loadTransactions(ctx.user.id),
+        loadStoredManualPrices(ctx.user.id),
+      ]);
       const snapshots = performanceSnapshots(input.months);
       const baseline = snapshots[0];
       const last = snapshots[snapshots.length - 1];
@@ -95,10 +103,10 @@ export const performanceRouter = router({
       const end = last.asOf;
 
       const manualPrices = Object.fromEntries(
-        Object.entries(input.manualPrices ?? {}).map(([ticker, price]) => [
-          ticker.toUpperCase(),
-          price,
-        ]),
+        Object.entries({
+          ...storedManualPrices,
+          ...input.manualPrices,
+        }).map(([ticker, price]) => [ticker.toUpperCase(), price]),
       );
       const assets = assetsToQuote(history, baseline.asOf);
       const needsFx = assets.some(
@@ -163,7 +171,7 @@ export const performanceRouter = router({
       await Promise.all(
         assets.map(async (asset) => {
           try {
-            const points = await provider.getSeries({
+            const { points } = await getSeriesWithManualFallback(provider, {
               ticker: asset.ticker,
               assetClass: asset.assetClass,
               currency: asset.currency,

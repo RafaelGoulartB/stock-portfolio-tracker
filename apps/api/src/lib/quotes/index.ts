@@ -3,7 +3,13 @@ import {
   type QuoteSource,
 } from "@portifolio-tracker/shared";
 import { ManualQuoteProvider } from "./manual";
-import type { MarketQuote, QuoteProvider, QuoteRequest } from "./provider";
+import type {
+  MarketQuote,
+  QuoteProvider,
+  QuoteRequest,
+  QuoteSeriesPoint,
+  QuoteSeriesRequest,
+} from "./provider";
 import { QuoteUnavailableError } from "./provider";
 import { YahooProvider } from "./yahoo";
 
@@ -58,5 +64,21 @@ export async function getQuoteWithManualFallback(
     }
 
     return { quote: await manualFallback.getQuote(request), manual: true };
+  }
+}
+
+/** Historical-series counterpart to `getQuoteWithManualFallback`. */
+export async function getSeriesWithManualFallback(
+  provider: QuoteProvider,
+  request: QuoteSeriesRequest,
+): Promise<{ points: QuoteSeriesPoint[]; manual: boolean }> {
+  try {
+    return { points: await provider.getSeries(request), manual: false };
+  } catch (error) {
+    if (!(error instanceof QuoteUnavailableError) || !request.manualPrice) {
+      throw error;
+    }
+
+    return { points: await manualFallback.getSeries(request), manual: true };
   }
 }

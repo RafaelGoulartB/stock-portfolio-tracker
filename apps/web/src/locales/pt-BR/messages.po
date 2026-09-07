@@ -1113,7 +1113,7 @@ msgstr "Compacta"
 #. js-lingui-explicit-id
 #: src/routes/_app/daily.tsx:364
 msgid "daily.total"
-msgstr "Total comparável"
+msgstr "Total da carteira"
 
 #. js-lingui-explicit-id
 #: src/routes/_app/deep-finder.tsx:289

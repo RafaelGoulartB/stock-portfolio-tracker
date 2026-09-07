@@ -234,6 +234,15 @@ function AllocationPage() {
     ]);
   }
 
+  async function refreshPortfolioValuations() {
+    await Promise.all([
+      refresh(),
+      utils.positions.list.invalidate(),
+      utils.positions.daily.invalidate(),
+      utils.performance.history.invalidate(),
+    ]);
+  }
+
   function reportError(error: unknown) {
     toast.error(queryErrorMessage(error));
   }
@@ -332,7 +341,7 @@ function AllocationPage() {
     onError: reportError,
   });
   const setManualValue = trpc.allocation.setManualValue.useMutation({
-    onSuccess: refresh,
+    onSuccess: refreshPortfolioValuations,
     onError: reportError,
   });
 

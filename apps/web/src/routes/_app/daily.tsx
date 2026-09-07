@@ -358,11 +358,11 @@ function DailyTable({ data, locale }: { data: DailyData; locale: string }) {
           <TableFooter>
             <TableRow>
               <TableCell colSpan={3} className="font-medium">
-                <Trans id="daily.total">Comparable total</Trans>
+                <Trans id="daily.total">Portfolio total</Trans>
               </TableCell>
               <TableCell className="text-right font-medium tabular-nums">
                 {formatMoney(
-                  data.summary.currentComparableValue,
+                  data.summary.marketValue,
                   data.summary.displayCurrency,
                 )}
               </TableCell>

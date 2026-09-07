@@ -45,6 +45,25 @@ export type ValuationResult = {
   manual: string[];
 };
 
+/** Stored native per-unit values used when a market provider cannot quote. */
+export async function loadStoredManualPrices(
+  userId: string,
+): Promise<Record<string, string>> {
+  const rows = await db
+    .select({
+      ticker: allocationAssets.ticker,
+      manualPrice: allocationAssets.manualPrice,
+    })
+    .from(allocationAssets)
+    .where(eq(allocationAssets.userId, userId));
+
+  return Object.fromEntries(
+    rows
+      .filter((asset) => asset.manualPrice !== null)
+      .map((asset) => [asset.ticker, asset.manualPrice as string]),
+  );
+}
+
 /**
  * Consolidates the trade log, converts it into the display currency and
  * values every open position with the requested quote source. Shared by the
@@ -59,13 +78,7 @@ export async function loadValuedPortfolio(
 ): Promise<ValuationResult> {
   const [transactions, storedManualPrices] = await Promise.all([
     loadTransactions(request.userId),
-    db
-      .select({
-        ticker: allocationAssets.ticker,
-        manualPrice: allocationAssets.manualPrice,
-      })
-      .from(allocationAssets)
-      .where(eq(allocationAssets.userId, request.userId)),
+    loadStoredManualPrices(request.userId),
   ]);
   const native = consolidatePositions(
     filterTransactionsByAsOf(transactions, request.asOf ?? null),
@@ -97,11 +110,7 @@ export async function loadValuedPortfolio(
   }
 
   const manualPrices = {
-    ...Object.fromEntries(
-      storedManualPrices
-        .filter((asset) => asset.manualPrice !== null)
-        .map((asset) => [asset.ticker, asset.manualPrice as string]),
-    ),
+    ...storedManualPrices,
     ...Object.fromEntries(
       Object.entries(request.manualPrices ?? {}).map(([ticker, price]) => [
         ticker.toUpperCase(),

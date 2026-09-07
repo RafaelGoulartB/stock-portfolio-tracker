@@ -24,11 +24,12 @@ import {
 } from "../../lib/decimal";
 import {
   getQuoteProvider,
+  getQuoteWithManualFallback,
   type MarketQuote,
   QuoteUnavailableError,
 } from "../../lib/quotes";
 import { protectedProcedure, router } from "../trpc";
-import { loadValuedPortfolio } from "../valuation";
+import { loadStoredManualPrices, loadValuedPortfolio } from "../valuation";
 import { finder } from "./deep-finder";
 import { loadTransactions } from "./transactions";
 
@@ -98,7 +99,10 @@ export const positionsRouter = router({
   daily: protectedProcedure
     .input(dailyTrackingInput)
     .query(async ({ ctx, input }) => {
-      const history = await loadTransactions(ctx.user.id);
+      const [history, storedManualPrices] = await Promise.all([
+        loadTransactions(ctx.user.id),
+        loadStoredManualPrices(ctx.user.id),
+      ]);
       const snapshotDate = dailySnapshotDate();
       const native = consolidatePositions(
         filterTransactionsByAsOf(history, snapshotDate),
@@ -130,10 +134,10 @@ export const positionsRouter = router({
       }
 
       const manualPrices = Object.fromEntries(
-        Object.entries(input.manualPrices ?? {}).map(([ticker, price]) => [
-          ticker.toUpperCase(),
-          price,
-        ]),
+        Object.entries({
+          ...storedManualPrices,
+          ...input.manualPrices,
+        }).map(([ticker, price]) => [ticker.toUpperCase(), price]),
       );
       const provider = getQuoteProvider(input.quoteSource);
       const quotes = new Map<string, MarketQuote>();
@@ -148,7 +152,7 @@ export const positionsRouter = router({
           }
 
           try {
-            const quote = await provider.getQuote({
+            const { quote } = await getQuoteWithManualFallback(provider, {
               ticker: position.ticker,
               assetClass: position.assetClass,
               currency: position.currency,
