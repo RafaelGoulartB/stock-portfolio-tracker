@@ -13,11 +13,13 @@ import {
   ArrowDown,
   ArrowUp,
   MoreVertical,
+  RefreshCw,
   ScanSearch,
   Search,
   X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { AssetLink } from "@/components/asset-link";
 import { AssetLogo } from "@/components/asset-logo";
 import { Badge } from "@/components/ui/badge";
@@ -67,6 +69,8 @@ import { cn } from "@/lib/utils";
 const CATEGORY_ALL = "all";
 const CATEGORY_NONE = "none";
 const WINDOWS: DeepFinderWindow[] = ["1d", "1w", "1m", "3m", "ytd", "1y"];
+// Match the API's historical-series TTL so reopening a view avoids unnecessary API work.
+const FINDER_CACHE_MS = 6 * 60 * 60 * 1_000;
 type Breadth = "all" | "up" | "down";
 type SortDirection = "asc" | "desc";
 
@@ -158,6 +162,7 @@ export function AllocationDeepFinderButton({
   ) => void;
 }) {
   const { i18n } = useLingui();
+  const utils = trpc.useUtils();
   const [open, setOpen] = useState(false);
   const [window, setWindow] = useState<DeepFinderWindow>("1m");
   const [breadth, setBreadth] = useState<Breadth>("all");
@@ -200,8 +205,34 @@ export function AllocationDeepFinderButton({
         ? {}
         : { categoryId: category === CATEGORY_NONE ? null : category }),
     },
-    { enabled: open },
+    {
+      enabled: open,
+      staleTime: FINDER_CACHE_MS,
+      gcTime: FINDER_CACHE_MS,
+    },
   );
+  const refreshFinder = trpc.allocation.refreshFinder.useMutation({
+    onSuccess: async () => {
+      await utils.allocation.finder.invalidate();
+      toast.success(
+        i18n._(
+          t({
+            id: "allocation.finderRefreshSuccess",
+            message: "All Deep Finder prices were refreshed.",
+          }),
+        ),
+      );
+    },
+    onError: (error) => toast.error(queryErrorMessage(error)),
+  });
+  const lastUpdated = finder.dataUpdatedAt
+    ? `${new Intl.DateTimeFormat(i18n.locale, {
+        dateStyle: "short",
+      }).format(finder.dataUpdatedAt)} ${new Intl.DateTimeFormat(i18n.locale, {
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(finder.dataUpdatedAt)}`
+    : null;
   const visible = useMemo(() => {
     const needle = search.trim().toLocaleLowerCase(i18n.locale);
 
@@ -264,7 +295,7 @@ export function AllocationDeepFinderButton({
         </DialogHeader>
 
         <div className="flex min-h-0 flex-1 flex-col gap-3">
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-start gap-2">
             <Select value={category} onValueChange={setCategoryChoice}>
               <SelectTrigger
                 size="sm"
@@ -310,6 +341,46 @@ export function AllocationDeepFinderButton({
                   t({ id: "allocation.searchLabel", message: "Search assets" }),
                 )}
               />
+            </div>
+            <div className="ml-auto flex shrink-0 flex-col items-center">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={refreshFinder.isPending || finder.isPending}
+                onClick={() =>
+                  refreshFinder.mutate({
+                    displayCurrency,
+                    usdBrlRate,
+                    quoteSource,
+                    window,
+                    manualPrices,
+                  })
+                }
+              >
+                <RefreshCw
+                  className={cn(
+                    "size-4",
+                    refreshFinder.isPending && "animate-spin",
+                  )}
+                  aria-hidden="true"
+                />
+                <Trans id="allocation.finderRefreshAll">Refresh all</Trans>
+              </Button>
+              {lastUpdated ? (
+                <span
+                  className="mt-1 w-full text-center text-[10px] leading-none text-muted-foreground"
+                  role="status"
+                  title={i18n._(
+                    t({
+                      id: "allocation.finderCacheHint",
+                      message: "Deep Finder prices are cached for 6 hours.",
+                    }),
+                  )}
+                >
+                  {lastUpdated}
+                </span>
+              ) : null}
             </div>
           </div>
 

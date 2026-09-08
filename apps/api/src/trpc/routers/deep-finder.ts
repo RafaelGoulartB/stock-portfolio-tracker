@@ -4,7 +4,11 @@ import {
   type ParsedDeepFinderInput,
 } from "@portifolio-tracker/shared";
 import { TRPCError } from "@trpc/server";
-import { seriesLookbackStart, windowStartDay } from "../../domain/deep-finder";
+import {
+  finderSeriesStart,
+  seriesLookbackStart,
+  windowStartDay,
+} from "../../domain/deep-finder";
 import { createSeriesLookup } from "../../domain/performance";
 import { convertMoney } from "../../domain/positions";
 import {
@@ -17,7 +21,11 @@ import {
   toDecimal,
   ZERO,
 } from "../../lib/decimal";
-import { getQuoteProvider, QuoteUnavailableError } from "../../lib/quotes";
+import {
+  getQuoteProvider,
+  getSeriesWithManualFallback,
+  QuoteUnavailableError,
+} from "../../lib/quotes";
 import { protectedProcedure } from "../trpc";
 import { loadValuedPortfolio } from "../valuation";
 
@@ -74,13 +82,25 @@ export async function buildFinderResult({
   positions,
   missing: quoteMissing,
   input,
+  reuseSeriesAcrossWindows = false,
+  deriveCurrentFromSeries = false,
+  forceSeriesRefresh = false,
 }: {
   positions: FinderPosition[];
   missing: string[];
   input: ParsedDeepFinderInput;
+  /** Fetch one stable one-year range so every period reuses the provider cache. */
+  reuseSeriesAcrossWindows?: boolean;
+  /** Use the newest close as the current quote, avoiding a second provider call. */
+  deriveCurrentFromSeries?: boolean;
+  /** Explicit user refresh that replaces completed provider cache entries. */
+  forceSeriesRefresh?: boolean;
 }) {
   const asOf = today();
   const start = windowStartDay(input.window, asOf);
+  const seriesStart = reuseSeriesAcrossWindows
+    ? (finderSeriesStart(input.window, asOf, true) ?? undefined)
+    : undefined;
 
   const rows =
     input.window === "cost" || start === null
@@ -93,6 +113,9 @@ export async function buildFinderResult({
           usdBrlRate: input.usdBrlRate ?? "1",
           quoteSource: input.quoteSource,
           manualPrices: input.manualPrices ?? {},
+          seriesStart,
+          deriveCurrentFromSeries,
+          forceSeriesRefresh,
         });
 
   const comparable = rows.filter((row) => row.change !== null);
@@ -198,6 +221,9 @@ async function periodRows({
   usdBrlRate,
   quoteSource,
   manualPrices,
+  seriesStart,
+  deriveCurrentFromSeries,
+  forceSeriesRefresh,
 }: {
   positions: FinderPosition[];
   start: string;
@@ -206,9 +232,12 @@ async function periodRows({
   usdBrlRate: string;
   quoteSource: Parameters<typeof getQuoteProvider>[0];
   manualPrices: Record<string, string>;
+  seriesStart?: string;
+  deriveCurrentFromSeries: boolean;
+  forceSeriesRefresh: boolean;
 }): Promise<DeepFinderRow[]> {
   const provider = getQuoteProvider(quoteSource);
-  const seriesStart = seriesLookbackStart(start);
+  const requestStart = seriesStart ?? seriesLookbackStart(start);
   const prices = Object.fromEntries(
     Object.entries(manualPrices).map(([ticker, price]) => [
       ticker.toUpperCase(),
@@ -233,26 +262,43 @@ async function periodRows({
       };
 
       if (
-        position.marketPrice == null ||
-        position.convertedMarketValue == null
+        !deriveCurrentFromSeries &&
+        (position.marketPrice == null || position.convertedMarketValue == null)
       ) {
         return base;
       }
 
       try {
-        const series = await provider.getSeries({
+        const { points: series } = await getSeriesWithManualFallback(provider, {
           ticker: position.ticker,
           assetClass: position.assetClass,
           currency: position.currency,
-          start: seriesStart,
+          start: requestStart,
           end: asOf,
           manualPrice: prices[position.ticker],
+          forceRefresh: forceSeriesRefresh,
         });
         const lookup = createSeriesLookup(series);
         const baseline = lookup(start);
+        const latest = deriveCurrentFromSeries ? lookup(asOf) : null;
+        const marketPrice = position.marketPrice ?? latest?.close ?? null;
+        const marketValue =
+          position.convertedMarketValue ??
+          (marketPrice === null
+            ? null
+            : convertMoney(
+                formatDecimal(
+                  mul(toDecimal(position.quantity), toDecimal(marketPrice)),
+                  MONEY_PLACES,
+                ),
+                position.currency,
+                displayCurrency,
+                usdBrlRate,
+              ));
+        const resolvedBase = { ...base, marketPrice, marketValue };
 
-        if (!baseline) {
-          return base;
+        if (!baseline || marketPrice === null || marketValue === null) {
+          return resolvedBase;
         }
 
         const startNative = mul(
@@ -270,13 +316,10 @@ async function periodRows({
           displayCurrency,
           usdBrlRate,
         );
-        const change = sub(
-          toDecimal(position.convertedMarketValue),
-          toDecimal(startDisplay),
-        );
+        const change = sub(toDecimal(marketValue), toDecimal(startDisplay));
 
         return {
-          ...base,
+          ...resolvedBase,
           change: formatDecimal(change, MONEY_PLACES),
           changePercent: formatDecimal(
             div(change, toDecimal(startDisplay)),

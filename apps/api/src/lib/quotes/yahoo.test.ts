@@ -209,4 +209,70 @@ describe("YahooProvider", () => {
 
     expect(fetchMock).toHaveBeenCalledOnce();
   });
+
+  it("caches an exact historical series within the TTL", async () => {
+    const fetchMock = stubFetch(
+      chartFixture([
+        { timestamp: unixDay("2026-08-28"), close: 45.25 },
+        { timestamp: unixDay("2026-09-04"), close: 47.11 },
+      ]),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const provider = new YahooProvider();
+    const request = {
+      ticker: "PETR4",
+      assetClass: "stock_br" as const,
+      currency: "BRL" as const,
+      start: "2025-08-27",
+      end: "2026-09-06",
+    };
+
+    const first = await provider.getSeries(request);
+    const second = await provider.getSeries(request);
+
+    expect(second).toEqual(first);
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it("replaces a cached historical series when refresh is forced", async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify(
+            chartFixture([{ timestamp: unixDay("2026-09-04"), close: 47.11 }]),
+          ),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify(
+            chartFixture([{ timestamp: unixDay("2026-09-04"), close: 48.25 }]),
+          ),
+          { status: 200 },
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const provider = new YahooProvider();
+    const request = {
+      ticker: "PETR4",
+      assetClass: "stock_br" as const,
+      currency: "BRL" as const,
+      start: "2025-08-27",
+      end: "2026-09-06",
+    };
+
+    const original = await provider.getSeries(request);
+    const refreshed = await provider.getSeries({
+      ...request,
+      forceRefresh: true,
+    });
+    const cachedRefresh = await provider.getSeries(request);
+
+    expect(original[0]?.close).toBe("47.11000000");
+    expect(refreshed[0]?.close).toBe("48.25000000");
+    expect(cachedRefresh).toEqual(refreshed);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });

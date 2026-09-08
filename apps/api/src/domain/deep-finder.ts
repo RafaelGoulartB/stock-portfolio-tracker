@@ -70,3 +70,18 @@ export function windowStartDay(
 export function seriesLookbackStart(start: string): string {
   return shiftIsoDate(start, -10);
 }
+
+/**
+ * Range requested from the provider. Watchlist views can deliberately use
+ * the longest supported window so changing the visible period hits the same
+ * in-memory series cache key instead of the upstream provider again.
+ */
+export function finderSeriesStart(
+  window: DeepFinderWindow,
+  today: string,
+  reuseAcrossWindows = false,
+): string | null {
+  const start = windowStartDay(reuseAcrossWindows ? "1y" : window, today);
+
+  return start === null ? null : seriesLookbackStart(start);
+}

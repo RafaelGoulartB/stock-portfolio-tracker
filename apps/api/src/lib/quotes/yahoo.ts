@@ -228,7 +228,7 @@ export class YahooProvider implements QuoteProvider {
     }
 
     const key = `${this.id}|${symbol}|${request.start}..${request.end}`;
-    const hit = seriesCache.get(key);
+    const hit = request.forceRefresh ? undefined : seriesCache.get(key);
 
     if (hit && hit.expiresAt > Date.now()) {
       return hit.points;

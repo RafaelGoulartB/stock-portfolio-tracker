@@ -41,6 +41,8 @@ export type QuoteSeriesRequest = {
   end: string;
   /** Required by the manual provider. */
   manualPrice?: string;
+  /** Skip a completed provider cache entry while still sharing in-flight work. */
+  forceRefresh?: boolean;
 };
 
 /** One native-currency close inside a historical series. */

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  finderSeriesStart,
   seriesLookbackStart,
   shiftIsoDate,
   shiftIsoMonth,
@@ -49,5 +50,20 @@ describe("shiftIsoMonth", () => {
 describe("seriesLookbackStart", () => {
   it("pads ten days before the window so weekends still resolve", () => {
     expect(seriesLookbackStart("2026-09-05")).toBe("2026-08-26");
+  });
+});
+
+describe("finderSeriesStart", () => {
+  it("uses distinct ranges for ordinary finder windows", () => {
+    expect(finderSeriesStart("1d", "2026-09-06")).toBe("2026-08-26");
+    expect(finderSeriesStart("1m", "2026-09-06")).toBe("2026-07-27");
+  });
+
+  it("uses one stable range when windows share the provider cache", () => {
+    const expected = "2025-08-27";
+
+    expect(finderSeriesStart("1d", "2026-09-06", true)).toBe(expected);
+    expect(finderSeriesStart("3m", "2026-09-06", true)).toBe(expected);
+    expect(finderSeriesStart("1y", "2026-09-06", true)).toBe(expected);
   });
 });

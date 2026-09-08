@@ -7,8 +7,10 @@ import {
   allocationMarkColorSchema,
   CASH_TICKER,
   type Currency,
+  deepFinderInput,
   FX_EXECUTION_IOF,
   FX_EXECUTION_SPREAD,
+  type ParsedDeepFinderInput,
   type QuoteSource,
   removeAllocationAssetInput,
   removeAssetReviewInput,
@@ -39,7 +41,7 @@ import {
   type WatchQuote,
 } from "../../domain/allocation";
 import { usdBrlExecutionRate } from "../../domain/fx-execution";
-import { consolidatePositions, convertMoney } from "../../domain/positions";
+import { consolidatePositions } from "../../domain/positions";
 import { loadScoreConfig } from "../../domain/score-config";
 import {
   add,
@@ -279,6 +281,85 @@ async function ensureAsset(userId: string, ticker: string): Promise<void> {
     });
 }
 
+async function loadAllocationFinder(
+  userId: string,
+  input: ParsedDeepFinderInput & { categoryId?: string | null },
+  forceSeriesRefresh = false,
+) {
+  const assets = await loadAssets(userId);
+  const [assignments, history] = await Promise.all([
+    db
+      .select({
+        ticker: assetCategories.ticker,
+        categoryId: assetCategories.categoryId,
+      })
+      .from(assetCategories)
+      .where(eq(assetCategories.userId, userId)),
+    loadTransactionsForTickers(
+      userId,
+      assets.map((asset) => asset.ticker),
+    ),
+  ]);
+  const categoryByTicker = new Map(
+    assignments.map((row) => [row.ticker, row.categoryId]),
+  );
+  const invested = new Set(
+    consolidatePositions(history)
+      .filter((position) => Number(position.quantity) > 0)
+      .map((position) => position.ticker),
+  );
+  const selected = assets.filter((asset) => {
+    if (invested.has(asset.ticker)) {
+      return false;
+    }
+
+    if (input.categoryId === undefined) {
+      return true;
+    }
+
+    return (categoryByTicker.get(asset.ticker) ?? null) === input.categoryId;
+  });
+
+  if (
+    !input.usdBrlRate &&
+    selected.some((asset) => asset.currency !== input.displayCurrency)
+  ) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "An USD/BRL rate is required to compare mixed currencies",
+    });
+  }
+
+  const requestManuals = {
+    ...storedManualPrices(selected),
+    ...Object.fromEntries(
+      Object.entries(input.manualPrices ?? {}).map(([ticker, price]) => [
+        ticker.toUpperCase(),
+        price,
+      ]),
+    ),
+  };
+  const positions: FinderPosition[] = selected.map((asset) => ({
+    ticker: asset.ticker,
+    assetClass: asset.assetClass,
+    currency: asset.currency,
+    quantity: "1",
+    marketPrice: null,
+    convertedMarketValue: null,
+    convertedUnrealizedPnl: null,
+    unrealizedPnlPercent: null,
+  }));
+
+  return buildFinderResult({
+    positions,
+    missing: [],
+    input: { ...input, manualPrices: requestManuals },
+    reuseSeriesAcrossWindows: true,
+    deriveCurrentFromSeries: true,
+    forceSeriesRefresh,
+  });
+}
+
 export const allocationRouter = router({
   /**
    * The allocation table: one row per open position or tracked ticker, with
@@ -365,102 +446,21 @@ export const allocationRouter = router({
     }),
 
   /**
-   * Price movement for allocation assets, including watch-only tickers. The
-   * category is applied before history is fetched so a large watchlist does
-   * not fan out into unnecessary provider requests.
+   * Price movement for watch-only allocation assets. The category is applied
+   * before history is fetched so a large watchlist does not fan out into
+   * unnecessary provider requests.
    */
   finder: protectedProcedure
     .input(allocationFinderInput)
-    .query(async ({ ctx, input }) => {
-      const assets = await loadAssets(ctx.user.id);
-      const [assignments, history] = await Promise.all([
-        db
-          .select({
-            ticker: assetCategories.ticker,
-            categoryId: assetCategories.categoryId,
-          })
-          .from(assetCategories)
-          .where(eq(assetCategories.userId, ctx.user.id)),
-        loadTransactionsForTickers(
-          ctx.user.id,
-          assets.map((asset) => asset.ticker),
-        ),
-      ]);
-      const categoryByTicker = new Map(
-        assignments.map((row) => [row.ticker, row.categoryId]),
-      );
-      const invested = new Set(
-        consolidatePositions(history)
-          .filter((position) => Number(position.quantity) > 0)
-          .map((position) => position.ticker),
-      );
-      const selected = assets.filter((asset) => {
-        if (invested.has(asset.ticker)) {
-          return false;
-        }
+    .query(({ ctx, input }) => loadAllocationFinder(ctx.user.id, input)),
 
-        if (input.categoryId === undefined) {
-          return true;
-        }
+  /** User-triggered refresh of every watch-only series, regardless of filter. */
+  refreshFinder: protectedProcedure
+    .input(deepFinderInput)
+    .mutation(async ({ ctx, input }) => {
+      const result = await loadAllocationFinder(ctx.user.id, input, true);
 
-        return (
-          (categoryByTicker.get(asset.ticker) ?? null) === input.categoryId
-        );
-      });
-
-      if (
-        !input.usdBrlRate &&
-        selected.some((asset) => asset.currency !== input.displayCurrency)
-      ) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "An USD/BRL rate is required to compare mixed currencies",
-        });
-      }
-
-      const requestManuals = {
-        ...storedManualPrices(selected),
-        ...Object.fromEntries(
-          Object.entries(input.manualPrices ?? {}).map(([ticker, price]) => [
-            ticker.toUpperCase(),
-            price,
-          ]),
-        ),
-      };
-      const watch = await quoteWatchOnly(
-        selected,
-        input.quoteSource,
-        requestManuals,
-      );
-      const positions: FinderPosition[] = selected.map((asset) => {
-        const quote = watch.quotes.get(asset.ticker);
-        const marketPrice = quote?.price ?? null;
-
-        return {
-          ticker: asset.ticker,
-          assetClass: asset.assetClass,
-          currency: asset.currency,
-          quantity: "1",
-          marketPrice,
-          convertedMarketValue:
-            marketPrice === null
-              ? null
-              : convertMoney(
-                  marketPrice,
-                  asset.currency,
-                  input.displayCurrency,
-                  input.usdBrlRate ?? "1",
-                ),
-          convertedUnrealizedPnl: null,
-          unrealizedPnlPercent: null,
-        };
-      });
-
-      return buildFinderResult({
-        positions,
-        missing: watch.missing,
-        input,
-      });
+      return { refreshed: result.positions.length, asOf: result.asOf };
     }),
 
   /**

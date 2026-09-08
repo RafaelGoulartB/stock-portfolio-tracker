@@ -14,6 +14,16 @@ msgstr ""
 "Plural-Forms: \n"
 
 #. js-lingui-explicit-id
+#: src/components/allocation/allocation-deep-finder.tsx:372
+#~ msgid "allocation.finderCacheDuration"
+#~ msgstr "6-hour cache"
+
+#. js-lingui-explicit-id
+#: src/components/allocation/allocation-deep-finder.tsx:379
+#~ msgid "allocation.finderLastUpdated"
+#~ msgstr "Last updated"
+
+#. js-lingui-explicit-id
 #. placeholder {0}: formatMonthLabel(month, locale)
 #: src/routes/_app/detailed-positions.tsx:852
 #: src/routes/_app/positions.tsx:246
@@ -213,31 +223,31 @@ msgid "documentation.score.ungradedBadge"
 msgstr "×{0} ungraded"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-deep-finder.tsx:122
+#: src/components/allocation/allocation-deep-finder.tsx:126
 #: src/routes/_app/deep-finder.tsx:219
 msgid "deepFinder.window1d"
 msgstr "1 day"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-deep-finder.tsx:126
+#: src/components/allocation/allocation-deep-finder.tsx:130
 #: src/routes/_app/deep-finder.tsx:223
 msgid "deepFinder.window1m"
 msgstr "1 month"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-deep-finder.tsx:124
+#: src/components/allocation/allocation-deep-finder.tsx:128
 #: src/routes/_app/deep-finder.tsx:221
 msgid "deepFinder.window1w"
 msgstr "1 week"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-deep-finder.tsx:132
+#: src/components/allocation/allocation-deep-finder.tsx:136
 #: src/routes/_app/deep-finder.tsx:229
 msgid "deepFinder.window1y"
 msgstr "1 year"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-deep-finder.tsx:128
+#: src/components/allocation/allocation-deep-finder.tsx:132
 #: src/routes/_app/deep-finder.tsx:225
 msgid "deepFinder.window3m"
 msgstr "3 months"
@@ -310,7 +320,7 @@ msgstr "Account data"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.ticker
-#: src/components/allocation/allocation-deep-finder.tsx:522
+#: src/components/allocation/allocation-deep-finder.tsx:593
 #: src/components/allocation/allocation-table.tsx:1263
 msgid "allocation.rowMenu"
 msgstr "Actions for {0}"
@@ -376,7 +386,7 @@ msgid "documentation.score.adjustedTarget"
 msgstr "Adjusted target"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-deep-finder.tsx:337
+#: src/components/allocation/allocation-deep-finder.tsx:408
 #: src/routes/_app/deep-finder.tsx:174
 msgid "deepFinder.filterAll"
 msgstr "All"
@@ -387,7 +397,7 @@ msgid "allocation.radarAll"
 msgstr "All assets"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-deep-finder.tsx:283
+#: src/components/allocation/allocation-deep-finder.tsx:314
 #: src/routes/_app/allocation.index.tsx:693
 msgid "allocation.categoryAll"
 msgstr "All categories"
@@ -401,6 +411,11 @@ msgstr "All data"
 #: src/routes/_app/detailed-positions.tsx:321
 msgid "detailedPositions.all"
 msgstr "All data"
+
+#. js-lingui-explicit-id
+#: src/components/allocation/allocation-deep-finder.tsx:219
+msgid "allocation.finderRefreshSuccess"
+msgstr "All Deep Finder prices were refreshed."
 
 #. js-lingui-explicit-id
 #: src/components/settings-data.tsx:77
@@ -930,7 +945,7 @@ msgstr "Clear"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.ticker
-#: src/components/allocation/allocation-deep-finder.tsx:563
+#: src/components/allocation/allocation-deep-finder.tsx:634
 #: src/components/allocation/allocation-table.tsx:1315
 msgid "allocation.clearMark"
 msgstr "Clear highlight on {0}"
@@ -986,7 +1001,7 @@ msgid "detailedPositions.compact"
 msgstr "Compact"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-deep-finder.tsx:259
+#: src/components/allocation/allocation-deep-finder.tsx:290
 msgid "allocation.finderDescription"
 msgstr "Compare price movement for every tracked asset, including assets that are still only on your radar."
 
@@ -1316,7 +1331,7 @@ msgid "allocation.colCurrent"
 msgstr "Current"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-deep-finder.tsx:376
+#: src/components/allocation/allocation-deep-finder.tsx:447
 msgid "allocation.finderCurrent"
 msgstr "Current price"
 
@@ -1434,7 +1449,7 @@ msgid "nav.deepFinder"
 msgstr "Deep Finder"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-deep-finder.tsx:247
+#: src/components/allocation/allocation-deep-finder.tsx:278
 msgid "allocation.finderOpen"
 msgstr "Deep Finder"
 
@@ -1447,6 +1462,11 @@ msgstr "Deep Finder and income estimates report unavailable observations explici
 #: src/components/documentation-dialog.tsx:278
 msgid "documentation.section.comparisonsDescription"
 msgstr "Deep Finder baselines and estimated dividend entitlement."
+
+#. js-lingui-explicit-id
+#: src/components/allocation/allocation-deep-finder.tsx:375
+msgid "allocation.finderCacheHint"
+msgstr "Deep Finder prices are cached for 6 hours."
 
 #. js-lingui-explicit-id
 #: src/components/settings-appearance.tsx:104
@@ -1761,7 +1781,7 @@ msgid "positions.teaserFalling"
 msgstr "falling"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-deep-finder.tsx:357
+#: src/components/allocation/allocation-deep-finder.tsx:428
 #: src/routes/_app/deep-finder.tsx:194
 msgid "deepFinder.filterDown"
 msgstr "Falling"
@@ -1798,7 +1818,7 @@ msgid "allocation.radarFilter"
 msgstr "Filter by radar"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-deep-finder.tsx:273
+#: src/components/allocation/allocation-deep-finder.tsx:304
 msgid "allocation.finderCategory"
 msgstr "Filter Deep Finder by category"
 
@@ -1908,7 +1928,7 @@ msgid "positions.allocGroupBy"
 msgstr "Group by"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-deep-finder.tsx:533
+#: src/components/allocation/allocation-deep-finder.tsx:604
 #: src/components/allocation/allocation-table.tsx:1281
 msgid "allocation.markColor"
 msgstr "Highlight"
@@ -2163,7 +2183,7 @@ msgstr "Manual prices are entered per ticker on the Positions page."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.ticker
-#: src/components/allocation/allocation-deep-finder.tsx:541
+#: src/components/allocation/allocation-deep-finder.tsx:612
 #: src/components/allocation/allocation-table.tsx:1292
 msgid "allocation.markAs"
 msgstr "Mark {0} {color}"
@@ -2592,7 +2612,7 @@ msgid "categories.noAssets"
 msgstr "No tickers yet. Register a trade or add a watch-only asset on Allocation."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-deep-finder.tsx:491
+#: src/components/allocation/allocation-deep-finder.tsx:562
 msgid "allocation.finderEmpty"
 msgstr "No tracked assets match these filters."
 
@@ -3088,6 +3108,11 @@ msgid "performance.refresh"
 msgstr "Refresh"
 
 #. js-lingui-explicit-id
+#: src/components/allocation/allocation-deep-finder.tsx:368
+msgid "allocation.finderRefreshAll"
+msgstr "Refresh all"
+
+#. js-lingui-explicit-id
 #: src/routes/_app/daily.tsx:105
 msgid "daily.refresh"
 msgstr "Refresh quotes"
@@ -3275,7 +3300,7 @@ msgid "positions.teaserRising"
 msgstr "rising"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-deep-finder.tsx:347
+#: src/components/allocation/allocation-deep-finder.tsx:418
 #: src/routes/_app/deep-finder.tsx:184
 msgid "deepFinder.filterUp"
 msgstr "Rising"
@@ -3354,7 +3379,7 @@ msgid "allocation.plannerNeedRemainder"
 msgstr "Scored need is smaller than this contribution. {0} stays unallocated."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-deep-finder.tsx:310
+#: src/components/allocation/allocation-deep-finder.tsx:341
 #: src/routes/_app/allocation.index.tsx:669
 msgid "allocation.searchLabel"
 msgstr "Search assets"
@@ -3380,7 +3405,7 @@ msgid "detailedPositions.search"
 msgstr "Search ticker or class…"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-deep-finder.tsx:307
+#: src/components/allocation/allocation-deep-finder.tsx:338
 #: src/routes/_app/allocation.index.tsx:672
 msgid "allocation.search"
 msgstr "Search ticker…"
@@ -3579,7 +3604,7 @@ msgid "allocation.sortBy"
 msgstr "Sort by {0}"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-deep-finder.tsx:393
+#: src/components/allocation/allocation-deep-finder.tsx:464
 msgid "allocation.finderSortVariation"
 msgstr "Sort by variation"
 
@@ -3617,7 +3642,7 @@ msgid "detailedPositions.standard"
 msgstr "Standard"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-deep-finder.tsx:379
+#: src/components/allocation/allocation-deep-finder.tsx:450
 msgid "allocation.finderBaseline"
 msgstr "Starting price"
 
@@ -3832,7 +3857,7 @@ msgid "daily.colTicker"
 msgstr "Ticker"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-deep-finder.tsx:373
+#: src/components/allocation/allocation-deep-finder.tsx:444
 #: src/routes/_app/deep-finder.tsx:617
 msgid "deepFinder.colTicker"
 msgstr "Ticker"
@@ -4015,7 +4040,7 @@ msgid "dividends.unavailable"
 msgstr "Unavailable tickers: {0}."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-deep-finder.tsx:287
+#: src/components/allocation/allocation-deep-finder.tsx:318
 #: src/routes/_app/allocation.index.tsx:696
 msgid "allocation.categoryNone"
 msgstr "Uncategorized"
@@ -4147,7 +4172,7 @@ msgid "performance.valuedAt"
 msgstr "Valued at {asOf}."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-deep-finder.tsx:404
+#: src/components/allocation/allocation-deep-finder.tsx:475
 msgid "allocation.finderVariation"
 msgstr "Variation"
 
@@ -4182,7 +4207,7 @@ msgid "deepFinder.windowCost"
 msgstr "Vs cost"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-deep-finder.tsx:443
+#: src/components/allocation/allocation-deep-finder.tsx:514
 #: src/components/allocation/allocation-table.tsx:762
 #: src/routes/_app/allocation.$ticker.tsx:236
 msgid "allocation.watchBadge"
@@ -4205,7 +4230,7 @@ msgid "allocation.addDescription"
 msgstr "Watch-only assets have no invested amount. They stay in the table with their target; set a fair value on a quarterly review so the score can already rank them."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-deep-finder.tsx:256
+#: src/components/allocation/allocation-deep-finder.tsx:287
 msgid "allocation.finderTitle"
 msgstr "Watchlist Deep Finder"
 
@@ -4301,7 +4326,7 @@ msgid "error.sessionExpired"
 msgstr "Your session expired. Sign in again."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-deep-finder.tsx:130
+#: src/components/allocation/allocation-deep-finder.tsx:134
 #: src/routes/_app/deep-finder.tsx:227
 msgid "deepFinder.windowYtd"
 msgstr "YTD"
