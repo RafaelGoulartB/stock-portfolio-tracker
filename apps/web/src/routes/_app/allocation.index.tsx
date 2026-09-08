@@ -4,6 +4,7 @@ import { Trans } from "@lingui/react/macro";
 import type {
   AllocationMarkColor,
   AllocationRow,
+  NextResult,
 } from "@portifolio-tracker/shared";
 import {
   CASH_TICKER,
@@ -90,7 +91,8 @@ const FREE_ORDER_KEY = "portfolio.allocation.freeOrder";
 const QUARTER_COUNT_KEY = "portfolio.allocation.quarters";
 const QUARTER_COUNTS = [3, 4, 5, 8] as const;
 const DEFAULT_QUARTER_COUNT = 4;
-const COLUMN_STORAGE_KEY = "portfolio.allocation.columns";
+const LEGACY_COLUMN_STORAGE_KEY = "portfolio.allocation.columns";
+const COLUMN_STORAGE_KEY = "portfolio.allocation.columns.v2";
 /** Category filter sentinels — match the categories screen. */
 const CATEGORY_ALL = "all";
 const CATEGORY_NONE = "none";
@@ -117,6 +119,7 @@ const COLUMN_PRESETS: Record<
     "gapWeight",
     "discount",
     "score",
+    "nextResult",
     "marketValue",
     "averageGrade",
   ],
@@ -125,14 +128,21 @@ const COLUMN_PRESETS: Record<
 
 function initialColumns(): Set<AllocationColumn> {
   try {
+    const stored = localStorage.getItem(COLUMN_STORAGE_KEY);
+    const legacy = stored === null;
     const parsed: unknown = JSON.parse(
-      localStorage.getItem(COLUMN_STORAGE_KEY) ?? "null",
+      stored ?? localStorage.getItem(LEGACY_COLUMN_STORAGE_KEY) ?? "null",
     );
     if (Array.isArray(parsed)) {
       const valid = parsed.filter((value): value is AllocationColumn =>
         ALLOCATION_COLUMNS.includes(value as AllocationColumn),
       );
-      if (valid.includes("ticker")) return new Set(valid);
+      if (valid.includes("ticker")) {
+        if (legacy && !valid.includes("nextResult")) {
+          valid.splice(valid.indexOf("score") + 1, 0, "nextResult");
+        }
+        return new Set(valid);
+      }
     }
   } catch {
     // Storage is only a convenience; the standard preset remains available.
@@ -240,6 +250,24 @@ function AllocationPage() {
 
   const allocation = trpc.allocation.list.useQuery(allocationListInput);
   const categories = trpc.categories.list.useQuery();
+  const shouldLoadNextResults =
+    visibleColumns.has("nextResult") || sort.id === "nextResult";
+  const nextResultsQuery = trpc.allocation.nextResults.useQuery(undefined, {
+    enabled: shouldLoadNextResults,
+    staleTime: 30 * 60 * 1_000,
+    retry: false,
+    refetchOnWindowFocus: false,
+  });
+  const nextResults = useMemo(
+    () =>
+      new Map<string, NextResult>(
+        (nextResultsQuery.data?.results ?? []).map((result) => [
+          result.ticker.toUpperCase(),
+          result,
+        ]),
+      ),
+    [nextResultsQuery.data?.results],
+  );
   /** Latest in-flight mark write per ticker — older failures must not rollback. */
   const markWriteGeneration = useRef(new Map<string, number>());
 
@@ -293,7 +321,12 @@ function AllocationPage() {
   }
 
   const upsertAsset = trpc.allocation.upsertAsset.useMutation({
-    onSuccess: refresh,
+    onSuccess: async (_result, input) => {
+      await refresh();
+      if (input.assetClass !== undefined) {
+        await utils.allocation.nextResults.invalidate();
+      }
+    },
     onError: reportError,
   });
   const setMarkColor = trpc.allocation.upsertAsset.useMutation({
@@ -346,7 +379,7 @@ function AllocationPage() {
           }),
         ),
       );
-      await refresh();
+      await Promise.all([refresh(), utils.allocation.nextResults.invalidate()]);
 
       return result;
     },
@@ -486,7 +519,7 @@ function AllocationPage() {
     // Free order keeps the stored rank the API already sorted by.
     return freeOrder
       ? filtered
-      : filtered.sort((a, b) => compareRows(a, b, sort));
+      : filtered.sort((a, b) => compareRows(a, b, sort, nextResults));
   }, [
     allRows,
     search,
@@ -494,6 +527,7 @@ function AllocationPage() {
     categoryByTicker,
     radarFilter,
     sort,
+    nextResults,
     freeOrder,
     i18n.locale,
   ]);
@@ -898,6 +932,10 @@ function AllocationPage() {
           onSaveReview={(input) => upsertReview.mutate(input)}
           onRemoveReview={(input) => removeReview.mutate(input)}
           missing={allocation.data.quotes.missing}
+          nextResults={nextResults}
+          nextResultsLoading={
+            shouldLoadNextResults && nextResultsQuery.isPending
+          }
           saving={saving}
         />
       ) : null}

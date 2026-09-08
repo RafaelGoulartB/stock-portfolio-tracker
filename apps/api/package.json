@@ -17,12 +17,15 @@
     "vitest": "^5.0.0"
   },
   "dependencies": {
-    "@portifolio-tracker/shared": "workspace:*",
     "@hono/node-server": "^2.1.1",
     "@hono/trpc-server": "^0.4.2",
+    "@portifolio-tracker/shared": "workspace:*",
     "@trpc/server": "^11.18.0",
+    "csv-parse": "7.0.2",
     "drizzle-orm": "^0.45.2",
+    "fflate": "0.8.3",
     "hono": "^4.13.7",
+    "pdfjs-dist": "6.3.289",
     "postgres": "^3.4.9",
     "zod": "^4.5.4"
   }

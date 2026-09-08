@@ -10,5 +10,6 @@ export * from "./fx";
 export * from "./holdings-import";
 export * from "./performance";
 export * from "./quotes";
+export * from "./results";
 export * from "./score";
 export * from "./transactions";

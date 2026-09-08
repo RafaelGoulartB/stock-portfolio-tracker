@@ -7,6 +7,7 @@ import type {
   AllocationRow,
   AllocationSummary,
   AssetReview,
+  NextResult,
 } from "@portifolio-tracker/shared";
 import {
   ALLOCATION_MARK_COLORS,
@@ -43,6 +44,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
   TableBody,
@@ -74,6 +76,7 @@ export const ALLOCATION_COLUMNS = [
   "gapWeight",
   "discount",
   "score",
+  "nextResult",
   "lastContributionAt",
   "quantity",
   "marketValue",
@@ -85,7 +88,11 @@ export type SortDirection = "asc" | "desc";
 export type AllocationSort = { id: AllocationColumn; direction: SortDirection };
 
 /** Columns that read better ascending on first click. */
-const ASCENDING_FIRST: AllocationColumn[] = ["ticker", "lastContributionAt"];
+const ASCENDING_FIRST: AllocationColumn[] = [
+  "ticker",
+  "nextResult",
+  "lastContributionAt",
+];
 
 export function defaultSortDirection(id: AllocationColumn): SortDirection {
   return ASCENDING_FIRST.includes(id) ? "asc" : "desc";
@@ -100,6 +107,9 @@ export function columnLabels(i18n: I18n): Record<AllocationColumn, string> {
     ),
     gapWeight: i18n._(t({ id: "allocation.colGap", message: "Gap" })),
     score: i18n._(t({ id: "allocation.colScore", message: "Score" })),
+    nextResult: i18n._(
+      t({ id: "allocation.colNextResult", message: "Next result" }),
+    ),
     averageGrade: i18n._(t({ id: "allocation.colGrade", message: "Grade" })),
     discount: i18n._(t({ id: "allocation.colDiscount", message: "Discount" })),
     lastContributionAt: i18n._(
@@ -113,6 +123,7 @@ export function columnLabels(i18n: I18n): Record<AllocationColumn, string> {
 export function sortableValue(
   row: AllocationRow,
   id: AllocationColumn,
+  nextResults: ReadonlyMap<string, NextResult> = new Map(),
 ): string | number | null {
   switch (id) {
     case "ticker":
@@ -125,6 +136,8 @@ export function sortableValue(
       return row.gapWeight === null ? null : Number(row.gapWeight);
     case "score":
       return Number(row.score.value);
+    case "nextResult":
+      return nextResults.get(row.ticker.toUpperCase())?.date ?? null;
     case "averageGrade":
       return row.averageGrade === null ? null : Number(row.averageGrade);
     case "discount":
@@ -152,6 +165,7 @@ export function compareRows(
   a: AllocationRow,
   b: AllocationRow,
   sort: AllocationSort,
+  nextResults: ReadonlyMap<string, NextResult> = new Map(),
 ): number {
   if (sort.id === "score") {
     const targetPriority =
@@ -162,8 +176,8 @@ export function compareRows(
     }
   }
 
-  const left = sortableValue(a, sort.id);
-  const right = sortableValue(b, sort.id);
+  const left = sortableValue(a, sort.id, nextResults);
+  const right = sortableValue(b, sort.id, nextResults);
 
   if (left === null || right === null) {
     if (left === right) {
@@ -357,6 +371,38 @@ export function scoreReason(row: AllocationRow, i18n: I18n): string {
   }
 }
 
+function resultDateTitle(
+  result: NextResult | undefined,
+  i18n: I18n,
+): string | undefined {
+  if (!result) return undefined;
+
+  const source =
+    result.source === "cvm_b3"
+      ? i18n._(t({ id: "allocation.resultSourceCvm", message: "CVM/B3" }))
+      : result.source === "alpha_vantage"
+        ? i18n._(
+            t({
+              id: "allocation.resultSourceAlpha",
+              message: "Alpha Vantage",
+            }),
+          )
+        : i18n._(
+            t({ id: "allocation.resultSourceYahoo", message: "Yahoo Finance" }),
+          );
+  const details = [source, result.period].filter(Boolean);
+
+  if (result.estimated) {
+    details.push(
+      i18n._(
+        t({ id: "allocation.resultEstimated", message: "Estimated date" }),
+      ),
+    );
+  }
+
+  return details.join(" · ");
+}
+
 export type AllocationTableProps = {
   rows: AllocationRow[];
   quarters: Quarter[];
@@ -390,6 +436,8 @@ export type AllocationTableProps = {
   }) => void;
   onRemoveReview: (input: { ticker: string; period: string }) => void;
   missing: string[];
+  nextResults: ReadonlyMap<string, NextResult>;
+  nextResultsLoading?: boolean;
   saving?: boolean;
 };
 
@@ -465,6 +513,8 @@ export function AllocationTable({
   onSaveReview,
   onRemoveReview,
   missing,
+  nextResults,
+  nextResultsLoading = false,
   saving = false,
 }: AllocationTableProps) {
   const { i18n } = useLingui();
@@ -540,6 +590,15 @@ export function AllocationTable({
                       ? "sticky left-0 z-10 w-40 max-w-40 bg-muted/50"
                       : "text-right",
                   )}
+                  aria-sort={
+                    freeOrder
+                      ? undefined
+                      : sort.id === id
+                        ? sort.direction === "asc"
+                          ? "ascending"
+                          : "descending"
+                        : "none"
+                  }
                 >
                   {freeOrder ? (
                     <span className="font-medium">{labels[id]}</span>
@@ -621,6 +680,9 @@ export function AllocationTable({
                 row.reviews.map((review) => [review.period, review]),
               );
               const scoreValue = Number(row.score.value);
+              const nextResult = nextResults.get(row.ticker.toUpperCase());
+              const supportsNextResult =
+                row.assetClass === "stock_br" || row.assetClass === "stock_us";
 
               return (
                 <TableRow
@@ -909,6 +971,33 @@ export function AllocationTable({
                             : 0
                         }
                       />
+                    </TableCell>
+                  ) : null}
+
+                  {visibleColumns.has("nextResult") ? (
+                    <TableCell
+                      className="px-2.5 py-2.5 text-right whitespace-nowrap tabular-nums"
+                      title={
+                        nextResult
+                          ? resultDateTitle(nextResult, i18n)
+                          : supportsNextResult && !nextResultsLoading
+                            ? i18n._(
+                                t({
+                                  id: "allocation.resultUnavailable",
+                                  message:
+                                    "Result date temporarily unavailable",
+                                }),
+                              )
+                            : undefined
+                      }
+                    >
+                      {nextResultsLoading && supportsNextResult ? (
+                        <Skeleton className="ml-auto h-4 w-20" />
+                      ) : nextResult ? (
+                        formatTradeDate(nextResult.date)
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
                     </TableCell>
                   ) : null}
 

@@ -10,6 +10,7 @@ import {
   deepFinderInput,
   FX_EXECUTION_IOF,
   FX_EXECUTION_SPREAD,
+  nextResultsResponseSchema,
   type ParsedDeepFinderInput,
   type QuoteSource,
   removeAllocationAssetInput,
@@ -56,6 +57,7 @@ import {
   getQuoteWithManualFallback,
   QuoteUnavailableError,
 } from "../../lib/quotes";
+import { getNextResults } from "../../lib/results";
 import { protectedProcedure, router } from "../trpc";
 import { loadValuedPortfolio } from "../valuation";
 import { buildFinderResult, type FinderPosition } from "./deep-finder";
@@ -361,6 +363,30 @@ async function loadAllocationFinder(
 }
 
 export const allocationRouter = router({
+  /**
+   * Provider-backed result dates load independently from portfolio valuation.
+   * This procedure deliberately resolves to an empty list on any unexpected
+   * provider failure so the allocation table itself can never be taken down.
+   */
+  nextResults: protectedProcedure.query(async ({ ctx }) => {
+    try {
+      const assets = await loadAssets(ctx.user.id);
+
+      return nextResultsResponseSchema.parse(
+        await getNextResults(
+          assets.map(({ ticker, assetClass, currency }) => ({
+            ticker,
+            assetClass,
+            currency,
+          })),
+          today(),
+        ),
+      );
+    } catch {
+      return { results: [], checkedAt: new Date().toISOString() };
+    }
+  }),
+
   /**
    * The allocation table: one row per open position or tracked ticker, with
    * targets, fair values, quarterly grades and the contribution score.
