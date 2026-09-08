@@ -13,14 +13,6 @@ import {
   weightRatio,
 } from "@portifolio-tracker/shared";
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  Columns3,
-  RotateCcw,
-  Search,
-} from "lucide-react";
 import { type ReactNode, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -29,39 +21,33 @@ import {
 } from "@/components/allocation/add-asset-dialog";
 import { AllocationDeepFinderButton } from "@/components/allocation/allocation-deep-finder";
 import {
+  type AllocationFilterState,
+  CATEGORY_ALL,
+  CATEGORY_NONE,
+  matchesCategory,
+  matchesStatus,
+  readStoredFilters,
+  storeFilters,
+} from "@/components/allocation/allocation-filters";
+import {
   ALLOCATION_COLUMNS,
   type AllocationColumn,
   type AllocationSort,
   AllocationTable,
-  columnLabels,
   compareRows,
   defaultSortDirection,
   summarizeVisibleRows,
 } from "@/components/allocation/allocation-table";
+import {
+  AllocationToolbar,
+  COLUMN_PRESETS,
+  DEFAULT_QUARTER_COUNT,
+  QUARTER_COUNTS,
+} from "@/components/allocation/allocation-toolbar";
 import { ContributionPlannerButton } from "@/components/allocation/contribution-planner";
 import { PageContent } from "@/components/page-content";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Switch } from "@/components/ui/switch";
 import {
   findReview,
   removeReviewFromList,
@@ -74,7 +60,6 @@ import { useFxQuote } from "@/lib/fx";
 import { parseDecimalInput, parsePercentInput } from "@/lib/numeric-input";
 import {
   currentQuarter,
-  formatQuarterLabel,
   type Quarter,
   quarterWindow,
   shiftQuarter,
@@ -89,42 +74,8 @@ export const Route = createFileRoute("/_app/allocation/")({
 
 const FREE_ORDER_KEY = "portfolio.allocation.freeOrder";
 const QUARTER_COUNT_KEY = "portfolio.allocation.quarters";
-const QUARTER_COUNTS = [3, 4, 5, 8] as const;
-const DEFAULT_QUARTER_COUNT = 4;
 const LEGACY_COLUMN_STORAGE_KEY = "portfolio.allocation.columns";
 const COLUMN_STORAGE_KEY = "portfolio.allocation.columns.v2";
-/** Category filter sentinels — match the categories screen. */
-const CATEGORY_ALL = "all";
-const CATEGORY_NONE = "none";
-const RADAR_ALL = "all";
-const RADAR_ON = "on";
-const RADAR_OFF = "off";
-
-const COLUMN_PRESETS: Record<
-  "compact" | "standard" | "all",
-  AllocationColumn[]
-> = {
-  compact: [
-    "ticker",
-    "targetWeight",
-    "currentWeight",
-    "gapWeight",
-    "score",
-    "marketValue",
-  ],
-  standard: [
-    "ticker",
-    "targetWeight",
-    "currentWeight",
-    "gapWeight",
-    "discount",
-    "score",
-    "nextResult",
-    "marketValue",
-    "averageGrade",
-  ],
-  all: [...ALLOCATION_COLUMNS],
-};
 
 function initialColumns(): Set<AllocationColumn> {
   try {
@@ -221,8 +172,9 @@ function AllocationPage() {
   const [quarterEndKey, setQuarterEndKey] = useState<string | null>(null);
   const [visibleColumns, setVisibleColumns] =
     useState<Set<AllocationColumn>>(initialColumns);
-  const [categoryFilter, setCategoryFilter] = useState(CATEGORY_ALL);
-  const [radarFilter, setRadarFilter] = useState(RADAR_ALL);
+  const [filters, setFilters] = useState<AllocationFilterState>(() =>
+    readStoredFilters(),
+  );
 
   const sanitizedManualPrices = useMemo(
     () =>
@@ -308,16 +260,9 @@ function AllocationPage() {
     }
   }
 
-  function applyPreset(preset: keyof typeof COLUMN_PRESETS) {
-    updateColumns(new Set(COLUMN_PRESETS[preset]));
-  }
-
-  function toggleColumn(id: AllocationColumn) {
-    if (id === "ticker") return;
-    const next = new Set(visibleColumns);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    updateColumns(next);
+  function updateFilters(next: AllocationFilterState) {
+    setFilters(next);
+    storeFilters(next);
   }
 
   const upsertAsset = trpc.allocation.upsertAsset.useMutation({
@@ -475,13 +420,17 @@ function AllocationPage() {
     return map;
   }, [categories.data?.assets]);
 
-  // Drop a stale pick if the category was deleted elsewhere.
-  const activeCategoryFilter =
-    categoryFilter === CATEGORY_ALL ||
-    categoryFilter === CATEGORY_NONE ||
-    categoryOptions.some((category) => category.id === categoryFilter)
-      ? categoryFilter
-      : CATEGORY_ALL;
+  // Drop a stale pick if the category was deleted elsewhere. Memoized so the
+  // fallback object stays stable for the row filter below.
+  const activeFilters = useMemo<AllocationFilterState>(
+    () =>
+      filters.category === CATEGORY_ALL ||
+      filters.category === CATEGORY_NONE ||
+      categoryOptions.some((category) => category.id === filters.category)
+        ? filters
+        : { ...filters, category: CATEGORY_ALL },
+    [filters, categoryOptions],
+  );
 
   const rows = useMemo(() => {
     const needle = search.trim().toLocaleLowerCase(i18n.locale);
@@ -495,25 +444,10 @@ function AllocationPage() {
 
       const categoryId = categoryByTicker.get(row.ticker) ?? null;
 
-      if (activeCategoryFilter === CATEGORY_NONE) {
-        if (categoryId !== null) {
-          return false;
-        }
-      } else if (activeCategoryFilter !== CATEGORY_ALL) {
-        if (categoryId !== activeCategoryFilter) {
-          return false;
-        }
-      }
-
-      if (radarFilter === RADAR_ON) {
-        return !row.hasPosition;
-      }
-
-      if (radarFilter === RADAR_OFF) {
-        return row.hasPosition;
-      }
-
-      return true;
+      return (
+        matchesCategory(activeFilters, categoryId) &&
+        matchesStatus(activeFilters, row.hasPosition)
+      );
     });
 
     // Free order keeps the stored rank the API already sorted by.
@@ -523,9 +457,8 @@ function AllocationPage() {
   }, [
     allRows,
     search,
-    activeCategoryFilter,
+    activeFilters,
     categoryByTicker,
-    radarFilter,
     sort,
     nextResults,
     freeOrder,
@@ -536,7 +469,6 @@ function AllocationPage() {
     ? toQuarter(quarterEndKey)
     : defaultQuarterEnd(allRows);
   const quarters = quarterWindow(quarterEnd, quarterCount);
-  const labels = columnLabels(i18n);
   const visibleSummary = allocation.data
     ? summarizeVisibleRows(
         rows,
@@ -690,198 +622,29 @@ function AllocationPage() {
         </div>
       </header>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-48 flex-1 sm:max-w-xs">
-          <Search
-            className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
-            aria-hidden="true"
-          />
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            aria-label={i18n._(
-              t({ id: "allocation.searchLabel", message: "Search assets" }),
-            )}
-            placeholder={i18n._(
-              t({ id: "allocation.search", message: "Search ticker…" }),
-            )}
-            className="h-8 pl-8"
-          />
-        </div>
-
-        <Select value={activeCategoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger
-            size="sm"
-            className="w-44"
-            aria-label={i18n._(
-              t({
-                id: "allocation.categoryFilter",
-                message: "Filter by category",
-              }),
-            )}
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={CATEGORY_ALL}>
-              <Trans id="allocation.categoryAll">All categories</Trans>
-            </SelectItem>
-            <SelectItem value={CATEGORY_NONE}>
-              <Trans id="allocation.categoryNone">Uncategorized</Trans>
-            </SelectItem>
-            {categoryOptions.map((category) => (
-              <SelectItem key={category.id} value={category.id}>
-                {category.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select value={radarFilter} onValueChange={setRadarFilter}>
-          <SelectTrigger
-            size="sm"
-            className="w-36"
-            aria-label={i18n._(
-              t({
-                id: "allocation.radarFilter",
-                message: "Filter by investment status",
-              }),
-            )}
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={RADAR_ALL}>
-              <Trans id="allocation.radarAll">All assets</Trans>
-            </SelectItem>
-            <SelectItem value={RADAR_ON}>
-              <Trans id="allocation.radarOn">On radar</Trans>
-            </SelectItem>
-            <SelectItem value={RADAR_OFF}>
-              <Trans id="allocation.radarOff">Invested</Trans>
-            </SelectItem>
-          </SelectContent>
-        </Select>
-
-        <div className="flex items-center gap-1 rounded-md border px-1 py-0.5">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label={i18n._(
-              t({
-                id: "allocation.quartersBack",
-                message: "Show earlier quarters",
-              }),
-            )}
-            onClick={() => setQuarterEndKey(shiftQuarter(quarterEnd, -1).key)}
-          >
-            <ChevronLeft className="size-4" aria-hidden="true" />
-          </Button>
-          <span className="min-w-28 text-center text-xs text-muted-foreground tabular-nums">
-            {formatQuarterLabel(quarters[0] ?? quarterEnd)} —{" "}
-            {formatQuarterLabel(quarterEnd)}
-          </span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label={i18n._(
-              t({
-                id: "allocation.quartersForward",
-                message: "Show later quarters",
-              }),
-            )}
-            onClick={() => setQuarterEndKey(shiftQuarter(quarterEnd, 1).key)}
-          >
-            <ChevronRight className="size-4" aria-hidden="true" />
-          </Button>
-        </div>
-
-        <Label htmlFor="allocation-quarter-count" className="sr-only">
-          <Trans id="allocation.quarterCount">Quarters shown</Trans>
-        </Label>
-        <Select
-          value={String(quarterCount)}
-          onValueChange={(value) => {
-            setQuarterCount(Number(value));
-            storeValue(QUARTER_COUNT_KEY, value);
-          }}
-        >
-          <SelectTrigger
-            id="allocation-quarter-count"
-            size="sm"
-            className="w-32"
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {QUARTER_COUNTS.map((count) => (
-              <SelectItem key={count} value={String(count)}>
-                <Trans id="allocation.quartersOption">{count} quarters</Trans>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button type="button" size="sm" variant="outline">
-              <Columns3 aria-hidden="true" />
-              <Trans id="allocation.columns">Columns</Trans>
-              <ChevronDown aria-hidden="true" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>
-              <Trans id="allocation.presets">View presets</Trans>
-            </DropdownMenuLabel>
-            <DropdownMenuItem onSelect={() => applyPreset("compact")}>
-              <Trans id="allocation.compact">Compact</Trans>
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => applyPreset("standard")}>
-              <Trans id="allocation.standard">Standard</Trans>
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => applyPreset("all")}>
-              <Trans id="allocation.all">All data</Trans>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel>
-              <Trans id="allocation.customize">Customize columns</Trans>
-            </DropdownMenuLabel>
-            {ALLOCATION_COLUMNS.map((id) => (
-              <DropdownMenuCheckboxItem
-                key={id}
-                checked={visibleColumns.has(id)}
-                disabled={id === "ticker"}
-                onSelect={(event) => event.preventDefault()}
-                onCheckedChange={() => toggleColumn(id)}
-              >
-                {labels[id]}
-              </DropdownMenuCheckboxItem>
-            ))}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => applyPreset("standard")}>
-              <RotateCcw aria-hidden="true" />
-              <Trans id="allocation.reset">Reset to standard</Trans>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <div className="ml-auto flex items-center gap-2">
-          <Label htmlFor="allocation-free-order" className="text-xs">
-            <Trans id="allocation.freeOrder">Free order</Trans>
-          </Label>
-          <Switch
-            id="allocation-free-order"
-            checked={freeOrder}
-            onCheckedChange={(checked) => {
-              setFreeOrder(checked);
-              storeValue(FREE_ORDER_KEY, String(checked));
-            }}
-          />
-        </div>
-      </div>
+      <AllocationToolbar
+        search={search}
+        onSearchChange={setSearch}
+        filters={activeFilters}
+        onFiltersChange={updateFilters}
+        categories={categoryOptions}
+        quarterStart={quarters[0] ?? quarterEnd}
+        quarterEnd={quarterEnd}
+        quarterCount={quarterCount}
+        onQuarterEndChange={(quarter) => setQuarterEndKey(quarter.key)}
+        onQuarterEndReset={() => setQuarterEndKey(null)}
+        onQuarterCountChange={(count) => {
+          setQuarterCount(count);
+          storeValue(QUARTER_COUNT_KEY, String(count));
+        }}
+        visibleColumns={visibleColumns}
+        onColumnsChange={updateColumns}
+        freeOrder={freeOrder}
+        onFreeOrderChange={(checked) => {
+          setFreeOrder(checked);
+          storeValue(FREE_ORDER_KEY, String(checked));
+        }}
+      />
 
       {allocation.isPending || waitingForRate ? <TableSkeleton /> : null}
       {fxFailed ? (
