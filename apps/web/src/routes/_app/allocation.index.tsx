@@ -269,6 +269,9 @@ function AllocationPage() {
   const upsertAsset = trpc.allocation.upsertAsset.useMutation({
     onSuccess: async (_result, input) => {
       await refresh();
+      if (input.categoryId !== undefined) {
+        await utils.categories.list.invalidate();
+      }
       if (input.assetClass !== undefined) {
         await utils.allocation.nextResults.invalidate();
       }
@@ -626,7 +629,11 @@ function AllocationPage() {
               setMarkColor.mutate({ ticker, markColor })
             }
           />
-          <AddAssetDialog onSubmit={addAsset} saving={upsertAsset.isPending} />
+          <AddAssetDialog
+            categories={categoryOptions}
+            onSubmit={addAsset}
+            saving={upsertAsset.isPending}
+          />
         </div>
       </header>
 

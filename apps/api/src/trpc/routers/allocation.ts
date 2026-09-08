@@ -29,6 +29,7 @@ import {
   assetCategories,
   assetReviews,
   cashBalances,
+  categories,
   transactions,
 } from "../../db/schema";
 import {
@@ -65,6 +66,10 @@ import { buildFinderResult, type FinderPosition } from "./deep-finder";
 import { loadTransactions, loadTransactionsForTickers } from "./transactions";
 
 const API_TIME_ZONE = "America/Sao_Paulo";
+
+type DbExecutor =
+  | Parameters<Parameters<typeof db.transaction>[0]>[0]
+  | typeof db;
 
 /** Today in the API timezone, `YYYY-MM-DD`, so cooldowns match the log. */
 function today(now = new Date()): string {
@@ -195,8 +200,11 @@ async function tradedIdentity(
     : null;
 }
 
-async function nextSortOrder(userId: string): Promise<number> {
-  const [row] = await db
+async function nextSortOrder(
+  userId: string,
+  executor: DbExecutor = db,
+): Promise<number> {
+  const [row] = await executor
     .select({ highest: max(allocationAssets.sortOrder) })
     .from(allocationAssets)
     .where(eq(allocationAssets.userId, userId));
@@ -593,6 +601,25 @@ export const allocationRouter = router({
           message: "Cash is managed by its dedicated allocation row",
         });
       }
+      if (input.categoryId !== undefined && input.categoryId !== null) {
+        const [category] = await db
+          .select({ id: categories.id })
+          .from(categories)
+          .where(
+            and(
+              eq(categories.userId, ctx.user.id),
+              eq(categories.id, input.categoryId),
+            ),
+          )
+          .limit(1);
+
+        if (!category) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Category not found",
+          });
+        }
+      }
       if (input.targetWeight !== undefined) {
         const targets = await db
           .select({
@@ -633,25 +660,55 @@ export const allocationRouter = router({
           : {}),
       };
 
-      const [row] = await db
-        .insert(allocationAssets)
-        .values({
-          userId: ctx.user.id,
-          ticker: input.ticker,
-          // A traded ticker keeps the log's own class and currency unless the
-          // caller states otherwise.
-          assetClass: traded?.assetClass ?? "other",
-          currency: traded?.currency ?? "USD",
-          sortOrder: await nextSortOrder(ctx.user.id),
-          ...patch,
-        })
-        .onConflictDoUpdate({
-          target: [allocationAssets.userId, allocationAssets.ticker],
-          set: { ...patch, updatedAt: new Date() },
-        })
-        .returning();
+      const row = await db.transaction(async (tx) => {
+        const [asset] = await tx
+          .insert(allocationAssets)
+          .values({
+            userId: ctx.user.id,
+            ticker: input.ticker,
+            // A traded ticker keeps the log's own class and currency unless the
+            // caller states otherwise.
+            assetClass: traded?.assetClass ?? "other",
+            currency: traded?.currency ?? "USD",
+            sortOrder: await nextSortOrder(ctx.user.id, tx),
+            ...patch,
+          })
+          .onConflictDoUpdate({
+            target: [allocationAssets.userId, allocationAssets.ticker],
+            set: { ...patch, updatedAt: new Date() },
+          })
+          .returning();
 
-      return row ?? null;
+        if (input.categoryId !== undefined) {
+          if (input.categoryId === null) {
+            await tx
+              .delete(assetCategories)
+              .where(
+                and(
+                  eq(assetCategories.userId, ctx.user.id),
+                  eq(assetCategories.ticker, input.ticker),
+                ),
+              );
+          } else {
+            await tx
+              .insert(assetCategories)
+              .values({
+                userId: ctx.user.id,
+                ticker: input.ticker,
+                categoryId: input.categoryId,
+                updatedAt: new Date(),
+              })
+              .onConflictDoUpdate({
+                target: [assetCategories.userId, assetCategories.ticker],
+                set: { categoryId: input.categoryId, updatedAt: new Date() },
+              });
+          }
+        }
+
+        return asset ?? null;
+      });
+
+      return row;
     }),
 
   /**

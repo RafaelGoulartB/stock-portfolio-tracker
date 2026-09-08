@@ -1,12 +1,13 @@
 import { t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import type { AssetReview } from "@portifolio-tracker/shared";
-import { Eye } from "lucide-react";
+import { Eye, Maximize2, Minimize2 } from "lucide-react";
 import { memo, useState } from "react";
 import {
   ReviewEditorForm,
   type ReviewSaveInput,
 } from "@/components/allocation/review-editor-form";
+import { Button } from "@/components/ui/button";
 import {
   Popover,
   PopoverContent,
@@ -133,6 +134,7 @@ function QuarterReviewCellComponent({
 }: QuarterReviewCellProps) {
   const { i18n } = useLingui();
   const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   const hasNotes = (review?.notes ?? "").trim().length > 0;
   const hasFairValue = review?.fairValue != null;
@@ -158,9 +160,29 @@ function QuarterReviewCellComponent({
           }),
         )
       : null;
+  const expandLabel = i18n._(
+    t({ id: "allocation.reviewExpand", message: "Expand editor" }),
+  );
+  const collapseLabel = i18n._(
+    t({ id: "allocation.reviewCollapse", message: "Collapse editor" }),
+  );
+
+  function closeEditor() {
+    setOpen(false);
+    setExpanded(false);
+  }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+
+        if (!next) {
+          setExpanded(false);
+        }
+      }}
+    >
       <PopoverTrigger asChild>
         <button
           type="button"
@@ -218,9 +240,31 @@ function QuarterReviewCellComponent({
       </PopoverTrigger>
       <PopoverContent
         align="center"
-        className="w-80 max-h-[min(32rem,calc(100dvh-2rem))] space-y-3 overflow-y-auto"
+        className={cn(
+          "space-y-3 overflow-y-auto",
+          expanded
+            ? "w-[min(52rem,calc(100vw-2rem))] max-h-[min(42rem,calc(100dvh-2rem))]"
+            : "w-80 max-h-[min(32rem,calc(100dvh-2rem))]",
+        )}
       >
-        <p className="text-sm font-semibold">{title}</p>
+        <div className="flex items-start justify-between gap-3">
+          <p className="min-w-0 text-sm font-semibold">{title}</p>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-xs"
+            aria-expanded={expanded}
+            aria-label={expanded ? collapseLabel : expandLabel}
+            title={expanded ? collapseLabel : expandLabel}
+            onClick={() => setExpanded((current) => !current)}
+          >
+            {expanded ? (
+              <Minimize2 aria-hidden="true" />
+            ) : (
+              <Maximize2 aria-hidden="true" />
+            )}
+          </Button>
+        </div>
         {watched && !watchNext ? (
           <p className={cn("text-xs", watchedTone.text)}>{watchHint}</p>
         ) : null}
@@ -229,13 +273,14 @@ function QuarterReviewCellComponent({
           period={quarter.key}
           review={review}
           saving={saving}
+          layout={expanded ? "wide" : "compact"}
           onSave={(input) => {
             onSave(input);
-            setOpen(false);
+            closeEditor();
           }}
           onRemove={(input) => {
             onRemove(input);
-            setOpen(false);
+            closeEditor();
           }}
         />
       </PopoverContent>

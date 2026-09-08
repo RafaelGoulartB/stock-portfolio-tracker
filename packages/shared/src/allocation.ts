@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { categoryIdSchema } from "./categories";
 import { currencySchema } from "./currency";
 import { nonNegativeDecimal, positiveDecimal, signedDecimal } from "./decimal";
 import { fxResolutionFields } from "./fx";
@@ -165,6 +166,8 @@ export const upsertAllocationAssetInput = z.object({
   targetWeight: weightRatio.nullable().optional(),
   valuationRef: valuationRefSchema.nullable().optional(),
   markColor: allocationMarkColorSchema.nullable().optional(),
+  /** Omitted preserves the assignment; null makes the ticker uncategorized. */
+  categoryId: categoryIdSchema.nullable().optional(),
 });
 
 export type UpsertAllocationAssetInput = z.input<

@@ -35,11 +35,16 @@ import {
 import { currencyText } from "@/lib/display-labels";
 import { parsePercentInput } from "@/lib/numeric-input";
 
+const NO_CATEGORY = "none";
+
+type CategoryOption = { id: string; name: string };
+
 export type AddAssetValues = {
   ticker: string;
   assetClass: AssetClass;
   currency: Currency;
   targetWeight: string | null;
+  categoryId: string | null;
 };
 
 /**
@@ -49,9 +54,11 @@ export type AddAssetValues = {
  */
 export function AddAssetDialog({
   onSubmit,
+  categories,
   saving = false,
 }: {
   onSubmit: (values: AddAssetValues) => Promise<void> | void;
+  categories: readonly CategoryOption[];
   saving?: boolean;
 }) {
   const { i18n } = useLingui();
@@ -59,6 +66,7 @@ export function AddAssetDialog({
   const [ticker, setTicker] = useState("");
   const [assetClass, setAssetClass] = useState<AssetClass>("stock_us");
   const [currency, setCurrency] = useState<Currency>("USD");
+  const [categoryId, setCategoryId] = useState<string | null>(null);
   const [target, setTarget] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -66,6 +74,7 @@ export function AddAssetDialog({
     setTicker("");
     setAssetClass("stock_us");
     setCurrency("USD");
+    setCategoryId(null);
     setTarget("");
     setError(null);
   }
@@ -109,6 +118,7 @@ export function AddAssetDialog({
       assetClass,
       currency,
       targetWeight: targetValue,
+      categoryId,
     });
     reset();
     setOpen(false);
@@ -210,6 +220,32 @@ export function AddAssetDialog({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="grid gap-2">
+            <Label htmlFor="allocation-add-category">
+              <Trans id="allocation.addCategory">Category</Trans>
+            </Label>
+            <Select
+              value={categoryId ?? NO_CATEGORY}
+              onValueChange={(value) =>
+                setCategoryId(value === NO_CATEGORY ? null : value)
+              }
+            >
+              <SelectTrigger id="allocation-add-category" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NO_CATEGORY}>
+                  <Trans id="allocation.categoryNone">Uncategorized</Trans>
+                </SelectItem>
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid gap-2">
