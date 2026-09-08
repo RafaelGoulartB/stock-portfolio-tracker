@@ -1,6 +1,29 @@
-import { positiveDecimal } from "@portifolio-tracker/shared";
+import { type FxSource, positiveDecimal } from "@portifolio-tracker/shared";
+import { useMemo } from "react";
 import { trpc } from "@/lib/api";
 import { useSettings } from "@/lib/settings";
+
+/**
+ * The FX fields every portfolio query sends. The server resolves the rate
+ * itself from these, so a screen no longer has to fetch `fx.getRate`, wait
+ * for it, and only then ask for its portfolio.
+ *
+ * A manual rate is only sent once it parses, so an in-progress edit never
+ * turns into a validation error on the request.
+ */
+export function useFxRequest(): { fxSource: FxSource; manualRate?: string } {
+  const { fxSource, manualRate } = useSettings();
+  const manualRateValid = positiveDecimal.safeParse(manualRate).success;
+
+  return useMemo(
+    () => ({
+      fxSource,
+      manualRate:
+        fxSource === "manual" && manualRateValid ? manualRate : undefined,
+    }),
+    [fxSource, manualRate, manualRateValid],
+  );
+}
 
 /**
  * USD/BRL quote for the portfolio display currency. Manual mode validates
@@ -8,6 +31,9 @@ import { useSettings } from "@/lib/settings";
  * and shared through the query cache (same key in the modal and the
  * positions page). `asOf` is a `YYYY-MM-DD` month-end close; omitted means
  * the live spot quote.
+ *
+ * Portfolio screens no longer depend on this to build their request; it backs
+ * the rate readout and the FX error messaging.
  */
 export function useFxQuote(asOf?: string | null) {
   const { fxSource, manualRate } = useSettings();

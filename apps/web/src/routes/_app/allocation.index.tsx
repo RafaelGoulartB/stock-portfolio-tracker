@@ -56,7 +56,7 @@ import {
   upsertReviewInList,
 } from "@/lib/allocation-review-cache";
 import { trpc } from "@/lib/api";
-import { useFxQuote } from "@/lib/fx";
+import { useFxQuote, useFxRequest } from "@/lib/fx";
 import { parseDecimalInput, parsePercentInput } from "@/lib/numeric-input";
 import {
   currentQuarter,
@@ -152,6 +152,7 @@ function AllocationPage() {
   const utils = trpc.useUtils();
   const { displayCurrency, quoteSource, manualPrices } = useSettings();
   const fx = useFxQuote();
+  const fxRequest = useFxRequest();
 
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<AllocationSort>({
@@ -189,7 +190,7 @@ function AllocationPage() {
   const allocationListInput = useMemo(
     () => ({
       displayCurrency,
-      usdBrlRate: fx.effectiveRate,
+      ...fxRequest,
       quoteSource,
       manualPrices:
         quoteSource === "manual" &&
@@ -197,7 +198,7 @@ function AllocationPage() {
           ? sanitizedManualPrices
           : undefined,
     }),
-    [displayCurrency, fx.effectiveRate, quoteSource, sanitizedManualPrices],
+    [displayCurrency, fxRequest, quoteSource, sanitizedManualPrices],
   );
 
   const allocation = trpc.allocation.list.useQuery(allocationListInput);
@@ -465,10 +466,17 @@ function AllocationPage() {
     i18n.locale,
   ]);
 
-  const quarterEnd = quarterEndKey
-    ? toQuarter(quarterEndKey)
-    : defaultQuarterEnd(allRows);
-  const quarters = quarterWindow(quarterEnd, quarterCount);
+  // Stable across unrelated renders (typing in the search box, sorting) so the
+  // memoized quarter cells are not invalidated by a brand-new quarter object.
+  const quarterEnd = useMemo(
+    () =>
+      quarterEndKey ? toQuarter(quarterEndKey) : defaultQuarterEnd(allRows),
+    [quarterEndKey, allRows],
+  );
+  const quarters = useMemo(
+    () => quarterWindow(quarterEnd, quarterCount),
+    [quarterEnd, quarterCount],
+  );
   const visibleSummary = allocation.data
     ? summarizeVisibleRows(
         rows,
@@ -692,8 +700,8 @@ function AllocationPage() {
             ticker: string,
             markColor: AllocationMarkColor | null,
           ) => setMarkColor.mutate({ ticker, markColor })}
-          onSaveReview={(input) => upsertReview.mutate(input)}
-          onRemoveReview={(input) => removeReview.mutate(input)}
+          onSaveReview={upsertReview.mutate}
+          onRemoveReview={removeReview.mutate}
           missing={allocation.data.quotes.missing}
           nextResults={nextResults}
           nextResultsLoading={

@@ -523,23 +523,72 @@ describe("valuePositions", () => {
 
     expect(cash).toMatchObject({
       ticker: "CASH",
+      averagePrice: "500.00",
+      investedCost: "500.00",
+      convertedAveragePrice: "500.00",
+      convertedInvestedCost: "500.00",
+      marketPrice: "500.00",
       convertedMarketValue: "500.00",
       weight: "0.33333333",
       quoteMissing: false,
-      convertedUnrealizedPnl: null,
+      unrealizedPnl: "0.00",
+      convertedUnrealizedPnl: "0.00",
+      unrealizedPnlPercent: "0.000000",
     });
     expect(positions[0]?.weight).toBe("0.66666667");
     expect(summarizePositions(positions, "BRL", null)).toMatchObject({
+      totalInvested: "1500.00",
       totalMarketValue: "1500.00",
-      quotedInvestedCost: "1000.00",
+      quotedInvestedCost: "1500.00",
       totalUnrealizedPnl: "0.00",
+      totalUnrealizedPnlPercent: "0.000000",
+    });
+  });
+
+  it("includes zero-return cash in the portfolio return base", () => {
+    const [stock] = valuePositions(
+      convertPositions(
+        consolidatePositions([
+          tx({ side: "buy", quantity: "10", price: "100" }),
+        ]),
+        "BRL",
+        null,
+      ),
+      new Map([
+        ["PETR4", { ticker: "PETR4", price: "110", asOf: "2026-09-08" }],
+      ]),
+      "BRL",
+      null,
+    );
+
+    if (!stock) throw new Error("expected stock position");
+
+    expect(
+      summarizePositions(
+        withCashPosition([stock], "500", "BRL", null),
+        "BRL",
+        null,
+      ),
+    ).toMatchObject({
+      totalInvested: "1500.00",
+      totalMarketValue: "1600.00",
+      totalUnrealizedPnl: "100.00",
+      totalUnrealizedPnlPercent: "0.066667",
     });
   });
 
   it("converts the BRL cash balance with the explicit rate", () => {
     const [cash] = withCashPosition([], "500", "USD", "5");
 
-    expect(cash?.convertedMarketValue).toBe("100.00");
+    expect(cash).toMatchObject({
+      averagePrice: "500.00",
+      investedCost: "500.00",
+      convertedAveragePrice: "100.00",
+      convertedInvestedCost: "100.00",
+      marketPrice: "500.00",
+      convertedMarketValue: "100.00",
+      convertedUnrealizedPnl: "0.00",
+    });
     expect(() => withCashPosition([], "500", "USD", null)).toThrow(
       "USD/BRL rate",
     );

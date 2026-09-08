@@ -10,6 +10,7 @@ import {
 import { convertMoney } from "../../domain/positions";
 import { add, formatDecimal, toDecimal, ZERO } from "../../lib/decimal";
 import { getDividendProvider, hasAlphaVantageKey } from "../../lib/dividends";
+import { resolveUsdBrlRate } from "../fx-rate";
 import { protectedProcedure, router } from "../trpc";
 import { loadTransactions } from "./transactions";
 
@@ -92,16 +93,25 @@ export const dividendsRouter = router({
       let convertedTotal = ZERO;
       let convertedUpcoming = ZERO;
       let unconvertedEvents = 0;
+      // Income only needs a rate when an event is not already in the display
+      // currency, so a single-currency book issues no FX request.
+      const needsRate = entitled.some(
+        (event) => event.currency !== input.displayCurrency,
+      );
+      const usdBrlRate =
+        needsRate && !input.usdBrlRate
+          ? await resolveUsdBrlRate(input)
+          : input.usdBrlRate;
       const enriched = entitled.map((event) => {
         const convertedGrossAmount =
           event.currency === input.displayCurrency
             ? event.grossAmount
-            : input.usdBrlRate
+            : usdBrlRate
               ? convertMoney(
                   event.grossAmount,
                   event.currency,
                   input.displayCurrency,
-                  input.usdBrlRate,
+                  usdBrlRate,
                 )
               : null;
 

@@ -6,10 +6,11 @@ import type {
   Currency,
   TransactionSide,
 } from "@portifolio-tracker/shared";
+import { memo } from "react";
 import { Badge } from "@/components/ui/badge";
 
 /** Translated side badge content shared by holdings and history tables. */
-export function SideLabel({ side }: { side: TransactionSide }) {
+function SideLabelComponent({ side }: { side: TransactionSide }) {
   if (side === "buy") {
     return <Trans id="side.buy">Buy</Trans>;
   }
@@ -18,7 +19,7 @@ export function SideLabel({ side }: { side: TransactionSide }) {
 }
 
 /** Translated asset class name shared by holdings and history tables. */
-export function AssetClassLabel({ assetClass }: { assetClass: AssetClass }) {
+function AssetClassLabelComponent({ assetClass }: { assetClass: AssetClass }) {
   switch (assetClass) {
     case "stock_br":
       return <Trans id="assetClass.stockBr">Brazilian stock</Trans>;
@@ -42,7 +43,7 @@ export function AssetClassLabel({ assetClass }: { assetClass: AssetClass }) {
 }
 
 /** ISO currency code of a trade or position. Codes need no translation. */
-export function CurrencyBadge({ currency }: { currency: Currency }) {
+function CurrencyBadgeComponent({ currency }: { currency: Currency }) {
   return (
     <Badge variant="outline" className="tabular-nums">
       {currency}
@@ -80,3 +81,11 @@ export function assetClassText(assetClass: AssetClass, i18n: I18n): string {
       return i18n._(msg({ id: "assetClass.other", message: "Other" }));
   }
 }
+
+/**
+ * Memoized: these render once per row in every table and depend on a single
+ * primitive. `Trans` still reacts to a locale change through context.
+ */
+export const SideLabel = memo(SideLabelComponent);
+export const AssetClassLabel = memo(AssetClassLabelComponent);
+export const CurrencyBadge = memo(CurrencyBadgeComponent);

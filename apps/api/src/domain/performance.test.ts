@@ -5,7 +5,7 @@ import {
   type PerformanceBuildInput,
   performanceSnapshots,
 } from "./performance";
-import type { ConsolidationInput } from "./positions";
+import { type ConsolidationInput, tradeCashTotal } from "./positions";
 
 let sequence = 0;
 
@@ -309,5 +309,140 @@ describe("buildPerformanceHistory", () => {
     const short = build(holding, prices, { months: 2 });
 
     expect(short.summary.annualizedReturn).toBeNull();
+  });
+});
+
+/**
+ * Month flows moved from one scan of the ledger per month to a single pass.
+ * The values are pinned against an independent sum so the single pass cannot
+ * drift on month boundaries, backdated trades or a rate that changes by day.
+ */
+describe("month flows", () => {
+  function flowLedger(): ConsolidationInput[] {
+    return [
+      // Before the window: must not reach any month.
+      tx({ side: "buy", tradedAt: "2025-11-20", quantity: "10", price: "10" }),
+      // Exactly on the baseline month end: still outside the window.
+      tx({ side: "buy", tradedAt: "2025-12-31", quantity: "5", price: "20" }),
+      // First day inside the first month.
+      tx({ side: "buy", tradedAt: "2026-01-01", quantity: "7", price: "30" }),
+      tx({
+        side: "buy",
+        tradedAt: "2026-01-31",
+        quantity: "3",
+        price: "40",
+        fees: "1.50",
+      }),
+      tx({
+        side: "sell",
+        tradedAt: "2026-02-10",
+        quantity: "4",
+        price: "50",
+        fees: "2.25",
+      }),
+      // USD trade, converted at its own trade-day rate.
+      tx({
+        side: "buy",
+        ticker: "AAPL",
+        assetClass: "stock_us",
+        currency: "USD",
+        tradedAt: "2026-02-20",
+        quantity: "2",
+        price: "100",
+      }),
+      tx({ side: "buy", tradedAt: "2026-03-05", quantity: "1", price: "60" }),
+      // Backdated write into an earlier month of the window.
+      tx({ side: "buy", tradedAt: "2026-01-15", quantity: "2", price: "25" }),
+    ];
+  }
+
+  /** BRL per USD, deliberately different per day. */
+  const rateByDay: Record<string, string> = {
+    "2026-02-20": "5.5",
+    "2026-02-28": "5.6",
+  };
+  const rateAt = (day: string) => rateByDay[day] ?? "5";
+
+  function expectedNetFlow(
+    transactions: ConsolidationInput[],
+    previous: string,
+    current: string,
+  ): number {
+    let total = 0;
+
+    for (const entry of transactions) {
+      if (entry.tradedAt <= previous || entry.tradedAt > current) {
+        continue;
+      }
+
+      const cash = Number(tradeCashTotal(entry));
+      const signed = entry.side === "buy" ? cash : -cash;
+      const rate =
+        entry.currency === "BRL"
+          ? 1
+          : Number(rateAt(entry.tradedAt) ?? rateAt(current));
+
+      total += signed * rate;
+    }
+
+    return total;
+  }
+
+  it("assigns every trade to exactly one month of the window", () => {
+    const transactions = flowLedger();
+    const snapshots = performanceSnapshots(3, at("2026-03-31"));
+    const history = buildPerformanceHistory({
+      transactions,
+      snapshots,
+      displayCurrency: "BRL",
+      priceAt: () => "45",
+      rateAt,
+    });
+
+    expect(history.months.map((month) => month.key)).toEqual([
+      "2026-01",
+      "2026-02",
+      "2026-03",
+    ]);
+
+    let previous = snapshots[0].asOf;
+
+    for (const month of history.months) {
+      expect(Number(month.netFlow)).toBeCloseTo(
+        expectedNetFlow(transactions, previous, month.asOf),
+        2,
+      );
+      previous = month.asOf;
+    }
+
+    // Nothing before the baseline leaked in, and the window sums up.
+    const windowTotal = history.months.reduce(
+      (sum, month) => sum + Number(month.netFlow),
+      0,
+    );
+
+    expect(Number(history.months.at(-1)?.cumulativeNetFlow)).toBeCloseTo(
+      windowTotal,
+      2,
+    );
+    expect(windowTotal).toBeCloseTo(
+      expectedNetFlow(transactions, snapshots[0].asOf, "2026-03-31"),
+      2,
+    );
+  });
+
+  it("is unaffected by the order the ledger arrives in", () => {
+    const transactions = flowLedger();
+    const shuffled = [...transactions].reverse();
+    const options = {
+      snapshots: performanceSnapshots(3, at("2026-03-31")),
+      displayCurrency: "BRL" as const,
+      priceAt: () => "45",
+      rateAt,
+    };
+
+    expect(
+      buildPerformanceHistory({ ...options, transactions: shuffled }),
+    ).toEqual(buildPerformanceHistory({ ...options, transactions }));
   });
 });

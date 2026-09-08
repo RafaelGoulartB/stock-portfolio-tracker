@@ -45,7 +45,7 @@ import {
   formatTradeDate,
   pnlClassName,
 } from "@/lib/format";
-import { useFxQuote } from "@/lib/fx";
+import { useFxQuote, useFxRequest } from "@/lib/fx";
 import { useSettings } from "@/lib/settings";
 import { isFxRateRequired, queryErrorMessage } from "@/lib/trpcErrors";
 import { cn } from "@/lib/utils";
@@ -68,6 +68,7 @@ type ChartDatum = {
 function DeepFinderPage() {
   const { displayCurrency, quoteSource, manualPrices } = useSettings();
   const fx = useFxQuote();
+  const fxRequest = useFxRequest();
   const [window, setWindow] = useState<DeepFinderWindow>(
     DEFAULT_DEEP_FINDER_WINDOW,
   );
@@ -83,7 +84,7 @@ function DeepFinderPage() {
   );
   const finder = trpc.positions.finder.useQuery({
     displayCurrency,
-    usdBrlRate: fx.effectiveRate,
+    ...fxRequest,
     quoteSource,
     window,
     manualPrices:

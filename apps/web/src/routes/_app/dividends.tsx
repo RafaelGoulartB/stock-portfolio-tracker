@@ -67,7 +67,7 @@ import {
   formatQuantity,
   formatTradeDate,
 } from "@/lib/format";
-import { useFxQuote } from "@/lib/fx";
+import { useFxRequest } from "@/lib/fx";
 import { useSettings } from "@/lib/settings";
 import { queryErrorMessage } from "@/lib/trpcErrors";
 
@@ -89,7 +89,7 @@ function currentMonth(): string {
 
 function DividendsPage() {
   const { displayCurrency } = useSettings();
-  const fx = useFxQuote();
+  const fxRequest = useFxRequest();
   const [source, setSource] = useState<DividendSource>("auto");
   const [years, setYears] = useState<DividendWindow>(3);
   const dividends = trpc.dividends.history.useQuery(
@@ -97,7 +97,7 @@ function DividendsPage() {
       source,
       years,
       displayCurrency,
-      usdBrlRate: fx.effectiveRate,
+      ...fxRequest,
     },
     { staleTime: 6 * 60 * 60 * 1_000, gcTime: 6 * 60 * 60 * 1_000 },
   );

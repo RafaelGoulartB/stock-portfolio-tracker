@@ -65,7 +65,7 @@ import {
   formatWeight,
   pnlClassName,
 } from "@/lib/format";
-import { useFxQuote } from "@/lib/fx";
+import { useFxQuote, useFxRequest } from "@/lib/fx";
 import { formatMonthLabel, lastTwelveMonths } from "@/lib/months";
 import { useSettings } from "@/lib/settings";
 import { isFxRateRequired, queryErrorMessage } from "@/lib/trpcErrors";
@@ -85,6 +85,7 @@ function PositionsPage() {
   const selected = months.find((month) => month.key === monthKey) ?? months[0];
 
   const fx = useFxQuote(selected?.asOf);
+  const fxRequest = useFxRequest();
 
   // Manual prices are raw user input; only valid decimals travel to the API.
   const sanitizedManualPrices = useMemo(() => {
@@ -97,7 +98,7 @@ function PositionsPage() {
 
   const positions = trpc.positions.list.useQuery({
     displayCurrency,
-    usdBrlRate: fx.effectiveRate,
+    ...fxRequest,
     asOf: selected?.asOf ?? undefined,
     quoteSource,
     manualPrices:
@@ -1041,7 +1042,7 @@ function DeepFinderTeaser({
   summary: PortfolioSummary;
 }) {
   const { displayCurrency, quoteSource, manualPrices } = useSettings();
-  const fx = useFxQuote();
+  const fxRequest = useFxRequest();
   const sanitizedManualPrices = useMemo(
     () =>
       Object.fromEntries(
@@ -1053,7 +1054,7 @@ function DeepFinderTeaser({
   );
   const month = trpc.positions.finder.useQuery({
     displayCurrency,
-    usdBrlRate: fx.effectiveRate,
+    ...fxRequest,
     quoteSource,
     window: "1m",
     manualPrices:
@@ -1469,8 +1470,7 @@ function HoldingsCard({
                   )}
                 </TableCell>
                 <TableCell className="text-right text-muted-foreground tabular-nums">
-                  {position.assetClass === "fixed_income" ||
-                  position.assetClass === "cash" ? (
+                  {position.assetClass === "fixed_income" ? (
                     <Dash />
                   ) : (
                     formatMoney(position.averagePrice, position.currency)
@@ -1478,7 +1478,6 @@ function HoldingsCard({
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
                   {position.assetClass === "fixed_income" ||
-                  position.assetClass === "cash" ||
                   position.marketPrice == null ? (
                     <Dash />
                   ) : (
@@ -1497,7 +1496,6 @@ function HoldingsCard({
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
                   {position.assetClass === "fixed_income" ||
-                  position.assetClass === "cash" ||
                   position.convertedUnrealizedPnl == null ? (
                     <Dash />
                   ) : (

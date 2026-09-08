@@ -64,6 +64,8 @@ export const finder = protectedProcedure
       userId: ctx.user.id,
       displayCurrency: input.displayCurrency,
       usdBrlRate: input.usdBrlRate,
+      fxSource: input.fxSource,
+      manualRate: input.manualRate,
       quoteSource: input.quoteSource,
       manualPrices: input.manualPrices,
     });
@@ -73,7 +75,9 @@ export const finder = protectedProcedure
     return buildFinderResult({
       positions: open,
       missing: portfolio.missing,
-      input,
+      // The rate the portfolio was actually consolidated with, so period
+      // baselines convert with the same number as current values.
+      input: { ...input, usdBrlRate: portfolio.usdBrlRate ?? undefined },
     });
   });
 

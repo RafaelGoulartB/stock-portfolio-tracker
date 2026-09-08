@@ -12,10 +12,15 @@ import {
 } from "../lib/decimal";
 import {
   type ConsolidationInput,
-  consolidatePositions,
+  type consolidatePositions,
+  consolidatePositionsAtEach,
   convertMoney,
-  filterTransactionsByAsOf,
 } from "./positions";
+
+/** One entry of the consolidation returned for a snapshot date. */
+type ConsolidatedSnapshotPosition = ReturnType<
+  typeof consolidatePositions
+>[number];
 
 const MONEY_PLACES = 2;
 /** Ratios (returns, weights) keep more digits than money. */
@@ -261,14 +266,15 @@ function emptyClassTotals(): ClassTotals {
  * Values every position held at `date` and aggregates the snapshot by asset
  * class and by ticker. Positions without a quote are carried at cost so the
  * value curve stays continuous; they are counted so the UI can disclose it.
+ *
+ * `positions` is the consolidation as of `date`, resolved once for the whole
+ * window by {@link consolidatePositionsAtEach}.
  */
 function valueSnapshot(
   input: PerformanceBuildInput,
   date: PerformanceSnapshotDate,
+  positions: readonly ConsolidatedSnapshotPosition[],
 ): SnapshotValuation {
-  const positions = consolidatePositions(
-    filterTransactionsByAsOf(input.transactions, date.asOf),
-  );
   const rate = input.rateAt(date.asOf);
   const convert = (value: string, currency: Currency): Decimal => {
     if (currency === input.displayCurrency) {
@@ -377,49 +383,82 @@ type MonthFlows = { total: Decimal; weighted: Decimal };
  * they were invested (`Modified Dietz`): a contribution on the last day of
  * the month barely counts towards the month's return base.
  */
-function monthFlows(
+function accumulateFlow(
   input: PerformanceBuildInput,
+  flows: MonthFlows,
+  entry: ConsolidationInput,
   previous: string,
   current: string,
-): MonthFlows {
+): void {
   const start = dayNumber(previous);
   const span = dayNumber(current) - start;
-  let total = ZERO;
-  let weighted = ZERO;
+  const native = formatDecimal(tradeCash(entry), MONEY_PLACES);
+  let amount: Decimal;
 
-  for (const entry of input.transactions) {
-    if (entry.tradedAt <= previous || entry.tradedAt > current) {
-      continue;
+  if (entry.currency === input.displayCurrency) {
+    amount = toDecimal(native);
+  } else {
+    const rate = input.rateAt(entry.tradedAt) ?? input.rateAt(current);
+
+    if (rate == null) {
+      throw new Error(`No USD/BRL rate available for ${entry.tradedAt}`);
     }
 
-    const native = formatDecimal(tradeCash(entry), MONEY_PLACES);
-    let amount: Decimal;
-
-    if (entry.currency === input.displayCurrency) {
-      amount = toDecimal(native);
-    } else {
-      const rate = input.rateAt(entry.tradedAt) ?? input.rateAt(current);
-
-      if (rate == null) {
-        throw new Error(`No USD/BRL rate available for ${entry.tradedAt}`);
-      }
-
-      amount = toDecimal(
-        convertMoney(native, entry.currency, input.displayCurrency, rate),
-      );
-    }
-
-    const elapsed = dayNumber(entry.tradedAt) - start;
-    const weight =
-      span <= 0
-        ? ZERO
-        : div(toDecimal(String(span - elapsed)), toDecimal(String(span)));
-
-    total = add(total, amount);
-    weighted = add(weighted, mul(amount, weight));
+    amount = toDecimal(
+      convertMoney(native, entry.currency, input.displayCurrency, rate),
+    );
   }
 
-  return { total, weighted };
+  const elapsed = dayNumber(entry.tradedAt) - start;
+  const weight =
+    span <= 0
+      ? ZERO
+      : div(toDecimal(String(span - elapsed)), toDecimal(String(span)));
+
+  flows.total = add(flows.total, amount);
+  flows.weighted = add(flows.weighted, mul(amount, weight));
+}
+
+/**
+ * Flows for every month of the window in one pass over the ledger. Month
+ * ranges are contiguous and ascending, so each trade belongs to at most one
+ * of them and the log never has to be re-scanned per month.
+ *
+ * `boundaries[i]` closes month `i`; `baselineAsOf` opens the first one.
+ */
+function monthFlowsByMonth(
+  input: PerformanceBuildInput,
+  baselineAsOf: string,
+  boundaries: readonly string[],
+): MonthFlows[] {
+  const ordered = [...input.transactions].sort((a, b) =>
+    a.tradedAt < b.tradedAt ? -1 : a.tradedAt > b.tradedAt ? 1 : 0,
+  );
+  const flows = boundaries.map<MonthFlows>(() => ({
+    total: ZERO,
+    weighted: ZERO,
+  }));
+  let index = 0;
+
+  // Trades at or before the baseline belong to no month of the window.
+  while (index < ordered.length && ordered[index].tradedAt <= baselineAsOf) {
+    index += 1;
+  }
+
+  let previous = baselineAsOf;
+
+  for (let month = 0; month < boundaries.length; month += 1) {
+    const current = boundaries[month];
+
+    while (index < ordered.length && ordered[index].tradedAt <= current) {
+      accumulateFlow(input, flows[month], ordered[index], previous, current);
+      index += 1;
+    }
+
+    previous = current;
+  }
+
+  return flows;
 }
 
 /**
@@ -488,7 +527,18 @@ export function buildPerformanceHistory(
     throw new Error("A performance window needs a baseline and one month");
   }
 
-  const baselineValuation = valueSnapshot(input, baseline);
+  // One walk of the ledger resolves every month end, and one more resolves
+  // every month's cash flows.
+  const consolidations = consolidatePositionsAtEach(
+    input.transactions,
+    input.snapshots.map((snapshot) => snapshot.asOf),
+  );
+  const flowsByMonth = monthFlowsByMonth(
+    input,
+    baseline.asOf,
+    window.map((snapshot) => snapshot.asOf),
+  );
+  const baselineValuation = valueSnapshot(input, baseline, consolidations[0]);
   const months: PerformanceMonth[] = [];
 
   let previous = baselineValuation;
@@ -503,9 +553,13 @@ export function buildPerformanceHistory(
   let worst: PerformanceMonthMark | null = null;
   let last = baselineValuation;
 
-  for (const date of window) {
-    const valuation = valueSnapshot(input, date);
-    const flows = monthFlows(input, previous.date.asOf, date.asOf);
+  for (const [monthIndex, date] of window.entries()) {
+    const valuation = valueSnapshot(
+      input,
+      date,
+      consolidations[monthIndex + 1],
+    );
+    const flows = flowsByMonth[monthIndex];
     const monthlyReturn = modifiedDietz(
       previous.marketValue,
       valuation.marketValue,

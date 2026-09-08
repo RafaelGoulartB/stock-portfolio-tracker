@@ -11,13 +11,23 @@ import {
 
 type CacheEntry = { quote: MarketQuote; expiresAt: number };
 type SeriesCacheEntry = { points: QuoteSeriesPoint[]; expiresAt: number };
+type FailureEntry = { ticker: string; message: string; expiresAt: number };
 
 const SPOT_TTL_MS = 15 * 60 * 1_000;
 const HISTORY_TTL_MS = 7 * 24 * 60 * 60 * 1_000;
 /** A running month keeps growing, so a series is refreshed a few times a day. */
 const SERIES_TTL_MS = 6 * 60 * 60 * 1_000;
+/**
+ * Remembering "this symbol has no data" avoids re-requesting every unquotable
+ * ticker on every screen load. That is the slowest path there is: an unknown
+ * symbol costs a full upstream round trip, up to the 10s timeout, every time.
+ * Kept short so a newly listed ticker starts working without a restart, and
+ * never applied to a transient failure.
+ */
+const FAILURE_TTL_MS = 10 * 60 * 1_000;
 const cache = new Map<string, CacheEntry>();
 const seriesCache = new Map<string, SeriesCacheEntry>();
+const failureCache = new Map<string, FailureEntry>();
 const pendingQuotes = new Map<string, Promise<MarketQuote>>();
 const pendingSeries = new Map<string, Promise<QuoteSeriesPoint[]>>();
 
@@ -29,6 +39,36 @@ function pruneExpired<T extends { expiresAt: number }>(cache: Map<string, T>) {
       cache.delete(key);
     }
   }
+}
+
+/** Replays a remembered "no data" answer, if one is still valid. */
+function cachedFailure(key: string): QuoteUnavailableError | null {
+  const hit = failureCache.get(key);
+
+  if (!hit) {
+    return null;
+  }
+
+  if (hit.expiresAt <= Date.now()) {
+    failureCache.delete(key);
+    return null;
+  }
+
+  return new QuoteUnavailableError(hit.ticker, hit.message);
+}
+
+/** Remembers a definitive "no data" answer; a transient failure is ignored. */
+function rememberFailure(key: string, ticker: string, error: unknown): void {
+  if (!(error instanceof QuoteUnavailableError) || error.transient) {
+    return;
+  }
+
+  pruneExpired(failureCache);
+  failureCache.set(key, {
+    ticker,
+    message: error.message,
+    expiresAt: Date.now() + FAILURE_TTL_MS,
+  });
 }
 
 const USER_AGENT =
@@ -127,13 +167,19 @@ async function fetchChart(
     throw new QuoteUnavailableError(
       ticker,
       error instanceof Error ? error.message : "Quote provider failed",
+      { transient: true },
     );
   }
 
   if (!response.ok) {
+    // Yahoo answers 404/400 for a symbol it does not know; anything else
+    // (429, 5xx) is about Yahoo, not about the ticker.
+    const unknownSymbol = response.status === 404 || response.status === 400;
+
     throw new QuoteUnavailableError(
       ticker,
       `Quote request failed (${response.status})`,
+      { transient: !unknownSymbol },
     );
   }
 
@@ -180,6 +226,12 @@ export class YahooProvider implements QuoteProvider {
       return hit.quote;
     }
 
+    const remembered = cachedFailure(key);
+
+    if (remembered) {
+      throw remembered;
+    }
+
     const pending = pendingQuotes.get(key);
     if (pending) {
       return pending;
@@ -204,6 +256,9 @@ export class YahooProvider implements QuoteProvider {
 
     try {
       return await result;
+    } catch (error) {
+      rememberFailure(key, request.ticker, error);
+      throw error;
     } finally {
       pendingQuotes.delete(key);
     }
@@ -232,6 +287,14 @@ export class YahooProvider implements QuoteProvider {
 
     if (hit && hit.expiresAt > Date.now()) {
       return hit.points;
+    }
+
+    if (!request.forceRefresh) {
+      const remembered = cachedFailure(key);
+
+      if (remembered) {
+        throw remembered;
+      }
     }
 
     const pending = pendingSeries.get(key);
@@ -276,6 +339,9 @@ export class YahooProvider implements QuoteProvider {
 
     try {
       return await result;
+    } catch (error) {
+      rememberFailure(key, request.ticker, error);
+      throw error;
     } finally {
       pendingSeries.delete(key);
     }
@@ -410,6 +476,7 @@ export class YahooProvider implements QuoteProvider {
 export function clearQuoteCache(): void {
   cache.clear();
   seriesCache.clear();
+  failureCache.clear();
   pendingQuotes.clear();
   pendingSeries.clear();
 }

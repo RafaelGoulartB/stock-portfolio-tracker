@@ -1,5 +1,5 @@
 import type { AssetClass, Currency } from "@portifolio-tracker/shared";
-import { useState } from "react";
+import { memo, useState } from "react";
 import { useSettings } from "@/lib/settings";
 import { cn } from "@/lib/utils";
 
@@ -107,7 +107,7 @@ export function assetLogoUrl(
   return `https://img.logo.dev/${identifier}?${parameters.toString()}`;
 }
 
-export function AssetLogo({
+function AssetLogoComponent({
   ticker,
   assetClass,
   currency,
@@ -176,3 +176,6 @@ export function LogoDevAttribution({ className }: { className?: string }) {
     </a>
   );
 }
+
+/** Memoized: one instance per table row, and its props are all primitives. */
+export const AssetLogo = memo(AssetLogoComponent);

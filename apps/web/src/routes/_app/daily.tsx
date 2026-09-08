@@ -34,7 +34,7 @@ import {
   formatTradeDate,
   pnlClassName,
 } from "@/lib/format";
-import { useFxQuote } from "@/lib/fx";
+import { useFxQuote, useFxRequest } from "@/lib/fx";
 import { useSettings } from "@/lib/settings";
 import { isFxRateRequired, queryErrorMessage } from "@/lib/trpcErrors";
 
@@ -51,6 +51,7 @@ function DailyPage() {
   const { i18n } = useLingui();
   const { displayCurrency, quoteSource, manualPrices } = useSettings();
   const fx = useFxQuote();
+  const fxRequest = useFxRequest();
   const sanitizedManualPrices = useMemo(
     () =>
       Object.fromEntries(
@@ -62,7 +63,7 @@ function DailyPage() {
   );
   const daily = trpc.positions.daily.useQuery({
     displayCurrency,
-    usdBrlRate: fx.effectiveRate,
+    ...fxRequest,
     quoteSource,
     manualPrices:
       quoteSource === "manual" && Object.keys(sanitizedManualPrices).length > 0

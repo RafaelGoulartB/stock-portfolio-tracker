@@ -73,36 +73,34 @@ async function nextSortOrder(userId: string): Promise<number> {
   return (row?.highest ?? 0) + 1;
 }
 
+/**
+ * Latest traded identity per ticker. `DISTINCT ON` keeps the resolution in
+ * PostgreSQL, so the categories screen no longer transfers the whole ledger
+ * just to read one row per ticker. `mergeAssetUniverse` sorts by ticker, so
+ * the row order this returns is not significant.
+ */
 async function loadTradedIdentities(
   userId: string,
 ): Promise<Omit<AssetRef, "traded">[]> {
   const rows = await db
-    .select({
+    .selectDistinctOn([transactions.ticker], {
       ticker: transactions.ticker,
       assetClass: transactions.assetClass,
       currency: transactions.currency,
-      tradedAt: transactions.tradedAt,
-      createdAt: transactions.createdAt,
     })
     .from(transactions)
     .where(eq(transactions.userId, userId))
-    .orderBy(desc(transactions.tradedAt), desc(transactions.createdAt));
+    .orderBy(
+      asc(transactions.ticker),
+      desc(transactions.tradedAt),
+      desc(transactions.createdAt),
+    );
 
-  const latest = new Map<string, Omit<AssetRef, "traded">>();
-
-  for (const row of rows) {
-    if (latest.has(row.ticker)) {
-      continue;
-    }
-
-    latest.set(row.ticker, {
-      ticker: row.ticker,
-      assetClass: normalizeAssetClass(row.assetClass),
-      currency: row.currency,
-    });
-  }
-
-  return [...latest.values()];
+  return rows.map((row) => ({
+    ticker: row.ticker,
+    assetClass: normalizeAssetClass(row.assetClass),
+    currency: row.currency,
+  }));
 }
 
 async function loadWatchedIdentities(

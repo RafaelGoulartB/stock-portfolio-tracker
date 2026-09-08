@@ -275,4 +275,125 @@ describe("YahooProvider", () => {
     expect(cachedRefresh).toEqual(refreshed);
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
+
+  it("remembers a definitive missing quote instead of asking again", async () => {
+    const fetchMock = stubFetch({ chart: { result: null, error: {} } });
+    vi.stubGlobal("fetch", fetchMock);
+    const provider = new YahooProvider();
+    const request = {
+      ticker: "NOPE",
+      assetClass: "stock_br" as const,
+      currency: "BRL" as const,
+    };
+
+    await expect(provider.getQuote(request)).rejects.toBeInstanceOf(
+      QuoteUnavailableError,
+    );
+    await expect(provider.getQuote(request)).rejects.toBeInstanceOf(
+      QuoteUnavailableError,
+    );
+
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it("remembers a 404 but retries a rate limit or outage", async () => {
+    const notFound = vi.fn(async () => ({
+      ok: false,
+      status: 404,
+      json: async () => ({}),
+    }));
+    vi.stubGlobal("fetch", notFound);
+    const provider = new YahooProvider();
+    const missing = {
+      ticker: "GONE",
+      assetClass: "stock_us" as const,
+      currency: "USD" as const,
+    };
+
+    await expect(provider.getQuote(missing)).rejects.toBeInstanceOf(
+      QuoteUnavailableError,
+    );
+    await expect(provider.getQuote(missing)).rejects.toBeInstanceOf(
+      QuoteUnavailableError,
+    );
+    expect(notFound).toHaveBeenCalledOnce();
+
+    const rateLimited = vi.fn(async () => ({
+      ok: false,
+      status: 429,
+      json: async () => ({}),
+    }));
+    vi.stubGlobal("fetch", rateLimited);
+    const throttled = {
+      ticker: "BUSY",
+      assetClass: "stock_us" as const,
+      currency: "USD" as const,
+    };
+
+    await expect(provider.getQuote(throttled)).rejects.toBeInstanceOf(
+      QuoteUnavailableError,
+    );
+    await expect(provider.getQuote(throttled)).rejects.toBeInstanceOf(
+      QuoteUnavailableError,
+    );
+    expect(rateLimited).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not remember a network failure", async () => {
+    const failing = vi.fn(async () => {
+      throw new Error("socket hang up");
+    });
+    vi.stubGlobal("fetch", failing);
+    const provider = new YahooProvider();
+    const request = {
+      ticker: "PETR4",
+      assetClass: "stock_br" as const,
+      currency: "BRL" as const,
+    };
+
+    await expect(provider.getQuote(request)).rejects.toBeInstanceOf(
+      QuoteUnavailableError,
+    );
+    await expect(provider.getQuote(request)).rejects.toBeInstanceOf(
+      QuoteUnavailableError,
+    );
+
+    expect(failing).toHaveBeenCalledTimes(2);
+  });
+
+  it("lets a forced refresh bypass a remembered series failure", async () => {
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ chart: { result: null } }), {
+          status: 200,
+        }),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify(
+            chartFixture([{ timestamp: unixDay("2026-09-04"), close: 51.4 }]),
+          ),
+          { status: 200 },
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const provider = new YahooProvider();
+    const request = {
+      ticker: "PETR4",
+      assetClass: "stock_br" as const,
+      currency: "BRL" as const,
+      start: "2026-08-01",
+      end: "2026-09-06",
+    };
+
+    await expect(provider.getSeries(request)).rejects.toBeInstanceOf(
+      QuoteUnavailableError,
+    );
+    // Without the bypass the user's explicit refresh would replay the failure.
+    await expect(
+      provider.getSeries({ ...request, forceRefresh: true }),
+    ).resolves.toEqual([{ asOf: "2026-09-04", close: "51.40000000" }]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
 });

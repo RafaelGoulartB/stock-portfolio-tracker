@@ -2,7 +2,7 @@ import { t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import type { AssetReview } from "@portifolio-tracker/shared";
 import { Eye } from "lucide-react";
-import { useState } from "react";
+import { memo, useState } from "react";
 import {
   ReviewEditorForm,
   type ReviewSaveInput,
@@ -121,7 +121,7 @@ export type QuarterReviewCellProps = {
  * right of the source cell and a matching bar (plus wash/icon) on the left
  * of the following cell, both in that review's grade color.
  */
-export function QuarterReviewCell({
+function QuarterReviewCellComponent({
   ticker,
   quarter,
   review,
@@ -242,3 +242,10 @@ export function QuarterReviewCell({
     </Popover>
   );
 }
+
+/**
+ * Memoized: the quarter grid renders `rows x quarters` cells, so a container
+ * re-render (typing in the search box, re-sorting) would otherwise rebuild all
+ * of them even though a cell only depends on its own review.
+ */
+export const QuarterReviewCell = memo(QuarterReviewCellComponent);

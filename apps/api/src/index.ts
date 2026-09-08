@@ -3,12 +3,17 @@ import { trpcServer } from "@hono/trpc-server";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { sql } from "./db";
+import { streamingCompress } from "./lib/compression";
 import { deleteExpiredSessions } from "./lib/session";
 import { dataBackupRoutes } from "./routes/data-backup";
 import { createContext } from "./trpc/context";
 import { appRouter } from "./trpc/router";
 
 const app = new Hono();
+
+// Outermost, so nothing else touches the response after its body has been
+// handed to gzip.
+app.use("*", streamingCompress());
 
 app.use(
   "*",

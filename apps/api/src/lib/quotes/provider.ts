@@ -56,11 +56,22 @@ export type QuoteSeriesPoint = {
 /** Thrown when a provider has no price for a ticker (delisted, weekend gap, unsupported class). Routers catch this per ticker so one gap never fails a whole snapshot. */
 export class QuoteUnavailableError extends Error {
   readonly ticker: string;
+  /**
+   * `true` when the failure says nothing about the symbol itself (timeout,
+   * rate limit, provider outage). Only a non-transient failure may be cached:
+   * retrying a transient one is the whole point of a user refresh.
+   */
+  readonly transient: boolean;
 
-  constructor(ticker: string, message?: string) {
+  constructor(
+    ticker: string,
+    message?: string,
+    options?: { transient?: boolean },
+  ) {
     super(message ?? `No quote available for ${ticker}`);
     this.name = "QuoteUnavailableError";
     this.ticker = ticker;
+    this.transient = options?.transient ?? false;
   }
 }
 

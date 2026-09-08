@@ -21,6 +21,31 @@ const moneyFormatters = new Map<string, Intl.NumberFormat>();
 const integerFormatters = new Map<string, Intl.NumberFormat>();
 const dateFormatters = new Map<string, Intl.DateTimeFormat>();
 const decimalSeparators = new Map<string, string>();
+const numberFormatters = new Map<string, Intl.NumberFormat>();
+
+/**
+ * Constructing an `Intl.NumberFormat` costs roughly fifty times more than
+ * formatting with an existing one, and a portfolio table formats hundreds of
+ * percentages per render. `variant` must identify the options uniquely.
+ */
+function numberFormatter(
+  locale: string,
+  variant: string,
+  options: Intl.NumberFormatOptions,
+): Intl.NumberFormat {
+  const key = `${locale}|${variant}`;
+  const cached = numberFormatters.get(key);
+
+  if (cached) {
+    return cached;
+  }
+
+  const formatter = new Intl.NumberFormat(locale, options);
+
+  numberFormatters.set(key, formatter);
+
+  return formatter;
+}
 
 function activeLocale(fallback = "en"): string {
   return i18n.locale ?? fallback;
@@ -141,7 +166,7 @@ export function formatWeight(
   value: string,
   locale: string = activeLocale(),
 ): string {
-  return new Intl.NumberFormat(locale, {
+  return numberFormatter(locale, "weight", {
     style: "percent",
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
@@ -157,7 +182,7 @@ export function formatWeightPrecise(
   value: string,
   locale: string = activeLocale(),
 ): string {
-  return new Intl.NumberFormat(locale, {
+  return numberFormatter(locale, "weightPrecise", {
     style: "percent",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -169,7 +194,7 @@ export function formatSignedWeightPrecise(
   value: string,
   locale: string = activeLocale(),
 ): string {
-  return new Intl.NumberFormat(locale, {
+  return numberFormatter(locale, "signedWeightPrecise", {
     style: "percent",
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
@@ -182,7 +207,7 @@ export function formatSignedPercent(
   value: string,
   locale: string = activeLocale(),
 ): string {
-  return new Intl.NumberFormat(locale, {
+  return numberFormatter(locale, "signedPercent", {
     style: "percent",
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
@@ -196,7 +221,7 @@ export function formatCompactMoney(
   currency: CurrencyCode = DEFAULT_CURRENCY,
   locale: string = activeLocale(),
 ): string {
-  return new Intl.NumberFormat(locale, {
+  return numberFormatter(locale, `compactMoney|${currency}`, {
     style: "currency",
     currency,
     notation: "compact",
@@ -209,7 +234,7 @@ export function formatPercentAxis(
   value: number,
   locale: string = activeLocale(),
 ): string {
-  return new Intl.NumberFormat(locale, {
+  return numberFormatter(locale, "percentAxis", {
     style: "percent",
     maximumFractionDigits: 1,
   }).format(value);

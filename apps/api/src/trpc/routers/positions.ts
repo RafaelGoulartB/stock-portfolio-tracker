@@ -33,6 +33,7 @@ import {
   type MarketQuote,
   QuoteUnavailableError,
 } from "../../lib/quotes";
+import { resolveUsdBrlRate } from "../fx-rate";
 import { protectedProcedure, router } from "../trpc";
 import { loadStoredManualPrices, loadValuedPortfolio } from "../valuation";
 import { finder } from "./deep-finder";
@@ -73,10 +74,12 @@ export const positionsRouter = router({
   list: protectedProcedure
     .input(positionsListInput)
     .query(async ({ ctx, input }) => {
-      const { positions, missing } = await loadValuedPortfolio({
+      const { positions, missing, usdBrlRate } = await loadValuedPortfolio({
         userId: ctx.user.id,
         displayCurrency: input.displayCurrency,
         usdBrlRate: input.usdBrlRate,
+        fxSource: input.fxSource,
+        manualRate: input.manualRate,
         quoteSource: input.quoteSource,
         manualPrices: input.manualPrices,
         asOf: input.asOf,
@@ -85,7 +88,7 @@ export const positionsRouter = router({
       const summary = summarizePositions(
         positions,
         input.displayCurrency,
-        input.usdBrlRate ?? null,
+        usdBrlRate,
         input.asOf ?? null,
       );
 
@@ -102,7 +105,7 @@ export const positionsRouter = router({
         summary,
         fx: {
           displayCurrency: input.displayCurrency,
-          usdBrlRate: input.usdBrlRate ?? null,
+          usdBrlRate,
         },
         quotes: {
           source: input.quoteSource,
@@ -131,8 +134,12 @@ export const positionsRouter = router({
         native.some(
           (position) => position.currency !== input.displayCurrency,
         ) || input.displayCurrency !== "BRL";
+      const usdBrlRate =
+        needsRate && !input.usdBrlRate
+          ? await resolveUsdBrlRate({ ...input, asOf: snapshotDate })
+          : input.usdBrlRate;
 
-      if (needsRate && !input.usdBrlRate) {
+      if (needsRate && !usdBrlRate) {
         throw new TRPCError({
           code: "BAD_REQUEST",
           message:
@@ -145,7 +152,7 @@ export const positionsRouter = router({
         converted = convertPositions(
           native,
           input.displayCurrency,
-          input.usdBrlRate ?? null,
+          usdBrlRate ?? null,
         );
       } catch {
         throw new TRPCError({
@@ -207,11 +214,11 @@ export const positionsRouter = router({
           converted,
           quotes,
           input.displayCurrency,
-          input.usdBrlRate ?? null,
+          usdBrlRate ?? null,
         ).filter((position) => Number(position.quantity) > 0),
         cashRows[0]?.amount ?? "0",
         input.displayCurrency,
-        input.usdBrlRate ?? null,
+        usdBrlRate ?? null,
       );
 
       let previousComparableValue = ZERO;
@@ -242,7 +249,7 @@ export const positionsRouter = router({
           previousNativeValue,
           position.currency,
           input.displayCurrency,
-          input.usdBrlRate ?? "1",
+          usdBrlRate ?? "1",
         );
         const change = sub(
           toDecimal(position.convertedMarketValue),
@@ -281,7 +288,7 @@ export const positionsRouter = router({
       const portfolio = summarizePositions(
         valued,
         input.displayCurrency,
-        input.usdBrlRate ?? null,
+        usdBrlRate ?? null,
       );
       const quoteDates = [...quotes.values()].map((quote) => quote.asOf).sort();
 
@@ -302,7 +309,7 @@ export const positionsRouter = router({
           comparablePositions: advancing + declining + unchanged,
           openPositions: valued.length,
           asOf: quoteDates.at(-1) ?? null,
-          usdBrlRate: input.usdBrlRate ?? null,
+          usdBrlRate: usdBrlRate ?? null,
         },
         quotes: {
           source: input.quoteSource,

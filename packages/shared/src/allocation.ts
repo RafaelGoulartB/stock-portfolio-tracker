@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { currencySchema } from "./currency";
 import { nonNegativeDecimal, positiveDecimal, signedDecimal } from "./decimal";
+import { fxResolutionFields } from "./fx";
 import { quoteSourceSchema } from "./quotes";
 import { gradeSchema, scoreBreakdownSchema } from "./score";
 import { assetClassSchema, tickerSchema } from "./transactions";
@@ -89,6 +90,7 @@ export const allocationListInput = z.object({
   displayCurrency: currencySchema.default("BRL"),
   /** Required whenever the portfolio mixes currencies. */
   usdBrlRate: positiveDecimal.optional(),
+  ...fxResolutionFields,
   quoteSource: quoteSourceSchema.default("yahoo"),
   /** Per-ticker native prices for `manual` quotes, keyed by upper-case ticker. */
   manualPrices: z.record(z.string(), positiveDecimal).optional(),

@@ -58,10 +58,11 @@ import {
   QuoteUnavailableError,
 } from "../../lib/quotes";
 import { getNextResults } from "../../lib/results";
+import { resolveUsdBrlRate } from "../fx-rate";
 import { protectedProcedure, router } from "../trpc";
 import { loadValuedPortfolio } from "../valuation";
 import { buildFinderResult, type FinderPosition } from "./deep-finder";
-import { loadTransactionsForTickers } from "./transactions";
+import { loadTransactions, loadTransactionsForTickers } from "./transactions";
 
 const API_TIME_ZONE = "America/Sao_Paulo";
 
@@ -322,10 +323,15 @@ async function loadAllocationFinder(
     return (categoryByTicker.get(asset.ticker) ?? null) === input.categoryId;
   });
 
-  if (
-    !input.usdBrlRate &&
-    selected.some((asset) => asset.currency !== input.displayCurrency)
-  ) {
+  const needsRate = selected.some(
+    (asset) => asset.currency !== input.displayCurrency,
+  );
+  const usdBrlRate =
+    needsRate && !input.usdBrlRate
+      ? await resolveUsdBrlRate(input)
+      : input.usdBrlRate;
+
+  if (needsRate && !usdBrlRate) {
     throw new TRPCError({
       code: "BAD_REQUEST",
       message: "An USD/BRL rate is required to compare mixed currencies",
@@ -355,7 +361,7 @@ async function loadAllocationFinder(
   return buildFinderResult({
     positions,
     missing: [],
-    input: { ...input, manualPrices: requestManuals },
+    input: { ...input, usdBrlRate, manualPrices: requestManuals },
     reuseSeriesAcrossWindows: true,
     deriveCurrentFromSeries: true,
     forceSeriesRefresh,
@@ -394,13 +400,15 @@ export const allocationRouter = router({
   list: protectedProcedure
     .input(allocationListInput)
     .query(async ({ ctx, input }) => {
-      const [assets, reviews, scorePolicy] = await Promise.all([
+      const [assets, reviews, scorePolicy, history] = await Promise.all([
         loadAssets(ctx.user.id),
         loadReviews(ctx.user.id),
         loadScoreConfig(ctx.user.id),
+        loadTransactions(ctx.user.id),
       ]);
+      const stored = storedManualPrices(assets);
       const requestManuals = {
-        ...storedManualPrices(assets),
+        ...stored,
         ...Object.fromEntries(
           Object.entries(input.manualPrices ?? {}).map(([ticker, price]) => [
             ticker.toUpperCase(),
@@ -408,25 +416,35 @@ export const allocationRouter = router({
           ]),
         ),
       };
-      const portfolio = await loadValuedPortfolio({
-        userId: ctx.user.id,
-        displayCurrency: input.displayCurrency,
-        usdBrlRate: input.usdBrlRate,
-        quoteSource: input.quoteSource,
-        manualPrices: requestManuals,
-        storedManualPrices: storedManualPrices(assets),
-      });
-
+      /**
+       * Which tickers hold money depends on the ledger alone, not on any
+       * quote, so the watch-only prices can be fetched in the same upstream
+       * wave as the portfolio instead of a second one after it.
+       */
       const invested = new Set(
-        portfolio.positions
+        consolidatePositions(history)
           .filter((position) => Number(position.quantity) > 0)
           .map((position) => position.ticker),
       );
-      const watch = await quoteWatchOnly(
-        assets.filter((asset) => !invested.has(asset.ticker)),
-        input.quoteSource,
-        requestManuals,
-      );
+      const [portfolio, watch] = await Promise.all([
+        loadValuedPortfolio({
+          userId: ctx.user.id,
+          displayCurrency: input.displayCurrency,
+          usdBrlRate: input.usdBrlRate,
+          fxSource: input.fxSource,
+          manualRate: input.manualRate,
+          quoteSource: input.quoteSource,
+          manualPrices: requestManuals,
+          storedManualPrices: stored,
+          transactions: history,
+        }),
+        quoteWatchOnly(
+          assets.filter((asset) => !invested.has(asset.ticker)),
+          input.quoteSource,
+          requestManuals,
+        ),
+      ]);
+      const usdBrlRate = portfolio.usdBrlRate;
       const manualValuedTickers = new Set([
         ...portfolio.manual,
         ...watch.manual,
@@ -439,7 +457,7 @@ export const allocationRouter = router({
         lastContributionByTicker: lastContributions(portfolio.transactions),
         watchQuotes: watch.quotes,
         displayCurrency: input.displayCurrency,
-        usdBrlRate: input.usdBrlRate ?? null,
+        usdBrlRate,
         manualValuedTickers,
         today: today(),
         config: scorePolicy.config,
@@ -455,11 +473,9 @@ export const allocationRouter = router({
         scoreConfig: scorePolicy.config,
         fx: {
           displayCurrency: input.displayCurrency,
-          usdBrlRate: input.usdBrlRate ?? null,
+          usdBrlRate,
           executionUsdBrlRate:
-            input.usdBrlRate === undefined
-              ? null
-              : usdBrlExecutionRate(input.usdBrlRate),
+            usdBrlRate === null ? null : usdBrlExecutionRate(usdBrlRate),
           executionSpread: FX_EXECUTION_SPREAD,
           executionIof: FX_EXECUTION_IOF,
         },

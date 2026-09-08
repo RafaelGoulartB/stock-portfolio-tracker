@@ -1,5 +1,6 @@
 import type {
   Currency,
+  FxSource,
   Position,
   QuoteSource,
   ValuedPosition,
@@ -22,6 +23,7 @@ import {
   getQuoteWithManualFallback,
   QuoteUnavailableError,
 } from "../lib/quotes";
+import { resolveUsdBrlRate } from "./fx-rate";
 import { loadTransactions } from "./routers/transactions";
 
 export type ValuationRequest = {
@@ -29,11 +31,20 @@ export type ValuationRequest = {
   displayCurrency: Currency;
   /** Required whenever the portfolio mixes currencies. */
   usdBrlRate?: string;
+  /** Used to resolve the rate here when `usdBrlRate` is absent. */
+  fxSource?: FxSource;
+  /** Only meaningful when `fxSource` is `manual`. */
+  manualRate?: string;
   quoteSource: QuoteSource;
   /** Per-ticker native prices for the `manual` source, any casing. */
   manualPrices?: Record<string, string>;
   /** Already-loaded persisted manual prices, used by Allocation to avoid a duplicate query. */
   storedManualPrices?: Record<string, string>;
+  /**
+   * Already-loaded trade log. A caller that needs the ledger for its own
+   * reasons passes it here so the account history is read once per request.
+   */
+  transactions?: ConsolidationInput[];
   /** `YYYY-MM-DD` snapshot; omitted values the live portfolio. */
   asOf?: string;
 };
@@ -46,6 +57,11 @@ export type ValuationResult = {
   missing: string[];
   /** Tickers valued from a stored/client manual price after the live quote failed. */
   manual: string[];
+  /**
+   * Rate actually used to consolidate, whether it came from the caller or was
+   * resolved here. `null` when the portfolio needed no conversion.
+   */
+  usdBrlRate: string | null;
 };
 
 /** Stored native per-unit values used when a market provider cannot quote. */
@@ -80,7 +96,7 @@ export async function loadValuedPortfolio(
   request: ValuationRequest,
 ): Promise<ValuationResult> {
   const [transactions, storedManualPrices, cashRows] = await Promise.all([
-    loadTransactions(request.userId),
+    request.transactions ?? loadTransactions(request.userId),
     request.storedManualPrices ?? loadStoredManualPrices(request.userId),
     request.asOf
       ? Promise.resolve([])
@@ -98,7 +114,14 @@ export async function loadValuedPortfolio(
     native.some((position) => position.currency !== request.displayCurrency) ||
     (includeCash && request.displayCurrency !== "BRL");
 
-  if (needsRate && !request.usdBrlRate) {
+  // Resolved only when the portfolio actually needs a conversion, so a
+  // single-currency account never triggers an upstream FX request.
+  const usdBrlRate =
+    needsRate && !request.usdBrlRate
+      ? await resolveUsdBrlRate(request)
+      : request.usdBrlRate;
+
+  if (needsRate && !usdBrlRate) {
     throw new TRPCError({
       code: "BAD_REQUEST",
       message: "An USD/BRL rate is required to consolidate mixed currencies",
@@ -111,7 +134,7 @@ export async function loadValuedPortfolio(
     converted = convertPositions(
       native,
       request.displayCurrency,
-      request.usdBrlRate ?? null,
+      usdBrlRate ?? null,
     );
   } catch {
     throw new TRPCError({
@@ -183,7 +206,7 @@ export async function loadValuedPortfolio(
     converted,
     quotes,
     request.displayCurrency,
-    request.usdBrlRate ?? null,
+    usdBrlRate ?? null,
   );
 
   return {
@@ -193,10 +216,11 @@ export async function loadValuedPortfolio(
           valued,
           cashRows[0]?.amount ?? "0",
           request.displayCurrency,
-          request.usdBrlRate ?? null,
+          usdBrlRate ?? null,
         )
       : valued,
     missing: missing.sort(),
     manual: manual.sort(),
+    usdBrlRate: usdBrlRate ?? null,
   };
 }

@@ -82,27 +82,28 @@ export function cashPosition(
     displayCurrency,
     usdBrlRate ?? "1",
   );
+  const nativeAmount = formatDecimal(toDecimal(amountBrl), MONEY_PLACES);
 
   return {
     ticker: CASH_TICKER,
     assetClass: "cash",
     currency: "BRL",
     quantity: "1.00000000",
-    averagePrice: "0.00",
-    investedCost: "0.00",
+    averagePrice: nativeAmount,
+    investedCost: nativeAmount,
     realizedPnl: "0.00",
     transactionCount: 0,
     lastTradedAt: "",
     displayCurrency,
-    convertedAveragePrice: "0.00",
-    convertedInvestedCost: "0.00",
+    convertedAveragePrice: converted,
+    convertedInvestedCost: converted,
     convertedRealizedPnl: "0.00",
-    marketPrice: null,
-    marketValue: formatDecimal(toDecimal(amountBrl), MONEY_PLACES),
+    marketPrice: nativeAmount,
+    marketValue: nativeAmount,
     convertedMarketValue: converted,
-    unrealizedPnl: null,
-    convertedUnrealizedPnl: null,
-    unrealizedPnlPercent: null,
+    unrealizedPnl: "0.00",
+    convertedUnrealizedPnl: "0.00",
+    unrealizedPnlPercent: "0.000000",
     weight: null,
     quoteAsOf: null,
     quoteMissing: false,
@@ -271,35 +272,35 @@ function applyTrade(current: Accumulator, entry: ConsolidationInput): Decimal {
   return realized;
 }
 
-/**
- * Consolidates a transaction log into one position per ticker and currency
- * using the moving average cost method: buys raise the average price, sells
- * release cost at the current average and realize the difference as P&L.
- *
- * Each currency is consolidated in isolation so BRL and USD costs are never
- * averaged together. Writes are additionally guarded by a one-currency-per
- * ticker rule, but grouping here stays (ticker, currency) as defense in
- * depth.
- */
-export function consolidatePositions(
-  input: readonly ConsolidationInput[],
-): Omit<
+type ConsolidatedPosition = Omit<
   Position,
   | "displayCurrency"
   | "convertedAveragePrice"
   | "convertedInvestedCost"
   | "convertedRealizedPnl"
->[] {
-  const byKey = new Map<string, Accumulator>();
+>;
 
-  for (const entry of [...input].sort(byTradeOrder)) {
-    const key = `${entry.ticker}|${entry.currency}`;
-    const current = byKey.get(key) ?? emptyAccumulator(entry);
-    applyTrade(current, entry);
-    byKey.set(key, current);
+/**
+ * The trade log already arrives ordered from SQL, so the common case only
+ * pays an O(n) check instead of copying and re-sorting the whole ledger.
+ */
+function inTradeOrder(
+  input: readonly ConsolidationInput[],
+): readonly ConsolidationInput[] {
+  for (let index = 1; index < input.length; index += 1) {
+    if (byTradeOrder(input[index - 1], input[index]) > 0) {
+      return [...input].sort(byTradeOrder);
+    }
   }
 
-  return [...byKey.values()]
+  return input;
+}
+
+/** Turns running accumulators into the sorted, formatted position list. */
+function projectPositions(
+  accumulators: Iterable<Accumulator>,
+): ConsolidatedPosition[] {
+  return [...accumulators]
     .map((position) => ({
       ticker: position.ticker,
       assetClass: position.assetClass,
@@ -316,6 +317,71 @@ export function consolidatePositions(
         a.ticker.localeCompare(b.ticker) ||
         a.currency.localeCompare(b.currency),
     );
+}
+
+/**
+ * Consolidates a transaction log into one position per ticker and currency
+ * using the moving average cost method: buys raise the average price, sells
+ * release cost at the current average and realize the difference as P&L.
+ *
+ * Each currency is consolidated in isolation so BRL and USD costs are never
+ * averaged together. Writes are additionally guarded by a one-currency-per
+ * ticker rule, but grouping here stays (ticker, currency) as defense in
+ * depth.
+ */
+export function consolidatePositions(
+  input: readonly ConsolidationInput[],
+): ConsolidatedPosition[] {
+  const byKey = new Map<string, Accumulator>();
+
+  for (const entry of inTradeOrder(input)) {
+    const key = `${entry.ticker}|${entry.currency}`;
+    const current = byKey.get(key) ?? emptyAccumulator(entry);
+    applyTrade(current, entry);
+    byKey.set(key, current);
+  }
+
+  return projectPositions(byKey.values());
+}
+
+/**
+ * Consolidated positions as they stood at each of `asOfDates`, which must be
+ * ascending. The ledger is walked once and every cut-off reads the running
+ * accumulators, instead of re-consolidating the whole history per date.
+ *
+ * Equivalent to calling {@link consolidatePositions} on
+ * {@link filterTransactionsByAsOf} for each date: filtering by `tradedAt` is
+ * exactly a prefix of the trade-ordered ledger, because trade order is keyed
+ * on `tradedAt` first.
+ */
+export function consolidatePositionsAtEach(
+  input: readonly ConsolidationInput[],
+  asOfDates: readonly string[],
+): ConsolidatedPosition[][] {
+  const ordered = inTradeOrder(input);
+  const byKey = new Map<string, Accumulator>();
+  const snapshots: ConsolidatedPosition[][] = [];
+  let index = 0;
+
+  for (const asOf of asOfDates) {
+    while (index < ordered.length) {
+      const entry = ordered[index];
+
+      if (entry.tradedAt > asOf) {
+        break;
+      }
+
+      const key = `${entry.ticker}|${entry.currency}`;
+      const current = byKey.get(key) ?? emptyAccumulator(entry);
+      applyTrade(current, entry);
+      byKey.set(key, current);
+      index += 1;
+    }
+
+    snapshots.push(projectPositions(byKey.values()));
+  }
+
+  return snapshots;
 }
 
 /**
@@ -542,11 +608,9 @@ export function summarizePositions(
         totalMarketValue = add(totalMarketValue, toDecimal(marketValue));
         // Fixed income is a user-maintained balance, not a quoted investment.
         // Its value belongs to the portfolio total, but never to a calculated
-        // return or cost-basis comparison.
-        if (
-          position.assetClass !== "fixed_income" &&
-          position.assetClass !== "cash"
-        ) {
+        // return or cost-basis comparison. Cash carries equal cost and market
+        // value, so it belongs in the return base with a zero result.
+        if (position.assetClass !== "fixed_income") {
           quotedInvestedCost = add(
             quotedInvestedCost,
             toDecimal(position.convertedInvestedCost),
@@ -570,7 +634,6 @@ export function summarizePositions(
   const returnEligibleMarketValue = positions.reduce((total, position) => {
     if (
       position.assetClass === "fixed_income" ||
-      position.assetClass === "cash" ||
       !("convertedMarketValue" in position) ||
       position.convertedMarketValue === null
     ) {

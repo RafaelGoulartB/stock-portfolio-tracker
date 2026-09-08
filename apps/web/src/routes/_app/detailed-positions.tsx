@@ -60,7 +60,7 @@ import {
   formatWeight,
   pnlClassName,
 } from "@/lib/format";
-import { useFxQuote } from "@/lib/fx";
+import { useFxQuote, useFxRequest } from "@/lib/fx";
 import { formatMonthLabel, lastTwelveMonths } from "@/lib/months";
 import { useSettings } from "@/lib/settings";
 import { isFxRateRequired, queryErrorMessage } from "@/lib/trpcErrors";
@@ -169,6 +169,7 @@ function DetailedPositionsPage() {
   });
   const selected = months.find((month) => month.key === monthKey) ?? months[0];
   const fx = useFxQuote(selected?.asOf);
+  const fxRequest = useFxRequest();
 
   const sanitizedManualPrices = useMemo(
     () =>
@@ -182,7 +183,7 @@ function DetailedPositionsPage() {
 
   const positions = trpc.positions.list.useQuery({
     displayCurrency,
-    usdBrlRate: fx.effectiveRate,
+    ...fxRequest,
     asOf: selected?.asOf ?? undefined,
     quoteSource,
     manualPrices:
@@ -656,12 +657,7 @@ function PositionCell({
         );
       break;
     case "averagePrice":
-      content =
-        position.assetClass === "cash" ? (
-          <Dash />
-        ) : (
-          formatMoney(position.averagePrice, position.currency)
-        );
+      content = formatMoney(position.averagePrice, position.currency);
       break;
     case "investedCost":
       content = formatMoney(
@@ -671,7 +667,7 @@ function PositionCell({
       break;
     case "marketPrice":
       content =
-        position.assetClass === "cash" || position.marketPrice == null ? (
+        position.marketPrice == null ? (
           <Dash missing={missing} />
         ) : (
           formatMoney(position.marketPrice, position.currency)

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { currencySchema } from "./currency";
 import { isoDate, positiveDecimal } from "./decimal";
+import { fxResolutionFields } from "./fx";
 
 /** Dividend sources are independent from price sources and can evolve separately. */
 export const DIVIDEND_SOURCE_IDS = ["auto", "yahoo", "alpha_vantage"] as const;
@@ -28,6 +29,7 @@ export const dividendHistoryInput = z.object({
   displayCurrency: currencySchema.default("BRL"),
   /** BRL per USD, used only to consolidate mixed-currency income. */
   usdBrlRate: positiveDecimal.optional(),
+  ...fxResolutionFields,
 });
 
 export type DividendHistoryInput = z.input<typeof dividendHistoryInput>;

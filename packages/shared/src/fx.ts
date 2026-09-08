@@ -49,11 +49,28 @@ export const getFxRateInput = z.object({
 
 export type GetFxRateInput = z.input<typeof getFxRateInput>;
 
+/**
+ * Lets the server resolve USD/BRL itself when the caller sends no explicit
+ * `usdBrlRate`, the way `performance.history` already does.
+ *
+ * This removes a client waterfall: a screen no longer has to fetch the rate,
+ * wait, and only then ask for its portfolio. `usdBrlRate` still wins when
+ * present, so a caller that already holds a rate (a write dialog, for
+ * instance) keeps full control of the number used.
+ */
+export const fxResolutionFields = {
+  /** Provider used when `usdBrlRate` is absent. */
+  fxSource: fxSourceSchema.optional(),
+  /** Required when `fxSource` is `manual` and no `usdBrlRate` is given. */
+  manualRate: positiveDecimal.optional(),
+} as const;
+
 /** Consolidation target: every position is shown converted to this. */
 export const positionsListInput = z.object({
   displayCurrency: currencySchema.default("BRL"),
   /** BRL per 1 USD. Required when holdings span both currencies. */
   usdBrlRate: positiveDecimal.optional(),
+  ...fxResolutionFields,
   /**
    * Snapshot date (`YYYY-MM-DD`, month-end for past months). Only trades on
    * or before this day consolidate; quotes resolve at its close. Omitted
