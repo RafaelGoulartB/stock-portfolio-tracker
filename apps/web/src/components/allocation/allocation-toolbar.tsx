@@ -6,13 +6,17 @@ import {
   ChevronLeft,
   ChevronRight,
   RotateCcw,
-  Search,
   SlidersHorizontal,
 } from "lucide-react";
 import type { ReactNode } from "react";
+import {
+  TableSearch,
+  TableSegmentedOption,
+  TableToolbar,
+  TableToolbarEnd,
+} from "@/components/table-toolbar";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Popover,
@@ -32,7 +36,6 @@ import {
   type AllocationFilterState,
   AllocationFiltersButton,
   type CategoryOption,
-  SegmentedOption,
 } from "./allocation-filters";
 import {
   ALLOCATION_COLUMNS,
@@ -130,24 +133,17 @@ export function AllocationToolbar({
   const { i18n } = useLingui();
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <div className="relative min-w-48 flex-1 sm:max-w-xs">
-        <Search
-          className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
-          aria-hidden="true"
-        />
-        <Input
-          value={search}
-          onChange={(event) => onSearchChange(event.target.value)}
-          aria-label={i18n._(
-            t({ id: "allocation.searchLabel", message: "Search assets" }),
-          )}
-          placeholder={i18n._(
-            t({ id: "allocation.search", message: "Search ticker…" }),
-          )}
-          className="h-8 pl-8"
-        />
-      </div>
+    <TableToolbar>
+      <TableSearch
+        value={search}
+        onChange={(event) => onSearchChange(event.target.value)}
+        ariaLabel={i18n._(
+          t({ id: "allocation.searchLabel", message: "Search assets" }),
+        )}
+        placeholder={i18n._(
+          t({ id: "allocation.search", message: "Search ticker…" }),
+        )}
+      />
 
       <AllocationFiltersButton
         filters={filters}
@@ -162,7 +158,7 @@ export function AllocationToolbar({
         onFreeOrderChange={onFreeOrderChange}
       />
 
-      <div className="ml-auto flex items-center gap-2">
+      <TableToolbarEnd>
         <QuarterWindow
           quarterStart={quarterStart}
           quarterEnd={quarterEnd}
@@ -177,8 +173,8 @@ export function AllocationToolbar({
           freeOrder={freeOrder}
           onFreeOrderChange={onFreeOrderChange}
         />
-      </div>
-    </div>
+      </TableToolbarEnd>
+    </TableToolbar>
   );
 }
 
@@ -262,13 +258,13 @@ function QuarterWindow({
             </legend>
             <div className="grid grid-cols-4 gap-0.5 rounded-md bg-muted p-0.5">
               {QUARTER_COUNTS.map((count) => (
-                <SegmentedOption
+                <TableSegmentedOption
                   key={count}
                   selected={count === quarterCount}
                   onSelect={() => onQuarterCountChange(count)}
                 >
                   {count}
-                </SegmentedOption>
+                </TableSegmentedOption>
               ))}
             </div>
           </fieldset>
@@ -375,7 +371,7 @@ function DisplayMenu({
           </legend>
           <div className="grid grid-cols-3 gap-0.5 rounded-md bg-muted p-0.5">
             {presets.map((preset) => (
-              <SegmentedOption
+              <TableSegmentedOption
                 key={preset.id}
                 selected={matchesPreset(preset.id)}
                 onSelect={() =>
@@ -383,7 +379,7 @@ function DisplayMenu({
                 }
               >
                 {preset.label}
-              </SegmentedOption>
+              </TableSegmentedOption>
             ))}
           </div>
         </fieldset>

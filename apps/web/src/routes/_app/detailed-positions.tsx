@@ -1,42 +1,30 @@
-import { t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import { positiveDecimal } from "@portifolio-tracker/shared";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ChevronDown, Columns3, Plus, RotateCcw, Search } from "lucide-react";
+import { Plus } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
   columnLabels,
   initialColumns,
-  PRESETS,
-  type PresetName,
   persistColumns,
 } from "@/components/detailed-positions/columns";
 import { PositionsTable } from "@/components/detailed-positions/positions-table";
 import { comparePositions } from "@/components/detailed-positions/sorting";
 import {
+  DetailedPositionsToolbar,
   ErrorCard,
   MonthSelector,
   TableSkeleton,
 } from "@/components/detailed-positions/toolbar";
-import {
-  COLUMN_IDS,
-  type ColumnId,
-  type SortState,
+import type {
+  ColumnId,
+  SortState,
 } from "@/components/detailed-positions/types";
 import { PageContent } from "@/components/page-content";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/api";
+import { CATEGORY_ALL, matchesCategory } from "@/lib/category-filter";
 import { useFxQuote, useFxRequest } from "@/lib/fx";
 import { lastTwelveMonths } from "@/lib/months";
 import { useSettings } from "@/lib/settings";
@@ -52,7 +40,7 @@ function DetailedPositionsPage() {
   const months = useMemo(() => lastTwelveMonths(), []);
   const [monthKey, setMonthKey] = useState(months[0]?.key ?? "");
   const [search, setSearch] = useState("");
-  const [showClosed, setShowClosed] = useState(false);
+  const [category, setCategory] = useState(CATEGORY_ALL);
   const [visibleColumns, setVisibleColumns] =
     useState<Set<ColumnId>>(initialColumns);
   const [sort, setSort] = useState<SortState>({
@@ -83,6 +71,17 @@ function DetailedPositionsPage() {
         ? sanitizedManualPrices
         : undefined,
   });
+  const categoryList = trpc.categories.list.useQuery();
+  const categoryByTicker = useMemo(
+    () =>
+      new Map(
+        (categoryList.data?.assets ?? []).map((asset) => [
+          asset.ticker,
+          asset.categoryId,
+        ]),
+      ),
+    [categoryList.data],
+  );
 
   const waitingForRate =
     !!positions.error && isFxRateRequired(positions.error) && fx.isPending;
@@ -96,7 +95,13 @@ function DetailedPositionsPage() {
   const rows = useMemo(() => {
     const needle = search.trim().toLocaleLowerCase(i18n.locale);
     const filtered = (positions.data?.positions ?? []).filter((position) => {
-      if (!showClosed && Number(position.quantity) === 0) return false;
+      if (Number(position.quantity) === 0) return false;
+      const categoryId = categoryByTicker.get(position.ticker) ?? null;
+
+      if (categoryList.isSuccess && !matchesCategory(category, categoryId)) {
+        return false;
+      }
+
       if (!needle) return true;
       return `${position.ticker} ${position.assetClass} ${position.currency}`
         .toLocaleLowerCase(i18n.locale)
@@ -105,23 +110,19 @@ function DetailedPositionsPage() {
     return filtered.sort((a, b) =>
       comparePositions(a, b, sort.id, sort.direction),
     );
-  }, [positions.data, search, showClosed, sort, i18n.locale]);
+  }, [
+    positions.data,
+    categoryByTicker,
+    categoryList.isSuccess,
+    category,
+    search,
+    sort,
+    i18n.locale,
+  ]);
 
   function updateColumns(next: Set<ColumnId>) {
     setVisibleColumns(next);
     persistColumns(next);
-  }
-
-  function applyPreset(preset: PresetName) {
-    updateColumns(new Set(PRESETS[preset]));
-  }
-
-  function toggleColumn(id: ColumnId) {
-    if (id === "ticker") return;
-    const next = new Set(visibleColumns);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    updateColumns(next);
   }
 
   function toggleSort(id: ColumnId) {
@@ -168,88 +169,16 @@ function DetailedPositionsPage() {
         </div>
       </header>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-56 flex-1 sm:max-w-xs">
-          <Search
-            className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
-            aria-hidden="true"
-          />
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            aria-label={i18n._(
-              t({
-                id: "detailedPositions.searchLabel",
-                message: "Search detailed positions",
-              }),
-            )}
-            placeholder={i18n._(
-              t({
-                id: "detailedPositions.search",
-                message: "Search ticker or class…",
-              }),
-            )}
-            className="h-8 pl-8"
-          />
-        </div>
-        <Button
-          type="button"
-          size="sm"
-          variant={showClosed ? "secondary" : "outline"}
-          aria-pressed={showClosed}
-          onClick={() => setShowClosed((current) => !current)}
-        >
-          <Trans id="detailedPositions.showClosed">Show closed positions</Trans>
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="ml-auto"
-            >
-              <Columns3 aria-hidden="true" />
-              <Trans id="detailedPositions.columns">Columns</Trans>
-              <ChevronDown aria-hidden="true" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-56">
-            <DropdownMenuLabel>
-              <Trans id="detailedPositions.presets">View presets</Trans>
-            </DropdownMenuLabel>
-            <DropdownMenuItem onSelect={() => applyPreset("compact")}>
-              <Trans id="detailedPositions.compact">Compact</Trans>
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => applyPreset("standard")}>
-              <Trans id="detailedPositions.standard">Standard</Trans>
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => applyPreset("all")}>
-              <Trans id="detailedPositions.all">All data</Trans>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel>
-              <Trans id="detailedPositions.customize">Customize columns</Trans>
-            </DropdownMenuLabel>
-            {COLUMN_IDS.map((id) => (
-              <DropdownMenuCheckboxItem
-                key={id}
-                checked={visibleColumns.has(id)}
-                disabled={id === "ticker"}
-                onSelect={(event) => event.preventDefault()}
-                onCheckedChange={() => toggleColumn(id)}
-              >
-                {labels[id]}
-              </DropdownMenuCheckboxItem>
-            ))}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => applyPreset("standard")}>
-              <RotateCcw aria-hidden="true" />
-              <Trans id="detailedPositions.reset">Reset to standard</Trans>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+      <DetailedPositionsToolbar
+        search={search}
+        onSearchChange={setSearch}
+        category={category}
+        categoryFilterReady={categoryList.isSuccess}
+        categories={categoryList.data?.categories ?? []}
+        onCategoryChange={setCategory}
+        visibleColumns={visibleColumns}
+        onColumnsChange={updateColumns}
+      />
 
       {positions.isPending || waitingForRate ? <TableSkeleton /> : null}
       {fxFailed ? (

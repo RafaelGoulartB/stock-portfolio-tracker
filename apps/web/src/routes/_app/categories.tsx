@@ -7,12 +7,18 @@ import {
   createCategoryInput,
 } from "@portifolio-tracker/shared";
 import { createFileRoute } from "@tanstack/react-router";
-import { Pencil, Plus, Search, Tags, Trash2 } from "lucide-react";
+import { Pencil, Plus, Tags, Trash2 } from "lucide-react";
 import { type FormEvent, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AssetClassLabel, CurrencyBadge } from "@/components/asset-labels";
 import { AssetLink } from "@/components/asset-link";
 import { AssetLogo } from "@/components/asset-logo";
+import {
+  TableFilterChip,
+  TableFilterTrigger,
+  TableSearch,
+  TableToolbar,
+} from "@/components/table-toolbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -56,6 +62,10 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { type RouterOutputs, trpc } from "@/lib/api";
+import {
+  CATEGORY_ALL as ALL,
+  CATEGORY_NONE as NONE,
+} from "@/lib/category-filter";
 import { categoryErrorMessage, queryErrorMessage } from "@/lib/trpcErrors";
 import { cn } from "@/lib/utils";
 
@@ -66,9 +76,6 @@ export const Route = createFileRoute("/_app/categories")({
 type CategoryList = RouterOutputs["categories"]["list"];
 type CategoryRow = CategoryList["categories"][number];
 type AssetRow = CategoryList["assets"][number];
-
-const NONE = "none";
-const ALL = "all";
 
 function swatchStyle(color: CategoryColor): { backgroundColor: string } {
   return { backgroundColor: `var(--${color})` };
@@ -382,57 +389,51 @@ function CategoriesPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <div className="relative min-w-0 flex-1">
-              <Search
-                className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
-                aria-hidden="true"
+          <TableToolbar>
+            <TableSearch
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={i18n._(
+                msg({
+                  id: "categories.searchPlaceholder",
+                  message: "Search ticker",
+                }),
+              )}
+              ariaLabel={i18n._(
+                msg({
+                  id: "categories.search",
+                  message: "Search ticker",
+                }),
+              )}
+            />
+            <CategoryFilterMenu
+              value={filter}
+              categories={categories}
+              onChange={setFilter}
+            />
+            {filter !== ALL ? (
+              <TableFilterChip
+                label={
+                  filter === NONE
+                    ? i18n._(
+                        msg({
+                          id: "categories.uncategorized",
+                          message: "Uncategorized",
+                        }),
+                      )
+                    : (categories.find((category) => category.id === filter)
+                        ?.name ?? filter)
+                }
+                removeLabel={i18n._(
+                  msg({
+                    id: "categories.removeFilter",
+                    message: "Remove category filter",
+                  }),
+                )}
+                onRemove={() => setFilter(ALL)}
               />
-              <Input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                className="pl-9"
-                placeholder={i18n._(
-                  msg({
-                    id: "categories.searchPlaceholder",
-                    message: "Search ticker",
-                  }),
-                )}
-                aria-label={i18n._(
-                  msg({
-                    id: "categories.search",
-                    message: "Search ticker",
-                  }),
-                )}
-              />
-            </div>
-            <Select value={filter} onValueChange={setFilter}>
-              <SelectTrigger
-                className="w-full sm:w-56"
-                aria-label={i18n._(
-                  msg({
-                    id: "categories.filter",
-                    message: "Filter by category",
-                  }),
-                )}
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL}>
-                  <Trans id="categories.filterAll">All tickers</Trans>
-                </SelectItem>
-                <SelectItem value={NONE}>
-                  <Trans id="categories.uncategorized">Uncategorized</Trans>
-                </SelectItem>
-                {categories.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+            ) : null}
+          </TableToolbar>
 
           {selected.size > 0 ? (
             <div className="flex flex-col gap-2 rounded-lg border bg-muted/40 p-3 sm:flex-row sm:items-center">
@@ -686,6 +687,65 @@ function CategoriesPage() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+function CategoryFilterMenu({
+  value,
+  categories,
+  onChange,
+}: {
+  value: string;
+  categories: readonly CategoryRow[];
+  onChange: (value: string) => void;
+}) {
+  const { i18n } = useLingui();
+  const active = value !== ALL;
+
+  return (
+    <Popover>
+      <TableFilterTrigger activeCount={active ? 1 : 0}>
+        <Trans id="allocation.filters">Filters</Trans>
+      </TableFilterTrigger>
+      <PopoverContent
+        align="start"
+        className="w-[min(20rem,calc(100vw-2rem))] space-y-4"
+      >
+        <div className="space-y-2">
+          <Label htmlFor="categories-filter-category" className="text-xs">
+            <Trans id="categories.filterCategory">Category</Trans>
+          </Label>
+          <Select value={value} onValueChange={onChange}>
+            <SelectTrigger
+              id="categories-filter-category"
+              size="sm"
+              className="w-full"
+              aria-label={i18n._(
+                msg({
+                  id: "categories.filter",
+                  message: "Filter by category",
+                }),
+              )}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>
+                <Trans id="categories.filterAll">All tickers</Trans>
+              </SelectItem>
+              <SelectItem value={NONE}>
+                <Trans id="categories.uncategorized">Uncategorized</Trans>
+              </SelectItem>
+              {categories.map((category) => (
+                <SelectItem key={category.id} value={category.id}>
+                  {category.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 

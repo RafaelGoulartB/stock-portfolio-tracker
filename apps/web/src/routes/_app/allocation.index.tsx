@@ -22,9 +22,6 @@ import {
 import { AllocationDeepFinderButton } from "@/components/allocation/allocation-deep-finder";
 import {
   type AllocationFilterState,
-  CATEGORY_ALL,
-  CATEGORY_NONE,
-  matchesCategory,
   matchesStatus,
   readStoredFilters,
   storeFilters,
@@ -56,6 +53,11 @@ import {
   upsertReviewInList,
 } from "@/lib/allocation-review-cache";
 import { trpc } from "@/lib/api";
+import {
+  CATEGORY_ALL,
+  CATEGORY_NONE,
+  matchesCategory,
+} from "@/lib/category-filter";
 import { useFxQuote, useFxRequest } from "@/lib/fx";
 import { parseDecimalInput, parsePercentInput } from "@/lib/numeric-input";
 import {
@@ -449,7 +451,7 @@ function AllocationPage() {
       const categoryId = categoryByTicker.get(row.ticker) ?? null;
 
       return (
-        matchesCategory(activeFilters, categoryId) &&
+        matchesCategory(activeFilters.category, categoryId) &&
         matchesStatus(activeFilters, row.hasPosition)
       );
     });

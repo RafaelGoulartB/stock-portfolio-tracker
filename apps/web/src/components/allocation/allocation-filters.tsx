@@ -1,17 +1,16 @@
 import type { I18n } from "@lingui/core";
-import { t } from "@lingui/core/macro";
+import { msg, t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
-import { Filter, X } from "lucide-react";
-import type { ReactNode } from "react";
-import { Badge } from "@/components/ui/badge";
+import { X } from "lucide-react";
+import {
+  TableFilterChip,
+  TableFilterTrigger,
+  TableSegmentedOption,
+} from "@/components/table-toolbar";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent } from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -20,11 +19,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
+import { CATEGORY_ALL, CATEGORY_NONE } from "@/lib/category-filter";
 
-/** Category filter sentinels — match the categories screen. */
-export const CATEGORY_ALL = "all";
-export const CATEGORY_NONE = "none";
+const allocationRemoveFilterMessage = msg({
+  id: "allocation.removeFilter",
+  message: "Remove filter: {label}",
+});
 
 export const STATUS_FILTERS = ["any", "invested", "radar"] as const;
 export type StatusFilter = (typeof STATUS_FILTERS)[number];
@@ -87,21 +87,6 @@ export function activeFilterCount(filters: AllocationFilterState): number {
 }
 
 /** Whether a row's category passes `filters`. */
-export function matchesCategory(
-  filters: AllocationFilterState,
-  categoryId: string | null,
-): boolean {
-  if (filters.category === CATEGORY_ALL) {
-    return true;
-  }
-
-  if (filters.category === CATEGORY_NONE) {
-    return categoryId === null;
-  }
-
-  return categoryId === filters.category;
-}
-
 export function matchesStatus(
   filters: AllocationFilterState,
   hasPosition: boolean,
@@ -140,24 +125,9 @@ export function AllocationFiltersButton({
 
   return (
     <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          type="button"
-          size="sm"
-          variant={count > 0 ? "secondary" : "outline"}
-        >
-          <Filter aria-hidden="true" />
-          <Trans id="allocation.filters">Filters</Trans>
-          {count > 0 ? (
-            <Badge
-              className="h-4 min-w-4 px-1 text-[0.625rem] tabular-nums"
-              aria-hidden="true"
-            >
-              {count}
-            </Badge>
-          ) : null}
-        </Button>
-      </PopoverTrigger>
+      <TableFilterTrigger activeCount={count}>
+        <Trans id="allocation.filters">Filters</Trans>
+      </TableFilterTrigger>
       <PopoverContent
         align="start"
         className="w-[min(20rem,calc(100vw-2rem))] space-y-4"
@@ -199,13 +169,13 @@ export function AllocationFiltersButton({
           </legend>
           <div className="grid grid-cols-3 gap-0.5 rounded-md bg-muted p-0.5">
             {STATUS_FILTERS.map((status) => (
-              <SegmentedOption
+              <TableSegmentedOption
                 key={status}
                 selected={filters.status === status}
                 onSelect={() => onChange({ ...filters, status })}
               >
                 {labels[status]}
-              </SegmentedOption>
+              </TableSegmentedOption>
             ))}
           </div>
         </fieldset>
@@ -257,19 +227,25 @@ export function AllocationFilterChips({
   return (
     <>
       {filters.category !== CATEGORY_ALL && categoryLabel ? (
-        <FilterChip
+        <TableFilterChip
           label={categoryLabel}
+          removeLabel={i18n._(allocationRemoveFilterMessage.id ?? "", {
+            label: categoryLabel,
+          })}
           onRemove={() => onChange({ ...filters, category: CATEGORY_ALL })}
         />
       ) : null}
       {filters.status !== "any" ? (
-        <FilterChip
+        <TableFilterChip
           label={labels[filters.status]}
+          removeLabel={i18n._(allocationRemoveFilterMessage.id ?? "", {
+            label: labels[filters.status],
+          })}
           onRemove={() => onChange({ ...filters, status: "any" })}
         />
       ) : null}
       {freeOrder ? (
-        <FilterChip
+        <TableFilterChip
           label={i18n._(
             t({ id: "allocation.freeOrder", message: "Free order" }),
           )}
@@ -283,64 +259,5 @@ export function AllocationFilterChips({
         />
       ) : null}
     </>
-  );
-}
-
-function FilterChip({
-  label,
-  onRemove,
-  removeLabel,
-}: {
-  label: string;
-  onRemove: () => void;
-  /** Defaults to "Remove filter: <label>"; modes describe their own action. */
-  removeLabel?: string;
-}) {
-  const { i18n } = useLingui();
-  const description =
-    removeLabel ??
-    i18n._(
-      t({ id: "allocation.removeFilter", message: `Remove filter: ${label}` }),
-    );
-
-  return (
-    <Badge asChild variant="secondary" className="gap-1 pr-1.5">
-      <button
-        type="button"
-        onClick={onRemove}
-        aria-label={description}
-        className="cursor-pointer hover:bg-secondary/70"
-      >
-        {label}
-        <X aria-hidden="true" />
-      </button>
-    </Badge>
-  );
-}
-
-/** Shared segmented-control option: a ghost button that lifts when selected. */
-export function SegmentedOption({
-  selected,
-  onSelect,
-  children,
-}: {
-  selected: boolean;
-  onSelect: () => void;
-  children: ReactNode;
-}) {
-  return (
-    <Button
-      type="button"
-      size="xs"
-      variant="ghost"
-      aria-pressed={selected}
-      onClick={onSelect}
-      className={cn(
-        "h-7 rounded-sm px-1 text-xs font-normal",
-        selected && "bg-background font-medium shadow-xs",
-      )}
-    >
-      {children}
-    </Button>
   );
 }
