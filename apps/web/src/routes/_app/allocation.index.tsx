@@ -60,6 +60,13 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import {
+  findReview,
+  removeReviewFromList,
+  restoreReviewInList,
+  reviewFromUpsertInput,
+  upsertReviewInList,
+} from "@/lib/allocation-review-cache";
 import { trpc } from "@/lib/api";
 import { useFxQuote } from "@/lib/fx";
 import { parseDecimalInput, parsePercentInput } from "@/lib/numeric-input";
@@ -349,12 +356,62 @@ function AllocationPage() {
     onError: reportError,
   });
   const upsertReview = trpc.allocation.upsertReview.useMutation({
-    onSuccess: refresh,
-    onError: reportError,
+    onMutate: async (input) => {
+      await utils.allocation.list.cancel(allocationListInput);
+      const snapshot = utils.allocation.list.getData(allocationListInput);
+      const previous = findReview(snapshot, input.ticker, input.period);
+
+      utils.allocation.list.setData(allocationListInput, (current) =>
+        upsertReviewInList(
+          current,
+          input.ticker,
+          reviewFromUpsertInput(input, previous),
+        ),
+      );
+
+      return { previous };
+    },
+    onError: (error, input, context) => {
+      utils.allocation.list.setData(allocationListInput, (current) =>
+        restoreReviewInList(
+          current,
+          input.ticker,
+          input.period,
+          context?.previous,
+        ),
+      );
+      reportError(error);
+    },
+    onSettled: () => {
+      void refresh();
+    },
   });
   const removeReview = trpc.allocation.removeReview.useMutation({
-    onSuccess: refresh,
-    onError: reportError,
+    onMutate: async (input) => {
+      await utils.allocation.list.cancel(allocationListInput);
+      const snapshot = utils.allocation.list.getData(allocationListInput);
+      const previous = findReview(snapshot, input.ticker, input.period);
+
+      utils.allocation.list.setData(allocationListInput, (current) =>
+        removeReviewFromList(current, input.ticker, input.period),
+      );
+
+      return { previous };
+    },
+    onError: (error, input, context) => {
+      utils.allocation.list.setData(allocationListInput, (current) =>
+        restoreReviewInList(
+          current,
+          input.ticker,
+          input.period,
+          context?.previous,
+        ),
+      );
+      reportError(error);
+    },
+    onSettled: () => {
+      void refresh();
+    },
   });
   const setManualValue = trpc.allocation.setManualValue.useMutation({
     onSuccess: refreshPortfolioValuations,
@@ -369,8 +426,6 @@ function AllocationPage() {
     upsertAsset.isPending ||
     removeAsset.isPending ||
     reorder.isPending ||
-    upsertReview.isPending ||
-    removeReview.isPending ||
     setManualValue.isPending ||
     setCashBalance.isPending;
 

@@ -21,6 +21,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  findReview,
+  removeReviewFromList,
+  restoreReviewInList,
+  reviewFromUpsertInput,
+  upsertReviewInList,
+} from "@/lib/allocation-review-cache";
 import { trpc } from "@/lib/api";
 import {
   formatMoney,
@@ -100,14 +107,63 @@ export function AssetDetailPage() {
   }
 
   const upsertReview = trpc.allocation.upsertReview.useMutation({
-    onSuccess: refresh,
-    onError: reportError,
+    onMutate: async (input) => {
+      await utils.allocation.list.cancel(queryInput);
+      const snapshot = utils.allocation.list.getData(queryInput);
+      const previous = findReview(snapshot, input.ticker, input.period);
+
+      utils.allocation.list.setData(queryInput, (current) =>
+        upsertReviewInList(
+          current,
+          input.ticker,
+          reviewFromUpsertInput(input, previous),
+        ),
+      );
+
+      return { previous };
+    },
+    onError: (error, input, context) => {
+      utils.allocation.list.setData(queryInput, (current) =>
+        restoreReviewInList(
+          current,
+          input.ticker,
+          input.period,
+          context?.previous,
+        ),
+      );
+      reportError(error);
+    },
+    onSettled: () => {
+      void refresh();
+    },
   });
   const removeReview = trpc.allocation.removeReview.useMutation({
-    onSuccess: refresh,
-    onError: reportError,
+    onMutate: async (input) => {
+      await utils.allocation.list.cancel(queryInput);
+      const snapshot = utils.allocation.list.getData(queryInput);
+      const previous = findReview(snapshot, input.ticker, input.period);
+
+      utils.allocation.list.setData(queryInput, (current) =>
+        removeReviewFromList(current, input.ticker, input.period),
+      );
+
+      return { previous };
+    },
+    onError: (error, input, context) => {
+      utils.allocation.list.setData(queryInput, (current) =>
+        restoreReviewInList(
+          current,
+          input.ticker,
+          input.period,
+          context?.previous,
+        ),
+      );
+      reportError(error);
+    },
+    onSettled: () => {
+      void refresh();
+    },
   });
-  const reviewSaving = upsertReview.isPending || removeReview.isPending;
 
   const waitingForRate =
     !!allocation.error && isFxRateRequired(allocation.error) && fx.isPending;
@@ -346,7 +402,6 @@ export function AssetDetailPage() {
               row={row}
               series={history.data?.series}
               locale={i18n.locale}
-              saving={reviewSaving}
               onSave={(input) => upsertReview.mutate(input)}
               onRemove={(input) => removeReview.mutate(input)}
             />

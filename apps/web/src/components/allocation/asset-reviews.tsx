@@ -174,8 +174,14 @@ export function AssetReviews({
                     current === review.period ? null : review.period,
                   )
                 }
-                onSave={onSave}
-                onRemove={onRemove}
+                onSave={(input) => {
+                  onSave(input);
+                  setExpandedPeriod(null);
+                }}
+                onRemove={(input) => {
+                  onRemove(input);
+                  setExpandedPeriod(null);
+                }}
                 onCollapse={() => setExpandedPeriod(null)}
               />
             ))}
