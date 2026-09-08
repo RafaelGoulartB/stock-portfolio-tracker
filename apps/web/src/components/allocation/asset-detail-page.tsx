@@ -12,6 +12,7 @@ import { AssetMovements } from "@/components/allocation/asset-movements";
 import { AssetReviews } from "@/components/allocation/asset-reviews";
 import { AssetClassLabel, CurrencyBadge } from "@/components/asset-labels";
 import { AssetLogo } from "@/components/asset-logo";
+import { ExternalAssetLinksMenu } from "@/components/external-asset-links-menu";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -223,6 +224,11 @@ export function AssetDetailPage() {
               <h1 className="text-2xl font-semibold tracking-tight">
                 {row.ticker}
               </h1>
+              <ExternalAssetLinksMenu
+                ticker={row.ticker}
+                assetClass={row.assetClass}
+                currency={row.currency}
+              />
               {row.hasPosition ? null : (
                 <Badge variant="outline">
                   <Trans id="allocation.watchBadge">Watch</Trans>

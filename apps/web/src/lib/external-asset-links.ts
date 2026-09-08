@@ -1,7 +1,7 @@
 import type { AssetClass, Currency } from "@portifolio-tracker/shared";
 
 export type ExternalAssetLink = {
-  id: "fundamentei" | "investorRelations";
+  id: "fundamentei" | "investorRelations" | "tradingView";
   href: string;
 };
 
@@ -35,6 +35,10 @@ export function externalAssetLinks(
   }
 
   const market = currency === "BRL" ? "br" : "us";
+  const tradingViewSymbol =
+    market === "br"
+      ? `BMFBOVESPA:${ticker.trim().toUpperCase()}`
+      : ticker.trim().toUpperCase();
   const investorRelationsQuery =
     market === "br"
       ? `${ticker.trim().toUpperCase()} relações com investidores site oficial`
@@ -48,6 +52,10 @@ export function externalAssetLinks(
     {
       id: "investorRelations",
       href: `https://www.google.com/search?q=${encodeURIComponent(investorRelationsQuery)}`,
+    },
+    {
+      id: "tradingView",
+      href: `https://www.tradingview.com/chart/?symbol=${encodeURIComponent(tradingViewSymbol)}`,
     },
   ];
 }

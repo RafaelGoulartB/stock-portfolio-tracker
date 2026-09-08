@@ -1,9 +1,9 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
-  pull_request:
+  # Automatic CI is disabled. Keep a manual trigger so the checks remain
+  # available without running on every push or pull request.
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}

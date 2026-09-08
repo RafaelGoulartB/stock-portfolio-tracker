@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { AssetLogo } from "@/components/asset-logo";
+import { ExternalAssetLinksMenu } from "@/components/external-asset-links-menu";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -435,6 +436,14 @@ export function AllocationTable({
                           >
                             {row.ticker}
                           </Link>
+                        )}
+                        {row.ticker === CASH_TICKER ? null : (
+                          <ExternalAssetLinksMenu
+                            ticker={row.ticker}
+                            assetClass={row.assetClass}
+                            currency={row.currency}
+                            className="shrink-0 opacity-60 transition-opacity focus:opacity-100 data-[state=open]:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+                          />
                         )}
                         {row.hasPosition ? null : (
                           <Badge

@@ -12,6 +12,10 @@ describe("externalAssetLinks", () => {
         id: "investorRelations",
         href: "https://www.google.com/search?q=ITUB4%20rela%C3%A7%C3%B5es%20com%20investidores%20site%20oficial",
       },
+      {
+        id: "tradingView",
+        href: "https://www.tradingview.com/chart/?symbol=BMFBOVESPA%3AITUB4",
+      },
     ]);
   });
 
@@ -24,6 +28,10 @@ describe("externalAssetLinks", () => {
       {
         id: "investorRelations",
         href: "https://www.google.com/search?q=NVDA%20investor%20relations%20official",
+      },
+      {
+        id: "tradingView",
+        href: "https://www.tradingview.com/chart/?symbol=NVDA",
       },
     ]);
   });

@@ -11,10 +11,8 @@ import {
   ChevronDown,
   ChevronUp,
   Eraser,
-  ExternalLink,
   Eye,
   MoreVertical,
-  Search,
   Trash2,
   X,
 } from "lucide-react";
@@ -26,12 +24,8 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { externalAssetLinks } from "@/lib/external-asset-links";
 import { cn } from "@/lib/utils";
 import { MARK_DOT } from "./marks";
 
@@ -51,11 +45,6 @@ export function RowMenu({
   onSetMarkColor: (markColor: AllocationMarkColor | null) => void;
 }): ReactNode {
   const { i18n } = useLingui();
-  const externalLinks = externalAssetLinks(
-    row.ticker,
-    row.assetClass,
-    row.currency,
-  );
 
   return (
     <DropdownMenu>
@@ -82,34 +71,6 @@ export function RowMenu({
             <Trans id="allocation.viewDetails">View details</Trans>
           </Link>
         </DropdownMenuItem>
-        {externalLinks.length > 0 ? (
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>
-              <ExternalLink aria-hidden="true" />
-              <Trans id="allocation.externalLinks">External links</Trans>
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent className="w-52">
-              {externalLinks.map((link) => (
-                <DropdownMenuItem key={link.id} asChild>
-                  <a href={link.href} target="_blank" rel="noopener noreferrer">
-                    {link.id === "fundamentei" ? (
-                      <ExternalLink aria-hidden="true" />
-                    ) : (
-                      <Search aria-hidden="true" />
-                    )}
-                    {link.id === "fundamentei" ? (
-                      <Trans id="allocation.openFundamentei">Fundamentei</Trans>
-                    ) : (
-                      <Trans id="allocation.findInvestorRelations">
-                        Investor relations website
-                      </Trans>
-                    )}
-                  </a>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-        ) : null}
         <DropdownMenuSeparator />
         <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
           <Trans id="allocation.markColor">Highlight</Trans>
