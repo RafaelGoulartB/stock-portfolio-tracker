@@ -109,13 +109,13 @@ msgstr "{0} holdings added to the list"
 #. placeholder {2}: visibleSummary.candidates
 #. placeholder {3}: visibleSummary.blocked
 #. placeholder {4}: visibleSummary.scoreVersion
-#: src/routes/_app/allocation.index.tsx:704
+#: src/routes/_app/allocation.index.tsx:708
 msgid "allocation.footnote"
 msgstr "{0} investidos · {1} em acompanhamento · {2} recebendo aporte · {3} bloqueados · regras de score {4}"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: values.ticker
-#: src/routes/_app/allocation.index.tsx:565
+#: src/routes/_app/allocation.index.tsx:569
 msgid "allocation.added"
 msgstr "{0} agora está na tabela"
 
@@ -458,7 +458,7 @@ msgid "categories.filterAll"
 msgstr "Todos os tickers"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:578
+#: src/routes/_app/allocation.index.tsx:582
 msgid "allocation.title"
 msgstr "Alocação"
 
@@ -468,7 +468,7 @@ msgid "positions.allocation"
 msgstr "Alocação"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:63
+#: src/components/app-nav.tsx:197
 msgid "nav.allocation"
 msgstr "Alocação"
 
@@ -1244,7 +1244,7 @@ msgid "settings.data.deleteError"
 msgstr "Não foi possível excluir os dados da aplicação."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:648
+#: src/routes/_app/allocation.index.tsx:652
 #: src/routes/_app/detailed-positions.tsx:350
 #: src/routes/_app/positions.tsx:166
 msgid "positions.fxFailed"
@@ -1417,7 +1417,7 @@ msgid "allocation.cycleMark"
 msgstr "Alternar cor de destaque de {0}"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:80
+#: src/components/app-nav.tsx:72
 msgid "nav.daily"
 msgstr "Diário"
 
@@ -1494,7 +1494,7 @@ msgid "deepFinder.title"
 msgstr "Deep Finder"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:85
+#: src/components/app-nav.tsx:77
 msgid "nav.deepFinder"
 msgstr "Deep Finder"
 
@@ -1566,7 +1566,7 @@ msgid "detailedPositions.title"
 msgstr "Posições detalhadas"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:58
+#: src/components/app-nav.tsx:55
 msgid "nav.detailedPositions"
 msgstr "Posições detalhadas"
 
@@ -1672,17 +1672,17 @@ msgid "allocation.plannerAutoEmpty"
 msgstr "Carteira vazia — espalhando em {0} ativos, até {1}."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:510
+#: src/routes/_app/allocation.index.tsx:514
 msgid "allocation.invalidCashValue"
 msgstr "Informe um valor de caixa igual ou maior que zero."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:543
+#: src/routes/_app/allocation.index.tsx:547
 msgid "allocation.invalidValue"
 msgstr "Enter a market value, e.g. 50000"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:489
+#: src/routes/_app/allocation.index.tsx:493
 msgid "allocation.invalidPercent"
 msgstr "Informe uma porcentagem, ex.: 1,5 ou -20"
 
@@ -2108,7 +2108,7 @@ msgid "dividends.title"
 msgstr "Proventos"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:90
+#: src/components/app-nav.tsx:82
 msgid "nav.dividends"
 msgstr "Proventos"
 
@@ -2471,7 +2471,7 @@ msgid "categories.title"
 msgstr "Minhas categorias"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:102
+#: src/components/app-nav.tsx:94
 msgid "nav.categories"
 msgstr "Minhas categorias"
 
@@ -2903,7 +2903,7 @@ msgid "performance.title"
 msgstr "Rentabilidade"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:75
+#: src/components/app-nav.tsx:67
 msgid "nav.performance"
 msgstr "Rentabilidade"
 
@@ -2961,7 +2961,7 @@ msgid "performance.total"
 msgstr "Carteira"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:48
+#: src/components/app-nav.tsx:45
 msgid "nav.portfolio"
 msgstr "Carteira"
 
@@ -3013,7 +3013,7 @@ msgid "positions.title"
 msgstr "Posições"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:53
+#: src/components/app-nav.tsx:50
 msgid "nav.positions"
 msgstr "Posições"
 
@@ -3367,7 +3367,7 @@ msgid "allocation.resultUnavailable"
 msgstr "Data de resultado temporariamente indisponível"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:70
+#: src/components/app-nav.tsx:62
 msgid "nav.results"
 msgstr "Resultados"
 
@@ -3815,7 +3815,7 @@ msgid "documentation.score.targetCap"
 msgstr "Limite relativo ao target"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:581
+#: src/routes/_app/allocation.index.tsx:585
 msgid "allocation.subtitle"
 msgstr "Metas, notas trimestrais e o score de aporte em um só lugar. Edite qualquer célula da tabela; o score é recalculado ao salvar."
 
@@ -4039,7 +4039,7 @@ msgid "documentation.contribution.exampleCrumbTitle"
 msgstr "Necessidade pontuada pequena e capital sobrando"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:97
+#: src/components/app-nav.tsx:89
 msgid "nav.tools"
 msgstr "Ferramentas"
 

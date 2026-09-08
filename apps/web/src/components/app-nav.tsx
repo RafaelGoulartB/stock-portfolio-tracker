@@ -37,10 +37,7 @@ type NavGroup = {
   items: NavItem[];
 };
 
-/**
- * Header sections. Every page lives inside a group so the bar stays at a
- * handful of triggers as pages are added; empty groups are not rendered.
- */
+/** Header sections shown after the standalone allocation link. */
 const NAV_GROUPS: NavGroup[] = [
   {
     id: "portfolio",
@@ -56,11 +53,6 @@ const NAV_GROUPS: NavGroup[] = [
         to: "/detailed-positions",
         icon: TableProperties,
         label: <Trans id="nav.detailedPositions">Detailed positions</Trans>,
-      },
-      {
-        to: "/allocation",
-        icon: Target,
-        label: <Trans id="nav.allocation">Allocation</Trans>,
       },
     ],
   },
@@ -193,6 +185,17 @@ export function AppNav() {
 
   return (
     <>
+      <Link
+        to="/allocation"
+        className={cn(
+          "flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring",
+          isActivePath(pathname, "/allocation") &&
+            "bg-accent text-accent-foreground",
+        )}
+      >
+        <Target className="size-4" aria-hidden="true" />
+        <Trans id="nav.allocation">Allocation</Trans>
+      </Link>
       {NAV_GROUPS.filter((group) => group.items.length > 0).map((group) => (
         <NavGroupMenu key={group.id} group={group} pathname={pathname} />
       ))}
