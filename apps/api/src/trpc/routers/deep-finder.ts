@@ -1,6 +1,7 @@
 import {
   type DeepFinderRow,
   deepFinderInput,
+  type ParsedDeepFinderInput,
 } from "@portifolio-tracker/shared";
 import { TRPCError } from "@trpc/server";
 import { seriesLookbackStart, windowStartDay } from "../../domain/deep-finder";
@@ -19,6 +20,17 @@ import {
 import { getQuoteProvider, QuoteUnavailableError } from "../../lib/quotes";
 import { protectedProcedure } from "../trpc";
 import { loadValuedPortfolio } from "../valuation";
+
+export type FinderPosition = {
+  ticker: string;
+  assetClass: DeepFinderRow["assetClass"];
+  currency: DeepFinderRow["currency"];
+  quantity: string;
+  marketPrice: string | null;
+  convertedMarketValue: string | null;
+  convertedUnrealizedPnl: string | null;
+  unrealizedPnlPercent: string | null;
+};
 
 const API_TIME_ZONE = "America/Sao_Paulo";
 const MONEY_PLACES = 2;
@@ -50,100 +62,117 @@ export const finder = protectedProcedure
     const open = portfolio.positions.filter(
       (position) => Number(position.quantity) > 0,
     );
-    const asOf = today();
-    const start = windowStartDay(input.window, asOf);
-
-    const rows =
-      input.window === "cost" || start === null
-        ? costRows(open, input.displayCurrency)
-        : await periodRows({
-            positions: open,
-            start,
-            asOf,
-            displayCurrency: input.displayCurrency,
-            usdBrlRate: input.usdBrlRate ?? "1",
-            quoteSource: input.quoteSource,
-            manualPrices: input.manualPrices ?? {},
-          });
-
-    const comparable = rows.filter((row) => row.change !== null);
-    let advancing = 0;
-    let declining = 0;
-    let unchanged = 0;
-    let totalChange = ZERO;
-    let totalBaseline = ZERO;
-
-    for (const row of comparable) {
-      const change = toDecimal(row.change ?? "0");
-      totalChange = add(totalChange, change);
-
-      if (row.changePercent !== null && row.marketValue !== null) {
-        const market = toDecimal(row.marketValue);
-        totalBaseline = add(totalBaseline, sub(market, change));
-      }
-
-      if (change > ZERO) {
-        advancing += 1;
-      } else if (change < ZERO) {
-        declining += 1;
-      } else {
-        unchanged += 1;
-      }
-    }
-
-    comparable.sort((a, b) => {
-      const leftMissing = a.changePercent == null;
-      const rightMissing = b.changePercent == null;
-
-      if (leftMissing || rightMissing) {
-        if (leftMissing && rightMissing) {
-          return a.ticker.localeCompare(b.ticker);
-        }
-
-        return leftMissing ? 1 : -1;
-      }
-
-      return Number(b.changePercent) - Number(a.changePercent);
+    return buildFinderResult({
+      positions: open,
+      missing: portfolio.missing,
+      input,
     });
-    const missing = [
-      ...new Set([
-        ...portfolio.missing,
-        ...rows.filter((row) => row.change === null).map((row) => row.ticker),
-      ]),
-    ].sort();
-
-    return {
-      window: input.window,
-      windowStart: start,
-      asOf,
-      positions: [
-        ...comparable,
-        ...rows
-          .filter((row) => row.change === null)
-          .sort((a, b) => a.ticker.localeCompare(b.ticker)),
-      ],
-      summary: {
-        displayCurrency: input.displayCurrency,
-        advancing,
-        declining,
-        unchanged,
-        comparable: comparable.length,
-        openPositions: open.length,
-        totalChange: formatDecimal(totalChange, MONEY_PLACES),
-        totalChangePercent: isZero(totalBaseline)
-          ? null
-          : formatDecimal(div(totalChange, totalBaseline), RATE_PLACES),
-        usdBrlRate: input.usdBrlRate ?? null,
-      },
-      quotes: {
-        source: input.quoteSource,
-        missing,
-      },
-    };
   });
 
+/** Shared calculation used by the portfolio and allocation-watchlist finders. */
+export async function buildFinderResult({
+  positions,
+  missing: quoteMissing,
+  input,
+}: {
+  positions: FinderPosition[];
+  missing: string[];
+  input: ParsedDeepFinderInput;
+}) {
+  const asOf = today();
+  const start = windowStartDay(input.window, asOf);
+
+  const rows =
+    input.window === "cost" || start === null
+      ? costRows(positions, input.displayCurrency)
+      : await periodRows({
+          positions,
+          start,
+          asOf,
+          displayCurrency: input.displayCurrency,
+          usdBrlRate: input.usdBrlRate ?? "1",
+          quoteSource: input.quoteSource,
+          manualPrices: input.manualPrices ?? {},
+        });
+
+  const comparable = rows.filter((row) => row.change !== null);
+  let advancing = 0;
+  let declining = 0;
+  let unchanged = 0;
+  let totalChange = ZERO;
+  let totalBaseline = ZERO;
+
+  for (const row of comparable) {
+    const change = toDecimal(row.change ?? "0");
+    totalChange = add(totalChange, change);
+
+    if (row.changePercent !== null && row.marketValue !== null) {
+      const market = toDecimal(row.marketValue);
+      totalBaseline = add(totalBaseline, sub(market, change));
+    }
+
+    if (change > ZERO) {
+      advancing += 1;
+    } else if (change < ZERO) {
+      declining += 1;
+    } else {
+      unchanged += 1;
+    }
+  }
+
+  comparable.sort((a, b) => {
+    const leftMissing = a.changePercent == null;
+    const rightMissing = b.changePercent == null;
+
+    if (leftMissing || rightMissing) {
+      if (leftMissing && rightMissing) {
+        return a.ticker.localeCompare(b.ticker);
+      }
+
+      return leftMissing ? 1 : -1;
+    }
+
+    return Number(b.changePercent) - Number(a.changePercent);
+  });
+  const missing = [
+    ...new Set([
+      ...quoteMissing,
+      ...rows.filter((row) => row.change === null).map((row) => row.ticker),
+    ]),
+  ].sort();
+
+  return {
+    window: input.window,
+    windowStart: start,
+    asOf,
+    positions: [
+      ...comparable,
+      ...rows
+        .filter((row) => row.change === null)
+        .sort((a, b) => a.ticker.localeCompare(b.ticker)),
+    ],
+    summary: {
+      displayCurrency: input.displayCurrency,
+      advancing,
+      declining,
+      unchanged,
+      comparable: comparable.length,
+      openPositions: positions.length,
+      totalChange: formatDecimal(totalChange, MONEY_PLACES),
+      totalChangePercent: isZero(totalBaseline)
+        ? null
+        : formatDecimal(div(totalChange, totalBaseline), RATE_PLACES),
+      usdBrlRate: input.usdBrlRate ?? null,
+    },
+    quotes: {
+      source: input.quoteSource,
+      missing,
+    },
+  };
+}
+
 function costRows(
-  positions: Awaited<ReturnType<typeof loadValuedPortfolio>>["positions"],
+  positions: FinderPosition[],
   displayCurrency: DeepFinderRow["displayCurrency"],
 ): DeepFinderRow[] {
   return positions.map((position) => ({
@@ -170,7 +199,7 @@ async function periodRows({
   quoteSource,
   manualPrices,
 }: {
-  positions: Awaited<ReturnType<typeof loadValuedPortfolio>>["positions"];
+  positions: FinderPosition[];
   start: string;
   asOf: string;
   displayCurrency: DeepFinderRow["displayCurrency"];

@@ -59,13 +59,13 @@ msgstr "{0} holdings added to the list"
 #. placeholder {2}: visibleSummary.candidates
 #. placeholder {3}: visibleSummary.blocked
 #. placeholder {4}: visibleSummary.scoreVersion
-#: src/routes/_app/allocation.index.tsx:825
+#: src/routes/_app/allocation.index.tsx:907
 msgid "allocation.footnote"
 msgstr "{0} invested · {1} watch-only · {2} taking contributions · {3} blocked · score rules {4}"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: values.ticker
-#: src/routes/_app/allocation.index.tsx:541
+#: src/routes/_app/allocation.index.tsx:603
 msgid "allocation.added"
 msgstr "{0} is now on the table"
 
@@ -84,7 +84,7 @@ msgstr "{0} positions · {1} columns"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: reviews.length
-#: src/components/allocation/asset-reviews.tsx:147
+#: src/components/allocation/asset-reviews.tsx:150
 msgid "allocation.detailReviewCount"
 msgstr "{0} quarters"
 
@@ -177,7 +177,7 @@ msgid "transactions.booked"
 msgstr "{count} holdings booked as buys"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:705
+#: src/routes/_app/allocation.index.tsx:787
 msgid "allocation.quartersOption"
 msgstr "{count} quarters"
 
@@ -213,26 +213,31 @@ msgid "documentation.score.ungradedBadge"
 msgstr "×{0} ungraded"
 
 #. js-lingui-explicit-id
+#: src/components/allocation/allocation-deep-finder.tsx:122
 #: src/routes/_app/deep-finder.tsx:219
 msgid "deepFinder.window1d"
 msgstr "1 day"
 
 #. js-lingui-explicit-id
+#: src/components/allocation/allocation-deep-finder.tsx:126
 #: src/routes/_app/deep-finder.tsx:223
 msgid "deepFinder.window1m"
 msgstr "1 month"
 
 #. js-lingui-explicit-id
+#: src/components/allocation/allocation-deep-finder.tsx:124
 #: src/routes/_app/deep-finder.tsx:221
 msgid "deepFinder.window1w"
 msgstr "1 week"
 
 #. js-lingui-explicit-id
+#: src/components/allocation/allocation-deep-finder.tsx:132
 #: src/routes/_app/deep-finder.tsx:229
 msgid "deepFinder.window1y"
 msgstr "1 year"
 
 #. js-lingui-explicit-id
+#: src/components/allocation/allocation-deep-finder.tsx:128
 #: src/routes/_app/deep-finder.tsx:225
 msgid "deepFinder.window3m"
 msgstr "3 months"
@@ -305,7 +310,8 @@ msgstr "Account data"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.ticker
-#: src/components/allocation/allocation-table.tsx:1259
+#: src/components/allocation/allocation-deep-finder.tsx:522
+#: src/components/allocation/allocation-table.tsx:1263
 msgid "allocation.rowMenu"
 msgstr "Actions for {0}"
 
@@ -370,22 +376,24 @@ msgid "documentation.score.adjustedTarget"
 msgstr "Adjusted target"
 
 #. js-lingui-explicit-id
+#: src/components/allocation/allocation-deep-finder.tsx:337
 #: src/routes/_app/deep-finder.tsx:174
 msgid "deepFinder.filterAll"
 msgstr "All"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:639
+#: src/routes/_app/allocation.index.tsx:721
 msgid "allocation.radarAll"
 msgstr "All assets"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:611
+#: src/components/allocation/allocation-deep-finder.tsx:283
+#: src/routes/_app/allocation.index.tsx:693
 msgid "allocation.categoryAll"
 msgstr "All categories"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:730
+#: src/routes/_app/allocation.index.tsx:812
 msgid "allocation.all"
 msgstr "All data"
 
@@ -405,7 +413,7 @@ msgid "categories.filterAll"
 msgstr "All tickers"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:554
+#: src/routes/_app/allocation.index.tsx:616
 msgid "allocation.title"
 msgstr "Allocation"
 
@@ -485,7 +493,7 @@ msgid "allocation.colTicker"
 msgstr "Asset"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:329
+#: src/routes/_app/allocation.index.tsx:343
 msgid "allocation.removed"
 msgstr "Asset removed from the table"
 
@@ -547,7 +555,7 @@ msgid "allocation.cashTargetHint"
 msgstr "Automatically fills the part not assigned to other assets."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.$ticker.tsx:309
+#: src/routes/_app/allocation.$ticker.tsx:365
 msgid "allocation.detailAvgPrice"
 msgstr "Average cost"
 
@@ -585,7 +593,7 @@ msgid "positions.colAvgCost"
 msgstr "Avg. cost"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.$ticker.tsx:137
+#: src/routes/_app/allocation.$ticker.tsx:193
 msgid "allocation.detailBack"
 msgstr "Back"
 
@@ -922,12 +930,13 @@ msgstr "Clear"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.ticker
-#: src/components/allocation/allocation-table.tsx:1311
+#: src/components/allocation/allocation-deep-finder.tsx:563
+#: src/components/allocation/allocation-table.tsx:1315
 msgid "allocation.clearMark"
 msgstr "Clear highlight on {0}"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1339
+#: src/components/allocation/allocation-table.tsx:1343
 msgid "allocation.clearAnalysis"
 msgstr "Clear target"
 
@@ -937,7 +946,7 @@ msgid "deepFinder.tableHint"
 msgstr "Click a column to sort. Missing quotes sit at the bottom."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/asset-reviews.tsx:140
+#: src/components/allocation/asset-reviews.tsx:143
 msgid "allocation.detailReviewsHint"
 msgstr "Click a quarter to expand and edit the grade, fair value and notes."
 
@@ -957,7 +966,7 @@ msgid "settings.appearance.description"
 msgstr "Color scheme and palette used across the dashboard."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:715
+#: src/routes/_app/allocation.index.tsx:797
 msgid "allocation.columns"
 msgstr "Columns"
 
@@ -967,7 +976,7 @@ msgid "detailedPositions.columns"
 msgstr "Columns"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:724
+#: src/routes/_app/allocation.index.tsx:806
 msgid "allocation.compact"
 msgstr "Compact"
 
@@ -975,6 +984,11 @@ msgstr "Compact"
 #: src/routes/_app/detailed-positions.tsx:315
 msgid "detailedPositions.compact"
 msgstr "Compact"
+
+#. js-lingui-explicit-id
+#: src/components/allocation/allocation-deep-finder.tsx:259
+msgid "allocation.finderDescription"
+msgstr "Compare price movement for every tracked asset, including assets that are still only on your radar."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: preview.maxAssets
@@ -1165,7 +1179,7 @@ msgid "settings.data.deleteError"
 msgstr "Could not delete the application data."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:773
+#: src/routes/_app/allocation.index.tsx:855
 #: src/routes/_app/detailed-positions.tsx:350
 #: src/routes/_app/positions.tsx:166
 msgid "positions.fxFailed"
@@ -1297,9 +1311,14 @@ msgstr "Currency consolidation"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/allocation-table.tsx:99
-#: src/routes/_app/allocation.$ticker.tsx:250
+#: src/routes/_app/allocation.$ticker.tsx:306
 msgid "allocation.colCurrent"
 msgstr "Current"
+
+#. js-lingui-explicit-id
+#: src/components/allocation/allocation-deep-finder.tsx:376
+msgid "allocation.finderCurrent"
+msgstr "Current price"
 
 #. js-lingui-explicit-id
 #: src/routes/_app/transactions.tsx:446
@@ -1317,7 +1336,7 @@ msgid "documentation.contribution.customPolicy"
 msgstr "Custom contribution split"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:734
+#: src/routes/_app/allocation.index.tsx:816
 msgid "allocation.customize"
 msgstr "Customize columns"
 
@@ -1415,6 +1434,11 @@ msgid "nav.deepFinder"
 msgstr "Deep Finder"
 
 #. js-lingui-explicit-id
+#: src/components/allocation/allocation-deep-finder.tsx:247
+msgid "allocation.finderOpen"
+msgstr "Deep Finder"
+
+#. js-lingui-explicit-id
 #: src/components/documentation-dialog.tsx:522
 msgid "documentation.comparisons.missingDataDescription"
 msgstr "Deep Finder and income estimates report unavailable observations explicitly. A missing quote, baseline, FX rate, or provider event is never silently converted to zero."
@@ -1483,7 +1507,7 @@ msgstr "Development only"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/allocation-table.tsx:104
-#: src/routes/_app/allocation.$ticker.tsx:229
+#: src/routes/_app/allocation.$ticker.tsx:285
 msgid "allocation.colDiscount"
 msgstr "Discount"
 
@@ -1568,17 +1592,17 @@ msgid "allocation.plannerAutoEmpty"
 msgstr "Empty portfolio — spreading over {0} assets, up to {1}."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:486
+#: src/routes/_app/allocation.index.tsx:548
 msgid "allocation.invalidCashValue"
 msgstr "Enter a cash value of zero or more."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:519
+#: src/routes/_app/allocation.index.tsx:581
 msgid "allocation.invalidValue"
 msgstr "Enter a market value, e.g. 50000"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:465
+#: src/routes/_app/allocation.index.tsx:527
 msgid "allocation.invalidPercent"
 msgstr "Enter a percentage, e.g. 1,5 or -20"
 
@@ -1703,8 +1727,8 @@ msgid "settings.data.export"
 msgstr "Export backup"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/asset-reviews.tsx:296
-#: src/routes/_app/allocation.$ticker.tsx:214
+#: src/components/allocation/asset-reviews.tsx:315
+#: src/routes/_app/allocation.$ticker.tsx:270
 msgid "allocation.colFairValue"
 msgstr "Fair value"
 
@@ -1737,6 +1761,7 @@ msgid "positions.teaserFalling"
 msgstr "falling"
 
 #. js-lingui-explicit-id
+#: src/components/allocation/allocation-deep-finder.tsx:357
 #: src/routes/_app/deep-finder.tsx:194
 msgid "deepFinder.filterDown"
 msgstr "Falling"
@@ -1758,7 +1783,7 @@ msgid "transactions.feesHint"
 msgstr "Fees are added to a buy and subtracted from a sell."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:601
+#: src/routes/_app/allocation.index.tsx:683
 msgid "allocation.categoryFilter"
 msgstr "Filter by category"
 
@@ -1768,9 +1793,14 @@ msgid "categories.filter"
 msgstr "Filter by category"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:629
+#: src/routes/_app/allocation.index.tsx:711
 msgid "allocation.radarFilter"
 msgstr "Filter by radar"
+
+#. js-lingui-explicit-id
+#: src/components/allocation/allocation-deep-finder.tsx:273
+msgid "allocation.finderCategory"
+msgstr "Filter Deep Finder by category"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/asset-movements.tsx:94
@@ -1784,7 +1814,7 @@ msgid "assetClass.fixedIncome"
 msgstr "Fixed income"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/quarter-review-cell.tsx:98
+#: src/components/allocation/quarter-review-cell.tsx:155
 msgid "allocation.reviewWatchedHint"
 msgstr "Flagged last quarter for attention"
 
@@ -1804,13 +1834,13 @@ msgid "positions.quoteSourceHint"
 msgstr "Free delayed quotes used for market values and allocation."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:757
+#: src/routes/_app/allocation.index.tsx:839
 msgid "allocation.freeOrder"
 msgstr "Free order"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/allocation-table.tsx:101
-#: src/routes/_app/allocation.$ticker.tsx:255
+#: src/routes/_app/allocation.$ticker.tsx:311
 msgid "allocation.colGap"
 msgstr "Gap"
 
@@ -1833,8 +1863,8 @@ msgstr "Give the category a name."
 
 #. js-lingui-explicit-id
 #: src/components/allocation/allocation-table.tsx:103
-#: src/components/allocation/asset-reviews.tsx:288
-#: src/routes/_app/allocation.$ticker.tsx:274
+#: src/components/allocation/asset-reviews.tsx:307
+#: src/routes/_app/allocation.$ticker.tsx:330
 msgid "allocation.colGrade"
 msgstr "Grade"
 
@@ -1857,8 +1887,8 @@ msgid "documentation.score.gradeRange"
 msgstr "Grade ≥ {0} and < {1}"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/asset-reviews.tsx:226
-#: src/components/allocation/quarter-review-cell.tsx:115
+#: src/components/allocation/asset-reviews.tsx:235
+#: src/components/allocation/quarter-review-cell.tsx:172
 msgid "allocation.reviewEdit"
 msgstr "Grade this quarter"
 
@@ -1878,7 +1908,8 @@ msgid "positions.allocGroupBy"
 msgstr "Group by"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1277
+#: src/components/allocation/allocation-deep-finder.tsx:533
+#: src/components/allocation/allocation-table.tsx:1281
 msgid "allocation.markColor"
 msgstr "Highlight"
 
@@ -1970,7 +2001,7 @@ msgstr "Importing replaces all current portfolio data with this backup. The oper
 #. js-lingui-explicit-id
 #. placeholder {0}: row.score.cooldownUntil
 #: src/components/allocation/allocation-table.tsx:925
-#: src/routes/_app/allocation.$ticker.tsx:299
+#: src/routes/_app/allocation.$ticker.tsx:355
 msgid "allocation.cooldownIcon"
 msgstr "In cooldown until {0}"
 
@@ -2031,7 +2062,7 @@ msgid "transactions.bookTickerInvalid"
 msgstr "Invalid ticker “{0}”."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:645
+#: src/routes/_app/allocation.index.tsx:727
 msgid "allocation.radarOff"
 msgstr "Not on radar"
 
@@ -2074,7 +2105,7 @@ msgstr "Large-book weight impact"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/allocation-table.tsx:106
-#: src/routes/_app/allocation.$ticker.tsx:289
+#: src/routes/_app/allocation.$ticker.tsx:345
 msgid "allocation.colLastBuy"
 msgstr "Last buy"
 
@@ -2089,7 +2120,7 @@ msgid "detailedPositions.colLastTrade"
 msgstr "Last trade"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/asset-reviews.tsx:238
+#: src/components/allocation/asset-reviews.tsx:250
 msgid "allocation.detailLatestReview"
 msgstr "Latest"
 
@@ -2132,7 +2163,8 @@ msgstr "Manual prices are entered per ticker on the Positions page."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.ticker
-#: src/components/allocation/allocation-table.tsx:1288
+#: src/components/allocation/allocation-deep-finder.tsx:541
+#: src/components/allocation/allocation-table.tsx:1292
 msgid "allocation.markAs"
 msgstr "Mark {0} {color}"
 
@@ -2145,7 +2177,7 @@ msgstr "Mark {0} as the quarter you are working on"
 #. js-lingui-explicit-id
 #: src/components/allocation/asset-detail-chart.tsx:52
 #: src/components/allocation/asset-detail-chart.tsx:131
-#: src/routes/_app/allocation.$ticker.tsx:204
+#: src/routes/_app/allocation.$ticker.tsx:260
 msgid "allocation.detailPrice"
 msgstr "Market"
 
@@ -2311,7 +2343,7 @@ msgid "categories.move"
 msgstr "Move"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1332
+#: src/components/allocation/allocation-table.tsx:1336
 msgid "allocation.moveDown"
 msgstr "Move down"
 
@@ -2322,7 +2354,7 @@ msgid "categories.moveTo"
 msgstr "Move to…"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1328
+#: src/components/allocation/allocation-table.tsx:1332
 msgid "allocation.moveUp"
 msgstr "Move up"
 
@@ -2442,7 +2474,7 @@ msgid "categories.empty"
 msgstr "No categories yet. Add one to start grouping tickers."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.$ticker.tsx:158
+#: src/routes/_app/allocation.$ticker.tsx:214
 msgid "allocation.detailMissing"
 msgstr "No details are available for {ticker}."
 
@@ -2457,7 +2489,7 @@ msgid "positions.teaserEmptyDown"
 msgstr "No falling holdings this month."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.$ticker.tsx:338
+#: src/routes/_app/allocation.$ticker.tsx:394
 msgid "allocation.detailReviewsEmpty"
 msgstr "No grades, notes or fair values have been added yet."
 
@@ -2560,6 +2592,11 @@ msgid "categories.noAssets"
 msgstr "No tickers yet. Register a trade or add a watch-only asset on Allocation."
 
 #. js-lingui-explicit-id
+#: src/components/allocation/allocation-deep-finder.tsx:491
+msgid "allocation.finderEmpty"
+msgstr "No tracked assets match these filters."
+
+#. js-lingui-explicit-id
 #: src/routes/_app/dividends.tsx:395
 msgid "dividends.noUpcoming"
 msgstr "No upcoming events were published by the selected source."
@@ -2595,12 +2632,12 @@ msgid "transactions.empty"
 msgstr "Nothing registered yet."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1098
+#: src/components/allocation/allocation-table.tsx:1102
 msgid "allocation.empty"
 msgstr "Nothing to allocate yet. Register a trade or add an asset to follow."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:642
+#: src/routes/_app/allocation.index.tsx:724
 msgid "allocation.radarOn"
 msgstr "On radar"
 
@@ -2616,7 +2653,7 @@ msgid "allocation.openFairValueRef"
 msgstr "Open fair value reference for {0}"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/asset-reviews.tsx:370
+#: src/components/allocation/asset-reviews.tsx:389
 #: src/components/allocation/review-editor-form.tsx:222
 msgid "allocation.reviewFairValueRefOpen"
 msgstr "Open reference"
@@ -2969,8 +3006,8 @@ msgid "documentation.score.gradeMultiplier"
 msgstr "Quarterly grade multiplier"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/asset-reviews.tsx:137
-#: src/routes/_app/allocation.$ticker.tsx:335
+#: src/components/allocation/asset-reviews.tsx:140
+#: src/routes/_app/allocation.$ticker.tsx:391
 msgid "allocation.detailReviews"
 msgstr "Quarterly reviews"
 
@@ -2980,7 +3017,7 @@ msgid "documentation.score.unit.quarters"
 msgstr "quarters"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:686
+#: src/routes/_app/allocation.index.tsx:768
 msgid "allocation.quarterCount"
 msgstr "Quarters shown"
 
@@ -3177,7 +3214,7 @@ msgid "documentation.score.resetDefaults"
 msgstr "Reset defaults"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:750
+#: src/routes/_app/allocation.index.tsx:832
 msgid "allocation.reset"
 msgstr "Reset to standard"
 
@@ -3238,6 +3275,7 @@ msgid "positions.teaserRising"
 msgstr "rising"
 
 #. js-lingui-explicit-id
+#: src/components/allocation/allocation-deep-finder.tsx:347
 #: src/routes/_app/deep-finder.tsx:184
 msgid "deepFinder.filterUp"
 msgstr "Rising"
@@ -3300,7 +3338,7 @@ msgstr "Scheduled"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/allocation-table.tsx:102
-#: src/routes/_app/allocation.$ticker.tsx:266
+#: src/routes/_app/allocation.$ticker.tsx:322
 msgid "allocation.colScore"
 msgstr "Score"
 
@@ -3316,7 +3354,8 @@ msgid "allocation.plannerNeedRemainder"
 msgstr "Scored need is smaller than this contribution. {0} stays unallocated."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:587
+#: src/components/allocation/allocation-deep-finder.tsx:310
+#: src/routes/_app/allocation.index.tsx:669
 msgid "allocation.searchLabel"
 msgstr "Search assets"
 
@@ -3341,7 +3380,8 @@ msgid "detailedPositions.search"
 msgstr "Search ticker or class…"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:590
+#: src/components/allocation/allocation-deep-finder.tsx:307
+#: src/routes/_app/allocation.index.tsx:672
 msgid "allocation.search"
 msgstr "Search ticker…"
 
@@ -3425,7 +3465,7 @@ msgstr "Share of quoted equity."
 
 #. js-lingui-explicit-id
 #: src/components/allocation/allocation-table.tsx:108
-#: src/routes/_app/allocation.$ticker.tsx:283
+#: src/routes/_app/allocation.$ticker.tsx:339
 msgid "allocation.colQuantity"
 msgstr "Shares"
 
@@ -3452,7 +3492,7 @@ msgid "settings.showLogos"
 msgstr "Show company logos"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:656
+#: src/routes/_app/allocation.index.tsx:738
 msgid "allocation.quartersBack"
 msgstr "Show earlier quarters"
 
@@ -3462,7 +3502,7 @@ msgid "positions.allocShowLess"
 msgstr "Show fewer"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:674
+#: src/routes/_app/allocation.index.tsx:756
 msgid "allocation.quartersForward"
 msgstr "Show later quarters"
 
@@ -3539,6 +3579,11 @@ msgid "allocation.sortBy"
 msgstr "Sort by {0}"
 
 #. js-lingui-explicit-id
+#: src/components/allocation/allocation-deep-finder.tsx:393
+msgid "allocation.finderSortVariation"
+msgstr "Sort by variation"
+
+#. js-lingui-explicit-id
 #: src/routes/_app/daily.tsx:486
 msgid "daily.sortColumn"
 msgstr "Sort this column"
@@ -3562,7 +3607,7 @@ msgid "allocation.plannerSpread"
 msgstr "Spread over"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:727
+#: src/routes/_app/allocation.index.tsx:809
 msgid "allocation.standard"
 msgstr "Standard"
 
@@ -3572,13 +3617,18 @@ msgid "detailedPositions.standard"
 msgstr "Standard"
 
 #. js-lingui-explicit-id
+#: src/components/allocation/allocation-deep-finder.tsx:379
+msgid "allocation.finderBaseline"
+msgstr "Starting price"
+
+#. js-lingui-explicit-id
 #: src/routes/_app/dividends.tsx:626
 #: src/routes/_app/dividends.tsx:735
 msgid "dividends.status"
 msgstr "Status"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1347
+#: src/components/allocation/allocation-table.tsx:1351
 msgid "allocation.removeAsset"
 msgstr "Stop following"
 
@@ -3607,7 +3657,7 @@ msgstr "System"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/allocation-table.tsx:97
-#: src/routes/_app/allocation.$ticker.tsx:240
+#: src/routes/_app/allocation.$ticker.tsx:296
 msgid "allocation.colTarget"
 msgstr "Target"
 
@@ -3633,7 +3683,7 @@ msgid "documentation.score.targetCap"
 msgstr "Target-relative cap"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:557
+#: src/routes/_app/allocation.index.tsx:619
 msgid "allocation.subtitle"
 msgstr "Targets, quarterly grades and the contribution score in one place. Edit any cell in the table; the score reranks on save."
 
@@ -3782,6 +3832,7 @@ msgid "daily.colTicker"
 msgstr "Ticker"
 
 #. js-lingui-explicit-id
+#: src/components/allocation/allocation-deep-finder.tsx:373
 #: src/routes/_app/deep-finder.tsx:617
 msgid "deepFinder.colTicker"
 msgstr "Ticker"
@@ -3898,7 +3949,7 @@ msgid "transactions.colTotal"
 msgstr "Total"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1118
+#: src/components/allocation/allocation-table.tsx:1122
 msgid "allocation.total"
 msgstr "Total"
 
@@ -3964,7 +4015,8 @@ msgid "dividends.unavailable"
 msgstr "Unavailable tickers: {0}."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:614
+#: src/components/allocation/allocation-deep-finder.tsx:287
+#: src/routes/_app/allocation.index.tsx:696
 msgid "allocation.categoryNone"
 msgstr "Uncategorized"
 
@@ -4065,7 +4117,7 @@ msgstr "Use your email and password to open your portfolio."
 
 #. js-lingui-explicit-id
 #: src/components/allocation/allocation-table.tsx:109
-#: src/routes/_app/allocation.$ticker.tsx:195
+#: src/routes/_app/allocation.$ticker.tsx:251
 msgid "allocation.colValue"
 msgstr "Value"
 
@@ -4095,17 +4147,22 @@ msgid "performance.valuedAt"
 msgstr "Valued at {asOf}."
 
 #. js-lingui-explicit-id
+#: src/components/allocation/allocation-deep-finder.tsx:404
+msgid "allocation.finderVariation"
+msgstr "Variation"
+
+#. js-lingui-explicit-id
 #: src/components/allocation/contribution-planner.tsx:491
 msgid "allocation.plannerFxHint"
 msgstr "VET / FX costs"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1272
+#: src/components/allocation/allocation-table.tsx:1276
 msgid "allocation.viewDetails"
 msgstr "View details"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:721
+#: src/routes/_app/allocation.index.tsx:803
 msgid "allocation.presets"
 msgstr "View presets"
 
@@ -4115,7 +4172,7 @@ msgid "detailedPositions.presets"
 msgstr "View presets"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/asset-reviews.tsx:308
+#: src/components/allocation/asset-reviews.tsx:327
 msgid "allocation.detailVsClose"
 msgstr "vs close"
 
@@ -4125,19 +4182,20 @@ msgid "deepFinder.windowCost"
 msgstr "Vs cost"
 
 #. js-lingui-explicit-id
+#: src/components/allocation/allocation-deep-finder.tsx:443
 #: src/components/allocation/allocation-table.tsx:762
-#: src/routes/_app/allocation.$ticker.tsx:180
+#: src/routes/_app/allocation.$ticker.tsx:236
 msgid "allocation.watchBadge"
 msgstr "Watch"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/asset-reviews.tsx:246
+#: src/components/allocation/asset-reviews.tsx:261
 #: src/components/allocation/review-editor-form.tsx:276
 msgid "allocation.reviewWatchNext"
 msgstr "Watch next quarter"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/quarter-review-cell.tsx:91
+#: src/components/allocation/quarter-review-cell.tsx:148
 msgid "allocation.reviewWatchNextHint"
 msgstr "Watch next quarter"
 
@@ -4145,6 +4203,11 @@ msgstr "Watch next quarter"
 #: src/components/allocation/add-asset-dialog.tsx:143
 msgid "allocation.addDescription"
 msgstr "Watch-only assets have no invested amount. They stay in the table with their target; set a fair value on a quarterly review so the score can already rank them."
+
+#. js-lingui-explicit-id
+#: src/components/allocation/allocation-deep-finder.tsx:256
+msgid "allocation.finderTitle"
+msgstr "Watchlist Deep Finder"
 
 #. js-lingui-explicit-id
 #: src/components/contribution-plan-documentation.tsx:431
@@ -4238,6 +4301,7 @@ msgid "error.sessionExpired"
 msgstr "Your session expired. Sign in again."
 
 #. js-lingui-explicit-id
+#: src/components/allocation/allocation-deep-finder.tsx:130
 #: src/routes/_app/deep-finder.tsx:227
 msgid "deepFinder.windowYtd"
 msgstr "YTD"

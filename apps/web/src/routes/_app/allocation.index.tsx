@@ -26,6 +26,7 @@ import {
   AddAssetDialog,
   type AddAssetValues,
 } from "@/components/allocation/add-asset-dialog";
+import { AllocationDeepFinderButton } from "@/components/allocation/allocation-deep-finder";
 import {
   ALLOCATION_COLUMNS,
   type AllocationColumn,
@@ -630,6 +631,26 @@ function AllocationPage() {
             portfolioValue={allocation.data?.summary.totalMarketValue ?? "0"}
             fx={allocation.data?.fx}
             disabled={!allocation.data}
+          />
+          <AllocationDeepFinderButton
+            rows={allocation.data?.rows ?? []}
+            categories={categoryOptions}
+            categoryByTicker={categoryByTicker}
+            displayCurrency={
+              allocation.data?.summary.displayCurrency ?? displayCurrency
+            }
+            usdBrlRate={fx.effectiveRate}
+            quoteSource={quoteSource}
+            manualPrices={
+              quoteSource === "manual" &&
+              Object.keys(sanitizedManualPrices).length > 0
+                ? sanitizedManualPrices
+                : undefined
+            }
+            disabled={!allocation.data || categories.isPending}
+            onSetMarkColor={(ticker, markColor) =>
+              setMarkColor.mutate({ ticker, markColor })
+            }
           />
           <AddAssetDialog onSubmit={addAsset} saving={upsertAsset.isPending} />
         </div>

@@ -1,6 +1,7 @@
 import {
   type AllocationMarkColor,
   type AssetClass,
+  allocationFinderInput,
   allocationHistoryInput,
   allocationListInput,
   allocationMarkColorSchema,
@@ -22,6 +23,7 @@ import { and, asc, desc, eq, inArray, max, sql } from "drizzle-orm";
 import { db } from "../../db";
 import {
   allocationAssets,
+  assetCategories,
   assetReviews,
   cashBalances,
   transactions,
@@ -37,7 +39,7 @@ import {
   type WatchQuote,
 } from "../../domain/allocation";
 import { usdBrlExecutionRate } from "../../domain/fx-execution";
-import { consolidatePositions } from "../../domain/positions";
+import { consolidatePositions, convertMoney } from "../../domain/positions";
 import { loadScoreConfig } from "../../domain/score-config";
 import {
   add,
@@ -54,6 +56,7 @@ import {
 } from "../../lib/quotes";
 import { protectedProcedure, router } from "../trpc";
 import { loadValuedPortfolio } from "../valuation";
+import { buildFinderResult, type FinderPosition } from "./deep-finder";
 import { loadTransactionsForTickers } from "./transactions";
 
 const API_TIME_ZONE = "America/Sao_Paulo";
@@ -359,6 +362,105 @@ export const allocationRouter = router({
           manual: [...manualValuedTickers].sort(),
         },
       };
+    }),
+
+  /**
+   * Price movement for allocation assets, including watch-only tickers. The
+   * category is applied before history is fetched so a large watchlist does
+   * not fan out into unnecessary provider requests.
+   */
+  finder: protectedProcedure
+    .input(allocationFinderInput)
+    .query(async ({ ctx, input }) => {
+      const assets = await loadAssets(ctx.user.id);
+      const [assignments, history] = await Promise.all([
+        db
+          .select({
+            ticker: assetCategories.ticker,
+            categoryId: assetCategories.categoryId,
+          })
+          .from(assetCategories)
+          .where(eq(assetCategories.userId, ctx.user.id)),
+        loadTransactionsForTickers(
+          ctx.user.id,
+          assets.map((asset) => asset.ticker),
+        ),
+      ]);
+      const categoryByTicker = new Map(
+        assignments.map((row) => [row.ticker, row.categoryId]),
+      );
+      const invested = new Set(
+        consolidatePositions(history)
+          .filter((position) => Number(position.quantity) > 0)
+          .map((position) => position.ticker),
+      );
+      const selected = assets.filter((asset) => {
+        if (invested.has(asset.ticker)) {
+          return false;
+        }
+
+        if (input.categoryId === undefined) {
+          return true;
+        }
+
+        return (
+          (categoryByTicker.get(asset.ticker) ?? null) === input.categoryId
+        );
+      });
+
+      if (
+        !input.usdBrlRate &&
+        selected.some((asset) => asset.currency !== input.displayCurrency)
+      ) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "An USD/BRL rate is required to compare mixed currencies",
+        });
+      }
+
+      const requestManuals = {
+        ...storedManualPrices(selected),
+        ...Object.fromEntries(
+          Object.entries(input.manualPrices ?? {}).map(([ticker, price]) => [
+            ticker.toUpperCase(),
+            price,
+          ]),
+        ),
+      };
+      const watch = await quoteWatchOnly(
+        selected,
+        input.quoteSource,
+        requestManuals,
+      );
+      const positions: FinderPosition[] = selected.map((asset) => {
+        const quote = watch.quotes.get(asset.ticker);
+        const marketPrice = quote?.price ?? null;
+
+        return {
+          ticker: asset.ticker,
+          assetClass: asset.assetClass,
+          currency: asset.currency,
+          quantity: "1",
+          marketPrice,
+          convertedMarketValue:
+            marketPrice === null
+              ? null
+              : convertMoney(
+                  marketPrice,
+                  asset.currency,
+                  input.displayCurrency,
+                  input.usdBrlRate ?? "1",
+                ),
+          convertedUnrealizedPnl: null,
+          unrealizedPnlPercent: null,
+        };
+      });
+
+      return buildFinderResult({
+        positions,
+        missing: watch.missing,
+        input,
+      });
     }),
 
   /**

@@ -27,6 +27,17 @@ export const deepFinderInput = dailyTrackingInput.extend({
 });
 
 export type DeepFinderInput = z.input<typeof deepFinderInput>;
+export type ParsedDeepFinderInput = z.output<typeof deepFinderInput>;
+
+/**
+ * Deep Finder over the allocation watchlist. An omitted category includes the
+ * whole watchlist; `null` selects assets that have no category.
+ */
+export const allocationFinderInput = deepFinderInput.extend({
+  categoryId: z.string().uuid().nullable().optional(),
+});
+
+export type AllocationFinderInput = z.input<typeof allocationFinderInput>;
 
 export const deepFinderRowSchema = z.object({
   ticker: z.string(),
