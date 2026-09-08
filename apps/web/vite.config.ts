@@ -6,8 +6,12 @@ import tailwindcss from "@tailwindcss/vite";
 import { tanstackRouter } from "@tanstack/router-plugin/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
-import { LOCALE_STORAGE_KEY, LOCALES, SOURCE_LOCALE } from "./src/i18n/locales";
-import { linguiCatalogPreload } from "./vite-plugins/lingui-catalog-preload";
+import {
+  LOCALE_STORAGE_KEY,
+  LOCALES,
+  SOURCE_LOCALE,
+} from "./src/i18n/locales.ts";
+import { linguiCatalogPreload } from "./vite-plugins/lingui-catalog-preload.ts";
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 

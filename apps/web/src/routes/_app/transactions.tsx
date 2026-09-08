@@ -6,7 +6,6 @@ import {
   ASSET_CLASSES,
   type BookHoldingRow,
   CURRENCIES,
-  CURRENCY_LABELS,
   createTransactionInput,
   TRANSACTION_SIDES,
   type Transaction,
@@ -60,6 +59,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { trpc } from "@/lib/api";
+import { currencyText } from "@/lib/display-labels";
 import { formatMoney, formatQuantity, formatTradeDate } from "@/lib/format";
 import {
   bookHoldingsErrorMessage,
@@ -540,7 +540,7 @@ function TransactionsPage() {
                             <SelectContent>
                               {CURRENCIES.map((currency) => (
                                 <SelectItem key={currency} value={currency}>
-                                  {CURRENCY_LABELS[currency]}
+                                  {currencyText(currency, i18n)}
                                 </SelectItem>
                               ))}
                             </SelectContent>

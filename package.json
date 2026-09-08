@@ -11,6 +11,9 @@
     "lint": "biome check .",
     "format": "biome check --write .",
     "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "test:coverage": "pnpm -r test:coverage",
+    "build": "pnpm --filter @portifolio-tracker/web build",
     "db:generate": "pnpm --filter @portifolio-tracker/api db:generate",
     "db:migrate": "pnpm --filter @portifolio-tracker/api db:migrate"
   },

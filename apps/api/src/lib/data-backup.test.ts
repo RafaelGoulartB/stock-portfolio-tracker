@@ -212,4 +212,145 @@ describe("portable data backups", () => {
       }),
     ).toThrow();
   });
+
+  it("rejects a decimal beyond numeric(22, 8) integer digits", () => {
+    expect(() =>
+      backupRecordSchema.parse({
+        type: "record",
+        entity: "cashBalances",
+        data: {
+          // 15 integer digits exceeds the 14 the column can store.
+          amount: "123456789012345.00",
+          updatedAt: "2026-09-07T12:00:00.000Z",
+        },
+      }),
+    ).toThrow();
+  });
+
+  it("rejects a decimal with more than 8 fractional digits", () => {
+    expect(() =>
+      backupRecordSchema.parse({
+        type: "record",
+        entity: "cashBalances",
+        data: {
+          amount: "1.000000009",
+          updatedAt: "2026-09-07T12:00:00.000Z",
+        },
+      }),
+    ).toThrow();
+  });
+
+  it("rejects a non-positive traded quantity", () => {
+    for (const quantity of ["0", "-1"]) {
+      expect(() =>
+        backupRecordSchema.parse({
+          type: "record",
+          entity: "transactions",
+          data: {
+            ticker: "PETR4",
+            assetClass: "stock_br",
+            currency: "BRL",
+            side: "buy",
+            quantity,
+            price: "25.5",
+            fees: "0",
+            tradedAt: "2026-09-01",
+            notes: null,
+            createdAt: "2026-09-01T12:00:00.000Z",
+          },
+        }),
+      ).toThrow();
+    }
+  });
+
+  it("rejects a non-positive traded price", () => {
+    expect(() =>
+      backupRecordSchema.parse({
+        type: "record",
+        entity: "transactions",
+        data: {
+          ticker: "PETR4",
+          assetClass: "stock_br",
+          currency: "BRL",
+          side: "buy",
+          quantity: "10",
+          price: "0",
+          fees: "0",
+          tradedAt: "2026-09-01",
+          notes: null,
+          createdAt: "2026-09-01T12:00:00.000Z",
+        },
+      }),
+    ).toThrow();
+  });
+
+  it("still accepts zero fees on a transaction", () => {
+    const record = backupRecordSchema.parse({
+      type: "record",
+      entity: "transactions",
+      data: {
+        ticker: "PETR4",
+        assetClass: "stock_br",
+        currency: "BRL",
+        side: "buy",
+        quantity: "10",
+        price: "25.5",
+        fees: "0",
+        tradedAt: "2026-09-01",
+        notes: null,
+        createdAt: "2026-09-01T12:00:00.000Z",
+      },
+    });
+    if (record.entity !== "transactions") {
+      throw new Error("expected transaction record");
+    }
+    expect(record.data.fees).toBe("0");
+  });
+
+  it("accepts a negative cash balance as a signed decimal", () => {
+    const record = backupRecordSchema.parse({
+      type: "record",
+      entity: "cashBalances",
+      data: { amount: "-10.50000000", updatedAt: "2026-09-07T12:00:00.000Z" },
+    });
+    if (record.entity !== "cashBalances") {
+      throw new Error("expected cash balance record");
+    }
+    expect(record.data.amount).toBe("-10.50000000");
+  });
+
+  it("rejects a payload past the decompressed byte budget", async () => {
+    const chunk = "x".repeat(1024);
+    async function consume() {
+      for await (const _ of decodeLines(byteStream(chunk, chunk, chunk), {
+        maxTotalBytes: 2048,
+        maxLineBytes: 1024 * 1024,
+      })) {
+        // drain
+      }
+    }
+    await expect(consume()).rejects.toThrow(/decompressed limit/i);
+  });
+
+  it("rejects more lines than the configured maximum", async () => {
+    async function consume() {
+      for await (const _ of decodeLines(byteStream("a\n", "b\n", "c\n"), {
+        maxLines: 2,
+      })) {
+        // drain
+      }
+    }
+    await expect(consume()).rejects.toThrow(/more than 2 lines/i);
+  });
+
+  it("rejects a single line past the byte budget", async () => {
+    async function consume() {
+      for await (const _ of decodeLines(byteStream("x".repeat(50), "\n"), {
+        maxLineBytes: 16,
+      })) {
+        // drain
+      }
+    }
+    await expect(consume()).rejects.toThrow(/larger than 16 bytes/i);
+  });
 });

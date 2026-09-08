@@ -233,6 +233,38 @@ describe("buildAllocationRows", () => {
     ]);
   });
 
+  it("carries the native open result, its ratio and the combined total", () => {
+    const [row] = buildAllocationRows({
+      positions: [position({ realizedPnl: "40.00" })],
+      assets: [asset()],
+      reviews: [],
+      lastContributionByTicker: new Map(),
+      displayCurrency: "BRL",
+      today: TODAY,
+    });
+
+    // Open result and its ratio come straight from the valued position; the
+    // total sums realized and open in the native currency (100 + 40).
+    expect(row?.unrealizedPnl).toBe("100.00");
+    expect(row?.unrealizedPnlPercent).toBe("0.200000");
+    expect(row?.totalResult).toBe("140.00");
+  });
+
+  it("falls back to realized-only total when there is no open lot", () => {
+    const [row] = buildAllocationRows({
+      positions: [],
+      assets: [asset({ ticker: "CAVA", targetWeight: null })],
+      reviews: [],
+      lastContributionByTicker: new Map(),
+      displayCurrency: "BRL",
+      today: TODAY,
+    });
+
+    expect(row?.unrealizedPnl).toBeNull();
+    expect(row?.unrealizedPnlPercent).toBeNull();
+    expect(row?.totalResult).toBe("0.00");
+  });
+
   it("lists watch-only assets with no position", () => {
     const rows = buildAllocationRows({
       positions: [],

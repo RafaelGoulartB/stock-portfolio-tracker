@@ -13,6 +13,7 @@ import {
   userContributionPlanConfigs,
   userScoreConfigs,
 } from "../db/schema";
+import { assertBackupTransactionsValid } from "../domain/backup-validation";
 import {
   BACKUP_ENTITIES,
   BACKUP_FORMAT,
@@ -27,6 +28,8 @@ import {
   decodeLines,
   emptyBackupCounts,
   encodeBackupLine,
+  MAX_COMPRESSED_BYTES,
+  MAX_RECORDS,
   manifestSchema,
 } from "../lib/data-backup";
 import { createContext } from "../trpc/context";
@@ -38,8 +41,42 @@ type ByteTransform = {
   writable: WritableStream<Uint8Array>;
 };
 
-function jsonError(message: string, status: 400 | 401 | 409 | 500) {
+function jsonError(message: string, status: 400 | 401 | 409 | 413 | 500) {
   return Response.json({ error: message }, { status });
+}
+
+/**
+ * Caps the raw request body at `maxBytes` before it reaches the decompressor,
+ * so an oversized compressed upload is rejected without buffering it. This is
+ * the outer bound; `decodeLines` separately caps the inflated payload.
+ */
+function limitStream(
+  stream: ReadableStream<Uint8Array>,
+  maxBytes: number,
+): ReadableStream<Uint8Array> {
+  let seen = 0;
+  const reader = stream.getReader();
+  return new ReadableStream<Uint8Array>({
+    async pull(controller) {
+      const { done, value } = await reader.read();
+      if (done) {
+        controller.close();
+        return;
+      }
+      seen += value.byteLength;
+      if (seen > maxBytes) {
+        controller.error(
+          new Error(`Backup exceeds the ${maxBytes}-byte upload limit`),
+        );
+        await reader.cancel().catch(() => undefined);
+        return;
+      }
+      controller.enqueue(value);
+    },
+    async cancel(reason) {
+      await reader.cancel(reason).catch(() => undefined);
+    },
+  });
 }
 
 function toWebStream(iterator: AsyncGenerator<string>) {
@@ -265,12 +302,34 @@ type RecordData<E extends BackupEntity> = Extract<
   { entity: E }
 >["data"];
 
-async function importBackup(body: ReadableStream<Uint8Array>, userId: string) {
+type ParsedBackup = {
+  manifest: BackupManifest;
+  counts: ReturnType<typeof emptyBackupCounts>;
+  categories: RecordData<"categories">[];
+  allocationAssets: RecordData<"allocationAssets">[];
+  cashBalances: RecordData<"cashBalances">[];
+  assetReviews: RecordData<"assetReviews">[];
+  transactions: RecordData<"transactions">[];
+  assetCategories: RecordData<"assetCategories">[];
+  scoreConfigs: RecordData<"scoreConfigs">[];
+  contributionPlanConfigs: RecordData<"contributionPlanConfigs">[];
+};
+
+/**
+ * Phase one: decode, verify, and buffer the whole upload without touching the
+ * database. Reading an untrusted, network-paced stream must not hold the
+ * replacement transaction open, so every integrity check — checksum, counts,
+ * record order, decimal precision, and the financial invariants — runs here
+ * first. `decodeLines` bounds the decompressed bytes, line size, and line
+ * count, and `MAX_RECORDS` bounds the buffer, so this stays on a fixed budget.
+ */
+async function parseBackup(
+  body: ReadableStream<Uint8Array>,
+): Promise<ParsedBackup> {
   const decompressed = body.pipeThrough(
     new DecompressionStream("gzip") as unknown as ByteTransform,
   );
-  const lines = decodeLines(decompressed);
-  const iterator = lines[Symbol.asyncIterator]();
+  const iterator = decodeLines(decompressed)[Symbol.asyncIterator]();
   const first = await iterator.next();
   if (first.done || first.value.length === 0) {
     throw new Error("Backup is empty");
@@ -285,10 +344,118 @@ async function importBackup(body: ReadableStream<Uint8Array>, userId: string) {
   const manifest = manifestSchema.parse(parsedJson);
   const hash = createBackupHash();
   hash.update(`${first.value}\n`);
-  const actualCounts = emptyBackupCounts();
+
+  const parsed: ParsedBackup = {
+    manifest,
+    counts: emptyBackupCounts(),
+    categories: [],
+    allocationAssets: [],
+    cashBalances: [],
+    assetReviews: [],
+    transactions: [],
+    assetCategories: [],
+    scoreConfigs: [],
+    contributionPlanConfigs: [],
+  };
   let lastEntityIndex = 0;
+  let totalRecords = 0;
   let sawChecksum = false;
 
+  for await (const line of { [Symbol.asyncIterator]: () => iterator }) {
+    if (line.length === 0) continue;
+    if (sawChecksum) throw new Error("Backup has data after its checksum");
+
+    let value: unknown;
+    try {
+      value = JSON.parse(line);
+    } catch {
+      throw new Error("Backup contains invalid JSON");
+    }
+
+    const checksum = checksumSchema.safeParse(value);
+    if (checksum.success) {
+      const digest = hash.digest("hex");
+      if (digest !== checksum.data.value) {
+        throw new Error("Backup checksum does not match its contents");
+      }
+      for (const entity of BACKUP_ENTITIES) {
+        if (parsed.counts[entity] !== manifest.counts[entity]) {
+          throw new Error(`Backup row count does not match for ${entity}`);
+        }
+      }
+      sawChecksum = true;
+      continue;
+    }
+
+    const record = backupRecordSchema.parse(value);
+    const entityIndex = BACKUP_ENTITIES.indexOf(record.entity);
+    if (entityIndex < lastEntityIndex) {
+      throw new Error("Backup records are not in a supported order");
+    }
+    lastEntityIndex = entityIndex;
+    hash.update(`${line}\n`);
+
+    totalRecords += 1;
+    if (totalRecords > MAX_RECORDS) {
+      throw new Error(`Backup contains more than ${MAX_RECORDS} records`);
+    }
+
+    parsed.counts[record.entity] += 1;
+    if (parsed.counts[record.entity] > manifest.counts[record.entity]) {
+      throw new Error(`Backup has too many rows for ${record.entity}`);
+    }
+
+    switch (record.entity) {
+      case "categories":
+        parsed.categories.push(record.data);
+        break;
+      case "allocationAssets":
+        parsed.allocationAssets.push(record.data);
+        break;
+      case "cashBalances":
+        parsed.cashBalances.push(record.data);
+        break;
+      case "assetReviews":
+        parsed.assetReviews.push(record.data);
+        break;
+      case "transactions":
+        parsed.transactions.push(record.data);
+        break;
+      case "assetCategories":
+        parsed.assetCategories.push(record.data);
+        break;
+      case "scoreConfigs":
+        parsed.scoreConfigs.push(record.data);
+        break;
+      case "contributionPlanConfigs":
+        parsed.contributionPlanConfigs.push(record.data);
+        break;
+    }
+  }
+
+  if (!sawChecksum) throw new Error("Backup checksum is missing");
+  if (parsed.cashBalances.length > 1) {
+    throw new Error("Backup contains more than one cash balance");
+  }
+  if (parsed.scoreConfigs.length > 1) {
+    throw new Error("Backup contains more than one score config");
+  }
+  if (parsed.contributionPlanConfigs.length > 1) {
+    throw new Error("Backup contains more than one contribution plan config");
+  }
+
+  // Replaying a backup must never smuggle in a state a live write would refuse.
+  assertBackupTransactionsValid(parsed.transactions);
+
+  return parsed;
+}
+
+/**
+ * Phase two: replace the account atomically. The upload is already fully
+ * decoded and validated, so this transaction only deletes and inserts bounded
+ * batches and stays short.
+ */
+async function replaceAccountData(parsed: ParsedBackup, userId: string) {
   await db.transaction(async (tx) => {
     await tx.delete(assetCategories).where(eq(assetCategories.userId, userId));
     await tx.delete(assetReviews).where(eq(assetReviews.userId, userId));
@@ -306,166 +473,103 @@ async function importBackup(body: ReadableStream<Uint8Array>, userId: string) {
       .where(eq(userContributionPlanConfigs.userId, userId));
 
     const categoryIdByRef = new Map<string, string>();
-    let categoryBatch: RecordData<"categories">[] = [];
-    let allocationBatch: RecordData<"allocationAssets">[] = [];
-    let cashBatch: RecordData<"cashBalances">[] = [];
-    let reviewBatch: RecordData<"assetReviews">[] = [];
-    let transactionBatch: RecordData<"transactions">[] = [];
-    let assignmentBatch: RecordData<"assetCategories">[] = [];
-    let scoreConfigBatch: RecordData<"scoreConfigs">[] = [];
-    let contributionPlanConfigBatch: RecordData<"contributionPlanConfigs">[] =
-      [];
-
-    const flush = async (entity: BackupEntity) => {
-      if (entity === "categories" && categoryBatch.length > 0) {
-        const values = categoryBatch.map(({ ref, ...row }) => {
+    for (let index = 0; index < parsed.categories.length; index += BATCH_SIZE) {
+      const values = parsed.categories
+        .slice(index, index + BATCH_SIZE)
+        .map(({ ref, ...row }) => {
           const id = randomUUID();
           categoryIdByRef.set(ref, id);
           return { ...row, id, userId };
         });
-        await tx.insert(categories).values(values);
-        categoryBatch = [];
-      } else if (entity === "allocationAssets" && allocationBatch.length > 0) {
-        await tx
-          .insert(allocationAssets)
-          .values(allocationBatch.map((row) => ({ ...row, userId })));
-        allocationBatch = [];
-      } else if (entity === "cashBalances" && cashBatch.length > 0) {
-        if (cashBatch.length > 1) {
-          throw new Error("Backup contains more than one cash balance");
-        }
-        await tx
-          .insert(cashBalances)
-          .values(cashBatch.map((row) => ({ ...row, userId })));
-        cashBatch = [];
-      } else if (entity === "assetReviews" && reviewBatch.length > 0) {
-        await tx
-          .insert(assetReviews)
-          .values(reviewBatch.map((row) => ({ ...row, userId })));
-        reviewBatch = [];
-      } else if (entity === "transactions" && transactionBatch.length > 0) {
-        await tx
-          .insert(transactions)
-          .values(transactionBatch.map((row) => ({ ...row, userId })));
-        transactionBatch = [];
-      } else if (entity === "assetCategories" && assignmentBatch.length > 0) {
-        await tx.insert(assetCategories).values(
-          assignmentBatch.map(({ categoryRef, ...row }) => {
+      await tx.insert(categories).values(values);
+    }
+
+    for (
+      let index = 0;
+      index < parsed.allocationAssets.length;
+      index += BATCH_SIZE
+    ) {
+      await tx
+        .insert(allocationAssets)
+        .values(
+          parsed.allocationAssets
+            .slice(index, index + BATCH_SIZE)
+            .map((row) => ({ ...row, userId })),
+        );
+    }
+
+    if (parsed.cashBalances.length > 0) {
+      await tx
+        .insert(cashBalances)
+        .values(parsed.cashBalances.map((row) => ({ ...row, userId })));
+    }
+
+    for (
+      let index = 0;
+      index < parsed.assetReviews.length;
+      index += BATCH_SIZE
+    ) {
+      await tx
+        .insert(assetReviews)
+        .values(
+          parsed.assetReviews
+            .slice(index, index + BATCH_SIZE)
+            .map((row) => ({ ...row, userId })),
+        );
+    }
+
+    for (
+      let index = 0;
+      index < parsed.transactions.length;
+      index += BATCH_SIZE
+    ) {
+      await tx
+        .insert(transactions)
+        .values(
+          parsed.transactions
+            .slice(index, index + BATCH_SIZE)
+            .map((row) => ({ ...row, userId })),
+        );
+    }
+
+    for (
+      let index = 0;
+      index < parsed.assetCategories.length;
+      index += BATCH_SIZE
+    ) {
+      await tx.insert(assetCategories).values(
+        parsed.assetCategories
+          .slice(index, index + BATCH_SIZE)
+          .map(({ categoryRef, ...row }) => {
             const categoryId = categoryIdByRef.get(categoryRef);
             if (!categoryId) {
               throw new Error("Backup contains a broken category reference");
             }
             return { ...row, categoryId, userId };
           }),
-        );
-        assignmentBatch = [];
-      } else if (entity === "scoreConfigs" && scoreConfigBatch.length > 0) {
-        if (scoreConfigBatch.length > 1) {
-          throw new Error("Backup contains more than one score config");
-        }
-        await tx
-          .insert(userScoreConfigs)
-          .values(scoreConfigBatch.map((row) => ({ ...row, userId })));
-        scoreConfigBatch = [];
-      } else if (
-        entity === "contributionPlanConfigs" &&
-        contributionPlanConfigBatch.length > 0
-      ) {
-        if (contributionPlanConfigBatch.length > 1) {
-          throw new Error(
-            "Backup contains more than one contribution plan config",
-          );
-        }
-        await tx
-          .insert(userContributionPlanConfigs)
-          .values(
-            contributionPlanConfigBatch.map((row) => ({ ...row, userId })),
-          );
-        contributionPlanConfigBatch = [];
-      }
-    };
-
-    for await (const line of { [Symbol.asyncIterator]: () => iterator }) {
-      if (line.length === 0) continue;
-      if (sawChecksum) throw new Error("Backup has data after its checksum");
-
-      let value: unknown;
-      try {
-        value = JSON.parse(line);
-      } catch {
-        throw new Error("Backup contains invalid JSON");
-      }
-
-      const checksum = checksumSchema.safeParse(value);
-      if (checksum.success) {
-        for (const entity of BACKUP_ENTITIES) await flush(entity);
-        const digest = hash.digest("hex");
-        if (digest !== checksum.data.value) {
-          throw new Error("Backup checksum does not match its contents");
-        }
-        for (const entity of BACKUP_ENTITIES) {
-          if (actualCounts[entity] !== manifest.counts[entity]) {
-            throw new Error(`Backup row count does not match for ${entity}`);
-          }
-        }
-        sawChecksum = true;
-        continue;
-      }
-
-      const record = backupRecordSchema.parse(value);
-      const entityIndex = BACKUP_ENTITIES.indexOf(record.entity);
-      if (entityIndex < lastEntityIndex) {
-        throw new Error("Backup records are not in a supported order");
-      }
-      lastEntityIndex = entityIndex;
-      hash.update(`${line}\n`);
-      actualCounts[record.entity] += 1;
-      if (actualCounts[record.entity] > manifest.counts[record.entity]) {
-        throw new Error(`Backup has too many rows for ${record.entity}`);
-      }
-
-      switch (record.entity) {
-        case "categories":
-          categoryBatch.push(record.data);
-          if (categoryBatch.length >= BATCH_SIZE) await flush(record.entity);
-          break;
-        case "allocationAssets":
-          allocationBatch.push(record.data);
-          if (allocationBatch.length >= BATCH_SIZE) await flush(record.entity);
-          break;
-        case "cashBalances":
-          cashBatch.push(record.data);
-          if (cashBatch.length >= BATCH_SIZE) await flush(record.entity);
-          break;
-        case "assetReviews":
-          reviewBatch.push(record.data);
-          if (reviewBatch.length >= BATCH_SIZE) await flush(record.entity);
-          break;
-        case "transactions":
-          transactionBatch.push(record.data);
-          if (transactionBatch.length >= BATCH_SIZE) await flush(record.entity);
-          break;
-        case "assetCategories":
-          assignmentBatch.push(record.data);
-          if (assignmentBatch.length >= BATCH_SIZE) await flush(record.entity);
-          break;
-        case "scoreConfigs":
-          scoreConfigBatch.push(record.data);
-          if (scoreConfigBatch.length >= BATCH_SIZE) await flush(record.entity);
-          break;
-        case "contributionPlanConfigs":
-          contributionPlanConfigBatch.push(record.data);
-          if (contributionPlanConfigBatch.length >= BATCH_SIZE) {
-            await flush(record.entity);
-          }
-          break;
-      }
+      );
     }
 
-    if (!sawChecksum) throw new Error("Backup checksum is missing");
-  });
+    if (parsed.scoreConfigs.length > 0) {
+      await tx
+        .insert(userScoreConfigs)
+        .values(parsed.scoreConfigs.map((row) => ({ ...row, userId })));
+    }
 
-  return { imported: actualCounts };
+    if (parsed.contributionPlanConfigs.length > 0) {
+      await tx
+        .insert(userContributionPlanConfigs)
+        .values(
+          parsed.contributionPlanConfigs.map((row) => ({ ...row, userId })),
+        );
+    }
+  });
+}
+
+async function importBackup(body: ReadableStream<Uint8Array>, userId: string) {
+  const parsed = await parseBackup(body);
+  await replaceAccountData(parsed, userId);
+  return { imported: parsed.counts };
 }
 
 export const dataBackupRoutes = new Hono()
@@ -496,10 +600,18 @@ export const dataBackupRoutes = new Hono()
     if (!c.req.header("Content-Type")?.startsWith(BACKUP_MEDIA_TYPE)) {
       return jsonError("Select a .jsonl.gz portfolio backup", 400);
     }
+    const declaredLength = Number(c.req.header("Content-Length"));
+    if (
+      Number.isFinite(declaredLength) &&
+      declaredLength > MAX_COMPRESSED_BYTES
+    ) {
+      return jsonError("Backup upload is too large", 413);
+    }
     if (!c.req.raw.body) return jsonError("Backup is empty", 400);
 
     try {
-      const result = await importBackup(c.req.raw.body, context.user.id);
+      const bounded = limitStream(c.req.raw.body, MAX_COMPRESSED_BYTES);
+      const result = await importBackup(bounded, context.user.id);
       return c.json(result);
     } catch (error) {
       console.error("Backup import failed", error);

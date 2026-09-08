@@ -1,9 +1,8 @@
-import { msg } from "@lingui/core/macro";
+import { msg, t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import {
   CURRENCIES,
-  CURRENCY_LABELS,
   type Currency,
   FX_SOURCE_LABELS,
   type FxSource,
@@ -41,6 +40,11 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import {
+  currencyText,
+  fxSourceText,
+  quoteSourceText,
+} from "@/lib/display-labels";
 import { formatQuantity, formatTradeDate } from "@/lib/format";
 import { useFxQuote } from "@/lib/fx";
 import { useSettings } from "@/lib/settings";
@@ -217,6 +221,7 @@ function SettingsSectionLabel({ section }: { section: SettingsSection }) {
 }
 
 function GeneralSettings() {
+  const { i18n } = useLingui();
   const {
     displayCurrency,
     setDisplayCurrency,
@@ -250,7 +255,7 @@ function GeneralSettings() {
           <SelectContent>
             {CURRENCIES.map((currency) => (
               <SelectItem key={currency} value={currency}>
-                {CURRENCY_LABELS[currency]}
+                {currencyText(currency, i18n)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -274,7 +279,7 @@ function GeneralSettings() {
           <SelectContent>
             {(Object.keys(FX_SOURCE_LABELS) as FxSource[]).map((source) => (
               <SelectItem key={source} value={source}>
-                {FX_SOURCE_LABELS[source]}
+                {fxSourceText(source, i18n)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -295,8 +300,23 @@ function GeneralSettings() {
             placeholder="5.00"
             value={manualRate}
             onChange={(event) => setManualRate(event.target.value)}
-            aria-invalid={!fx.manualRateValid}
+            aria-invalid={fx.manualRateInvalid}
+            aria-describedby={
+              fx.manualRateInvalid ? "settings-fx-rate-error" : undefined
+            }
           />
+          {fx.manualRateInvalid ? (
+            <p
+              id="settings-fx-rate-error"
+              role="alert"
+              className="text-xs text-destructive"
+            >
+              <Trans id="settings.fxManualRateInvalid">
+                Enter a rate above zero, e.g. 5.00, to consolidate your
+                portfolio.
+              </Trans>
+            </p>
+          ) : null}
         </Field>
       ) : (
         <Field
@@ -323,7 +343,9 @@ function GeneralSettings() {
               size="icon"
               className="ml-auto size-7"
               onClick={() => fx.refetch()}
-              aria-label="Refresh rate"
+              aria-label={i18n._(
+                t({ id: "settings.fxRefresh", message: "Refresh rate" }),
+              )}
             >
               <RefreshCw className="size-4" aria-hidden="true" />
             </Button>
@@ -349,7 +371,7 @@ function GeneralSettings() {
             {(Object.keys(QUOTE_SOURCE_LABELS) as QuoteSource[]).map(
               (source) => (
                 <SelectItem key={source} value={source}>
-                  {QUOTE_SOURCE_LABELS[source]}
+                  {quoteSourceText(source, i18n)}
                 </SelectItem>
               ),
             )}

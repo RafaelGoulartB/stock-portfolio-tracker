@@ -15,11 +15,69 @@ import {
   availableBeforeOversell,
   buildTickerLedger,
   type ConsolidationInput,
+  type IdentifiedEntry,
+  oversellAfterRemoval,
   type TickerLedgerEntry,
   tickerCurrencies,
   tradeCashTotal,
 } from "../../domain/positions";
 import { protectedProcedure, router } from "../trpc";
+
+/** A Drizzle transaction handle, or the base `db`, that runs the query. */
+type DbExecutor =
+  | Parameters<Parameters<typeof db.transaction>[0]>[0]
+  | typeof db;
+
+/**
+ * Serializes writes for one account's tickers so simultaneous sales cannot
+ * both validate against the same available quantity. Locks are taken in a
+ * stable sorted order and deduplicated so two transactions touching the same
+ * set of tickers can never deadlock by acquiring them in opposite orders.
+ * Must run inside a transaction: `pg_advisory_xact_lock` releases on commit.
+ */
+export async function lockTickers(
+  tx: DbExecutor,
+  userId: string,
+  tickers: readonly string[],
+): Promise<void> {
+  const ordered = [...new Set(tickers)].sort();
+
+  for (const ticker of ordered) {
+    await tx.execute(
+      sql`SELECT pg_advisory_xact_lock(hashtext(${`${userId}:${ticker}`}))`,
+    );
+  }
+}
+
+/**
+ * Re-reads the calculation columns for one account's tickers in trade order.
+ * Call after {@link lockTickers} so the history reflects committed writes and
+ * cannot change under the mutation.
+ */
+export async function readTickerHistory(
+  tx: DbExecutor,
+  userId: string,
+  tickers: readonly string[],
+): Promise<ConsolidationInput[]> {
+  const unique = [...new Set(tickers)];
+
+  if (unique.length === 0) {
+    return [];
+  }
+
+  const rows = await tx
+    .select(calculationColumns)
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.userId, userId),
+        inArray(transactions.ticker, unique),
+      ),
+    )
+    .orderBy(asc(transactions.tradedAt), asc(transactions.createdAt));
+
+  return rows.map((row) => toConsolidationInput(row));
+}
 
 const displayColumns = {
   id: transactions.id,
@@ -72,6 +130,40 @@ export async function loadTransactions(
     .orderBy(asc(transactions.tradedAt), asc(transactions.createdAt));
 
   return rows.map((row) => toConsolidationInput(row));
+}
+
+/**
+ * Like {@link readTickerHistory} but keeps each row's id, so a mutation can
+ * target one entry (e.g. simulate its removal). Trade order and locking
+ * expectations are identical.
+ */
+export async function readIdentifiedHistory(
+  tx: DbExecutor,
+  userId: string,
+  tickers: readonly string[],
+): Promise<IdentifiedEntry[]> {
+  const unique = [...new Set(tickers)];
+
+  if (unique.length === 0) {
+    return [];
+  }
+
+  const rows = await tx
+    .select({ id: transactions.id, ...calculationColumns })
+    .from(transactions)
+    .where(
+      and(
+        eq(transactions.userId, userId),
+        inArray(transactions.ticker, unique),
+      ),
+    )
+    .orderBy(asc(transactions.tradedAt), asc(transactions.createdAt));
+
+  return rows.map((row) => {
+    const { id, ...rest } = row;
+
+    return { ...toConsolidationInput(rest), id } satisfies IdentifiedEntry;
+  });
 }
 
 /** Reads only the ticker ledgers needed by a mutation. */
@@ -186,21 +278,10 @@ export const transactionsRouter = router({
       const row = await db.transaction(async (tx) => {
         // Serialize writes for one account/ticker so simultaneous sales do
         // not both validate against the same available quantity.
-        await tx.execute(
-          sql`SELECT pg_advisory_xact_lock(hashtext(${`${ctx.user.id}:${trade.ticker}`}))`,
-        );
-        const history = (
-          await tx
-            .select(calculationColumns)
-            .from(transactions)
-            .where(
-              and(
-                eq(transactions.userId, ctx.user.id),
-                eq(transactions.ticker, trade.ticker),
-              ),
-            )
-            .orderBy(asc(transactions.tradedAt), asc(transactions.createdAt))
-        ).map((entry) => toConsolidationInput(entry));
+        await lockTickers(tx, ctx.user.id, [trade.ticker]);
+        const history = await readTickerHistory(tx, ctx.user.id, [
+          trade.ticker,
+        ]);
 
         if (
           trade.assetClass === "fixed_income" &&
@@ -281,43 +362,51 @@ export const transactionsRouter = router({
 
   /**
    * Books opening lots as synthetic buys (quantity × average cost, fees 0).
-   * Validates every currency lock first, then inserts all-or-nothing.
+   * Locks every ticker in a stable order, re-reads their history under the
+   * locks, validates the one-currency-per-ticker rule, then inserts
+   * all-or-nothing.
    */
   bookHoldings: protectedProcedure
     .input(bookHoldingsInput)
     .mutation(async ({ ctx, input }) => {
-      const history = await loadTransactionsForTickers(
-        ctx.user.id,
-        input.holdings.map((holding) => holding.ticker),
-      );
-      const tickers = new Set<string>();
+      const seen = new Set<string>();
 
       for (const holding of input.holdings) {
-        if (tickers.has(holding.ticker)) {
+        if (seen.has(holding.ticker)) {
           throw new TRPCError({
             code: "BAD_REQUEST",
             message: `Duplicate ticker ${holding.ticker} in this batch`,
           });
         }
 
-        tickers.add(holding.ticker);
-
-        const used = tickerCurrencies(history, holding.ticker);
-
-        if (used.length > 0 && !used.includes(holding.currency)) {
-          throw new TRPCError({
-            code: "PRECONDITION_FAILED",
-            message: `Ticker ${holding.ticker} is tracked in ${used.join(", ")}. Register this trade in the same currency.`,
-          });
-        }
+        seen.add(holding.ticker);
       }
 
       const note =
         input.notes && input.notes.length > 0
           ? input.notes
           : "Opening position";
+      const batchTickers = input.holdings.map((holding) => holding.ticker);
 
       const inserted = await db.transaction(async (tx) => {
+        // Lock in a deterministic order across the whole batch so two
+        // concurrent bookings sharing tickers cannot deadlock, then read the
+        // committed history under those locks.
+        await lockTickers(tx, ctx.user.id, batchTickers);
+        const history = await readTickerHistory(tx, ctx.user.id, batchTickers);
+
+        for (const holding of input.holdings) {
+          // One ticker, one currency: BRL and USD costs are never averaged.
+          const used = tickerCurrencies(history, holding.ticker);
+
+          if (used.length > 0 && !used.includes(holding.currency)) {
+            throw new TRPCError({
+              code: "PRECONDITION_FAILED",
+              message: `Ticker ${holding.ticker} is tracked in ${used.join(", ")}. Register this trade in the same currency.`,
+            });
+          }
+        }
+
         const rows = [];
 
         for (const holding of input.holdings) {
@@ -353,51 +442,94 @@ export const transactionsRouter = router({
   remove: protectedProcedure
     .input(deleteTransactionInput)
     .mutation(async ({ ctx, input }) => {
-      const [deleted] = await db
-        .delete(transactions)
-        .where(
-          and(
-            eq(transactions.id, input.id),
-            eq(transactions.userId, ctx.user.id),
-          ),
-        )
-        .returning({
-          id: transactions.id,
-          ticker: transactions.ticker,
-          assetClass: transactions.assetClass,
-        });
-
-      if (!deleted) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Transaction not found",
-        });
-      }
-
-      if (deleted.assetClass === "fixed_income") {
-        const [remaining] = await db
-          .select({ id: transactions.id })
+      const deletedId = await db.transaction(async (tx) => {
+        // The target's ticker never changes, so reading it before locking is
+        // safe; the lock then guards the history we validate and delete from.
+        const [target] = await tx
+          .select({
+            id: transactions.id,
+            ticker: transactions.ticker,
+            assetClass: transactions.assetClass,
+          })
           .from(transactions)
           .where(
             and(
+              eq(transactions.id, input.id),
               eq(transactions.userId, ctx.user.id),
-              eq(transactions.ticker, deleted.ticker),
             ),
           )
           .limit(1);
 
-        if (!remaining) {
-          await db
-            .delete(allocationAssets)
-            .where(
-              and(
-                eq(allocationAssets.userId, ctx.user.id),
-                eq(allocationAssets.ticker, deleted.ticker),
-              ),
-            );
+        if (!target) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Transaction not found",
+          });
         }
-      }
 
-      return { id: deleted.id };
+        await lockTickers(tx, ctx.user.id, [target.ticker]);
+
+        // Re-read with ids under the lock so the oversell check sees the
+        // committed ledger and the row still exists.
+        const history = await readIdentifiedHistory(tx, ctx.user.id, [
+          target.ticker,
+        ]);
+
+        if (!history.some((entry) => entry.id === target.id)) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Transaction not found",
+          });
+        }
+
+        // Deleting a buy can retroactively oversell a later sell it covered.
+        const available = oversellAfterRemoval(
+          history,
+          target.ticker,
+          target.id,
+        );
+
+        if (available !== null) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `Removing this trade would oversell ${target.ticker}: only ${available} would be available for a later sale.`,
+          });
+        }
+
+        const [deleted] = await tx
+          .delete(transactions)
+          .where(
+            and(
+              eq(transactions.id, target.id),
+              eq(transactions.userId, ctx.user.id),
+            ),
+          )
+          .returning({ id: transactions.id });
+
+        if (!deleted) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        }
+
+        // The manual fixed-income balance only exists while at least one
+        // transaction backs it; drop it atomically with its last trade.
+        if (target.assetClass === "fixed_income") {
+          const remaining = history.some((entry) => entry.id !== target.id);
+
+          if (!remaining) {
+            await tx
+              .delete(allocationAssets)
+              .where(
+                and(
+                  eq(allocationAssets.userId, ctx.user.id),
+                  eq(allocationAssets.ticker, target.ticker),
+                ),
+              );
+          }
+        }
+
+        return deleted.id;
+      });
+
+      return { id: deletedId };
     }),
 });

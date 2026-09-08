@@ -18,11 +18,16 @@ export function DevSeedSection() {
 
   const seed = trpc.devSeed.seedDemo.useMutation({
     onSuccess: async (result) => {
+      // The seed writes trades, allocation rows and quarterly reviews, which
+      // fan out into every derived screen. Invalidate whole routers so
+      // sibling procedures (daily, per-ticker ledgers, finders, dividends,
+      // performance) refresh too, not just the two list views.
       await Promise.all([
-        utils.transactions.list.invalidate(),
-        utils.positions.list.invalidate(),
-        utils.allocation.list.invalidate(),
-        utils.allocation.history.invalidate(),
+        utils.transactions.invalidate(),
+        utils.positions.invalidate(),
+        utils.allocation.invalidate(),
+        utils.dividends.invalidate(),
+        utils.performance.invalidate(),
       ]);
 
       const base = i18n._(

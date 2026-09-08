@@ -268,6 +268,19 @@ export const allocationRowSchema = z.object({
   convertedMarketPrice: z.string().nullable(),
   /** Position value in the display currency, `null` without a quote. */
   marketValue: z.string().nullable(),
+  /**
+   * Native-currency open result (`marketValue - investedCost`) of the held
+   * lot. Null without a quote, a closed position, or a manual fixed-income
+   * balance. Computed on the server so clients never re-derive it.
+   */
+  unrealizedPnl: z.string().nullable(),
+  /** Open result over invested cost, as a decimal string (`0.1` = +10%). */
+  unrealizedPnlPercent: z.string().nullable(),
+  /**
+   * Native-currency realized plus open result. Falls back to realized alone
+   * when there is no open lot to value.
+   */
+  totalResult: z.string(),
   /** Share of the quoted portfolio, `0`–`1`. Watch-only assets are `0`. */
   currentWeight: z.string(),
   targetWeight: z.string().nullable(),

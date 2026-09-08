@@ -43,32 +43,6 @@ function signedMoney(
     : formatSignedMoney(value, currency);
 }
 
-/**
- * Native open result from the live quote and the remaining cost basis.
- * Display-only: both inputs are already 2-decimal API strings.
- */
-function openResult(
-  ledger: TickerLedger,
-  marketPrice: string | null,
-): string | null {
-  if (marketPrice === null || Number(ledger.quantity) === 0) {
-    return null;
-  }
-
-  return (
-    Number(marketPrice) * Number(ledger.quantity) -
-    Number(ledger.investedCost)
-  ).toFixed(2);
-}
-
-function totalResult(realized: string, unrealized: string | null): string {
-  if (unrealized === null) {
-    return realized;
-  }
-
-  return (Number(realized) + Number(unrealized)).toFixed(2);
-}
-
 /** Buys, sells, realized P&L and the remaining cost basis of one ticker. */
 export function AssetMovements({
   row,
@@ -78,12 +52,11 @@ export function AssetMovements({
   ledger: TickerLedger;
 }) {
   const currency = ledger.currency ?? row.currency;
-  const unrealized = openResult(ledger, row.marketPrice);
-  const combined = totalResult(ledger.realizedPnl, unrealized);
-  const unrealizedPercent =
-    unrealized === null || Number(ledger.investedCost) === 0
-      ? null
-      : (Number(unrealized) / Number(ledger.investedCost)).toFixed(6);
+  // The API already consolidated the open result, its percentage and the
+  // combined total against the ledger; the detail view only formats them.
+  const unrealized = row.unrealizedPnl;
+  const unrealizedPercent = row.unrealizedPnlPercent;
+  const combined = row.totalResult;
 
   return (
     <div className="space-y-5">

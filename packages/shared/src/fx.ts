@@ -18,6 +18,26 @@ export const FX_SOURCE_LABELS: Record<FxSource, string> = {
 };
 
 /**
+ * Whether an FX quote query can run and whether the manual rate is unusable.
+ *
+ * A manual source with an unparsed rate has nothing to fetch, so the query is
+ * disabled. TanStack Query reports a disabled query as `pending`, so callers
+ * must gate their loading readout on `enabled` to avoid a spinner that never
+ * resolves. `manualRateInvalid` drives the actionable inline message.
+ */
+export function fxQuoteGate(input: {
+  fxSource: FxSource;
+  manualRateValid: boolean;
+}): { enabled: boolean; manualRateInvalid: boolean } {
+  const isManual = input.fxSource === "manual";
+
+  return {
+    enabled: isManual ? input.manualRateValid : true,
+    manualRateInvalid: isManual && !input.manualRateValid,
+  };
+}
+
+/**
  * Extra costs applied only when sizing a contribution in BRL for a USD
  * asset: broker spread, then IOF. Portfolio valuation always uses the
  * spot dollar; these factors never leave the contribution planner.

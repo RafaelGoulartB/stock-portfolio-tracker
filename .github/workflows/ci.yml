@@ -1,0 +1,71 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: portifolio
+          POSTGRES_PASSWORD: portifolio
+          POSTGRES_DB: portifolio
+          TZ: America/Sao_Paulo
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U portifolio"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      NODE_ENV: test
+      DATABASE_URL: postgres://portifolio:portifolio@127.0.0.1:5432/portifolio
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Apply migrations
+        run: pnpm db:migrate
+
+      - name: Test with coverage
+        run: pnpm test:coverage
+        env:
+          RUN_DB_INTEGRATION_TESTS: "true"
+
+      - name: Check i18n catalogs
+        run: |
+          pnpm --filter @portifolio-tracker/web i18n:extract
+          pnpm --filter @portifolio-tracker/web i18n:compile
+
+      - name: Build web
+        run: pnpm build

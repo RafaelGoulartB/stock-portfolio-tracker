@@ -1,3 +1,4 @@
+import { Trans } from "@lingui/react/macro";
 import type { AssetClass, Currency } from "@portifolio-tracker/shared";
 import { memo, useState } from "react";
 import { useSettings } from "@/lib/settings";
@@ -172,7 +173,7 @@ export function LogoDevAttribution({ className }: { className?: string }) {
       rel="noopener"
       className={cn("text-xs text-muted-foreground hover:underline", className)}
     >
-      Logos provided by Logo.dev
+      <Trans id="logoDev.attribution">Logos provided by Logo.dev</Trans>
     </a>
   );
 }

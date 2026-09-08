@@ -2,17 +2,16 @@ import { t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import {
-  ASSET_CLASS_LABELS,
   ASSET_CLASSES,
   type AssetClass,
   CURRENCIES,
-  CURRENCY_LABELS,
   type Currency,
   tickerSchema,
   weightRatio,
 } from "@portifolio-tracker/shared";
 import { Plus } from "lucide-react";
 import { useState } from "react";
+import { assetClassText } from "@/components/asset-labels";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -33,6 +32,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { currencyText } from "@/lib/display-labels";
 import { parsePercentInput } from "@/lib/numeric-input";
 
 export type AddAssetValues = {
@@ -182,7 +182,7 @@ export function AddAssetDialog({
                   {ASSET_CLASSES.filter((value) => value !== "cash").map(
                     (value) => (
                       <SelectItem key={value} value={value}>
-                        {ASSET_CLASS_LABELS[value]}
+                        {assetClassText(value, i18n)}
                       </SelectItem>
                     ),
                   )}
@@ -204,7 +204,7 @@ export function AddAssetDialog({
                 <SelectContent>
                   {CURRENCIES.map((value) => (
                     <SelectItem key={value} value={value}>
-                      {CURRENCY_LABELS[value]}
+                      {currencyText(value, i18n)}
                     </SelectItem>
                   ))}
                 </SelectContent>

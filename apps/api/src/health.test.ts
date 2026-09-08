@@ -5,6 +5,7 @@ import { appRouter } from "./trpc/router";
 const anonymousContext: Context = {
   user: null,
   token: null,
+  clientKey: "test",
   setSessionCookie: () => {},
   clearSessionCookie: () => {},
 };

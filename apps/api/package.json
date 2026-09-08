@@ -8,10 +8,12 @@
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "devDependencies": {
     "@types/node": "^26.4.1",
+    "@vitest/coverage-v8": "5.0.0",
     "drizzle-kit": "^0.31.10",
     "tsx": "^4.23.13",
     "vitest": "^5.0.0"

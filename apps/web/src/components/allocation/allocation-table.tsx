@@ -1,4 +1,3 @@
-﻿import type { I18n } from "@lingui/core";
 import { t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
@@ -10,7 +9,6 @@ import type {
   NextResult,
 } from "@portifolio-tracker/shared";
 import {
-  ALLOCATION_MARK_COLORS,
   CASH_TICKER,
   nextAllocationMarkColor,
 } from "@portifolio-tracker/shared";
@@ -19,31 +17,15 @@ import {
   ArrowDown,
   ArrowUp,
   ArrowUpDown,
-  ChevronDown,
-  ChevronUp,
-  Eraser,
   ExternalLink,
-  Eye,
   GripVertical,
-  MoreVertical,
   Timer,
-  Trash2,
   TriangleAlert,
-  X,
 } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { useState } from "react";
 import { AssetLogo } from "@/components/asset-logo";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -67,341 +49,34 @@ import { formatQuarterLabel, type Quarter, shiftQuarter } from "@/lib/quarters";
 import { cn } from "@/lib/utils";
 import { InlineEditCell } from "./inline-edit-cell";
 import { QuarterReviewCell } from "./quarter-review-cell";
+import {
+  ALLOCATION_COLUMNS,
+  type AllocationColumn,
+  type AllocationSort,
+  columnLabels,
+} from "./table/columns";
+import {
+  FOCUS_QUARTER_COL,
+  FOCUS_QUARTERS_KEY,
+  initialFocusQuarters,
+  MARK_ROW,
+  MARK_STICKY,
+} from "./table/marks";
+import { RowMenu } from "./table/row-menu";
+import { ScoreCell } from "./table/score-cell";
+import { resultDateTitle, scoreReason } from "./table/score-reason";
 
-/** Sortable columns, in render order. The quarter grid follows them. */
-export const ALLOCATION_COLUMNS = [
-  "ticker",
-  "targetWeight",
-  "currentWeight",
-  "gapWeight",
-  "discount",
-  "score",
-  "nextResult",
-  "lastContributionAt",
-  "quantity",
-  "marketValue",
-  "averageGrade",
-] as const;
-
-export type AllocationColumn = (typeof ALLOCATION_COLUMNS)[number];
-export type SortDirection = "asc" | "desc";
-export type AllocationSort = { id: AllocationColumn; direction: SortDirection };
-
-/** Columns that read better ascending on first click. */
-const ASCENDING_FIRST: AllocationColumn[] = [
-  "ticker",
-  "nextResult",
-  "lastContributionAt",
-];
-
-export function defaultSortDirection(id: AllocationColumn): SortDirection {
-  return ASCENDING_FIRST.includes(id) ? "asc" : "desc";
-}
-
-export function columnLabels(i18n: I18n): Record<AllocationColumn, string> {
-  return {
-    ticker: i18n._(t({ id: "allocation.colTicker", message: "Asset" })),
-    targetWeight: i18n._(t({ id: "allocation.colTarget", message: "Target" })),
-    currentWeight: i18n._(
-      t({ id: "allocation.colCurrent", message: "Current" }),
-    ),
-    gapWeight: i18n._(t({ id: "allocation.colGap", message: "Gap" })),
-    score: i18n._(t({ id: "allocation.colScore", message: "Score" })),
-    nextResult: i18n._(
-      t({ id: "allocation.colNextResult", message: "Next result" }),
-    ),
-    averageGrade: i18n._(t({ id: "allocation.colGrade", message: "Grade" })),
-    discount: i18n._(t({ id: "allocation.colDiscount", message: "Discount" })),
-    lastContributionAt: i18n._(
-      t({ id: "allocation.colLastBuy", message: "Last buy" }),
-    ),
-    quantity: i18n._(t({ id: "allocation.colQuantity", message: "Shares" })),
-    marketValue: i18n._(t({ id: "allocation.colValue", message: "Value" })),
-  };
-}
-
-export function sortableValue(
-  row: AllocationRow,
-  id: AllocationColumn,
-  nextResults: ReadonlyMap<string, NextResult> = new Map(),
-): string | number | null {
-  switch (id) {
-    case "ticker":
-      return row.ticker;
-    case "targetWeight":
-      return row.targetWeight === null ? null : Number(row.targetWeight);
-    case "currentWeight":
-      return Number(row.currentWeight);
-    case "gapWeight":
-      return row.gapWeight === null ? null : Number(row.gapWeight);
-    case "score":
-      return Number(row.score.value);
-    case "nextResult":
-      return nextResults.get(row.ticker.toUpperCase())?.date ?? null;
-    case "averageGrade":
-      return row.averageGrade === null ? null : Number(row.averageGrade);
-    case "discount":
-      return row.discount === null ? null : Number(row.discount);
-    case "lastContributionAt":
-      return row.lastContributionAt;
-    case "quantity":
-      return Number(row.quantity);
-    case "marketValue":
-      return row.marketValue === null ? null : Number(row.marketValue);
-  }
-}
-
-/**
- * The default score view should focus capital allocation on owned assets with
- * a target. Watch-only tickers can still be scored and sorted, but trail those
- * actionable positions until the user chooses a different column or free order.
- */
-function hasActionableTarget(row: AllocationRow): boolean {
-  return row.hasPosition && row.targetWeight !== null;
-}
-
-/** Rows with no value for the sorted column always sink to the bottom. */
-export function compareRows(
-  a: AllocationRow,
-  b: AllocationRow,
-  sort: AllocationSort,
-  nextResults: ReadonlyMap<string, NextResult> = new Map(),
-): number {
-  if (sort.id === "score") {
-    const targetPriority =
-      Number(hasActionableTarget(b)) - Number(hasActionableTarget(a));
-
-    if (targetPriority !== 0) {
-      return targetPriority;
-    }
-  }
-
-  const left = sortableValue(a, sort.id, nextResults);
-  const right = sortableValue(b, sort.id, nextResults);
-
-  if (left === null || right === null) {
-    if (left === right) {
-      return a.ticker.localeCompare(b.ticker);
-    }
-
-    return left === null ? 1 : -1;
-  }
-
-  const result =
-    typeof left === "number" && typeof right === "number"
-      ? left - right
-      : String(left).localeCompare(String(right));
-
-  return (
-    (sort.direction === "asc" ? result : -result) ||
-    a.ticker.localeCompare(b.ticker)
-  );
-}
-
-const SCALE = 100_000_000n;
-const SCALE_PLACES = 8;
-
-/** Parses a decimal string into a scaled bigint; empty/invalid becomes 0. */
-function toScaled(value: string): bigint {
-  const match = /^(-)?(\d+)(?:\.(\d+))?$/.exec(value.trim());
-
-  if (!match) {
-    return 0n;
-  }
-
-  const negative = match[1] === "-";
-  const whole = BigInt(match[2] ?? "0");
-  const frac = BigInt(
-    (match[3] ?? "").padEnd(SCALE_PLACES, "0").slice(0, SCALE_PLACES),
-  );
-  const scaled = whole * SCALE + frac;
-
-  return negative ? -scaled : scaled;
-}
-
-/** Renders a scaled bigint with `places` digits, rounding half away from zero. */
-function fromScaled(value: bigint, places: number): string {
-  const divisor = 10n ** BigInt(SCALE_PLACES - places);
-  const negative = value < 0n;
-  const absolute = negative ? -value : value;
-  const quotient = absolute / divisor;
-  const remainder = absolute % divisor;
-  const rounded = remainder * 2n >= divisor ? quotient + 1n : quotient;
-  const digits = rounded.toString().padStart(places + 1, "0");
-  const whole = digits.slice(0, digits.length - places);
-  const fraction = places > 0 ? digits.slice(digits.length - places) : "";
-  const text = fraction ? `${whole}.${fraction}` : whole;
-
-  return negative && rounded !== 0n ? `-${text}` : text;
-}
-
-/** Average of scaled values, rounding half away from zero. */
-function averageScaled(sum: bigint, count: number): bigint {
-  const denominator = BigInt(count);
-  const negative = sum < 0n;
-  const absolute = negative ? -sum : sum;
-  const quotient = absolute / denominator;
-  const remainder = absolute % denominator;
-  const rounded = remainder * 2n >= denominator ? quotient + 1n : quotient;
-
-  return negative && rounded !== 0n ? -rounded : rounded;
-}
-
-/**
- * Totals for the rows currently shown (search, category and radar filters).
- * Matches the server summary shape so the footer and footnote stay consistent.
- */
-export function summarizeVisibleRows(
-  rows: readonly AllocationRow[],
-  displayCurrency: AllocationSummary["displayCurrency"],
-  scoreVersion: string,
-): AllocationSummary {
-  let totalMarketValue = 0n;
-  let totalTargetWeight = 0n;
-  let totalCurrentWeight = 0n;
-  let discountSum = 0n;
-  let discountCount = 0;
-  let investedAssets = 0;
-  let watchOnlyAssets = 0;
-  let candidates = 0;
-  let blocked = 0;
-  let trimCandidates = 0;
-
-  for (const row of rows) {
-    if (row.marketValue !== null) {
-      totalMarketValue += toScaled(row.marketValue);
-    }
-
-    if (row.targetWeight !== null) {
-      totalTargetWeight += toScaled(row.targetWeight);
-    }
-
-    totalCurrentWeight += toScaled(row.currentWeight);
-
-    if (row.discount !== null) {
-      discountSum += toScaled(row.discount);
-      discountCount += 1;
-    }
-
-    if (row.hasPosition) {
-      investedAssets += 1;
-    } else {
-      watchOnlyAssets += 1;
-    }
-
-    const score = Number(row.score.value);
-
-    if (score > 0) {
-      candidates += 1;
-    } else if (score < 0) {
-      trimCandidates += 1;
-    }
-
-    if (row.score.blocked) {
-      blocked += 1;
-    }
-  }
-
-  return {
-    displayCurrency,
-    totalMarketValue: fromScaled(totalMarketValue, 2),
-    totalTargetWeight: fromScaled(totalTargetWeight, 8),
-    totalCurrentWeight: fromScaled(totalCurrentWeight, 8),
-    averageDiscount:
-      discountCount === 0
-        ? null
-        : fromScaled(averageScaled(discountSum, discountCount), 8),
-    investedAssets,
-    watchOnlyAssets,
-    candidates,
-    blocked,
-    trimCandidates,
-    scoreVersion,
-  };
-}
-
-/** Plain-language reason behind a score, shown on hover. */
-export function scoreReason(row: AllocationRow, i18n: I18n): string {
-  const { score } = row;
-
-  switch (score.ruleId) {
-    case "no-target":
-      return i18n._(
-        t({
-          id: "allocation.reasonNoTarget",
-          message: "No target weight set, so there is no gap to close.",
-        }),
-      );
-    case "trim-overweight":
-      return i18n._(
-        t({
-          id: "allocation.reasonTrim",
-          message:
-            "Above target and no longer cheap: consider trimming instead of buying.",
-        }),
-      );
-    case "weight-cap":
-      return i18n._(
-        t({
-          id: "allocation.reasonWeightCap",
-          message: "Past the portfolio weight ceiling for a single asset.",
-        }),
-      );
-    case "target-overweight":
-      return i18n._(
-        t({
-          id: "allocation.reasonOverweight",
-          message: "Already past its own target by more than the block factor.",
-        }),
-      );
-    case "cooldown":
-      return i18n._(
-        t({
-          id: "allocation.reasonCooldown",
-          message: `Bought recently; free again on ${score.cooldownUntil ?? ""}.`,
-        }),
-      );
-    case "gap-weighted":
-      return i18n._(
-        t({
-          id: "allocation.reasonGap",
-          message: `Discount-adjusted target ${score.adjustedTarget === null ? "" : formatWeightPrecise(score.adjustedTarget)} against ${formatWeightPrecise(row.currentWeight)} held, times ${score.multiplier} for quality.`,
-        }),
-      );
-  }
-}
-
-function resultDateTitle(
-  result: NextResult | undefined,
-  i18n: I18n,
-): string | undefined {
-  if (!result) return undefined;
-
-  const source =
-    result.source === "cvm_b3"
-      ? i18n._(t({ id: "allocation.resultSourceCvm", message: "CVM/B3" }))
-      : result.source === "alpha_vantage"
-        ? i18n._(
-            t({
-              id: "allocation.resultSourceAlpha",
-              message: "Alpha Vantage",
-            }),
-          )
-        : i18n._(
-            t({ id: "allocation.resultSourceYahoo", message: "Yahoo Finance" }),
-          );
-  const details = [source, result.period].filter(Boolean);
-
-  if (result.estimated) {
-    details.push(
-      i18n._(
-        t({ id: "allocation.resultEstimated", message: "Estimated date" }),
-      ),
-    );
-  }
-
-  return details.join(" · ");
-}
+export {
+  ALLOCATION_COLUMNS,
+  type AllocationColumn,
+  type AllocationSort,
+  columnLabels,
+  defaultSortDirection,
+  type SortDirection,
+} from "./table/columns";
+export { scoreReason } from "./table/score-reason";
+export { compareRows, sortableValue } from "./table/sorting";
+export { summarizeVisibleRows } from "./table/summary";
 
 export type AllocationTableProps = {
   rows: AllocationRow[];
@@ -440,61 +115,6 @@ export type AllocationTableProps = {
   nextResultsLoading?: boolean;
   saving?: boolean;
 };
-
-const FOCUS_QUARTERS_KEY = "portfolio.allocation.focusQuarters";
-const FOCUS_QUARTER_COL = "bg-blue-400/[0.04]";
-
-/**
- * Soft mark tint mixed into `--card` so sticky ticker and the rest of the
- * row share the same opaque wash. Hover deepens the same hue slightly
- * instead of swapping to muted grey.
- */
-const MARK_ROW: Record<AllocationMarkColor, string> = {
-  blue: "bg-[color-mix(in_oklab,var(--color-blue-400)_7%,var(--card))] hover:bg-[color-mix(in_oklab,var(--color-blue-400)_10%,var(--card))]",
-  yellow:
-    "bg-[color-mix(in_oklab,var(--color-yellow-400)_10%,var(--card))] hover:bg-[color-mix(in_oklab,var(--color-yellow-400)_13%,var(--card))]",
-  red: "bg-[color-mix(in_oklab,var(--color-red-400)_7%,var(--card))] hover:bg-[color-mix(in_oklab,var(--color-red-400)_10%,var(--card))]",
-  orange:
-    "bg-[color-mix(in_oklab,var(--color-orange-400)_10%,var(--card))] hover:bg-[color-mix(in_oklab,var(--color-orange-400)_13%,var(--card))]",
-  green:
-    "bg-[color-mix(in_oklab,var(--color-green-400)_7%,var(--card))] hover:bg-[color-mix(in_oklab,var(--color-green-400)_10%,var(--card))]",
-};
-
-/** Same wash as {@link MARK_ROW}, driven by `group-hover` for the sticky cell. */
-const MARK_STICKY: Record<AllocationMarkColor, string> = {
-  blue: "bg-[color-mix(in_oklab,var(--color-blue-400)_7%,var(--card))] group-hover:bg-[color-mix(in_oklab,var(--color-blue-400)_10%,var(--card))]",
-  yellow:
-    "bg-[color-mix(in_oklab,var(--color-yellow-400)_10%,var(--card))] group-hover:bg-[color-mix(in_oklab,var(--color-yellow-400)_13%,var(--card))]",
-  red: "bg-[color-mix(in_oklab,var(--color-red-400)_7%,var(--card))] group-hover:bg-[color-mix(in_oklab,var(--color-red-400)_10%,var(--card))]",
-  orange:
-    "bg-[color-mix(in_oklab,var(--color-orange-400)_10%,var(--card))] group-hover:bg-[color-mix(in_oklab,var(--color-orange-400)_13%,var(--card))]",
-  green:
-    "bg-[color-mix(in_oklab,var(--color-green-400)_7%,var(--card))] group-hover:bg-[color-mix(in_oklab,var(--color-green-400)_10%,var(--card))]",
-};
-
-const MARK_DOT: Record<AllocationMarkColor, string> = {
-  blue: "bg-blue-400",
-  yellow: "bg-yellow-400",
-  red: "bg-red-400",
-  orange: "bg-orange-400",
-  green: "bg-green-400",
-};
-
-function initialFocusQuarters(): Set<string> {
-  try {
-    const parsed: unknown = JSON.parse(
-      localStorage.getItem(FOCUS_QUARTERS_KEY) ?? "null",
-    );
-
-    if (Array.isArray(parsed)) {
-      return new Set(parsed.filter((value) => typeof value === "string"));
-    }
-  } catch {
-    // Storage is only a convenience; nothing is focused by default.
-  }
-
-  return new Set();
-}
 
 export function AllocationTable({
   rows,
@@ -1286,160 +906,5 @@ export function AllocationTable({
         </Table>
       </CardContent>
     </Card>
-  );
-}
-
-/** Score with a proportional bar, so the ranking is readable at a glance. */
-function ScoreCell({
-  value,
-  blocked,
-  share,
-}: {
-  value: string;
-  blocked: boolean;
-  share: number;
-}) {
-  const numeric = Number(value);
-
-  return (
-    <div className="flex items-center justify-end gap-1.5">
-      <span className="h-1 w-8 shrink-0 overflow-hidden rounded-full bg-muted">
-        <span
-          className="block h-full rounded-full bg-foreground/60"
-          style={{ width: `${Math.round(share * 100)}%` }}
-        />
-      </span>
-      <span
-        className={cn(
-          "w-14 text-right",
-          numeric > 0 && "font-medium",
-          numeric < 0 && "text-loss",
-          numeric === 0 && "text-muted-foreground",
-        )}
-      >
-        {blocked ? "—" : formatSignedWeightPrecise(value)}
-      </span>
-    </div>
-  );
-}
-
-function RowMenu({
-  row,
-  freeOrder,
-  onMove,
-  onClear,
-  onRemove,
-  onSetMarkColor,
-}: {
-  row: AllocationRow;
-  freeOrder: boolean;
-  onMove: (offset: number) => void;
-  onClear: () => void;
-  onRemove: () => void;
-  onSetMarkColor: (markColor: AllocationMarkColor | null) => void;
-}): ReactNode {
-  const { i18n } = useLingui();
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          className="size-6"
-          aria-label={i18n._(
-            t({
-              id: "allocation.rowMenu",
-              message: `Actions for ${row.ticker}`,
-            }),
-          )}
-        >
-          <MoreVertical className="size-3.5" aria-hidden="true" />
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-52">
-        <DropdownMenuItem asChild>
-          <Link to="/assets/$ticker" params={{ ticker: row.ticker }}>
-            <Eye aria-hidden="true" />
-            <Trans id="allocation.viewDetails">View details</Trans>
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">
-          <Trans id="allocation.markColor">Highlight</Trans>
-        </DropdownMenuLabel>
-        <div className="flex items-center gap-1.5 px-2 pb-1.5">
-          {ALLOCATION_MARK_COLORS.map((color) => {
-            const selected = row.markColor === color;
-
-            return (
-              <button
-                key={color}
-                type="button"
-                aria-label={i18n._(
-                  t({
-                    id: "allocation.markAs",
-                    message: `Mark ${row.ticker} ${color}`,
-                  }),
-                )}
-                aria-pressed={selected}
-                onClick={() => onSetMarkColor(color)}
-                className={cn(
-                  "flex size-5 items-center justify-center rounded-full focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-                  selected &&
-                    "ring-2 ring-foreground/40 ring-offset-1 ring-offset-popover",
-                )}
-              >
-                <span
-                  className={cn("size-3.5 rounded-full", MARK_DOT[color])}
-                  aria-hidden="true"
-                />
-              </button>
-            );
-          })}
-          <button
-            type="button"
-            aria-label={i18n._(
-              t({
-                id: "allocation.clearMark",
-                message: `Clear highlight on ${row.ticker}`,
-              }),
-            )}
-            disabled={row.markColor === null}
-            onClick={() => onSetMarkColor(null)}
-            className="flex size-5 items-center justify-center rounded-full text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:opacity-40"
-          >
-            <X className="size-3.5" aria-hidden="true" />
-          </button>
-        </div>
-        <DropdownMenuSeparator />
-        {freeOrder ? (
-          <>
-            <DropdownMenuItem onSelect={() => onMove(-1)}>
-              <ChevronUp aria-hidden="true" />
-              <Trans id="allocation.moveUp">Move up</Trans>
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => onMove(1)}>
-              <ChevronDown aria-hidden="true" />
-              <Trans id="allocation.moveDown">Move down</Trans>
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-          </>
-        ) : null}
-        <DropdownMenuItem onSelect={onClear} disabled={!row.tracked}>
-          <Eraser aria-hidden="true" />
-          <Trans id="allocation.clearAnalysis">Clear target</Trans>
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          variant="destructive"
-          onSelect={onRemove}
-          disabled={row.hasPosition || !row.tracked}
-        >
-          <Trash2 aria-hidden="true" />
-          <Trans id="allocation.removeAsset">Stop following</Trans>
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
   );
 }

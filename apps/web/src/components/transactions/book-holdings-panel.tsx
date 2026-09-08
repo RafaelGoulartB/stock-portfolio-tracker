@@ -3,13 +3,11 @@ import { t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import {
-  ASSET_CLASS_LABELS,
   ASSET_CLASSES,
   type AssetClass,
   type BookHoldingRow,
   bookHoldingRowSchema,
   CURRENCIES,
-  CURRENCY_LABELS,
   type Currency,
   parseBrazilianNumber,
   parseHoldingsImport,
@@ -18,6 +16,7 @@ import {
 import { FileUp, Plus, Trash2, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
+import { assetClassText } from "@/components/asset-labels";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -47,6 +46,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { currencyText } from "@/lib/display-labels";
+import { localizeValidationMessage } from "@/lib/validation-messages";
 
 export type DraftHolding = {
   key: string;
@@ -324,7 +325,7 @@ export function ImportHoldingsDialog({
             <ul className="space-y-1 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-xs text-destructive">
               {issues.slice(0, 8).map((issue) => {
                 const line = issue.line;
-                const detail = issue.message;
+                const detail = localizeValidationMessage(issue.message, i18n);
 
                 return (
                   <li key={`${line}-${detail}`}>
@@ -413,7 +414,7 @@ export function ImportHoldingsDialog({
                               (value) => value !== "cash",
                             ).map((value) => (
                               <SelectItem key={value} value={value}>
-                                {ASSET_CLASS_LABELS[value]}
+                                {assetClassText(value, i18n)}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -434,7 +435,7 @@ export function ImportHoldingsDialog({
                           <SelectContent>
                             {CURRENCIES.map((value) => (
                               <SelectItem key={value} value={value}>
-                                {CURRENCY_LABELS[value]}
+                                {currencyText(value, i18n)}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -677,7 +678,7 @@ export function BookHoldingsPanel({
                       {ASSET_CLASSES.filter((value) => value !== "cash").map(
                         (value) => (
                           <SelectItem key={value} value={value}>
-                            {ASSET_CLASS_LABELS[value]}
+                            {assetClassText(value, i18n)}
                           </SelectItem>
                         ),
                       )}
@@ -697,7 +698,7 @@ export function BookHoldingsPanel({
                     <SelectContent>
                       {CURRENCIES.map((value) => (
                         <SelectItem key={value} value={value}>
-                          {CURRENCY_LABELS[value]}
+                          {currencyText(value, i18n)}
                         </SelectItem>
                       ))}
                     </SelectContent>

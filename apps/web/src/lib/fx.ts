@@ -1,4 +1,8 @@
-import { type FxSource, positiveDecimal } from "@portifolio-tracker/shared";
+import {
+  type FxSource,
+  fxQuoteGate,
+  positiveDecimal,
+} from "@portifolio-tracker/shared";
 import { useMemo } from "react";
 import { trpc } from "@/lib/api";
 import { useSettings } from "@/lib/settings";
@@ -38,6 +42,16 @@ export function useFxRequest(): { fxSource: FxSource; manualRate?: string } {
 export function useFxQuote(asOf?: string | null) {
   const { fxSource, manualRate } = useSettings();
   const manualRateValid = positiveDecimal.safeParse(manualRate).success;
+  /**
+   * A manual source with an unparsed rate never queries: there is nothing to
+   * fetch until the user types a valid number. Disabled queries report a
+   * `pending` status in TanStack Query, so the enabled flag has to gate the
+   * pending readout too, otherwise a bad manual rate would spin forever.
+   */
+  const { enabled, manualRateInvalid } = fxQuoteGate({
+    fxSource,
+    manualRateValid,
+  });
 
   const quote = trpc.fx.getRate.useQuery(
     {
@@ -48,7 +62,7 @@ export function useFxQuote(asOf?: string | null) {
       asOf: asOf ?? undefined,
     },
     {
-      enabled: fxSource === "manual" ? manualRateValid : true,
+      enabled,
       staleTime: 6 * 60 * 60 * 1_000,
       gcTime: 6 * 60 * 60 * 1_000,
     },
@@ -58,6 +72,7 @@ export function useFxQuote(asOf?: string | null) {
     fxSource,
     manualRate,
     manualRateValid,
+    manualRateInvalid,
     /** Rate accepted by `positions.list`, if one is available. */
     effectiveRate:
       fxSource === "manual"
@@ -67,7 +82,9 @@ export function useFxQuote(asOf?: string | null) {
         : quote.data?.rate,
     rate: quote.data?.rate,
     asOf: quote.data?.asOf,
-    isPending: quote.isPending || quote.isFetching,
+    // A disabled query is `pending` but not loading; only report progress
+    // once the query can actually run.
+    isPending: enabled && (quote.isPending || quote.isFetching),
     error: quote.error,
     refetch: quote.refetch,
   };

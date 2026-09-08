@@ -11,6 +11,24 @@ export const BACKUP_FORMAT = "portifolio-tracker-backup";
 export const BACKUP_VERSION = 6;
 export const BACKUP_MEDIA_TYPE = "application/x-portifolio-backup+gzip";
 
+/**
+ * Explicit, defensive bounds for an untrusted upload. A malformed or hostile
+ * backup must fail fast on a fixed budget instead of exhausting memory: a gzip
+ * bomb inflates a tiny request into gigabytes, and a single unterminated line
+ * would otherwise buffer without limit. Every bound is deliberately generous
+ * for a personal account yet finite.
+ */
+/** Largest accepted compressed request body. */
+export const MAX_COMPRESSED_BYTES = 64 * 1024 * 1024;
+/** Largest accepted total decompressed payload. */
+export const MAX_DECOMPRESSED_BYTES = 512 * 1024 * 1024;
+/** Largest accepted single newline-delimited line. */
+export const MAX_LINE_BYTES = 10 * 1024 * 1024;
+/** Largest accepted number of lines, including the manifest and checksum. */
+export const MAX_LINES = 2_000_000;
+/** Largest accepted number of data records across all entities. */
+export const MAX_RECORDS = 1_000_000;
+
 export const BACKUP_ENTITIES = [
   "categories",
   "allocationAssets",
@@ -25,8 +43,27 @@ export const BACKUP_ENTITIES = [
 export type BackupEntity = (typeof BACKUP_ENTITIES)[number];
 export type BackupCounts = Record<BackupEntity, number>;
 
-const decimal = z.string().regex(/^-?\d+(?:\.\d+)?$/);
+/**
+ * Decimal values that must round-trip a Postgres `numeric(22, 8)` column
+ * without loss: at most 14 integer digits and 8 fractional digits. The old
+ * unbounded pattern would accept a value the database then silently rounds or
+ * rejects, so validation now matches the stored precision exactly.
+ */
+const DECIMAL_DIGITS_PATTERN = /^\d{1,14}(?:\.\d{1,8})?$/;
+/** Signed variant for columns that legitimately store negatives (grades never, cash can). */
+const signedDecimal = z
+  .string()
+  .regex(/^-?\d{1,14}(?:\.\d{1,8})?$/, "decimal exceeds numeric(22, 8)");
+/** Non-negative decimal: rejects a leading minus while keeping numeric(22, 8) bounds. */
+const decimal = z
+  .string()
+  .regex(DECIMAL_DIGITS_PATTERN, "decimal exceeds numeric(22, 8)");
 const nullableDecimal = decimal.nullable();
+/** Strictly positive decimal: a traded quantity or price is never zero or negative. */
+const positiveDecimal = decimal.refine(
+  (value) => /[1-9]/.test(value),
+  "must be greater than zero",
+);
 const timestamp = z.iso.datetime({ offset: true });
 const databaseTimestamp = timestamp.transform((value) => new Date(value));
 
@@ -92,7 +129,7 @@ const cashBalanceRecord = z.strictObject({
   type: z.literal("record"),
   entity: z.literal("cashBalances"),
   data: z.strictObject({
-    amount: decimal,
+    amount: signedDecimal,
     updatedAt: databaseTimestamp,
   }),
 });
@@ -121,8 +158,8 @@ const transactionRecord = z.strictObject({
     assetClass: z.enum(ASSET_CLASSES),
     currency: z.enum(CURRENCIES),
     side: z.enum(TRANSACTION_SIDES),
-    quantity: decimal,
-    price: decimal,
+    quantity: positiveDecimal,
+    price: positiveDecimal,
     fees: decimal,
     tradedAt: z.iso.date(),
     notes: z.string().nullable(),
@@ -237,16 +274,48 @@ export function emptyBackupCounts(): BackupCounts {
 
 export async function* decodeLines(
   stream: ReadableStream<Uint8Array>,
-  maxLineBytes = 10 * 1024 * 1024,
+  {
+    maxLineBytes = MAX_LINE_BYTES,
+    maxTotalBytes = MAX_DECOMPRESSED_BYTES,
+    maxLines = MAX_LINES,
+  }: {
+    maxLineBytes?: number;
+    maxTotalBytes?: number;
+    maxLines?: number;
+  } = {},
 ) {
   const reader = stream.getReader();
   const decoder = new TextDecoder("utf-8", { fatal: true });
   let buffered = "";
+  let totalBytes = 0;
+  let emitted = 0;
+
+  const guardLine = () => {
+    if (Buffer.byteLength(buffered, "utf8") > maxLineBytes) {
+      throw new Error(
+        `Backup contains a line larger than ${maxLineBytes} bytes`,
+      );
+    }
+  };
+  const countLine = () => {
+    emitted += 1;
+    if (emitted > maxLines) {
+      throw new Error(`Backup contains more than ${maxLines} lines`);
+    }
+  };
 
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
+      // Bound the inflated payload before it is decoded, so a gzip bomb is
+      // rejected on a fixed budget instead of buffering without limit.
+      totalBytes += value.byteLength;
+      if (totalBytes > maxTotalBytes) {
+        throw new Error(
+          `Backup exceeds the ${maxTotalBytes}-byte decompressed limit`,
+        );
+      }
       buffered += decoder.decode(value, { stream: true });
 
       let newline = buffered.indexOf("\n");
@@ -254,23 +323,25 @@ export async function* decodeLines(
         if (
           Buffer.byteLength(buffered.slice(0, newline), "utf8") > maxLineBytes
         ) {
-          throw new Error("Backup contains a line larger than 10 MiB");
+          throw new Error(
+            `Backup contains a line larger than ${maxLineBytes} bytes`,
+          );
         }
         const line = buffered.slice(0, newline);
         buffered = buffered.slice(newline + 1);
+        countLine();
         yield line.endsWith("\r") ? line.slice(0, -1) : line;
         newline = buffered.indexOf("\n");
       }
-      if (Buffer.byteLength(buffered, "utf8") > maxLineBytes) {
-        throw new Error("Backup contains a line larger than 10 MiB");
-      }
+      guardLine();
     }
 
     buffered += decoder.decode();
-    if (Buffer.byteLength(buffered, "utf8") > maxLineBytes) {
-      throw new Error("Backup contains a line larger than 10 MiB");
+    guardLine();
+    if (buffered.length > 0) {
+      countLine();
+      yield buffered;
     }
-    if (buffered.length > 0) yield buffered;
   } finally {
     reader.releaseLock();
   }

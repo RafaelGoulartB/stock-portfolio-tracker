@@ -1,3 +1,4 @@
+import { useLingui } from "@lingui/react";
 import type { Label as LabelPrimitive } from "radix-ui";
 import { Slot } from "radix-ui";
 import * as React from "react";
@@ -12,6 +13,7 @@ import {
 } from "react-hook-form";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { localizeValidationMessage } from "@/lib/validation-messages";
 
 const Form = FormProvider;
 
@@ -135,7 +137,13 @@ function FormDescription({ className, ...props }: React.ComponentProps<"p">) {
 
 function FormMessage({ className, ...props }: React.ComponentProps<"p">) {
   const { error, formMessageId } = useFormField();
-  const body = error ? String(error?.message ?? "") : props.children;
+  // Subscribe to locale changes so a validation error re-renders translated.
+  const { i18n } = useLingui();
+  // Zod validation strings arrive as English source messages; translate the
+  // known ones and leave unknown strings and custom children untouched.
+  const body = error
+    ? localizeValidationMessage(String(error?.message ?? ""), i18n)
+    : props.children;
 
   if (!body) {
     return null;

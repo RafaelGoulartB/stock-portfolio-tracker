@@ -352,6 +352,17 @@ export function buildAllocationRows(input: AllocationInput): AllocationRow[] {
     const lastContributionAt =
       input.lastContributionByTicker.get(ticker) ?? null;
     const marketValue = position?.convertedMarketValue ?? null;
+    // Native open result and total, taken from the already-valued position so
+    // the client never re-derives money math from formatted strings.
+    const unrealizedPnl = position?.unrealizedPnl ?? null;
+    const unrealizedPnlPercent = position?.unrealizedPnlPercent ?? null;
+    const realizedPnl = position?.realizedPnl ?? formatDecimal(ZERO, 2);
+    const totalResult = formatDecimal(
+      unrealizedPnl === null
+        ? toDecimal(realizedPnl)
+        : add(toDecimal(realizedPnl), toDecimal(unrealizedPnl)),
+      2,
+    );
     const execution = executionPrice(
       marketPrice,
       currency,
@@ -384,6 +395,9 @@ export function buildAllocationRows(input: AllocationInput): AllocationRow[] {
       executionPrice: execution.price,
       executionFxApplied: execution.fxApplied,
       marketValue,
+      unrealizedPnl,
+      unrealizedPnlPercent,
+      totalResult,
       currentWeight,
       targetWeight,
       gapWeight:

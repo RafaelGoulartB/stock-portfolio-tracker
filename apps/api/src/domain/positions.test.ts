@@ -8,6 +8,8 @@ import {
   convertMoney,
   convertPositions,
   filterTransactionsByAsOf,
+  type IdentifiedEntry,
+  oversellAfterRemoval,
   portfolioReturnContribution,
   summarizePositions,
   type TickerLedgerEntry,
@@ -362,6 +364,93 @@ describe("availableBeforeOversell", () => {
     ];
 
     expect(availableBeforeOversell(log, "PETR4")).toBeNull();
+  });
+});
+
+describe("oversellAfterRemoval", () => {
+  let idSequence = 0;
+
+  function identified(
+    partial: Partial<IdentifiedEntry> & Pick<IdentifiedEntry, "side">,
+  ): IdentifiedEntry {
+    idSequence += 1;
+
+    return { ...tx(partial), id: `id-${idSequence}` };
+  }
+
+  it("rejects removing a buy that a later sale still depends on", () => {
+    const buy = identified({
+      side: "buy",
+      quantity: "10",
+      tradedAt: "2026-01-01",
+    });
+    const sell = identified({
+      side: "sell",
+      quantity: "8",
+      tradedAt: "2026-02-01",
+    });
+
+    // Deleting the buy leaves the 8-share sale uncovered from a 0 balance.
+    expect(oversellAfterRemoval([buy, sell], "PETR4", buy.id)).toBe(
+      "0.00000000",
+    );
+  });
+
+  it("allows removing a buy that leaves later sales covered", () => {
+    const firstBuy = identified({
+      side: "buy",
+      quantity: "10",
+      tradedAt: "2026-01-01",
+    });
+    const secondBuy = identified({
+      side: "buy",
+      quantity: "10",
+      tradedAt: "2026-01-15",
+    });
+    const sell = identified({
+      side: "sell",
+      quantity: "8",
+      tradedAt: "2026-02-01",
+    });
+
+    expect(
+      oversellAfterRemoval([firstBuy, secondBuy, sell], "PETR4", secondBuy.id),
+    ).toBeNull();
+  });
+
+  it("allows removing a sell", () => {
+    const buy = identified({
+      side: "buy",
+      quantity: "10",
+      tradedAt: "2026-01-01",
+    });
+    const sell = identified({
+      side: "sell",
+      quantity: "5",
+      tradedAt: "2026-02-01",
+    });
+
+    expect(oversellAfterRemoval([buy, sell], "PETR4", sell.id)).toBeNull();
+  });
+
+  it("ignores entries for other tickers when replaying the ledger", () => {
+    const target = identified({
+      ticker: "PETR4",
+      side: "buy",
+      quantity: "10",
+      tradedAt: "2026-01-01",
+    });
+    const otherTickerSell = identified({
+      ticker: "VALE3",
+      side: "sell",
+      quantity: "50",
+      tradedAt: "2026-03-01",
+    });
+
+    // A large sale of an unrelated ticker never blocks this removal.
+    expect(
+      oversellAfterRemoval([target, otherTickerSell], "PETR4", target.id),
+    ).toBeNull();
   });
 });
 

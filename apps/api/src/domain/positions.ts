@@ -847,6 +847,30 @@ export function availableBeforeOversell(
   return null;
 }
 
+/** A ledger entry that carries its row id, needed to target one for removal. */
+export type IdentifiedEntry = ConsolidationInput & { id: string };
+
+/**
+ * Simulates removing the entry with `removeId` from a ticker's ledger and
+ * returns the balance immediately before the first sell that removal would
+ * leave uncovered, or `null` when the remaining ledger stays valid.
+ *
+ * Deleting a buy can retroactively oversell a later sell that the buy was
+ * covering, so the whole remaining history must be replayed in trade order,
+ * not just the net balance. Entries for other tickers are ignored.
+ */
+export function oversellAfterRemoval(
+  history: readonly IdentifiedEntry[],
+  ticker: string,
+  removeId: string,
+): string | null {
+  const remaining = history.filter(
+    (entry) => entry.id !== removeId && entry.ticker === ticker,
+  );
+
+  return availableBeforeOversell(remaining, ticker);
+}
+
 /** Native currencies already used by a ticker, e.g. to enforce one per ticker. */
 export function tickerCurrencies(
   input: readonly ConsolidationInput[],
