@@ -5,6 +5,7 @@ import {
   TRANSACTION_SIDES,
 } from "@portifolio-tracker/shared";
 import {
+  boolean,
   date,
   index,
   integer,
@@ -164,6 +165,11 @@ export const assetReviews = pgTable(
     fairValue: numeric("fair_value", DECIMAL),
     /** Optional URL to the valuation write-up behind this fair value. */
     fairValueRef: text("fair_value_ref"),
+    /**
+     * When true, the next quarter of this ticker is flagged for attention.
+     * It does not change the score; it is a review workflow marker.
+     */
+    watchNext: boolean("watch_next").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

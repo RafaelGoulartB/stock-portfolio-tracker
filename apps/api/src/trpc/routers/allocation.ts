@@ -150,6 +150,7 @@ async function loadReviews(userId: string): Promise<StoredReview[]> {
       notes: assetReviews.notes,
       fairValue: assetReviews.fairValue,
       fairValueRef: assetReviews.fairValueRef,
+      watchNext: assetReviews.watchNext,
     })
     .from(assetReviews)
     .where(eq(assetReviews.userId, userId))
@@ -733,6 +734,9 @@ export const allocationRouter = router({
         ...(input.fairValueRef !== undefined
           ? { fairValueRef: input.fairValueRef }
           : {}),
+        ...(input.watchNext !== undefined
+          ? { watchNext: input.watchNext }
+          : {}),
       };
 
       const [row] = await db
@@ -758,6 +762,7 @@ export const allocationRouter = router({
           notes: assetReviews.notes,
           fairValue: assetReviews.fairValue,
           fairValueRef: assetReviews.fairValueRef,
+          watchNext: assetReviews.watchNext,
         });
 
       return row ?? null;

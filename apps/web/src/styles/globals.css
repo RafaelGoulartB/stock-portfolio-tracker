@@ -25,6 +25,9 @@
   --ring: oklch(0.708 0 0);
   --gain: oklch(0.627 0.194 149.214);
   --loss: oklch(0.577 0.245 27.325);
+  /* Mid-band for grades 4–6: yellow, distinct from `--gain` / `--loss` and
+     from `--chart-3` (the watch-next marker). */
+  --caution: oklch(0.79 0.145 95);
   /* Categorical palette: even hue steps, matched lightness and chroma so no
      slice shouts louder than the others. `--chart-10` is the neutral tail. */
   --chart-1: oklch(0.58 0.17 258);
@@ -60,6 +63,7 @@
   --ring: oklch(0.556 0 0);
   --gain: oklch(0.723 0.191 150.813);
   --loss: oklch(0.704 0.191 22.216);
+  --caution: oklch(0.85 0.15 95);
   --chart-1: oklch(0.68 0.16 258);
   --chart-2: oklch(0.72 0.13 172);
   --chart-3: oklch(0.79 0.15 62);
@@ -97,6 +101,7 @@
   --color-ring: var(--ring);
   --color-gain: var(--gain);
   --color-loss: var(--loss);
+  --color-caution: var(--caution);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);

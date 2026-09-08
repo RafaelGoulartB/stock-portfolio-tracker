@@ -221,6 +221,7 @@ export const upsertAssetReviewInput = z.object({
     .optional(),
   fairValue: fairValueSchema.nullable().optional(),
   fairValueRef: fairValueRefSchema.nullable().optional(),
+  watchNext: z.boolean().optional(),
 });
 
 export type UpsertAssetReviewInput = z.input<typeof upsertAssetReviewInput>;
@@ -238,6 +239,11 @@ export const assetReviewSchema = z.object({
   fairValue: z.string().nullable(),
   /** Optional link to the valuation behind this fair value. */
   fairValueRef: z.string().nullable(),
+  /**
+   * True when this review asks to watch the following quarter. The next
+   * cell is styled from this flag; it never feeds the score.
+   */
+  watchNext: z.boolean(),
 });
 
 export type AssetReview = z.infer<typeof assetReviewSchema>;

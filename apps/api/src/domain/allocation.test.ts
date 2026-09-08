@@ -169,6 +169,7 @@ describe("buildAllocationRows", () => {
           notes: "Take rate up",
           fairValue: "100",
           fairValueRef: "https://example.com/dlo",
+          watchNext: true,
         },
         {
           ticker: "DLO",
@@ -177,6 +178,7 @@ describe("buildAllocationRows", () => {
           notes: null,
           fairValue: "90",
           fairValueRef: null,
+          watchNext: false,
         },
       ],
       lastContributionByTicker: new Map([["DLO", "2026-01-10"]]),
@@ -206,6 +208,24 @@ describe("buildAllocationRows", () => {
     expect(row?.score.ruleId).toBe("gap-weighted");
     expect(row?.valueSource).toBe("quote");
     expect(row?.manualPrice).toBeNull();
+    expect(row?.reviews).toEqual([
+      {
+        period: "2025Q4",
+        grade: "8",
+        notes: null,
+        fairValue: "90",
+        fairValueRef: null,
+        watchNext: false,
+      },
+      {
+        period: "2026Q1",
+        grade: "8",
+        notes: "Take rate up",
+        fairValue: "100",
+        fairValueRef: "https://example.com/dlo",
+        watchNext: true,
+      },
+    ]);
     expect(row?.executionFxApplied).toBe(false);
     expect(row?.reviews.map((review) => review.period)).toEqual([
       "2025Q4",
@@ -307,6 +327,7 @@ describe("buildAllocationRows", () => {
           notes: null,
           fairValue: "100",
           fairValueRef: null,
+          watchNext: false,
         },
       ],
       lastContributionByTicker: new Map(),
@@ -414,6 +435,7 @@ describe("summarizeAllocation", () => {
           notes: null,
           fairValue: "100",
           fairValueRef: null,
+          watchNext: false,
         },
         {
           ticker: "AUGO",
@@ -422,6 +444,7 @@ describe("summarizeAllocation", () => {
           notes: null,
           fairValue: "100",
           fairValueRef: null,
+          watchNext: false,
         },
         {
           ticker: "VOO",
@@ -430,6 +453,7 @@ describe("summarizeAllocation", () => {
           notes: null,
           fairValue: "100",
           fairValueRef: null,
+          watchNext: false,
         },
       ],
       lastContributionByTicker: new Map([["VOO", "2026-09-01"]]),

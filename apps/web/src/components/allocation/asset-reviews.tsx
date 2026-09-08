@@ -10,7 +10,10 @@ import {
 } from "@portifolio-tracker/shared";
 import { ChevronDown, ExternalLink } from "lucide-react";
 import { useEffect, useState } from "react";
-import { gradeToneClass } from "@/components/allocation/quarter-review-cell";
+import {
+  gradeToneClass,
+  gradeWatchTone,
+} from "@/components/allocation/quarter-review-cell";
 import {
   ReviewEditorForm,
   type ReviewSaveInput,
@@ -76,7 +79,7 @@ function gradeFillClass(grade: string | null): string {
   }
 
   if (value >= 4) {
-    return "bg-foreground/50";
+    return "bg-caution/75";
   }
 
   return "bg-loss";
@@ -228,24 +231,42 @@ function ReviewCard({
       message: "Grade this quarter",
     }),
   )}`;
+  const watchTone = gradeWatchTone(review.grade);
 
   const header = (
-    <header className="flex w-full items-center justify-between gap-2">
-      <p className="text-base font-semibold tracking-tight">{title}</p>
-      <span className="flex items-center gap-2">
-        {latest ? (
-          <Badge variant="secondary" className="text-[10px]">
-            <Trans id="allocation.detailLatestReview">Latest</Trans>
-          </Badge>
+    <header className="flex w-full min-w-0 items-start gap-2">
+      <div className="min-w-0 flex-1 space-y-1.5">
+        <p className="text-base font-semibold tracking-tight">{title}</p>
+        {latest || review.watchNext ? (
+          <span className="flex flex-wrap items-center gap-1.5">
+            {latest ? (
+              <Badge variant="secondary" className="text-[10px]">
+                <Trans id="allocation.detailLatestReview">Latest</Trans>
+              </Badge>
+            ) : null}
+            {review.watchNext ? (
+              <Badge
+                variant="outline"
+                className={cn(
+                  "max-w-full min-w-0 whitespace-normal text-pretty leading-tight",
+                  watchTone.badge,
+                )}
+              >
+                <Trans id="allocation.reviewWatchNext">
+                  Watch next quarter
+                </Trans>
+              </Badge>
+            ) : null}
+          </span>
         ) : null}
-        <ChevronDown
-          aria-hidden="true"
-          className={cn(
-            "size-4 text-muted-foreground transition-transform duration-300 ease-out",
-            expanded && "rotate-180",
-          )}
-        />
-      </span>
+      </div>
+      <ChevronDown
+        aria-hidden="true"
+        className={cn(
+          "mt-0.5 size-4 shrink-0 text-muted-foreground transition-transform duration-300 ease-out",
+          expanded && "rotate-180",
+        )}
+      />
     </header>
   );
 
@@ -315,7 +336,7 @@ function ReviewCard({
   return (
     <li
       className={cn(
-        "rounded-xl border bg-card shadow-sm ring-1 ring-foreground/6 transition-[box-shadow] duration-300 ease-out",
+        "min-w-0 overflow-hidden rounded-xl border bg-card shadow-sm ring-1 ring-foreground/6 transition-[box-shadow] duration-300 ease-out",
         latest && !expanded && "ring-ring/40",
         expanded && "col-span-full shadow-md ring-ring/50",
       )}

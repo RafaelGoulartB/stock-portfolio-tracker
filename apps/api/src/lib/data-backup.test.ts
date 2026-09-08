@@ -54,7 +54,7 @@ describe("portable data backups", () => {
       },
     });
 
-    expect(manifest.version).toBe(5);
+    expect(manifest.version).toBe(6);
     if (record.entity !== "transactions") {
       throw new Error("expected transaction record");
     }
@@ -109,6 +109,51 @@ describe("portable data backups", () => {
     expect(record.data.largeBookImpact).toBe("0.00500000");
     expect(record.data.maxShare).toBe("0.70000000");
     expect(record.data.maxAssets).toBe(5);
+  });
+
+  it("defaults a missing review watchNext flag on older backups", () => {
+    const record = backupRecordSchema.parse({
+      type: "record",
+      entity: "assetReviews",
+      data: {
+        ticker: "DLO",
+        period: "2026Q1",
+        grade: "8",
+        notes: null,
+        fairValue: "100",
+        fairValueRef: null,
+        createdAt: "2026-09-01T12:00:00.000Z",
+        updatedAt: "2026-09-01T12:00:00.000Z",
+      },
+    });
+
+    if (record.entity !== "assetReviews") {
+      throw new Error("expected asset review record");
+    }
+    expect(record.data.watchNext).toBe(false);
+  });
+
+  it("keeps an explicit review watchNext flag", () => {
+    const record = backupRecordSchema.parse({
+      type: "record",
+      entity: "assetReviews",
+      data: {
+        ticker: "DLO",
+        period: "2026Q1",
+        grade: "8",
+        notes: null,
+        fairValue: "100",
+        fairValueRef: null,
+        watchNext: true,
+        createdAt: "2026-09-01T12:00:00.000Z",
+        updatedAt: "2026-09-01T12:00:00.000Z",
+      },
+    });
+
+    if (record.entity !== "assetReviews") {
+      throw new Error("expected asset review record");
+    }
+    expect(record.data.watchNext).toBe(true);
   });
 
   it("maps a v4 planner record with a single impact onto the two book knobs", () => {

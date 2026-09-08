@@ -168,6 +168,7 @@ export const devSeedRouter = router({
                 notes: review.notes,
                 fairValue: review.fairValue,
                 fairValueRef: review.fairValueRef,
+                watchNext: review.watchNext,
               })),
             )
             .onConflictDoNothing({

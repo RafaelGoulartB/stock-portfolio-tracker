@@ -8,7 +8,7 @@ import {
 import { z } from "zod";
 
 export const BACKUP_FORMAT = "portifolio-tracker-backup";
-export const BACKUP_VERSION = 5;
+export const BACKUP_VERSION = 6;
 export const BACKUP_MEDIA_TYPE = "application/x-portifolio-backup+gzip";
 
 export const BACKUP_ENTITIES = [
@@ -50,6 +50,7 @@ export const manifestSchema = z.object({
     z.literal(3),
     z.literal(4),
     z.literal(5),
+    z.literal(6),
   ]),
   exportedAt: timestamp,
   counts: backupCountsSchema,
@@ -106,6 +107,7 @@ const assetReviewRecord = z.strictObject({
     notes: z.string().nullable(),
     fairValue: nullableDecimal,
     fairValueRef: z.string().nullable(),
+    watchNext: z.boolean().optional().default(false),
     createdAt: databaseTimestamp,
     updatedAt: databaseTimestamp,
   }),

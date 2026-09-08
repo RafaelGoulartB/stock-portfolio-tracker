@@ -48,7 +48,7 @@ production deployment.
 - **display currency** — the user-selected `BRL` or `USD` currency used to
   consolidate the portfolio;
 - **allocation asset** — a held or watch-only ticker with allocation metadata;
-- **review** — a ticker's quarterly grade, notes, and optional fair value;
+- **review** — a ticker's quarterly grade, notes, optional fair value, and whether to watch the next quarter;
 - **contribution score** — the domain recommendation used to rank new capital;
 - **provider** — a replaceable source of market quotes, income events, or FX;
 - **account data** — every portfolio record owned by one authenticated user.

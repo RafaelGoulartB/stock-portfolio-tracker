@@ -61,7 +61,7 @@ import {
   pnlClassName,
 } from "@/lib/format";
 import { formatDecimalInput, formatPercentInput } from "@/lib/numeric-input";
-import { formatQuarterLabel, type Quarter } from "@/lib/quarters";
+import { formatQuarterLabel, type Quarter, shiftQuarter } from "@/lib/quarters";
 import { cn } from "@/lib/utils";
 import { InlineEditCell } from "./inline-edit-cell";
 import { QuarterReviewCell } from "./quarter-review-cell";
@@ -386,6 +386,7 @@ export type AllocationTableProps = {
     notes: string | null;
     fairValue: string | null;
     fairValueRef: string | null;
+    watchNext: boolean;
   }) => void;
   onRemoveReview: (input: { ticker: string; period: string }) => void;
   missing: string[];
@@ -1058,6 +1059,14 @@ export function AllocationTable({
                           ticker={row.ticker}
                           quarter={quarter}
                           review={reviewByPeriod.get(quarter.key)}
+                          watched={
+                            reviewByPeriod.get(shiftQuarter(quarter, -1).key)
+                              ?.watchNext === true
+                          }
+                          watchedGrade={
+                            reviewByPeriod.get(shiftQuarter(quarter, -1).key)
+                              ?.grade ?? null
+                          }
                           saving={saving}
                           onSave={onSaveReview}
                           onRemove={onRemoveReview}

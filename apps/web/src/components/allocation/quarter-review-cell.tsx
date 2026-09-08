@@ -1,6 +1,7 @@
 import { t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import type { AssetReview } from "@portifolio-tracker/shared";
+import { Eye } from "lucide-react";
 import { useState } from "react";
 import {
   ReviewEditorForm,
@@ -17,10 +18,10 @@ import { formatQuarterTitle } from "@/lib/quarters";
 import { cn } from "@/lib/utils";
 
 /**
- * Quarter quality, as a background tone. Built from the `--gain` / `--loss`
- * tokens so the scale keeps working in both themes: the bands mirror the
- * grade bands the score engine uses, which is why a `7` reads weaker than
- * an `8` at a glance.
+ * Quarter quality as a traffic-light wash. Breakpoints match the default
+ * score bands (`0`–`3`, `4`–`6`, `7`, `8`+): red, yellow, then green, with
+ * an `8` reading stronger than a `7`. `--muted` is not a grade color — it
+ * disappeared against the table.
  */
 export function gradeToneClass(grade: string | null): string {
   if (grade === null) {
@@ -30,24 +31,83 @@ export function gradeToneClass(grade: string | null): string {
   const value = Number(grade);
 
   if (value >= 8) {
-    return "bg-gain/30";
+    return "bg-gain/35";
   }
 
   if (value >= 7) {
-    return "bg-gain/15";
+    return "bg-gain/22";
   }
 
   if (value >= 4) {
-    return "bg-muted";
+    return "bg-caution/48";
   }
 
-  return "bg-loss/20";
+  return "bg-loss/28";
+}
+
+/**
+ * Accent classes for the watch-next bridge. They follow the grade of the
+ * quarter that raised the flag, so a yellow `6` does not grow a gold bar.
+ */
+export function gradeWatchTone(grade: string | null): {
+  bar: string;
+  wash: string;
+  icon: string;
+  text: string;
+  badge: string;
+} {
+  const value = grade === null ? Number.NaN : Number(grade);
+
+  if (value >= 7) {
+    return {
+      bar: "bg-gain",
+      wash: "bg-gain/20",
+      icon: "text-gain",
+      text: "text-gain",
+      badge: "border-gain/45 text-gain",
+    };
+  }
+
+  if (value >= 4) {
+    return {
+      bar: "bg-caution",
+      wash: "bg-caution/25",
+      icon: "text-caution",
+      text: "text-caution",
+      badge: "border-caution/45 text-caution",
+    };
+  }
+
+  if (Number.isFinite(value)) {
+    return {
+      bar: "bg-loss",
+      wash: "bg-loss/20",
+      icon: "text-loss",
+      text: "text-loss",
+      badge: "border-loss/45 text-loss",
+    };
+  }
+
+  return {
+    bar: "bg-foreground/50",
+    wash: "bg-accent",
+    icon: "text-foreground/70",
+    text: "text-muted-foreground",
+    badge: "border-border text-muted-foreground",
+  };
 }
 
 export type QuarterReviewCellProps = {
   ticker: string;
   quarter: Quarter;
   review: AssetReview | undefined;
+  /**
+   * True when the previous quarter's review asked to watch this cell. The
+   * marker lives on that earlier review; this cell only renders it.
+   */
+  watched?: boolean;
+  /** Grade of the quarter that raised {@link watched}, for matching color. */
+  watchedGrade?: string | null;
   saving?: boolean;
   onSave: (input: ReviewSaveInput) => void;
   onRemove: (input: { ticker: string; period: string }) => void;
@@ -56,11 +116,17 @@ export type QuarterReviewCellProps = {
 /**
  * One cell of the quarter grid: the grade colours the cell, a dot marks
  * stored notes or a fair value, and clicking opens the editor.
+ *
+ * Watching the next quarter is a static bridge, not a pulse: a bar on the
+ * right of the source cell and a matching bar (plus wash/icon) on the left
+ * of the following cell, both in that review's grade color.
  */
 export function QuarterReviewCell({
   ticker,
   quarter,
   review,
+  watched = false,
+  watchedGrade = null,
   saving = false,
   onSave,
   onRemove,
@@ -72,7 +138,26 @@ export function QuarterReviewCell({
   const hasFairValue = review?.fairValue != null;
   const hasFairValueRef = (review?.fairValueRef ?? "").trim().length > 0;
   const hasMarker = hasNotes || hasFairValue || hasFairValueRef;
+  const watchNext = review?.watchNext === true;
+  const emptyWatched = watched && review?.grade == null;
+  const sourceTone = gradeWatchTone(review?.grade ?? null);
+  const watchedTone = gradeWatchTone(watchedGrade);
   const title = `${ticker} · ${formatQuarterTitle(quarter)}`;
+  const watchHint = watchNext
+    ? i18n._(
+        t({
+          id: "allocation.reviewWatchNextHint",
+          message: "Watch next quarter",
+        }),
+      )
+    : watched
+      ? i18n._(
+          t({
+            id: "allocation.reviewWatchedHint",
+            message: "Flagged last quarter for attention",
+          }),
+        )
+      : null;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -80,31 +165,65 @@ export function QuarterReviewCell({
         <button
           type="button"
           title={
-            hasNotes
-              ? `${title} — ${review?.notes ?? ""}`
-              : `${title} — ${i18n._(t({ id: "allocation.reviewEdit", message: "Grade this quarter" }))}`
+            watchHint
+              ? `${title} — ${watchHint}`
+              : hasNotes
+                ? `${title} — ${review?.notes ?? ""}`
+                : `${title} — ${i18n._(t({ id: "allocation.reviewEdit", message: "Grade this quarter" }))}`
           }
-          aria-label={title}
+          aria-label={watchHint ? `${title} — ${watchHint}` : title}
           className={cn(
             "relative h-7 w-full rounded-sm text-center text-xs font-medium tabular-nums transition-colors hover:ring-1 hover:ring-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
             gradeToneClass(review?.grade ?? null),
             review?.grade == null && hasMarker && "bg-accent",
-            !review && "hover:bg-accent",
+            emptyWatched && watchedTone.wash,
+            !review && !watched && "hover:bg-accent",
           )}
         >
-          {review?.grade == null
-            ? null
-            : formatDecimalInput(review.grade, i18n.locale)}
+          {review?.grade == null ? (
+            emptyWatched ? (
+              <Eye
+                aria-hidden="true"
+                className={cn("mx-auto size-3.5", watchedTone.icon)}
+              />
+            ) : null
+          ) : (
+            formatDecimalInput(review.grade, i18n.locale)
+          )}
           {hasMarker ? (
             <span
               aria-hidden="true"
               className="absolute top-0.5 right-0.5 size-1.5 rounded-full bg-foreground/50"
             />
           ) : null}
+          {watchNext ? (
+            <span
+              aria-hidden="true"
+              className={cn(
+                "absolute inset-y-1 -right-px w-1 rounded-full",
+                sourceTone.bar,
+              )}
+            />
+          ) : null}
+          {watched ? (
+            <span
+              aria-hidden="true"
+              className={cn(
+                "absolute inset-y-1 -left-px w-1 rounded-full",
+                watchedTone.bar,
+              )}
+            />
+          ) : null}
         </button>
       </PopoverTrigger>
-      <PopoverContent align="center" className="w-80 space-y-3">
+      <PopoverContent
+        align="center"
+        className="w-80 max-h-[min(32rem,calc(100dvh-2rem))] space-y-3 overflow-y-auto"
+      >
         <p className="text-sm font-semibold">{title}</p>
+        {watched && !watchNext ? (
+          <p className={cn("text-xs", watchedTone.text)}>{watchHint}</p>
+        ) : null}
         <ReviewEditorForm
           ticker={ticker}
           period={quarter.key}

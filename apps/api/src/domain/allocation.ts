@@ -299,6 +299,7 @@ export function buildAllocationRows(input: AllocationInput): AllocationRow[] {
       notes: review.notes,
       fairValue: review.fairValue,
       fairValueRef: review.fairValueRef,
+      watchNext: review.watchNext,
     });
     reviewsByTicker.set(review.ticker, list);
   }

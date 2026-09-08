@@ -13,6 +13,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDecimalInput, parseDecimalInput } from "@/lib/numeric-input";
 import { cn } from "@/lib/utils";
@@ -24,6 +25,7 @@ export type ReviewSaveInput = {
   notes: string | null;
   fairValue: string | null;
   fairValueRef: string | null;
+  watchNext: boolean;
 };
 
 export function ReviewEditorForm({
@@ -58,6 +60,7 @@ export function ReviewEditorForm({
     formatDecimalInput(review?.fairValue ?? null, i18n.locale),
   );
   const [fairValueRef, setFairValueRef] = useState(review?.fairValueRef ?? "");
+  const [watchNext, setWatchNext] = useState(review?.watchNext ?? false);
   const [invalidGrade, setInvalidGrade] = useState(false);
   const [invalidFairValue, setInvalidFairValue] = useState(false);
   const [invalidFairValueRef, setInvalidFairValueRef] = useState(false);
@@ -111,7 +114,8 @@ export function ReviewEditorForm({
       parsedGrade === null &&
       trimmedNotes.length === 0 &&
       parsedFairValue === null &&
-      parsedFairValueRef === null
+      parsedFairValueRef === null &&
+      !watchNext
     ) {
       if (review) {
         onRemove({ ticker, period });
@@ -127,6 +131,7 @@ export function ReviewEditorForm({
       notes: trimmedNotes.length === 0 ? null : trimmedNotes,
       fairValue: parsedFairValue,
       fairValueRef: parsedFairValueRef,
+      watchNext,
     });
   }
 
@@ -264,6 +269,24 @@ export function ReviewEditorForm({
           {notesField}
         </>
       )}
+
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0 space-y-0.5">
+          <Label htmlFor={`watch-next-${fieldId}`} className="text-xs">
+            <Trans id="allocation.reviewWatchNext">Watch next quarter</Trans>
+          </Label>
+          <p className="text-[11px] leading-snug text-muted-foreground">
+            <Trans id="allocation.reviewWatchNextHelp">
+              Flags the next quarter so you remember to follow this thesis.
+            </Trans>
+          </p>
+        </div>
+        <Switch
+          id={`watch-next-${fieldId}`}
+          checked={watchNext}
+          onCheckedChange={setWatchNext}
+        />
+      </div>
 
       <div className="flex items-center justify-between gap-2">
         <Button

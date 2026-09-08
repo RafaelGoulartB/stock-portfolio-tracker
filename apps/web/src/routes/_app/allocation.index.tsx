@@ -154,22 +154,28 @@ function storeValue(key: string, value: string): void {
  * Where the quarter grid ends by default: the newest quarter that already
  * has a review, which is how far the research has advanced. With nothing
  * reviewed yet it falls back to the last completed quarter, because the
- * current one has no earnings to grade.
+ * current one has no earnings to grade. A watch-next flag on that newest
+ * review pulls the following quarter into view so the empty cell is visible.
  */
 function defaultQuarterEnd(rows: readonly AllocationRow[]): Quarter {
   const periods = rows.flatMap((row) =>
     row.reviews.map((review) => review.period),
   );
   const newest = periods.sort().at(-1);
-  const fallback = shiftQuarter(currentQuarter(), -1);
+  const current = currentQuarter();
+  const fallback = shiftQuarter(current, -1);
 
   if (!newest) {
     return fallback;
   }
 
   const reviewed = toQuarter(newest);
+  const end = reviewed.key > current.key ? fallback : reviewed;
+  const watchExtends = rows.some((row) =>
+    row.reviews.some((review) => review.period === end.key && review.watchNext),
+  );
 
-  return reviewed.key > currentQuarter().key ? fallback : reviewed;
+  return watchExtends ? shiftQuarter(end, 1) : end;
 }
 
 function AllocationPage() {

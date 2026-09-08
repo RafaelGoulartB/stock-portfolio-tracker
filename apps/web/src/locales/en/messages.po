@@ -305,7 +305,7 @@ msgstr "Account data"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.ticker
-#: src/components/allocation/allocation-table.tsx:1254
+#: src/components/allocation/allocation-table.tsx:1259
 msgid "allocation.rowMenu"
 msgstr "Actions for {0}"
 
@@ -542,7 +542,7 @@ msgid "dividends.alphaHint"
 msgstr "Automatic mode is currently using Yahoo only. Set ALPHA_VANTAGE_API_KEY on the API to enrich US events with payment dates and future declarations."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:785
+#: src/components/allocation/allocation-table.tsx:786
 msgid "allocation.cashTargetHint"
 msgstr "Automatically fills the part not assigned to other assets."
 
@@ -558,7 +558,7 @@ msgstr "Average cost and prices stay in the native currency of each asset; marke
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.gradedQuarters
-#: src/components/allocation/allocation-table.tsx:1032
+#: src/components/allocation/allocation-table.tsx:1033
 msgid "allocation.gradeTooltip"
 msgstr "Average of {0} graded quarters"
 
@@ -728,7 +728,7 @@ msgid "categories.cancel"
 msgstr "Cancel"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/review-editor-form.tsx:287
+#: src/components/allocation/review-editor-form.tsx:310
 #: src/components/settings-data.tsx:296
 #: src/components/settings-data.tsx:357
 msgid "common.cancel"
@@ -756,7 +756,7 @@ msgid "assetClass.cash"
 msgstr "Cash"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:744
+#: src/components/allocation/allocation-table.tsx:745
 msgid "allocation.cash"
 msgstr "Cash"
 
@@ -766,7 +766,7 @@ msgid "documentation.performance.cashFlowsTitle"
 msgstr "Cash flows and timing"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:987
+#: src/components/allocation/allocation-table.tsx:988
 msgid "allocation.cashValueHint"
 msgstr "Cash is entered manually and included in total net worth."
 
@@ -916,18 +916,18 @@ msgid "categories.clearSelection"
 msgstr "Clear"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/review-editor-form.tsx:276
+#: src/components/allocation/review-editor-form.tsx:299
 msgid "allocation.reviewClear"
 msgstr "Clear"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.ticker
-#: src/components/allocation/allocation-table.tsx:1306
+#: src/components/allocation/allocation-table.tsx:1311
 msgid "allocation.clearMark"
 msgstr "Clear highlight on {0}"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1334
+#: src/components/allocation/allocation-table.tsx:1339
 msgid "allocation.clearAnalysis"
 msgstr "Clear target"
 
@@ -942,7 +942,7 @@ msgid "allocation.detailReviewsHint"
 msgstr "Click a quarter to expand and edit the grade, fair value and notes."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:715
+#: src/components/allocation/allocation-table.tsx:716
 msgid "allocation.cycleMarkHint"
 msgstr "Click to cycle highlight color"
 
@@ -1328,7 +1328,7 @@ msgstr "Customize columns"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.ticker
-#: src/components/allocation/allocation-table.tsx:709
+#: src/components/allocation/allocation-table.tsx:710
 msgid "allocation.cycleMark"
 msgstr "Cycle highlight color for {0}"
 
@@ -1703,7 +1703,7 @@ msgid "settings.data.export"
 msgstr "Export backup"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/asset-reviews.tsx:288
+#: src/components/allocation/asset-reviews.tsx:296
 #: src/routes/_app/allocation.$ticker.tsx:214
 msgid "allocation.colFairValue"
 msgstr "Fair value"
@@ -1715,14 +1715,14 @@ msgid "allocation.detailFairValue"
 msgstr "Fair value"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/review-editor-form.tsx:162
+#: src/components/allocation/review-editor-form.tsx:167
 msgid "allocation.reviewFairValue"
 msgstr "Fair value"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: formatMoney(row.fairValue, row.currency)
 #. placeholder {1}: row.fairValuePeriod ?? ""
-#: src/components/allocation/allocation-table.tsx:854
+#: src/components/allocation/allocation-table.tsx:855
 msgid "allocation.discountTooltipFairOnly"
 msgstr "Fair value {0} ({1})"
 
@@ -1784,6 +1784,16 @@ msgid "assetClass.fixedIncome"
 msgstr "Fixed income"
 
 #. js-lingui-explicit-id
+#: src/components/allocation/quarter-review-cell.tsx:98
+msgid "allocation.reviewWatchedHint"
+msgstr "Flagged last quarter for attention"
+
+#. js-lingui-explicit-id
+#: src/components/allocation/review-editor-form.tsx:279
+msgid "allocation.reviewWatchNextHelp"
+msgstr "Flags the next quarter so you remember to follow this thesis."
+
+#. js-lingui-explicit-id
 #: src/routes/_app/daily.tsx:88
 msgid "daily.subtitle"
 msgstr "Follow the portfolio's latest daily movement and see which assets are driving the change."
@@ -1823,13 +1833,13 @@ msgstr "Give the category a name."
 
 #. js-lingui-explicit-id
 #: src/components/allocation/allocation-table.tsx:103
-#: src/components/allocation/asset-reviews.tsx:280
+#: src/components/allocation/asset-reviews.tsx:288
 #: src/routes/_app/allocation.$ticker.tsx:274
 msgid "allocation.colGrade"
 msgstr "Grade"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/review-editor-form.tsx:137
+#: src/components/allocation/review-editor-form.tsx:142
 msgid "allocation.reviewGrade"
 msgstr "Grade (0–10)"
 
@@ -1848,7 +1858,7 @@ msgstr "Grade ≥ {0} and < {1}"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/asset-reviews.tsx:226
-#: src/components/allocation/quarter-review-cell.tsx:85
+#: src/components/allocation/quarter-review-cell.tsx:115
 msgid "allocation.reviewEdit"
 msgstr "Grade this quarter"
 
@@ -1868,7 +1878,7 @@ msgid "positions.allocGroupBy"
 msgstr "Group by"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1272
+#: src/components/allocation/allocation-table.tsx:1277
 msgid "allocation.markColor"
 msgstr "Highlight"
 
@@ -1959,7 +1969,7 @@ msgstr "Importing replaces all current portfolio data with this backup. The oper
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.score.cooldownUntil
-#: src/components/allocation/allocation-table.tsx:924
+#: src/components/allocation/allocation-table.tsx:925
 #: src/routes/_app/allocation.$ticker.tsx:299
 msgid "allocation.cooldownIcon"
 msgstr "In cooldown until {0}"
@@ -2122,13 +2132,13 @@ msgstr "Manual prices are entered per ticker on the Positions page."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.ticker
-#: src/components/allocation/allocation-table.tsx:1283
+#: src/components/allocation/allocation-table.tsx:1288
 msgid "allocation.markAs"
 msgstr "Mark {0} {color}"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: formatQuarterLabel(quarter)
-#: src/components/allocation/allocation-table.tsx:598
+#: src/components/allocation/allocation-table.tsx:599
 msgid "allocation.focusQuarter"
 msgstr "Mark {0} as the quarter you are working on"
 
@@ -2143,7 +2153,7 @@ msgstr "Market"
 #. placeholder {0}: formatMoney(row.marketPrice, row.currency)
 #. placeholder {1}: formatMoney(row.fairValue, row.currency)
 #. placeholder {2}: row.fairValuePeriod ?? ""
-#: src/components/allocation/allocation-table.tsx:860
+#: src/components/allocation/allocation-table.tsx:861
 msgid "allocation.discountTooltip"
 msgstr "Market {0} vs fair value {1} ({2})"
 
@@ -2194,7 +2204,7 @@ msgstr "Market value at {snapshotLabel} and share of quoted equity."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.ticker
-#: src/components/allocation/allocation-table.tsx:979
+#: src/components/allocation/allocation-table.tsx:980
 msgid "allocation.editValue"
 msgstr "Market value of {0}"
 
@@ -2301,7 +2311,7 @@ msgid "categories.move"
 msgstr "Move"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1327
+#: src/components/allocation/allocation-table.tsx:1332
 msgid "allocation.moveDown"
 msgstr "Move down"
 
@@ -2312,7 +2322,7 @@ msgid "categories.moveTo"
 msgstr "Move to…"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1323
+#: src/components/allocation/allocation-table.tsx:1328
 msgid "allocation.moveUp"
 msgstr "Move up"
 
@@ -2473,7 +2483,7 @@ msgid "daily.noQuoteDate"
 msgstr "No live quotes available."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:768
+#: src/components/allocation/allocation-table.tsx:769
 msgid "allocation.quoteMissing"
 msgstr "No market quote for this ticker"
 
@@ -2504,12 +2514,12 @@ msgid "allocation.detailChartEmpty"
 msgstr "No price history for this ticker yet."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1002
+#: src/components/allocation/allocation-table.tsx:1003
 msgid "allocation.valueMissingTooltip"
 msgstr "No public quote. Enter the position's market value."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:995
+#: src/components/allocation/allocation-table.tsx:996
 msgid "allocation.valueManualTooltip"
 msgstr "No public quote. This value is set by you. Clear the cell to remove it."
 
@@ -2575,7 +2585,7 @@ msgid "transactions.notes"
 msgstr "Notes"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/review-editor-form.tsx:227
+#: src/components/allocation/review-editor-form.tsx:232
 msgid "allocation.reviewNotes"
 msgstr "Notes"
 
@@ -2585,7 +2595,7 @@ msgid "transactions.empty"
 msgstr "Nothing registered yet."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1093
+#: src/components/allocation/allocation-table.tsx:1098
 msgid "allocation.empty"
 msgstr "Nothing to allocate yet. Register a trade or add an asset to follow."
 
@@ -2601,13 +2611,13 @@ msgstr "Open Deep Finder"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.ticker
-#: src/components/allocation/allocation-table.tsx:880
+#: src/components/allocation/allocation-table.tsx:881
 msgid "allocation.openFairValueRef"
 msgstr "Open fair value reference for {0}"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/asset-reviews.tsx:362
-#: src/components/allocation/review-editor-form.tsx:217
+#: src/components/allocation/asset-reviews.tsx:370
+#: src/components/allocation/review-editor-form.tsx:222
 msgid "allocation.reviewFairValueRefOpen"
 msgstr "Open reference"
 
@@ -2943,7 +2953,7 @@ msgid "transactions.colQuantity"
 msgstr "Quantity"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:956
+#: src/components/allocation/allocation-table.tsx:957
 msgid "allocation.valueQuotedTooltip"
 msgstr "Quantity × market price"
 
@@ -3026,7 +3036,7 @@ msgid "dividends.recordDate"
 msgstr "Record date"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/review-editor-form.tsx:187
+#: src/components/allocation/review-editor-form.tsx:192
 msgid "allocation.reviewFairValueRef"
 msgstr "Reference link"
 
@@ -3142,7 +3152,7 @@ msgstr "Rename category"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.ticker
-#: src/components/allocation/allocation-table.tsx:686
+#: src/components/allocation/allocation-table.tsx:687
 msgid "allocation.dragHandle"
 msgstr "Reorder {0}. Use the arrow keys to move it."
 
@@ -3274,7 +3284,7 @@ msgid "documentation.score.save"
 msgstr "Save"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/review-editor-form.tsx:291
+#: src/components/allocation/review-editor-form.tsx:314
 msgid "allocation.reviewSave"
 msgstr "Save"
 
@@ -3368,7 +3378,7 @@ msgid "side.sell"
 msgstr "Sell"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:846
+#: src/components/allocation/allocation-table.tsx:847
 msgid "allocation.discountEmptyTooltip"
 msgstr "Set a fair value on a quarterly review"
 
@@ -3383,7 +3393,7 @@ msgid "register.description"
 msgstr "Set up an account to start tracking your trades."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1010
+#: src/components/allocation/allocation-table.tsx:1011
 msgid "allocation.valuePlaceholder"
 msgstr "Set value"
 
@@ -3524,7 +3534,7 @@ msgstr "Something went wrong. Try again."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: labels[id]
-#: src/components/allocation/allocation-table.tsx:554
+#: src/components/allocation/allocation-table.tsx:555
 msgid "allocation.sortBy"
 msgstr "Sort by {0}"
 
@@ -3568,13 +3578,13 @@ msgid "dividends.status"
 msgstr "Status"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1342
+#: src/components/allocation/allocation-table.tsx:1347
 msgid "allocation.removeAsset"
 msgstr "Stop following"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: formatQuarterLabel(quarter)
-#: src/components/allocation/allocation-table.tsx:594
+#: src/components/allocation/allocation-table.tsx:595
 msgid "allocation.unfocusQuarter"
 msgstr "Stop marking {0} as the quarter you are working on"
 
@@ -3613,7 +3623,7 @@ msgstr "Target overweight block"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.ticker
-#: src/components/allocation/allocation-table.tsx:806
+#: src/components/allocation/allocation-table.tsx:807
 msgid "allocation.editTarget"
 msgstr "Target weight of {0}, in percent"
 
@@ -3643,7 +3653,7 @@ msgid "documentation.comparisons.periodViewsDescription"
 msgstr "The app compares today's open quantity at today's price with that same quantity at the baseline close. This isolates price movement and is not the realized performance of trades made during the period."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/review-editor-form.tsx:249
+#: src/components/allocation/review-editor-form.tsx:254
 msgid "allocation.reviewHint"
 msgstr "The average of the newest graded quarters scales the score. Fair value feeds the discount from the newest quarter that has one."
 
@@ -3888,7 +3898,7 @@ msgid "transactions.colTotal"
 msgstr "Total"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1113
+#: src/components/allocation/allocation-table.tsx:1118
 msgid "allocation.total"
 msgstr "Total"
 
@@ -4024,17 +4034,17 @@ msgid "positions.fxRate"
 msgstr "USD/BRL rate"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/review-editor-form.tsx:204
+#: src/components/allocation/review-editor-form.tsx:209
 msgid "allocation.reviewFairValueRefInvalid"
 msgstr "Use a full http(s) link."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/review-editor-form.tsx:153
+#: src/components/allocation/review-editor-form.tsx:158
 msgid "allocation.reviewGradeInvalid"
 msgstr "Use a grade between 0 and 10."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/review-editor-form.tsx:178
+#: src/components/allocation/review-editor-form.tsx:183
 msgid "allocation.reviewFairValueInvalid"
 msgstr "Use a positive fair value."
 
@@ -4090,7 +4100,7 @@ msgid "allocation.plannerFxHint"
 msgstr "VET / FX costs"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:1267
+#: src/components/allocation/allocation-table.tsx:1272
 msgid "allocation.viewDetails"
 msgstr "View details"
 
@@ -4105,7 +4115,7 @@ msgid "detailedPositions.presets"
 msgstr "View presets"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/asset-reviews.tsx:300
+#: src/components/allocation/asset-reviews.tsx:308
 msgid "allocation.detailVsClose"
 msgstr "vs close"
 
@@ -4115,10 +4125,21 @@ msgid "deepFinder.windowCost"
 msgstr "Vs cost"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:761
+#: src/components/allocation/allocation-table.tsx:762
 #: src/routes/_app/allocation.$ticker.tsx:180
 msgid "allocation.watchBadge"
 msgstr "Watch"
+
+#. js-lingui-explicit-id
+#: src/components/allocation/asset-reviews.tsx:246
+#: src/components/allocation/review-editor-form.tsx:276
+msgid "allocation.reviewWatchNext"
+msgstr "Watch next quarter"
+
+#. js-lingui-explicit-id
+#: src/components/allocation/quarter-review-cell.tsx:91
+msgid "allocation.reviewWatchNextHint"
+msgstr "Watch next quarter"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/add-asset-dialog.tsx:143
@@ -4136,7 +4157,7 @@ msgid "performance.colWeight"
 msgstr "Weight"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/review-editor-form.tsx:234
+#: src/components/allocation/review-editor-form.tsx:239
 msgid "allocation.reviewNotesPlaceholder"
 msgstr "What happened in the quarter?"
 

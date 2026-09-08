@@ -1,0 +1,1 @@
+ALTER TABLE "asset_reviews" ADD COLUMN "watch_next" boolean DEFAULT false NOT NULL;

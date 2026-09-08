@@ -166,8 +166,8 @@ async function* exportBackup(userId: string): AsyncGenerator<string> {
 
     for await (const rows of connection`
       select ticker, period, grade, notes, fair_value as "fairValue",
-        fair_value_ref as "fairValueRef", created_at as "createdAt",
-        updated_at as "updatedAt"
+        fair_value_ref as "fairValueRef", watch_next as "watchNext",
+        created_at as "createdAt", updated_at as "updatedAt"
       from asset_reviews where user_id = ${userId} order by id
     `.cursor(BATCH_SIZE)) {
       for (const data of rows) {

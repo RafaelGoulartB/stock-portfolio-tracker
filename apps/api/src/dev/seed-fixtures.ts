@@ -30,6 +30,7 @@ type SeedReview = Required<
   notes: string | null;
   fairValue: string | null;
   fairValueRef: string | null;
+  watchNext: boolean;
 };
 
 type SeedName = {
@@ -79,6 +80,7 @@ function review(
     notes?: string;
     fairValue?: string;
     fairValueRef?: string;
+    watchNext?: boolean;
   },
 ): SeedReview {
   return {
@@ -88,6 +90,7 @@ function review(
     notes: fields.notes ?? null,
     fairValue: fields.fairValue ?? null,
     fairValueRef: fields.fairValueRef ?? null,
+    watchNext: fields.watchNext ?? false,
   };
 }
 
