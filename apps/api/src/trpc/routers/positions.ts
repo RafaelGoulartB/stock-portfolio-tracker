@@ -12,6 +12,7 @@ import {
   convertMoney,
   convertPositions,
   filterTransactionsByAsOf,
+  portfolioReturnContribution,
   summarizePositions,
   valuePositions,
   withCashPosition,
@@ -81,14 +82,24 @@ export const positionsRouter = router({
         asOf: input.asOf,
       });
 
-      return {
+      const summary = summarizePositions(
         positions,
-        summary: summarizePositions(
-          positions,
-          input.displayCurrency,
-          input.usdBrlRate ?? null,
-          input.asOf ?? null,
-        ),
+        input.displayCurrency,
+        input.usdBrlRate ?? null,
+        input.asOf ?? null,
+      );
+
+      return {
+        positions: positions.map((position) => {
+          return {
+            ...position,
+            returnContribution: portfolioReturnContribution(
+              position.convertedUnrealizedPnl,
+              summary.quotedInvestedCost,
+            ),
+          };
+        }),
+        summary,
         fx: {
           displayCurrency: input.displayCurrency,
           usdBrlRate: input.usdBrlRate ?? null,

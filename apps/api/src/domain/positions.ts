@@ -48,6 +48,23 @@ const QUANTITY_PLACES = 8;
 const MONEY_PLACES = 2;
 /** Ratios (returns, weights) keep more digits than money. */
 const RATE_PLACES = 6;
+/**
+ * Open result over the portfolio's return-eligible invested cost. The result
+ * is the percentage-point contribution of one asset to the portfolio return.
+ */
+export function portfolioReturnContribution(
+  convertedUnrealizedPnl: string | null,
+  portfolioInvestedCost: string,
+): string | null {
+  const invested = toDecimal(portfolioInvestedCost);
+
+  return convertedUnrealizedPnl == null || isZero(invested)
+    ? null
+    : formatDecimal(
+        div(toDecimal(convertedUnrealizedPnl), invested),
+        RATE_PLACES,
+      );
+}
 
 /** Builds the quote-free live position representing the account's BRL cash. */
 export function cashPosition(

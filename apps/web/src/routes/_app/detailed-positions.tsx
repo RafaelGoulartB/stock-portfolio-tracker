@@ -2,10 +2,7 @@ import type { I18n } from "@lingui/core";
 import { t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
-import {
-  positiveDecimal,
-  type ValuedPosition,
-} from "@portifolio-tracker/shared";
+import { positiveDecimal } from "@portifolio-tracker/shared";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   ArrowDown,
@@ -52,12 +49,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { trpc } from "@/lib/api";
+import { type RouterOutputs, trpc } from "@/lib/api";
 import {
   formatMoney,
   formatQuantity,
   formatSignedMoney,
   formatSignedPercent,
+  formatSignedWeightPrecise,
   formatTradeDate,
   formatWeight,
   pnlClassName,
@@ -71,7 +69,9 @@ export const Route = createFileRoute("/_app/detailed-positions")({
   component: DetailedPositionsPage,
 });
 
-const COLUMN_STORAGE_KEY = "portfolio.detailedPositions.columns";
+const COLUMN_STORAGE_KEY = "portfolio.detailedPositions.columns.v3";
+const PREVIOUS_COLUMN_STORAGE_KEY = "portfolio.detailedPositions.columns.v2";
+const LEGACY_COLUMN_STORAGE_KEY = "portfolio.detailedPositions.columns";
 
 const COLUMN_IDS = [
   "ticker",
@@ -84,6 +84,7 @@ const COLUMN_IDS = [
   "marketValue",
   "unrealizedPnl",
   "unrealizedPnlPercent",
+  "returnContribution",
   "weight",
   "realizedPnl",
   "transactionCount",
@@ -93,6 +94,7 @@ const COLUMN_IDS = [
 
 type ColumnId = (typeof COLUMN_IDS)[number];
 type SortDirection = "asc" | "desc";
+type DetailedPosition = RouterOutputs["positions"]["list"]["positions"][number];
 
 const PRESETS: Record<"compact" | "standard" | "all", ColumnId[]> = {
   compact: [
@@ -114,6 +116,7 @@ const PRESETS: Record<"compact" | "standard" | "all", ColumnId[]> = {
     "marketValue",
     "unrealizedPnl",
     "unrealizedPnlPercent",
+    "returnContribution",
     "weight",
   ],
   all: [...COLUMN_IDS],
@@ -121,14 +124,29 @@ const PRESETS: Record<"compact" | "standard" | "all", ColumnId[]> = {
 
 function initialColumns(): Set<ColumnId> {
   try {
+    const stored = localStorage.getItem(COLUMN_STORAGE_KEY);
     const parsed: unknown = JSON.parse(
-      localStorage.getItem(COLUMN_STORAGE_KEY) ?? "null",
+      stored ??
+        localStorage.getItem(PREVIOUS_COLUMN_STORAGE_KEY) ??
+        localStorage.getItem(LEGACY_COLUMN_STORAGE_KEY) ??
+        "null",
     );
     if (Array.isArray(parsed)) {
       const valid = parsed.filter((value): value is ColumnId =>
         COLUMN_IDS.includes(value as ColumnId),
       );
-      if (valid.includes("ticker")) return new Set(valid);
+      if (valid.includes("ticker")) {
+        if (stored == null && !valid.includes("returnContribution")) {
+          const returnIndex = valid.indexOf("unrealizedPnlPercent");
+          valid.splice(
+            returnIndex < 0 ? valid.length : returnIndex + 1,
+            0,
+            "returnContribution",
+          );
+          localStorage.setItem(COLUMN_STORAGE_KEY, JSON.stringify(valid));
+        }
+        return new Set(valid);
+      }
     }
   } catch {
     // Storage is only a convenience; the standard preset remains available.
@@ -364,6 +382,7 @@ function DetailedPositionsPage() {
           sort={sort}
           onSort={toggleSort}
           displayCurrency={displayCurrency}
+          portfolioReturn={positions.data.summary.totalUnrealizedPnlPercent}
           missing={positions.data.quotes.missing}
         />
       ) : null}
@@ -428,6 +447,12 @@ function columnLabels(i18n: I18n): Record<ColumnId, string> {
         message: "Return",
       }),
     ),
+    returnContribution: i18n._(
+      t({
+        id: "detailedPositions.colReturnContribution",
+        message: "Return impact",
+      }),
+    ),
     weight: i18n._(
       t({
         id: "detailedPositions.colWeight",
@@ -468,14 +493,16 @@ function PositionsTable({
   sort,
   onSort,
   displayCurrency,
+  portfolioReturn,
   missing,
 }: {
-  rows: ValuedPosition[];
+  rows: DetailedPosition[];
   visibleColumns: Set<ColumnId>;
   labels: Record<ColumnId, string>;
   sort: { id: ColumnId; direction: SortDirection };
   onSort: (id: ColumnId) => void;
   displayCurrency: "BRL" | "USD";
+  portfolioReturn: string | null;
   missing: string[];
 }) {
   const columns = COLUMN_IDS.filter((id) => visibleColumns.has(id));
@@ -490,6 +517,7 @@ function PositionsTable({
     unrealized: openRows
       .reduce((sum, row) => sum + Number(row.convertedUnrealizedPnl ?? 0), 0)
       .toFixed(2),
+    portfolioReturn,
     realized: rows
       .reduce((sum, row) => sum + Number(row.convertedRealizedPnl), 0)
       .toFixed(2),
@@ -593,7 +621,7 @@ function PositionCell({
   missing,
 }: {
   id: ColumnId;
-  position: ValuedPosition;
+  position: DetailedPosition;
   missing: boolean;
 }) {
   let content: ReactNode;
@@ -680,6 +708,16 @@ function PositionCell({
           </span>
         );
       break;
+    case "returnContribution":
+      content =
+        position.returnContribution == null ? (
+          <Dash />
+        ) : (
+          <span className={pnlClassName(position.returnContribution)}>
+            {formatSignedWeightPrecise(position.returnContribution)}
+          </span>
+        );
+      break;
     case "weight":
       content =
         position.weight == null ? (
@@ -740,6 +778,7 @@ function totalForColumn(
     invested: string;
     market: string;
     unrealized: string;
+    portfolioReturn: string | null;
     realized: string;
   },
   currency: "BRL" | "USD",
@@ -750,6 +789,16 @@ function totalForColumn(
     return (
       <span className={pnlClassName(totals.unrealized)}>
         {formatSignedMoney(totals.unrealized, currency)}
+      </span>
+    );
+  if (id === "unrealizedPnlPercent" || id === "returnContribution")
+    return totals.portfolioReturn == null ? (
+      <Dash />
+    ) : (
+      <span className={pnlClassName(totals.portfolioReturn)}>
+        {id === "unrealizedPnlPercent"
+          ? formatSignedPercent(totals.portfolioReturn)
+          : formatSignedWeightPrecise(totals.portfolioReturn)}
       </span>
     );
   if (id === "realizedPnl")
@@ -763,8 +812,8 @@ function totalForColumn(
 }
 
 function comparePositions(
-  a: ValuedPosition,
-  b: ValuedPosition,
+  a: DetailedPosition,
+  b: DetailedPosition,
   id: ColumnId,
   direction: SortDirection,
 ) {
@@ -778,7 +827,7 @@ function comparePositions(
 }
 
 function sortableValue(
-  position: ValuedPosition,
+  position: DetailedPosition,
   id: ColumnId,
 ): string | number | null {
   switch (id) {
@@ -808,6 +857,10 @@ function sortableValue(
       return position.unrealizedPnlPercent == null
         ? null
         : Number(position.unrealizedPnlPercent);
+    case "returnContribution":
+      return position.returnContribution == null
+        ? null
+        : Number(position.returnContribution);
     case "weight":
       return position.weight == null ? null : Number(position.weight);
     case "realizedPnl":

@@ -8,6 +8,7 @@ import {
   convertMoney,
   convertPositions,
   filterTransactionsByAsOf,
+  portfolioReturnContribution,
   summarizePositions,
   type TickerLedgerEntry,
   tickerCurrencies,
@@ -418,17 +419,24 @@ describe("valuePositions", () => {
 
     const weights = valued.reduce((sum, p) => sum + Number(p.weight ?? 0), 0);
     expect(weights).toBeCloseTo(1, 6);
-    expect(summarizePositions(valued, "BRL", null, "2024-06-30")).toMatchObject(
-      {
-        asOf: "2024-06-30",
-        totalMarketValue: "3700.00",
-        quotedInvestedCost: "2600.00",
-        totalUnrealizedPnl: "1100.00",
-        totalUnrealizedPnlPercent: "0.423077",
-        quotedPositions: 2,
-        unquotedPositions: 0,
-      },
-    );
+    const summary = summarizePositions(valued, "BRL", null, "2024-06-30");
+    expect(summary).toMatchObject({
+      asOf: "2024-06-30",
+      totalMarketValue: "3700.00",
+      quotedInvestedCost: "2600.00",
+      totalUnrealizedPnl: "1100.00",
+      totalUnrealizedPnlPercent: "0.423077",
+      quotedPositions: 2,
+      unquotedPositions: 0,
+    });
+    expect(
+      valued.map((position) =>
+        portfolioReturnContribution(
+          position.convertedUnrealizedPnl,
+          summary.quotedInvestedCost,
+        ),
+      ),
+    ).toEqual(["0.384615", "0.038462"]);
   });
 
   it("keeps the open result negative when the quote is below the average cost", () => {
@@ -566,5 +574,19 @@ describe("valuePositions", () => {
       quotedPositions: 0,
       unquotedPositions: 1,
     });
+  });
+});
+
+describe("portfolio return contribution", () => {
+  it("expresses one asset's open result over the portfolio cost basis", () => {
+    expect(portfolioReturnContribution("500.00", "10000.00")).toBe("0.050000");
+    expect(portfolioReturnContribution("-250.00", "10000.00")).toBe(
+      "-0.025000",
+    );
+  });
+
+  it("keeps unavailable results and zero invested cost explicit", () => {
+    expect(portfolioReturnContribution(null, "100.00")).toBeNull();
+    expect(portfolioReturnContribution("10.00", "0.00")).toBeNull();
   });
 });

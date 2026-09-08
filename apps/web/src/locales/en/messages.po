@@ -65,7 +65,7 @@ msgstr ""
 
 #. js-lingui-explicit-id
 #. placeholder {0}: formatMonthLabel(month, locale)
-#: src/routes/_app/detailed-positions.tsx:852
+#: src/routes/_app/detailed-positions.tsx:905
 #: src/routes/_app/positions.tsx:246
 msgid "positions.currentMonth"
 msgstr "{0} · Live"
@@ -128,7 +128,7 @@ msgstr "{0} per year."
 #. js-lingui-explicit-id
 #. placeholder {0}: rows.length
 #. placeholder {1}: columns.length
-#: src/routes/_app/detailed-positions.tsx:582
+#: src/routes/_app/detailed-positions.tsx:610
 msgid "detailedPositions.rowCount"
 msgstr "{0} positions · {1} columns"
 
@@ -433,7 +433,7 @@ msgid "allocation.categoryAll"
 msgstr "All categories"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/detailed-positions.tsx:321
+#: src/routes/_app/detailed-positions.tsx:339
 msgid "detailedPositions.all"
 msgstr "All data"
 
@@ -638,7 +638,7 @@ msgid "transactions.avgPrice"
 msgstr "Avg price"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/detailed-positions.tsx:396
+#: src/routes/_app/detailed-positions.tsx:415
 msgid "detailedPositions.colAvgPrice"
 msgstr "Avg. cost"
 
@@ -957,7 +957,7 @@ msgid "deepFinder.colClass"
 msgstr "Class"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/detailed-positions.tsx:378
+#: src/routes/_app/detailed-positions.tsx:397
 msgid "detailedPositions.colClass"
 msgstr "Class"
 
@@ -1036,12 +1036,12 @@ msgid "settings.appearance.description"
 msgstr "Color scheme and palette used across the dashboard."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/detailed-positions.tsx:306
+#: src/routes/_app/detailed-positions.tsx:324
 msgid "detailedPositions.columns"
 msgstr "Columns"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/detailed-positions.tsx:315
+#: src/routes/_app/detailed-positions.tsx:333
 msgid "detailedPositions.compact"
 msgstr "Compact"
 
@@ -1245,7 +1245,7 @@ msgstr "Could not delete the application data."
 
 #. js-lingui-explicit-id
 #: src/routes/_app/allocation.index.tsx:652
-#: src/routes/_app/detailed-positions.tsx:350
+#: src/routes/_app/detailed-positions.tsx:368
 #: src/routes/_app/positions.tsx:166
 msgid "positions.fxFailed"
 msgstr "Could not fetch the exchange rate. Try another source or enter it manually."
@@ -1348,7 +1348,7 @@ msgid "documentation.performance.cumulativeReturn"
 msgstr "Cumulative return"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/detailed-positions.tsx:384
+#: src/routes/_app/detailed-positions.tsx:403
 msgid "detailedPositions.colCurrency"
 msgstr "Currency"
 
@@ -1401,7 +1401,7 @@ msgid "documentation.contribution.customPolicy"
 msgstr "Custom contribution split"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/detailed-positions.tsx:325
+#: src/routes/_app/detailed-positions.tsx:343
 msgid "detailedPositions.customize"
 msgstr "Customize columns"
 
@@ -1561,7 +1561,7 @@ msgid "settings.data.deleteConfirm"
 msgstr "Delete everything"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/detailed-positions.tsx:239
+#: src/routes/_app/detailed-positions.tsx:257
 msgid "detailedPositions.title"
 msgstr "Detailed positions"
 
@@ -2138,7 +2138,7 @@ msgid "dividends.historyTitle"
 msgstr "Income history"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/detailed-positions.tsx:242
+#: src/routes/_app/detailed-positions.tsx:260
 msgid "detailedPositions.subtitle"
 msgstr "Inspect your holdings in a dense, customizable view. Choose a preset or select exactly which columns to display."
 
@@ -2154,7 +2154,7 @@ msgid "transactions.bookTickerInvalid"
 msgstr "Invalid ticker “{0}”."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/detailed-positions.tsx:402
+#: src/routes/_app/detailed-positions.tsx:421
 msgid "detailedPositions.colInvested"
 msgstr "Invested"
 
@@ -2202,7 +2202,7 @@ msgid "daily.colLastPrice"
 msgstr "Last price"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/detailed-positions.tsx:450
+#: src/routes/_app/detailed-positions.tsx:475
 msgid "detailedPositions.colLastTrade"
 msgstr "Last trade"
 
@@ -2287,7 +2287,7 @@ msgid "allocation.detailOpenResultHint"
 msgstr "Market minus remaining cost."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/detailed-positions.tsx:408
+#: src/routes/_app/detailed-positions.tsx:427
 msgid "detailedPositions.colPrice"
 msgstr "Market price"
 
@@ -2297,7 +2297,7 @@ msgid "daily.colMarketValue"
 msgstr "Market value"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/detailed-positions.tsx:414
+#: src/routes/_app/detailed-positions.tsx:433
 msgid "detailedPositions.colValue"
 msgstr "Market value"
 
@@ -2617,7 +2617,7 @@ msgid "positions.noQuotes"
 msgstr "No market quotes for this snapshot yet."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/detailed-positions.tsx:552
+#: src/routes/_app/detailed-positions.tsx:580
 msgid "detailedPositions.empty"
 msgstr "No positions match these filters."
 
@@ -2751,7 +2751,7 @@ msgid "allocation.reviewFairValueRefOpen"
 msgstr "Open reference"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/detailed-positions.tsx:420
+#: src/routes/_app/detailed-positions.tsx:439
 msgid "detailedPositions.colOpenResult"
 msgstr "Open result"
 
@@ -2971,7 +2971,7 @@ msgid "daily.colPortfolioImpact"
 msgstr "Portfolio impact"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/detailed-positions.tsx:432
+#: src/routes/_app/detailed-positions.tsx:457
 msgid "detailedPositions.colWeight"
 msgstr "Portfolio share"
 
@@ -3064,7 +3064,7 @@ msgid "dividends.disclaimer"
 msgstr "Provider events do not confirm a broker credit. Amounts exclude taxes and broker adjustments."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/detailed-positions.tsx:390
+#: src/routes/_app/detailed-positions.tsx:409
 msgid "detailedPositions.colQuantity"
 msgstr "Quantity"
 
@@ -3129,7 +3129,7 @@ msgid "allocation.quarterCount"
 msgstr "Quarters shown"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/detailed-positions.tsx:456
+#: src/routes/_app/detailed-positions.tsx:481
 msgid "detailedPositions.colQuoteDate"
 msgstr "Quote date"
 
@@ -3164,7 +3164,7 @@ msgid "allocation.detailTotalResultClosed"
 msgstr "Realized only — no open lot."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/detailed-positions.tsx:438
+#: src/routes/_app/detailed-positions.tsx:463
 msgid "detailedPositions.colRealized"
 msgstr "Realized P&L"
 
@@ -3216,7 +3216,7 @@ msgstr "Refresh the page and try again. The planner continues to use the last kn
 
 #. js-lingui-explicit-id
 #: src/components/allocation/asset-movements.tsx:284
-#: src/routes/_app/detailed-positions.tsx:258
+#: src/routes/_app/detailed-positions.tsx:276
 #: src/routes/_app/positions.tsx:155
 #: src/routes/_app/positions.tsx:1709
 msgid "positions.registerTrade"
@@ -3336,7 +3336,7 @@ msgid "documentation.score.resetDefaults"
 msgstr "Reset defaults"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/detailed-positions.tsx:341
+#: src/routes/_app/detailed-positions.tsx:359
 msgid "detailedPositions.reset"
 msgstr "Reset to standard"
 
@@ -3372,7 +3372,7 @@ msgid "nav.results"
 msgstr "Results"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/detailed-positions.tsx:426
+#: src/routes/_app/detailed-positions.tsx:445
 msgid "detailedPositions.colReturn"
 msgstr "Return"
 
@@ -3390,6 +3390,11 @@ msgstr "Return"
 #: src/routes/_app/performance.tsx:1203
 msgid "performance.categoryReturnTitle"
 msgstr "Return by category"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/detailed-positions.tsx:451
+msgid "detailedPositions.colReturnContribution"
+msgstr "Return impact"
 
 #. js-lingui-explicit-id
 #: src/routes/_app/performance.tsx:470
@@ -3487,7 +3492,7 @@ msgid "allocation.searchLabel"
 msgstr "Search assets"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/detailed-positions.tsx:274
+#: src/routes/_app/detailed-positions.tsx:292
 msgid "detailedPositions.searchLabel"
 msgstr "Search detailed positions"
 
@@ -3502,7 +3507,7 @@ msgid "categories.search"
 msgstr "Search ticker"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/detailed-positions.tsx:280
+#: src/routes/_app/detailed-positions.tsx:298
 msgid "detailedPositions.search"
 msgstr "Search ticker or class…"
 
@@ -3609,7 +3614,7 @@ msgid "positions.allocShowAll"
 msgstr "Show all {0}"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/detailed-positions.tsx:295
+#: src/routes/_app/detailed-positions.tsx:313
 msgid "detailedPositions.showClosed"
 msgstr "Show closed positions"
 
@@ -3694,7 +3699,7 @@ msgid "documentation.contribution.field.smallImpact"
 msgstr "Small-book weight impact"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/detailed-positions.tsx:838
+#: src/routes/_app/detailed-positions.tsx:891
 #: src/routes/_app/positions.tsx:232
 msgid "positions.month"
 msgstr "Snapshot month"
@@ -3739,7 +3744,7 @@ msgid "allocation.plannerSpread"
 msgstr "Spread over"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/detailed-positions.tsx:318
+#: src/routes/_app/detailed-positions.tsx:336
 msgid "detailedPositions.standard"
 msgstr "Standard"
 
@@ -3970,7 +3975,7 @@ msgid "deepFinder.colTicker"
 msgstr "Ticker"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/detailed-positions.tsx:376
+#: src/routes/_app/detailed-positions.tsx:395
 msgid "detailedPositions.colTicker"
 msgstr "Ticker"
 
@@ -4069,7 +4074,7 @@ msgid "performance.topLosses"
 msgstr "Top losses"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/detailed-positions.tsx:569
+#: src/routes/_app/detailed-positions.tsx:597
 #: src/routes/_app/positions.tsx:1540
 msgid "positions.total"
 msgstr "Total"
@@ -4096,7 +4101,7 @@ msgid "transactions.tradeDate"
 msgstr "Trade date"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/detailed-positions.tsx:444
+#: src/routes/_app/detailed-positions.tsx:469
 msgid "detailedPositions.colTrades"
 msgstr "Trades"
 
@@ -4300,7 +4305,7 @@ msgid "allocation.viewDetails"
 msgstr "View details"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/detailed-positions.tsx:312
+#: src/routes/_app/detailed-positions.tsx:330
 msgid "detailedPositions.presets"
 msgstr "View presets"
 
