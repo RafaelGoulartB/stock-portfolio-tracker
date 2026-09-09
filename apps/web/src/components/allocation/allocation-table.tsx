@@ -208,7 +208,7 @@ export function AllocationTable({
                   className={cn(
                     "h-10 px-2.5 whitespace-nowrap",
                     id === "ticker"
-                      ? "sticky left-0 z-10 w-40 max-w-40 bg-muted/50"
+                      ? "sticky left-0 z-10 w-52 max-w-52 bg-muted/50"
                       : "text-right",
                   )}
                   aria-sort={
@@ -411,7 +411,7 @@ export function AllocationTable({
                   {visibleColumns.has("ticker") ? (
                     <TableCell
                       className={cn(
-                        "sticky left-0 z-10 w-40 max-w-40 px-2.5 py-2.5",
+                        "sticky left-0 z-10 w-52 max-w-52 px-2.5 py-2.5",
                         row.markColor
                           ? MARK_STICKY[row.markColor]
                           : "bg-card group-hover:bg-[color-mix(in_oklab,var(--muted)_50%,var(--card))]",
@@ -448,7 +448,7 @@ export function AllocationTable({
                         {row.hasPosition ? null : (
                           <Badge
                             variant="outline"
-                            className="h-4 shrink-0 px-1 text-[10px] font-normal"
+                            className="ml-auto h-4 shrink-0 px-1 text-[10px] font-normal"
                           >
                             <Trans id="allocation.watchBadge">Watch</Trans>
                           </Badge>
@@ -835,7 +835,7 @@ export function AllocationTable({
                     return (
                       <TableCell
                         key={id}
-                        className="sticky left-0 z-10 w-40 max-w-40 bg-muted px-2.5 py-2.5 font-medium"
+                        className="sticky left-0 z-10 w-52 max-w-52 bg-muted px-2.5 py-2.5 font-medium"
                       >
                         <Trans id="allocation.total">Total</Trans>
                       </TableCell>
