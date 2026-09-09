@@ -445,24 +445,28 @@ export function AllocationTable({
                             className="shrink-0 opacity-60 transition-opacity focus:opacity-100 data-[state=open]:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
                           />
                         )}
-                        {row.hasPosition ? null : (
-                          <Badge
-                            variant="outline"
-                            className="ml-auto h-4 shrink-0 px-1 text-[10px] font-normal"
-                          >
-                            <Trans id="allocation.watchBadge">Watch</Trans>
-                          </Badge>
-                        )}
-                        {missing.includes(row.ticker) ? (
-                          <TriangleAlert
-                            className="size-3 shrink-0 text-amber-600 dark:text-amber-400"
-                            aria-label={i18n._(
-                              t({
-                                id: "allocation.quoteMissing",
-                                message: "No market quote for this ticker",
-                              }),
+                        {missing.includes(row.ticker) || !row.hasPosition ? (
+                          <div className="ml-auto flex shrink-0 items-center gap-1">
+                            {missing.includes(row.ticker) ? (
+                              <TriangleAlert
+                                className="size-3 text-amber-600 dark:text-amber-400"
+                                aria-label={i18n._(
+                                  t({
+                                    id: "allocation.quoteMissing",
+                                    message: "No market quote for this ticker",
+                                  }),
+                                )}
+                              />
+                            ) : null}
+                            {row.hasPosition ? null : (
+                              <Badge
+                                variant="outline"
+                                className="h-4 px-1 text-[10px] font-normal"
+                              >
+                                <Trans id="allocation.watchBadge">Watch</Trans>
+                              </Badge>
                             )}
-                          />
+                          </div>
                         ) : null}
                       </div>
                     </TableCell>
