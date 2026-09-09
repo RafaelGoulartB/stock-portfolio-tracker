@@ -1088,7 +1088,7 @@ msgid "allocation.cycleMarkHint"
 msgstr "Click to cycle highlight color"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/quarter-review-cell.tsx:167
+#: src/components/allocation/quarter-review-cell.tsx:169
 msgid "allocation.reviewCollapse"
 msgstr "Collapse editor"
 
@@ -1895,7 +1895,7 @@ msgid "positions.fxSource"
 msgstr "Exchange-rate source"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/quarter-review-cell.tsx:164
+#: src/components/allocation/quarter-review-cell.tsx:166
 msgid "allocation.reviewExpand"
 msgstr "Expand editor"
 
@@ -1947,6 +1947,11 @@ msgstr "Fair value"
 #: src/components/allocation/allocation-table.tsx:546
 msgid "allocation.discountTooltipFairOnly"
 msgstr "Fair value {0} ({1})"
+
+#. js-lingui-explicit-id
+#: src/components/allocation/quarter-review-cell.tsx:172
+msgid "allocation.reviewFairValueSet"
+msgstr "Fair value set"
 
 #. js-lingui-explicit-id
 #: src/components/score-documentation.tsx:282
@@ -2019,7 +2024,7 @@ msgid "validation.fixedIncomeNoSell"
 msgstr "Fixed income cannot be sold as a trade"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/quarter-review-cell.tsx:157
+#: src/components/allocation/quarter-review-cell.tsx:159
 msgid "allocation.reviewWatchedHint"
 msgstr "Flagged last quarter for attention"
 
@@ -2109,7 +2114,7 @@ msgstr "Grade bands must be strictly ascending by minimum grade"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/asset-reviews.tsx:235
-#: src/components/allocation/quarter-review-cell.tsx:194
+#: src/components/allocation/quarter-review-cell.tsx:206
 msgid "allocation.reviewEdit"
 msgstr "Grade this quarter"
 
@@ -4674,7 +4679,7 @@ msgid "allocation.reviewWatchNext"
 msgstr "Watch next quarter"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/quarter-review-cell.tsx:150
+#: src/components/allocation/quarter-review-cell.tsx:152
 msgid "allocation.reviewWatchNextHint"
 msgstr "Watch next quarter"
 

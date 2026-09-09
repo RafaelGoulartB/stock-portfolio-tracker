@@ -115,8 +115,9 @@ export type QuarterReviewCellProps = {
 };
 
 /**
- * One cell of the quarter grid: the grade colours the cell, a dot marks
- * stored notes or a fair value, and clicking opens the editor.
+ * One cell of the quarter grid: the grade colours the cell, adjacent dots
+ * distinguish notes/supporting content from fair value, and clicking opens
+ * the editor.
  *
  * Watching the next quarter is a static bridge, not a pulse: a bar on the
  * right of the source cell and a matching bar (plus wash/icon) on the left
@@ -140,6 +141,7 @@ function QuarterReviewCellComponent({
   const hasFairValue = review?.fairValue != null;
   const hasFairValueRef = (review?.fairValueRef ?? "").trim().length > 0;
   const hasMarker = hasNotes || hasFairValue || hasFairValueRef;
+  const hasNoteMarker = hasNotes || (hasFairValueRef && !hasFairValue);
   const watchNext = review?.watchNext === true;
   const emptyWatched = watched && review?.grade == null;
   const sourceTone = gradeWatchTone(review?.grade ?? null);
@@ -166,6 +168,18 @@ function QuarterReviewCellComponent({
   const collapseLabel = i18n._(
     t({ id: "allocation.reviewCollapse", message: "Collapse editor" }),
   );
+  const fairValueHint = i18n._(
+    t({ id: "allocation.reviewFairValueSet", message: "Fair value set" }),
+  );
+  const markerDetails = [
+    watchHint,
+    hasNotes ? review?.notes : null,
+    hasFairValue ? fairValueHint : null,
+  ].filter((detail): detail is string => !!detail);
+  const triggerLabel =
+    markerDetails.length > 0
+      ? `${title} — ${markerDetails.join(" · ")}`
+      : title;
 
   function closeEditor() {
     setOpen(false);
@@ -187,13 +201,11 @@ function QuarterReviewCellComponent({
         <button
           type="button"
           title={
-            watchHint
-              ? `${title} — ${watchHint}`
-              : hasNotes
-                ? `${title} — ${review?.notes ?? ""}`
-                : `${title} — ${i18n._(t({ id: "allocation.reviewEdit", message: "Grade this quarter" }))}`
+            markerDetails.length > 0
+              ? triggerLabel
+              : `${title} — ${i18n._(t({ id: "allocation.reviewEdit", message: "Grade this quarter" }))}`
           }
-          aria-label={watchHint ? `${title} — ${watchHint}` : title}
+          aria-label={triggerLabel}
           className={cn(
             "relative h-7 w-full rounded-sm text-center text-xs font-medium tabular-nums transition-colors hover:ring-1 hover:ring-ring focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
             gradeToneClass(review?.grade ?? null),
@@ -212,11 +224,18 @@ function QuarterReviewCellComponent({
           ) : (
             formatDecimalInput(review.grade, i18n.locale)
           )}
-          {hasMarker ? (
+          {hasNoteMarker || hasFairValue ? (
             <span
               aria-hidden="true"
-              className="absolute top-0.5 right-0.5 size-1.5 rounded-full bg-foreground/50"
-            />
+              className="absolute top-0.5 right-0.5 flex items-center gap-0.5"
+            >
+              {hasNoteMarker ? (
+                <span className="size-1.5 rounded-full bg-foreground/45" />
+              ) : null}
+              {hasFairValue ? (
+                <span className="size-1.5 rounded-full bg-primary/80" />
+              ) : null}
+            </span>
           ) : null}
           {watchNext ? (
             <span
