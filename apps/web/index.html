@@ -8,12 +8,35 @@
       var palette;
       var stored;
       var dark;
+      var customTheme;
+      var customThemes;
+      var customColors;
+      var customColorRoles = [
+        "background",
+        "foreground",
+        "card",
+        "card-foreground",
+        "popover",
+        "popover-foreground",
+        "primary",
+        "primary-foreground",
+        "secondary",
+        "secondary-foreground",
+        "muted",
+        "muted-foreground",
+        "accent",
+        "accent-foreground",
+        "destructive",
+        "border",
+        "input",
+        "ring",
+      ];
       try {
         palette = localStorage.getItem("portfolio-theme-palette") || "default";
         if (palette === "t3-code" || palette === "slate") {
           palette = "default";
-        } else if (palette === "bloom") {
-          palette = "t3-chat";
+        } else if (palette === "t3-chat") {
+          palette = "bloom";
         }
         document.documentElement.setAttribute("data-theme-palette", palette);
         stored = localStorage.getItem("portfolio-theme");
@@ -25,6 +48,40 @@
           document.documentElement.classList.add("dark");
         }
         document.documentElement.style.colorScheme = dark ? "dark" : "light";
+        if (
+          palette !== "default" &&
+          palette !== "bloom" &&
+          palette !== "grove" &&
+          palette !== "ocean" &&
+          palette !== "ember" &&
+          palette !== "iris"
+        ) {
+          customThemes = JSON.parse(
+            localStorage.getItem("portfolio-custom-themes") || "[]",
+          );
+          if (Array.isArray(customThemes)) {
+            customTheme = customThemes.find(function (theme) {
+              return theme && theme.id === palette;
+            });
+          }
+          customColors =
+            customTheme &&
+            customTheme.colors &&
+            customTheme.colors[dark ? "dark" : "light"];
+          if (customColors) {
+            customColorRoles.forEach(function (role) {
+              var value = customColors[role];
+              if (
+                typeof value === "string" &&
+                value.length <= 128 &&
+                typeof CSS !== "undefined" &&
+                CSS.supports("color", value)
+              ) {
+                document.documentElement.style.setProperty("--" + role, value);
+              }
+            });
+          }
+        }
       } catch {
         // Theme hint is optional; React applies it after mount.
       }
