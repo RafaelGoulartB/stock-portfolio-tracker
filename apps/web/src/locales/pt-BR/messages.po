@@ -112,7 +112,7 @@ msgstr "{0} · Ao vivo"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: summary.comparablePositions
-#: src/routes/_app/daily.tsx:222
+#: src/routes/_app/daily.tsx:224
 msgid "daily.marketBreadthHint"
 msgstr "{0} ativos com comparação diária."
 
@@ -333,7 +333,7 @@ msgid "allocation.plannerAmountPlaceholder"
 msgstr "5000"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:312
+#: src/components/documentation-dialog.tsx:313
 msgid "documentation.positions.buysDescription"
 msgstr "Uma compra adiciona seu valor bruto e as taxas ao custo ainda mantido. O preço médio é sempre o custo remanescente dividido pela quantidade restante."
 
@@ -359,7 +359,7 @@ msgid "documentation.contribution.exampleCapTitle"
 msgstr "Um aporte grande com um score muito alto"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:332
+#: src/components/documentation-dialog.tsx:333
 msgid "documentation.positions.salesDescription"
 msgstr "Uma venda libera o custo pelo preço médio existente imediatamente antes dela. As taxas reduzem o valor recebido. A venda não altera o preço das unidades restantes."
 
@@ -519,7 +519,7 @@ msgid "positions.allocation"
 msgstr "Alocação"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:368
+#: src/components/documentation-dialog.tsx:369
 msgid "documentation.positions.missingQuote"
 msgstr "Os pesos da alocação usam o valor de mercado cotado na moeda de exibição. Uma posição aberta sem cotação ao vivo ou manual é sinalizada e fica fora do denominador do valor cotado, em vez de ser avaliada como zero. Consequentemente, seu peso atual usado no score assume zero, enquanto a quantidade sugerida de unidades permanece indisponível até haver um preço."
 
@@ -549,7 +549,7 @@ msgid "allocation.reasonOverweight"
 msgstr "Já passou da própria meta além do fator de bloqueio."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:585
+#: src/components/documentation-dialog.tsx:617
 msgid "documentation.comparisons.dividendStatus"
 msgstr "Os valores são estimativas brutas: retenções, ajustes da corretora e liquidação confirmada não são modelados. Eventos com ex-date futura são anunciados; uma ex-date passada com pagamento futuro fica agendada; nos demais casos, o evento recebe o status de pagamento estimado. Esse último status é uma inferência, não uma confirmação de pagamento."
 
@@ -569,7 +569,7 @@ msgid "dividends.upcomingDescription"
 msgstr "Eventos anunciados para posições que parecem elegíveis."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:444
+#: src/components/documentation-dialog.tsx:445
 msgid "documentation.performance.annualizedReturn"
 msgstr "Retorno anualizado"
 
@@ -604,7 +604,7 @@ msgid "categories.assetsTitle"
 msgstr "Ativos"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/daily.tsx:322
+#: src/routes/_app/daily.tsx:325
 msgid "daily.assets"
 msgstr "Ativos"
 
@@ -615,7 +615,7 @@ msgstr "Ativos"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: formatTradeDate(data.summary.asOf)
-#: src/routes/_app/daily.tsx:318
+#: src/routes/_app/daily.tsx:321
 msgid "daily.assetsAsOf"
 msgstr "Ativos · {0}"
 
@@ -805,12 +805,12 @@ msgid "side.buy"
 msgstr "Compra"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:306
+#: src/components/documentation-dialog.tsx:307
 msgid "documentation.positions.buysTitle"
 msgstr "Compras e preço médio"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:408
+#: src/components/documentation-dialog.tsx:409
 msgid "documentation.performance.cashFlowsDescription"
 msgstr "Compras são caixa investido positivo, incluindo taxas. Vendas são caixa investido negativo, usando o valor recebido após as taxas. Cada fluxo é ponderado pela fração de dias restantes no mês, então um aporte no último dia quase não afeta a base de retorno do mês."
 
@@ -880,7 +880,7 @@ msgid "allocation.cash"
 msgstr "Caixa"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:402
+#: src/components/documentation-dialog.tsx:403
 msgid "documentation.performance.cashFlowsTitle"
 msgstr "Fluxos de caixa e tempo"
 
@@ -988,7 +988,12 @@ msgid "categories.changeColor"
 msgstr "Alterar cor"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:535
+#: src/routes/_app/daily.tsx:329
+msgid "daily.assetsHint"
+msgstr "Variação desde o fechamento anterior na moeda de exibição, incluindo o câmbio, e o impacto de cada ativo sobre o patrimônio de ontem."
+
+#. js-lingui-explicit-id
+#: src/components/documentation-dialog.tsx:567
 msgid "documentation.comparisons.costViewDescription"
 msgstr "A variação é o valor de mercado da posição aberta menos o custo médio móvel."
 
@@ -1134,9 +1139,9 @@ msgid "deepFinder.periodHint"
 msgstr "Comparado com o fechamento em ou antes de {startLabel}."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/daily.tsx:212
+#: src/routes/_app/daily.tsx:213
 msgid "daily.previousCloseComparison"
-msgstr "Comparado ao fechamento anterior."
+msgstr "Comparado ao fechamento anterior, convertido na taxa USD/BRL daquele dia."
 
 #. js-lingui-explicit-id
 #: src/components/documentation-dialog.tsx:237
@@ -1144,12 +1149,12 @@ msgid "documentation.section.comparisons"
 msgstr "Comparações e proventos"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:517
+#: src/components/documentation-dialog.tsx:518
 msgid "documentation.comparisons.missingDataTitle"
 msgstr "Comparações preservam dados ausentes"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:426
+#: src/components/documentation-dialog.tsx:427
 msgid "documentation.performance.compoundingTitle"
 msgstr "Composição, anualização e drawdown"
 
@@ -1285,7 +1290,7 @@ msgid "allocation.detailInvestedHint"
 msgstr "Custo ainda em carteira no preço médio."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:532
+#: src/components/documentation-dialog.tsx:564
 msgid "documentation.comparisons.costView"
 msgstr "Visão por custo"
 
@@ -1318,7 +1323,7 @@ msgid "positions.fxFailed"
 msgstr "Não foi possível buscar a cotação. Tente outra fonte ou informe manualmente."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/daily.tsx:136
+#: src/routes/_app/daily.tsx:137
 msgid "daily.fxFailed"
 msgstr "Não foi possível obter a taxa de câmbio. Tente outra fonte ou informe a taxa manualmente."
 
@@ -1399,7 +1404,7 @@ msgid "assetClass.crypto"
 msgstr "Cripto"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:433
+#: src/components/documentation-dialog.tsx:434
 msgid "documentation.performance.cumulativeReturn"
 msgstr "Retorno acumulado"
 
@@ -1437,7 +1442,7 @@ msgid "allocation.addCurrency"
 msgstr "Moeda"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:353
+#: src/components/documentation-dialog.tsx:354
 msgid "documentation.positions.currencyTitle"
 msgstr "Consolidação de moedas"
 
@@ -1492,14 +1497,29 @@ msgstr "Diário"
 #. placeholder {0}: summary.comparablePositions
 #. placeholder {1}: summary.openPositions
 #. placeholder {2}: summary.displayCurrency
-#: src/routes/_app/daily.tsx:229
+#: src/routes/_app/daily.tsx:231
 msgid "daily.comparisonCoverage"
-msgstr "A variação diária abrange {0} de {1} ativos em aberto. Os valores estão consolidados em {2}."
+msgstr "A variação diária abrange {0} de {1} ativos em aberto. Os valores estão consolidados em {2}, com o dia anterior convertido na taxa USD/BRL daquela sessão."
+
+#. js-lingui-explicit-id
+#: src/components/documentation-dialog.tsx:538
+msgid "documentation.comparisons.dailyDescription"
+msgstr "A variação diária é o patrimônio convertido de hoje menos o de ontem. O fechamento anterior é convertido na taxa USD/BRL do dia útil anterior, e o de hoje usa a taxa ao vivo, então um ativo em outra moeda inclui o movimento do papel e o do dólar. Trocar a moeda de exibição inverte essa conversão. Caixa não tem fechamento de mercado; em USD ele ainda se move com a taxa. Uma taxa manual não tem histórico, então os dois dias compartilham o mesmo número."
 
 #. js-lingui-explicit-id
 #: src/components/allocation/asset-detail-chart.tsx:68
 msgid "allocation.detailChartHint"
 msgstr "Fechamento diário na moeda do ativo. O fair value avança em degraus a partir de cada trimestre avaliado até a próxima valuation."
+
+#. js-lingui-explicit-id
+#: src/components/documentation-dialog.tsx:278
+msgid "documentation.section.comparisonsDescription"
+msgstr "Variação diária com câmbio, baselines do Deep Finder e direito estimado a dividendos."
+
+#. js-lingui-explicit-id
+#: src/components/documentation-dialog.tsx:532
+msgid "documentation.comparisons.dailyTitle"
+msgstr "Desempenho diário"
 
 #. js-lingui-explicit-id
 #: src/routes/_app/daily.tsx:108
@@ -1530,12 +1550,12 @@ msgid "transactions.colDate"
 msgstr "Data"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/daily.tsx:197
+#: src/routes/_app/daily.tsx:198
 msgid "daily.dayChange"
 msgstr "Variação no dia"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/daily.tsx:356
+#: src/routes/_app/daily.tsx:359
 msgid "daily.colDayChange"
 msgstr "Variação no dia"
 
@@ -1571,14 +1591,9 @@ msgid "allocation.finderOpen"
 msgstr "Deep Finder"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:522
+#: src/components/documentation-dialog.tsx:523
 msgid "documentation.comparisons.missingDataDescription"
 msgstr "O Deep Finder e as estimativas de proventos mostram explicitamente observações indisponíveis. Uma cotação, baseline, taxa de câmbio ou evento ausente no provedor nunca é convertido silenciosamente em zero."
-
-#. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:278
-msgid "documentation.section.comparisonsDescription"
-msgstr "Baselines do Deep Finder e direito estimado a dividendos."
 
 #. js-lingui-explicit-id
 #: src/components/allocation/allocation-deep-finder.tsx:375
@@ -1678,7 +1693,7 @@ msgid "documentation.contribution.field.maxAssetsHint"
 msgstr "Teto de diversificação para um aporte relativamente grande."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:569
+#: src/components/documentation-dialog.tsx:601
 msgid "documentation.comparisons.dividendTitle"
 msgstr "Direito a dividendos"
 
@@ -1708,7 +1723,7 @@ msgid "allocation.freeOrderHelp"
 msgstr "Arraste as linhas para definir sua própria ordem. A ordenação por coluna fica pausada enquanto estiver ativa."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:455
+#: src/components/documentation-dialog.tsx:456
 msgid "documentation.performance.drawdown"
 msgstr "Drawdown"
 
@@ -1826,7 +1841,7 @@ msgid "dividends.subtitle"
 msgstr "Proventos estimados com base nas ações mantidas antes de cada data-ex. As datas de pagamento aparecem quando o provedor as publica."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:575
+#: src/components/documentation-dialog.tsx:607
 msgid "documentation.comparisons.dividendDescription"
 msgstr "A quantidade elegível estimada é a posição consolidada a partir das transações estritamente anteriores à ex-date. Transações na própria ex-date são excluídas porque essa sessão já não dá direito ao provento."
 
@@ -1882,7 +1897,7 @@ msgid "transactions.openingDateHint"
 msgstr "Every row is booked as a buy on this date."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:296
+#: src/components/documentation-dialog.tsx:297
 msgid "documentation.positions.movingAverageDescription"
 msgstr "Cada ticker é consolidado cronologicamente pelo custo médio móvel. Transações no mesmo dia seguem a ordem de criação. Cada ticker pode usar apenas uma moeda nativa, e moedas diferentes nunca são combinadas em uma média."
 
@@ -2041,7 +2056,7 @@ msgstr "Marca o próximo trimestre para você lembrar de acompanhar esta tese."
 #. js-lingui-explicit-id
 #: src/routes/_app/daily.tsx:111
 msgid "daily.subtitle"
-msgstr "Acompanhe a última movimentação diária do patrimônio e veja quais ativos estão impulsionando a variação."
+msgstr "Acompanhe a última movimentação diária do patrimônio na moeda de exibição, incluindo a variação do USD/BRL em ativos e caixa em outra moeda."
 
 #. js-lingui-explicit-id
 #: src/lib/display-labels.ts:19
@@ -2150,7 +2165,7 @@ msgid "allocation.markColor"
 msgstr "Destaque"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:466
+#: src/components/documentation-dialog.tsx:467
 msgid "documentation.performance.historyTitle"
 msgstr "Preços históricos, câmbio e lacunas"
 
@@ -2216,7 +2231,7 @@ msgid "documentation.section.scoreDescription"
 msgstr "Como a prioridade do próximo aporte é calculada e os limiares que você pode ajustar."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:481
+#: src/components/documentation-dialog.tsx:482
 msgid "documentation.performance.fallbackDescription"
 msgstr "Quando uma posição não tem preço histórico, ela é mantida pelo custo remanescente para preservar a continuidade da curva do portfólio. A página conta e informa essas posições avaliadas pelo custo. Um mês com base de retorno não positiva não tem retorno calculado."
 
@@ -2367,7 +2382,7 @@ msgid "allocation.colLastBuy"
 msgstr "Últ. aporte"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/daily.tsx:346
+#: src/routes/_app/daily.tsx:349
 msgid "daily.colLastPrice"
 msgstr "Último preço"
 
@@ -2382,7 +2397,7 @@ msgid "allocation.detailLatestReview"
 msgstr "Mais recente"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/daily.tsx:190
+#: src/routes/_app/daily.tsx:191
 msgid "daily.quotedAt"
 msgstr "Cotações mais recentes de {asOf}."
 
@@ -2462,7 +2477,7 @@ msgid "allocation.discountTooltip"
 msgstr "Market {0} vs fair value {1} ({2})"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/daily.tsx:219
+#: src/routes/_app/daily.tsx:221
 msgid "daily.marketBreadth"
 msgstr "Amplitude do mercado"
 
@@ -2482,7 +2497,7 @@ msgid "detailedPositions.quoteUnavailable"
 msgstr "Cotação de mercado indisponível"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/daily.tsx:349
+#: src/routes/_app/daily.tsx:352
 msgid "daily.colMarketValue"
 msgstr "Valor de mercado"
 
@@ -2568,7 +2583,7 @@ msgid "documentation.contribution.missingPrices"
 msgstr "Preços ausentes"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:594
+#: src/components/documentation-dialog.tsx:626
 msgid "documentation.comparisons.dividendFx"
 msgstr "Totais em moedas diferentes usam a taxa USD/BRL selecionada atualmente, não uma taxa histórica da data do pagamento. Quando não há taxa de conversão, o valor nativo continua visível e o evento fica fora do total convertido."
 
@@ -2579,7 +2594,7 @@ msgid "documentation.contribution.waterfallDescription"
 msgstr "O dinheiro que o primeiro grupo não absorve continua descendo a lista ranqueada, um nome por vez, até {0}. Um nome é pulado quando a necessidade pontuada fica abaixo de um centavo. Só o que sobra depois dessa passagem aparece como não alocado."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:472
+#: src/components/documentation-dialog.tsx:473
 msgid "documentation.performance.historyDescription"
 msgstr "O fechamento de cada mês usa a última cotação disponível na data do snapshot ou antes dela. As posições são convertidas pela taxa USD/BRL daquele snapshot, e os fluxos das transações usam a taxa do próprio dia da operação. Uma taxa manual não tem histórico, portanto a mesma taxa manual é aplicada a todos os meses."
 
@@ -2605,7 +2620,7 @@ msgid "performance.monthlyTitle"
 msgstr "Rentabilidade mensal"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:388
+#: src/components/documentation-dialog.tsx:389
 msgid "documentation.performance.monthlyTitle"
 msgstr "Performance mensal ponderada pelo tempo"
 
@@ -2641,7 +2656,7 @@ msgid "documentation.section.positionsDescription"
 msgstr "Custo médio móvel, taxas, vendas e consolidação de moedas."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:291
+#: src/components/documentation-dialog.tsx:292
 msgid "documentation.positions.movingAverageTitle"
 msgstr "Custo médio móvel, nunca FIFO"
 
@@ -2651,7 +2666,7 @@ msgid "allocation.detailResultHint"
 msgstr "Preço médio móvel. O P&L realizado trava nas vendas; o resultado em aberto é o lote restante versus o mercado."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:438
+#: src/components/documentation-dialog.tsx:439
 msgid "documentation.performance.cumulativeReturnDescription"
 msgstr "Multiplica um mais cada retorno mensal válido e depois subtrai um."
 
@@ -2691,7 +2706,7 @@ msgid "categories.listHint"
 msgstr "Os nomes são seus. Excluir uma categoria deixa os tickers sem categoria."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:359
+#: src/components/documentation-dialog.tsx:360
 msgid "documentation.positions.currencyDescription"
 msgstr "Os valores nativos permanecem na moeda do ativo. O portfólio então os converte para BRL ou USD, conforme a moeda de exibição selecionada, usando a taxa spot atual. Por isso, o P&L realizado convertido nas telas de posição ao vivo é uma aproximação pela taxa de consolidação de hoje, e não uma apuração fiscal com câmbio histórico."
 
@@ -2802,7 +2817,7 @@ msgid "dividends.emptyTitle"
 msgstr "Nenhum provento encontrado"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/daily.tsx:192
+#: src/routes/_app/daily.tsx:193
 msgid "daily.noQuoteDate"
 msgstr "Nenhuma cotação ao vivo disponível."
 
@@ -3124,7 +3139,7 @@ msgid "deepFinder.periodMove"
 msgstr "Movimento do período"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:542
+#: src/components/documentation-dialog.tsx:574
 msgid "documentation.comparisons.periodViews"
 msgstr "Visões por período"
 
@@ -3171,7 +3186,7 @@ msgid "performance.total"
 msgstr "Carteira"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/daily.tsx:364
+#: src/routes/_app/daily.tsx:367
 msgid "daily.colPortfolioImpact"
 msgstr "Impacto no portfólio"
 
@@ -3181,7 +3196,7 @@ msgid "detailedPositions.colWeight"
 msgstr "% do patrimônio"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/daily.tsx:385
+#: src/routes/_app/daily.tsx:388
 msgid "daily.total"
 msgstr "Total da carteira"
 
@@ -3192,7 +3207,7 @@ msgid "shell.brand"
 msgstr "Portfolio Tracker"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/daily.tsx:186
+#: src/routes/_app/daily.tsx:187
 msgid "daily.portfolioValue"
 msgstr "Valor do patrimônio"
 
@@ -3233,7 +3248,7 @@ msgid "transactions.previous"
 msgstr "Anterior"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/daily.tsx:343
+#: src/routes/_app/daily.tsx:346
 msgid "daily.colPreviousClose"
 msgstr "Fechamento anterior"
 
@@ -3257,11 +3272,6 @@ msgstr "Preço"
 #: src/components/positions/holdings-card.tsx:204
 msgid "positions.colPrice"
 msgstr "Preço"
-
-#. js-lingui-explicit-id
-#: src/routes/_app/daily.tsx:326
-msgid "daily.assetsHint"
-msgstr "Variação do preço desde o fechamento anterior e o impacto na sua posição atual."
 
 #. js-lingui-explicit-id
 #: src/lib/validation-messages.ts:114
@@ -3416,7 +3426,7 @@ msgstr "Atualizar tudo"
 
 #. js-lingui-explicit-id
 #: src/routes/_app/allocation.index.tsx:633
-#: src/routes/_app/daily.tsx:128
+#: src/routes/_app/daily.tsx:129
 #: src/routes/_app/deep-finder.tsx:157
 #: src/routes/_app/detailed-positions.tsx:202
 #: src/routes/_app/positions.tsx:147
@@ -3462,7 +3472,7 @@ msgid "deepFinder.empty"
 msgstr "Registre uma operação para começar a ranquear as posições em aberto."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/daily.tsx:153
+#: src/routes/_app/daily.tsx:154
 msgid "daily.empty"
 msgstr "Registre uma negociação para começar a acompanhar a variação diária."
 
@@ -3580,7 +3590,7 @@ msgid "allocation.reset"
 msgstr "Restaurar padrão"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:449
+#: src/components/documentation-dialog.tsx:450
 msgid "documentation.performance.annualizedReturnDescription"
 msgstr "Reexpressa o crescimento acumulado como uma taxa de 12 meses. Intencionalmente, ele não é mostrado para janelas menores que 6 meses."
 
@@ -3591,7 +3601,7 @@ msgid "positions.realizedPnlHint"
 msgstr "Resultado já garantido pelas suas vendas."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:492
+#: src/components/documentation-dialog.tsx:493
 msgid "documentation.performance.contributionTitle"
 msgstr "Contribuição para o resultado"
 
@@ -3668,7 +3678,7 @@ msgid "documentation.score.ruleLadderDescription"
 msgstr "As regras são executadas exatamente nesta ordem, e a primeira correspondência vence. Essa prioridade faz parte do método; só os limiares acima são editáveis."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:326
+#: src/components/documentation-dialog.tsx:327
 msgid "documentation.positions.salesTitle"
 msgstr "Vendas e P&L realizado"
 
@@ -3966,7 +3976,7 @@ msgid "allocation.finderSortVariation"
 msgstr "Ordenar por variação"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/daily.tsx:509
+#: src/routes/_app/daily.tsx:506
 msgid "daily.sortColumn"
 msgstr "Ordenar por esta coluna"
 
@@ -4080,7 +4090,7 @@ msgid "categories.unknownTicker"
 msgstr "Esse ticker não está no seu portfólio."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:547
+#: src/components/documentation-dialog.tsx:579
 msgid "documentation.comparisons.periodViewsDescription"
 msgstr "A aplicação compara a quantidade aberta hoje ao preço de hoje com essa mesma quantidade no fechamento do baseline. Isso isola a variação de preço e não representa a performance realizada das operações feitas durante o período."
 
@@ -4090,12 +4100,12 @@ msgid "allocation.reviewHint"
 msgstr "A média das notas dos trimestres mais recentes ajusta o score."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:558
+#: src/components/documentation-dialog.tsx:590
 msgid "documentation.comparisons.baselineDescription"
 msgstr "O baseline é o último fechamento disponível na data nominal de início da janela ou antes dela. O acumulado no ano começa em 31 de dezembro do ano anterior. O percentual do resumo é ponderado por valor: variação total dividida pelo valor-base total, não uma média dos percentuais dos tickers."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:498
+#: src/components/documentation-dialog.tsx:499
 msgid "documentation.performance.contributionDescription"
 msgstr "A contribuição exibida para um ativo ou classe é seu P&L não realizado dividido pelo custo investido de todo o portfólio. Ela responde quantos pontos percentuais aquele item acrescenta ao resultado aberto do portfólio; não é o percentual de retorno do próprio item."
 
@@ -4122,12 +4132,12 @@ msgid "documentation.contribution.exampleLargeDescription"
 msgstr "O impacto de carteira grande é {largeImpact}, então a fatia mínima é R$ 5.000. Dois mil reais ficam em um nome; N = 2 só a partir de cerca de R$ 7.500."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:457
+#: src/components/documentation-dialog.tsx:458
 msgid "documentation.performance.drawdownDescription"
 msgstr "A distância percentual entre o índice de retorno composto e seu pico anterior. O drawdown máximo é a queda mais profunda."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:393
+#: src/components/documentation-dialog.tsx:394
 msgid "documentation.performance.monthlyDescription"
 msgstr "A página de performance usa Modified Dietz para que aportes e retiradas não pareçam retorno do investimento. Cada mês é calculado separadamente e depois composto."
 
@@ -4135,6 +4145,11 @@ msgstr "A página de performance usa Modified Dietz para que aportes e retiradas
 #: src/components/contribution-plan-documentation.tsx:235
 msgid "documentation.contribution.intro"
 msgstr "O planejador transforma um valor de aporte em fatias sugeridas. O score continua ranqueando quem merece capital; este método decide em quantos nomes aquele cheque consegue mexer de fato, e quanto cada um pode receber. Nada é registrado até você lançar a operação."
+
+#. js-lingui-explicit-id
+#: src/components/documentation-dialog.tsx:552
+msgid "documentation.comparisons.dailyPercent"
+msgstr "O percentual da carteira é essa variação dividida pelo valor comparável de ontem, incluindo o caixa. Não é o retorno nativo de cada ticker, nem o resultado em aberto contra o custo médio móvel."
 
 #. js-lingui-explicit-id
 #: src/components/score-documentation.tsx:321
@@ -4209,7 +4224,7 @@ msgid "categories.colTicker"
 msgstr "Ticker"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/daily.tsx:337
+#: src/routes/_app/daily.tsx:340
 msgid "daily.colTicker"
 msgstr "Ticker"
 
@@ -4728,7 +4743,7 @@ msgid "documentation.contribution.vetDescription"
 msgstr "Quando um ativo em USD é dimensionado em BRL, a quantidade sugerida de unidades inclui o spread configurado da corretora e o IOF. Esses custos são compostos, não somados. O planejador informa os aportes em ativos USD em USD usando esse VET; os ativos BRL permanecem no total em BRL."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:343
+#: src/components/documentation-dialog.tsx:344
 msgid "documentation.positions.zeroQuantity"
 msgstr "Quando a quantidade chega a zero, a base de custo remanescente é zerada. O P&L não realizado de uma posição aberta é o valor de mercado atual menos sua base de custo remanescente."
 

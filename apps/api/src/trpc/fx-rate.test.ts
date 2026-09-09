@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { clearFxCache } from "../lib/fx";
-import { resolveUsdBrlRate } from "./fx-rate";
+import { resolvePreviousUsdBrlRate, resolveUsdBrlRate } from "./fx-rate";
 
 function stubFrankfurter(rate: number) {
   return vi.fn<(input: string | URL) => Promise<unknown>>(async () => ({
@@ -78,5 +78,60 @@ describe("resolveUsdBrlRate", () => {
     await resolveUsdBrlRate({ fxSource: "frankfurter", asOf: "2026-07-31" });
 
     expect(String(fetchMock.mock.calls[0]?.[0])).toContain("2026-07-31");
+  });
+});
+
+describe("resolvePreviousUsdBrlRate", () => {
+  beforeEach(() => {
+    clearFxCache();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("reuses the typed rate for a manual source", async () => {
+    const fetchMock = stubFrankfurter(5.4);
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      resolvePreviousUsdBrlRate({
+        currentRate: "6.10",
+        fxSource: "manual",
+        previousDay: "2026-09-08",
+      }),
+    ).resolves.toBe("6.10");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("asks the provider for the previous weekday", async () => {
+    const fetchMock = stubFrankfurter(5.2);
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      resolvePreviousUsdBrlRate({
+        currentRate: "5.5",
+        fxSource: "frankfurter",
+        previousDay: "2026-09-08",
+      }),
+    ).resolves.toBe("5.20000000");
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("2026-09-08");
+  });
+
+  it("falls back to the live rate when the dated quote is missing", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new Error("network down");
+      }),
+    );
+
+    await expect(
+      resolvePreviousUsdBrlRate({
+        currentRate: "5.5",
+        fxSource: "frankfurter",
+        previousDay: "2026-09-08",
+      }),
+    ).resolves.toBe("5.5");
   });
 });

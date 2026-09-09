@@ -276,7 +276,8 @@ function DocumentationSectionDescription({
     case "comparisons":
       return (
         <Trans id="documentation.section.comparisonsDescription">
-          Deep Finder baselines and estimated dividend entitlement.
+          Daily FX-inclusive change, Deep Finder baselines, and estimated
+          dividend entitlement.
         </Trans>
       );
   }
@@ -525,6 +526,37 @@ function ComparisonDocumentation() {
           never silently converted to zero.
         </Trans>
       </Callout>
+
+      <Topic
+        title={
+          <Trans id="documentation.comparisons.dailyTitle">
+            Daily performance
+          </Trans>
+        }
+      >
+        <p>
+          <Trans id="documentation.comparisons.dailyDescription">
+            Daily change is today&apos;s converted wealth minus yesterday&apos;s
+            converted wealth. The previous close is converted at the previous
+            weekday&apos;s USD/BRL rate, and today uses the live rate, so a
+            foreign-currency holding includes both the asset move and the
+            dollar. Switching the display currency inverts that conversion. Cash
+            has no market previous close; in USD it still moves with the rate. A
+            manual FX rate has no history, so both days share it.
+          </Trans>
+        </p>
+        <Formula>
+          daily change = today (fx today) - previous close (fx yesterday)
+        </Formula>
+        <p>
+          <Trans id="documentation.comparisons.dailyPercent">
+            The portfolio percentage is that change divided by yesterday&apos;s
+            comparable value, including cash. It is not the same as each
+            ticker&apos;s native-currency return, and it is not the open result
+            against moving-average cost.
+          </Trans>
+        </p>
+      </Topic>
 
       <Topic title="Deep Finder">
         <Definition

@@ -109,8 +109,9 @@ function DailyPage() {
           </h1>
           <p className="max-w-xl text-sm text-muted-foreground">
             <Trans id="daily.subtitle">
-              Follow the portfolio's latest daily movement and see which assets
-              are driving the change.
+              Follow the portfolio's latest daily movement in the display
+              currency, including the USD/BRL move on foreign-currency assets
+              and cash.
             </Trans>
           </p>
         </div>
@@ -210,7 +211,8 @@ function DailySummary({ data }: { data: DailyData }) {
               </span>
             ) : (
               <Trans id="daily.previousCloseComparison">
-                Compared with the previous close.
+                Compared with the previous close, converted at that day's
+                USD/BRL rate.
               </Trans>
             )
           }
@@ -229,7 +231,8 @@ function DailySummary({ data }: { data: DailyData }) {
         <Trans id="daily.comparisonCoverage">
           Daily change covers {summary.comparablePositions} of{" "}
           {summary.openPositions} open assets. Values are consolidated in{" "}
-          {summary.displayCurrency}.
+          {summary.displayCurrency}, with yesterday converted at that session's
+          USD/BRL rate.
         </Trans>
       </div>
     </Card>
@@ -324,8 +327,8 @@ function DailyTable({ data, locale }: { data: DailyData; locale: string }) {
         </CardTitle>
         <CardDescription>
           <Trans id="daily.assetsHint">
-            Price change from the previous close and its impact on your current
-            position.
+            Change from the previous close in the display currency, including
+            FX, and each asset's impact on yesterday's portfolio value.
           </Trans>
         </CardDescription>
       </CardHeader>
@@ -375,7 +378,7 @@ function DailyTable({ data, locale }: { data: DailyData; locale: string }) {
               <DailyRow
                 key={`${position.ticker}|${position.currency}`}
                 position={position}
-                portfolioValue={data.summary.marketValue}
+                previousPortfolioValue={data.summary.previousComparableValue}
               />
             ))}
           </TableBody>
@@ -403,14 +406,8 @@ function DailyTable({ data, locale }: { data: DailyData; locale: string }) {
               <TableCell
                 className={`text-right font-semibold tabular-nums ${pnlClassName(data.summary.dailyChange)}`}
               >
-                {data.summary.comparablePositions > 0 &&
-                Number(data.summary.marketValue) !== 0
-                  ? formatSignedWeightPrecise(
-                      String(
-                        Number(data.summary.dailyChange) /
-                          Number(data.summary.marketValue),
-                      ),
-                    )
+                {data.summary.dailyChangePercent
+                  ? formatSignedPercentPrecise(data.summary.dailyChangePercent)
                   : "—"}
               </TableCell>
             </TableRow>
@@ -423,14 +420,14 @@ function DailyTable({ data, locale }: { data: DailyData; locale: string }) {
 
 function DailyRow({
   position,
-  portfolioValue,
+  previousPortfolioValue,
 }: {
   position: DailyPosition;
-  portfolioValue: string;
+  previousPortfolioValue: string;
 }) {
   const portfolioImpact =
-    position.dailyChange != null && Number(portfolioValue) !== 0
-      ? Number(position.dailyChange) / Number(portfolioValue)
+    position.dailyChange != null && Number(previousPortfolioValue) !== 0
+      ? Number(position.dailyChange) / Number(previousPortfolioValue)
       : null;
 
   return (

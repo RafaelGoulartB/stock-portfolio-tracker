@@ -58,3 +58,25 @@ export async function resolveUsdBrlRate(
     return undefined;
   }
 }
+
+/**
+ * USD/BRL of the previous weekday for daily wealth change. A manual source
+ * has no history, so both days share the typed rate. A provider miss falls
+ * back to the live rate rather than inventing a number or failing the page.
+ */
+export async function resolvePreviousUsdBrlRate(request: {
+  currentRate: string;
+  fxSource?: FxSource;
+  previousDay: string;
+}): Promise<string> {
+  if (request.fxSource === "manual") {
+    return request.currentRate;
+  }
+
+  const previous = await resolveUsdBrlRate({
+    fxSource: request.fxSource ?? "frankfurter",
+    asOf: request.previousDay,
+  });
+
+  return previous ?? request.currentRate;
+}
