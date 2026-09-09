@@ -227,7 +227,7 @@ function QuarterReviewCellComponent({
           {hasNoteMarker || hasFairValue ? (
             <span
               aria-hidden="true"
-              className="absolute top-0.5 right-0.5 flex items-center gap-0.5"
+              className="absolute top-0.5 right-0.5 flex items-center -space-x-px"
             >
               {hasNoteMarker ? (
                 <span className="size-1.5 rounded-full bg-foreground/45" />
