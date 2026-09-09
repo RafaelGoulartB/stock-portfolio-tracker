@@ -10,10 +10,10 @@
       var dark;
       try {
         palette = localStorage.getItem("portfolio-theme-palette") || "default";
-        if (palette === "t3-code") {
-          palette = "slate";
-        } else if (palette === "t3-chat") {
-          palette = "bloom";
+        if (palette === "t3-code" || palette === "slate") {
+          palette = "default";
+        } else if (palette === "bloom") {
+          palette = "t3-chat";
         }
         document.documentElement.setAttribute("data-theme-palette", palette);
         stored = localStorage.getItem("portfolio-theme");

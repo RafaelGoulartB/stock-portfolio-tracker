@@ -6,8 +6,7 @@ export const LEGACY_THEME_LAB_STORAGE_KEY = "portfolio-theme-lab";
 
 export type ThemePaletteId =
   | "default"
-  | "slate"
-  | "bloom"
+  | "t3-chat"
   | "grove"
   | "ocean"
   | "ember"
@@ -35,51 +34,43 @@ export const THEME_PALETTES = [
     },
   },
   {
-    id: "slate",
-    name: "Slate",
-    swatch: {
-      light: "oklch(0.97 0.01 250)",
-      dark: "oklch(0.35 0.1 255)",
-    },
-  },
-  {
-    id: "bloom",
+    id: "t3-chat",
     name: "Bloom",
     swatch: {
-      light: "oklch(0.82 0.12 340)",
-      dark: "oklch(0.5 0.2 340)",
+      light: "oklch(0.591646 0.217985 0.584)",
+      dark: "oklch(0.460685 0.185347 4.099)",
     },
   },
   {
     id: "grove",
     name: "Grove",
     swatch: {
-      light: "oklch(0.86 0.1 155)",
-      dark: "oklch(0.42 0.12 155)",
+      light: "oklch(0.535028 0.106403 77.549)",
+      dark: "oklch(0.791603 0.129713 83.299)",
     },
   },
   {
     id: "ocean",
     name: "Ocean",
     swatch: {
-      light: "oklch(0.84 0.08 230)",
-      dark: "oklch(0.38 0.12 250)",
+      light: "oklch(0.493961 0.08175 201.584)",
+      dark: "oklch(0.793363 0.105022 199.893)",
     },
   },
   {
     id: "ember",
     name: "Ember",
     swatch: {
-      light: "oklch(0.86 0.1 55)",
-      dark: "oklch(0.42 0.12 45)",
+      light: "oklch(0.516323 0.161628 24.82)",
+      dark: "oklch(0.747955 0.135578 29.432)",
     },
   },
   {
     id: "iris",
     name: "Iris",
     swatch: {
-      light: "oklch(0.84 0.1 300)",
-      dark: "oklch(0.42 0.14 300)",
+      light: "oklch(0.516084 0.185229 340.776)",
+      dark: "oklch(0.789904 0.130063 337.621)",
     },
   },
 ] as const satisfies readonly ThemePalette[];
@@ -89,8 +80,9 @@ const THEME_PALETTE_IDS = new Set<string>(
 );
 
 const LEGACY_PALETTE_IDS: Record<string, ThemePaletteId> = {
-  "t3-code": "slate",
-  "t3-chat": "bloom",
+  "t3-code": "default",
+  slate: "default",
+  bloom: "t3-chat",
 };
 
 export function isThemePaletteId(
