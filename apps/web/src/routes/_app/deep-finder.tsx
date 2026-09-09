@@ -8,9 +8,16 @@ import {
   positiveDecimal,
 } from "@portifolio-tracker/shared";
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowDown, ArrowUp, ArrowUpDown, ScanSearch } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  RefreshCw,
+  ScanSearch,
+} from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
 import { Bar, BarChart, Cell, ReferenceLine, XAxis, YAxis } from "recharts";
+import { toast } from "sonner";
 import { AssetClassLabel } from "@/components/asset-labels";
 import { AssetLink } from "@/components/asset-link";
 import { AssetLogo } from "@/components/asset-logo";
@@ -69,6 +76,8 @@ function DeepFinderPage() {
   const { displayCurrency, quoteSource, manualPrices } = useSettings();
   const fx = useFxQuote();
   const fxRequest = useFxRequest();
+  const utils = trpc.useUtils();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [window, setWindow] = useState<DeepFinderWindow>(
     DEFAULT_DEEP_FINDER_WINDOW,
   );
@@ -82,16 +91,35 @@ function DeepFinderPage() {
       ),
     [manualPrices],
   );
-  const finder = trpc.positions.finder.useQuery({
-    displayCurrency,
-    ...fxRequest,
-    quoteSource,
-    window,
-    manualPrices:
-      quoteSource === "manual" && Object.keys(sanitizedManualPrices).length > 0
-        ? sanitizedManualPrices
-        : undefined,
-  });
+  const queryInput = useMemo(
+    () => ({
+      displayCurrency,
+      ...fxRequest,
+      quoteSource,
+      window,
+      manualPrices:
+        quoteSource === "manual" &&
+        Object.keys(sanitizedManualPrices).length > 0
+          ? sanitizedManualPrices
+          : undefined,
+    }),
+    [displayCurrency, fxRequest, quoteSource, sanitizedManualPrices, window],
+  );
+  const finder = trpc.positions.finder.useQuery(queryInput);
+
+  async function refreshQuotes() {
+    const forcedInput = { ...queryInput, forceRefresh: true };
+    setIsRefreshing(true);
+    try {
+      await utils.positions.finder.invalidate(forcedInput);
+      const refreshed = await utils.positions.finder.fetch(forcedInput);
+      utils.positions.finder.setData(queryInput, refreshed);
+    } catch (error) {
+      toast.error(queryErrorMessage(error));
+    } finally {
+      setIsRefreshing(false);
+    }
+  }
   const waitingForRate =
     !!finder.error && isFxRateRequired(finder.error) && fx.isPending;
   const fxFailed =
@@ -102,17 +130,32 @@ function DeepFinderPage() {
 
   return (
     <div className="space-y-5">
-      <header className="space-y-1">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          <Trans id="deepFinder.title">Deep Finder</Trans>
-        </h1>
-        <p className="max-w-2xl text-sm text-muted-foreground">
-          <Trans id="deepFinder.subtitle">
-            See which open holdings are rising or falling over a period. Cost is
-            the open result versus the moving average; the other windows compare
-            today's book to a past close.
-          </Trans>
-        </p>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight">
+            <Trans id="deepFinder.title">Deep Finder</Trans>
+          </h1>
+          <p className="max-w-2xl text-sm text-muted-foreground">
+            <Trans id="deepFinder.subtitle">
+              See which open holdings are rising or falling over a period. Cost
+              is the open result versus the moving average; the other windows
+              compare today's book to a past close.
+            </Trans>
+          </p>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => void refreshQuotes()}
+          disabled={finder.isFetching || isRefreshing}
+        >
+          <RefreshCw
+            className={`size-4 ${finder.isFetching || isRefreshing ? "animate-spin" : ""}`}
+            aria-hidden="true"
+          />
+          <Trans id="quotes.refresh">Refresh quotes</Trans>
+        </Button>
       </header>
 
       <div className="flex flex-wrap gap-1.5">

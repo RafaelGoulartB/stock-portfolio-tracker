@@ -4,6 +4,7 @@ import {
   formatQuantity,
   formatSignedMoney,
   formatSignedPercent,
+  formatSignedPercentPrecise,
   formatTradeDate,
   formatWeight,
   formatWeightPrecise,
@@ -39,6 +40,8 @@ describe("weight and percent formatting", () => {
     expect(formatWeightPrecise("0.0146", "en")).toBe("1.46%");
     expect(formatSignedPercent("0.1", "en")).toBe("+10.0%");
     expect(formatSignedPercent("-0.1", "en")).toBe("-10.0%");
+    expect(formatSignedPercentPrecise("0.1", "en")).toBe("+10.00%");
+    expect(formatSignedPercentPrecise("-0.01234", "pt-BR")).toBe("-1,23%");
   });
 });
 

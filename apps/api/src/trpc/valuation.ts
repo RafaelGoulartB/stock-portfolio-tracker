@@ -14,6 +14,7 @@ import {
   consolidatePositions,
   convertPositions,
   filterTransactionsByAsOf,
+  isOpenQuantity,
   type ValuationQuote,
   valuePositions,
   withCashPosition,
@@ -23,6 +24,7 @@ import {
   getQuoteWithManualFallback,
   QuoteUnavailableError,
 } from "../lib/quotes";
+import { memoizeRequest } from "../lib/request-memo";
 import { resolveUsdBrlRate } from "./fx-rate";
 import { loadTransactions } from "./routers/transactions";
 
@@ -47,6 +49,13 @@ export type ValuationRequest = {
   transactions?: ConsolidationInput[];
   /** `YYYY-MM-DD` snapshot; omitted values the live portfolio. */
   asOf?: string;
+  /**
+   * Include the live cash row. Defaults to true for the live book and false
+   * for dated snapshots. Daily tracking keeps cash even on a weekend as-of.
+   */
+  includeCash?: boolean;
+  /** Bypass completed provider quote caches for this explicit refresh. */
+  forceRefresh?: boolean;
 };
 
 export type ValuationResult = {
@@ -62,10 +71,20 @@ export type ValuationResult = {
    * resolved here. `null` when the portfolio needed no conversion.
    */
   usdBrlRate: string | null;
+  /** Provider quotes used to value the book, including previous close. */
+  quotes: Map<string, ValuationQuote>;
 };
 
 /** Stored native per-unit values used when a market provider cannot quote. */
 export async function loadStoredManualPrices(
+  userId: string,
+): Promise<Record<string, string>> {
+  return memoizeRequest(`manual-prices:${userId}`, () =>
+    loadStoredManualPricesUncached(userId),
+  );
+}
+
+async function loadStoredManualPricesUncached(
   userId: string,
 ): Promise<Record<string, string>> {
   const rows = await db
@@ -95,21 +114,47 @@ export async function loadStoredManualPrices(
 export async function loadValuedPortfolio(
   request: ValuationRequest,
 ): Promise<ValuationResult> {
+  const key = [
+    "valuation",
+    request.userId,
+    request.displayCurrency,
+    request.quoteSource,
+    request.asOf ?? "live",
+    request.includeCash === undefined
+      ? "cash-default"
+      : request.includeCash
+        ? "cash"
+        : "no-cash",
+    request.usdBrlRate ?? "",
+    request.fxSource ?? "",
+    request.manualRate ?? "",
+    JSON.stringify(request.manualPrices ?? {}),
+    request.transactions ? "preloaded-tx" : "tx",
+    request.storedManualPrices ? "preloaded-manuals" : "manuals",
+    request.forceRefresh ? "refresh" : "cached",
+  ].join("|");
+
+  return memoizeRequest(key, () => loadValuedPortfolioUncached(request));
+}
+
+async function loadValuedPortfolioUncached(
+  request: ValuationRequest,
+): Promise<ValuationResult> {
+  const includeCash = request.includeCash ?? request.asOf === undefined;
   const [transactions, storedManualPrices, cashRows] = await Promise.all([
     request.transactions ?? loadTransactions(request.userId),
     request.storedManualPrices ?? loadStoredManualPrices(request.userId),
-    request.asOf
-      ? Promise.resolve([])
-      : db
+    includeCash
+      ? db
           .select({ amount: cashBalances.amount })
           .from(cashBalances)
           .where(eq(cashBalances.userId, request.userId))
-          .limit(1),
+          .limit(1)
+      : Promise.resolve([]),
   ]);
   const native = consolidatePositions(
     filterTransactionsByAsOf(transactions, request.asOf ?? null),
   );
-  const includeCash = request.asOf === undefined;
   const needsRate =
     native.some((position) => position.currency !== request.displayCurrency) ||
     (includeCash && request.displayCurrency !== "BRL");
@@ -161,7 +206,7 @@ export async function loadValuedPortfolio(
 
   await Promise.all(
     converted.map(async (position) => {
-      if (Number(position.quantity) === 0) {
+      if (!isOpenQuantity(position.quantity)) {
         return;
       }
 
@@ -172,12 +217,15 @@ export async function loadValuedPortfolio(
           currency: position.currency,
           asOf: request.asOf,
           manualPrice: manualPrices[position.ticker],
+          forceRefresh: request.forceRefresh,
         });
 
         quotes.set(position.ticker, {
           ticker: resolved.quote.ticker,
           price: resolved.quote.price,
           asOf: resolved.quote.asOf,
+          previousClose: resolved.quote.previousClose,
+          previousCloseAsOf: resolved.quote.previousCloseAsOf,
         });
 
         if (resolved.manual) {
@@ -222,5 +270,6 @@ export async function loadValuedPortfolio(
     missing: missing.sort(),
     manual: manual.sort(),
     usdBrlRate: usdBrlRate ?? null,
+    quotes,
   };
 }

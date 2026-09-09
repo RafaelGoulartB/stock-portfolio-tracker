@@ -4,6 +4,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { sql } from "./db";
 import { streamingCompress } from "./lib/compression";
+import { runWithRequestMemo } from "./lib/request-memo";
 import { deleteExpiredSessions } from "./lib/session";
 import { dataBackupRoutes } from "./routes/data-backup";
 import { createContext } from "./trpc/context";
@@ -14,6 +15,10 @@ const app = new Hono();
 // Outermost, so nothing else touches the response after its body has been
 // handed to gzip.
 app.use("*", streamingCompress());
+
+app.use("*", async (_c, next) => {
+  await runWithRequestMemo(() => next());
+});
 
 app.use(
   "*",

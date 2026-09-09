@@ -330,47 +330,27 @@ transactions before the chart start is not generally safe.
 
 ### P1: Match frontend cache lifetime to data freshness
 
-`apps/web/src/lib/api.ts` sets `staleTime: 10_000`, disables focus refetch and
-retries, and does not configure `gcTime`. Ten seconds is a freshness window,
-not a polling interval: stale queries can fetch again when mounted or
-reconnected. The installed Query Core 5.102.8 defaults to removing inactive
-queries after five minutes (`src/removable.ts`).
+`apps/web/src/lib/api.ts` now sets `staleTime` to 15 minutes and `gcTime` to
+one hour, matching the Yahoo delayed-tape window. Focus refetch and retries
+stay off. Performance still overrides to 30 minutes; Dividends and FX stay at
+six hours. Live screens expose an explicit "Refresh quotes" action so a
+longer freshness window does not trap the user on a dead tape.
 
-Performance overrides freshness to 30 minutes; Dividends and FX use six hours.
-Their entries can nevertheless be discarded after five inactive minutes and
-need a new request on return. Cache is in memory and is lost on page reload.
-Provider cache hits do not bypass ledger reads or session lookup in the API.
+Mutation invalidation in `routes/_app/transactions.tsx` already covers
+`positions.list`, `positions.daily`, `positions.finder`, `allocation.list`,
+`performance.history`, `dividends.history`, and `transactions.forTicker`.
+Preserve `lib/session.ts` clearing all queries on account changes. Do not
+persist private portfolio query caches.
 
-Proposed starting policies, to validate against memory and acceptable age:
+The API also memoizes `loadTransactions` / `loadValuedPortfolio` inside one
+HTTP batch via `runWithRequestMemo`, and Yahoo spot quotes batch into a
+single upstream request. Provider cache hits still do not persist to
+PostgreSQL.
 
-- Categories and configuration: 5–15 minute freshness, 30 minute inactive
-  retention, immediate mutation invalidation.
-- Transaction pages: 1–5 minute freshness and 15–30 minute retention after
-  pagination. Preserve refresh and account-switch behavior.
-- Live portfolio views: consider 30–60 second freshness first, with an explicit
-  refresh and truthful quote timestamps. The Yahoo spot cache already lasts
-  15 minutes; reading SQL again does not necessarily obtain a newer quote.
-- Performance: retain inactive responses for at least its 30 minute freshness
-  window. Dividends/FX: evaluate retention up to their six-hour window with a
-  bounded number of historical-range keys.
-
-Before increasing lifetimes, complete mutation invalidation. For example,
-`routes/_app/transactions.tsx:refresh` currently omits `positions.daily`,
-`positions.finder`, `dividends.history`, and `transactions.forTicker`.
-Longer freshness would make stale financial values more visible. Preserve
-`lib/session.ts` clearing all queries on account changes and define how another
-tab's writes become visible. Do not persist private portfolio query caches as
-part of this optimization.
-
-Several live screens also issue queries while `fx.effectiveRate` is undefined,
-then issue a different query when FX resolves. Measure cold-load traces and
-gate only operations that require that rate. Preserve native-currency and
-manual-fallback behavior; a missing provider rate must not cause an indefinite
-loading screen or block a portfolio that can be valued without conversion.
-
-Acceptance: navigating back within the chosen freshness window performs no
-new request for the same query key; mutations update every affected screen;
-BRL/USD, absent FX, reload, and account switching remain correct.
+Acceptance: navigating back within 15 minutes performs no new request for the
+same live query key; an explicit refresh bypasses that window; mutations
+update every affected screen; BRL/USD, absent FX, reload, and account
+switching remain correct.
 
 ### P1: Clean expired sessions periodically
 

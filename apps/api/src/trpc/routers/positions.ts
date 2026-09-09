@@ -1,21 +1,12 @@
 import {
   dailyTrackingInput,
-  type Position,
   positionsListInput,
 } from "@portifolio-tracker/shared";
-import { TRPCError } from "@trpc/server";
-import { eq } from "drizzle-orm";
-import { db } from "../../db";
-import { cashBalances } from "../../db/schema";
 import {
-  consolidatePositions,
   convertMoney,
-  convertPositions,
-  filterTransactionsByAsOf,
+  isOpenQuantity,
   portfolioReturnContribution,
   summarizePositions,
-  valuePositions,
-  withCashPosition,
 } from "../../domain/positions";
 import {
   add,
@@ -27,17 +18,9 @@ import {
   toDecimal,
   ZERO,
 } from "../../lib/decimal";
-import {
-  getQuoteProvider,
-  getQuoteWithManualFallback,
-  type MarketQuote,
-  QuoteUnavailableError,
-} from "../../lib/quotes";
-import { resolveUsdBrlRate } from "../fx-rate";
 import { protectedProcedure, router } from "../trpc";
-import { loadStoredManualPrices, loadValuedPortfolio } from "../valuation";
+import { loadValuedPortfolio } from "../valuation";
 import { finder } from "./deep-finder";
-import { loadTransactions } from "./transactions";
 
 const API_TIME_ZONE = "America/Sao_Paulo";
 
@@ -83,6 +66,7 @@ export const positionsRouter = router({
         quoteSource: input.quoteSource,
         manualPrices: input.manualPrices,
         asOf: input.asOf,
+        forceRefresh: input.forceRefresh,
       });
 
       const summary = summarizePositions(
@@ -117,108 +101,26 @@ export const positionsRouter = router({
   daily: protectedProcedure
     .input(dailyTrackingInput)
     .query(async ({ ctx, input }) => {
-      const [history, storedManualPrices, cashRows] = await Promise.all([
-        loadTransactions(ctx.user.id),
-        loadStoredManualPrices(ctx.user.id),
-        db
-          .select({ amount: cashBalances.amount })
-          .from(cashBalances)
-          .where(eq(cashBalances.userId, ctx.user.id))
-          .limit(1),
-      ]);
       const snapshotDate = dailySnapshotDate();
-      const native = consolidatePositions(
-        filterTransactionsByAsOf(history, snapshotDate),
-      );
-      const needsRate =
-        native.some(
-          (position) => position.currency !== input.displayCurrency,
-        ) || input.displayCurrency !== "BRL";
-      const usdBrlRate =
-        needsRate && !input.usdBrlRate
-          ? await resolveUsdBrlRate({ ...input, asOf: snapshotDate })
-          : input.usdBrlRate;
-
-      if (needsRate && !usdBrlRate) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message:
-            "An USD/BRL rate is required to consolidate mixed currencies",
-        });
-      }
-
-      let converted: Position[];
-      try {
-        converted = convertPositions(
-          native,
-          input.displayCurrency,
-          usdBrlRate ?? null,
-        );
-      } catch {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "The USD/BRL rate is invalid",
-        });
-      }
-
-      const manualPrices = Object.fromEntries(
-        Object.entries({
-          ...storedManualPrices,
-          ...input.manualPrices,
-        }).map(([ticker, price]) => [ticker.toUpperCase(), price]),
-      );
-      const provider = getQuoteProvider(input.quoteSource);
-      const quotes = new Map<string, MarketQuote>();
-      const missing: string[] = [];
-      let providerFailures = 0;
-      let lastProviderError: string | null = null;
-
-      await Promise.all(
-        converted.map(async (position) => {
-          if (Number(position.quantity) === 0) {
-            return;
-          }
-
-          try {
-            const { quote } = await getQuoteWithManualFallback(provider, {
-              ticker: position.ticker,
-              assetClass: position.assetClass,
-              currency: position.currency,
-              asOf: snapshotDate,
-              manualPrice: manualPrices[position.ticker],
-            });
-            quotes.set(position.ticker, quote);
-          } catch (error) {
-            missing.push(position.ticker);
-
-            if (!(error instanceof QuoteUnavailableError)) {
-              providerFailures += 1;
-              lastProviderError =
-                error instanceof Error
-                  ? error.message
-                  : "Quote provider failed";
-            }
-          }
-        }),
-      );
-
-      if (quotes.size === 0 && providerFailures > 0) {
-        throw new TRPCError({
-          code: "BAD_GATEWAY",
-          message: lastProviderError ?? "Quote provider failed",
-        });
-      }
-
-      const valued = withCashPosition(
-        valuePositions(
-          converted,
-          quotes,
-          input.displayCurrency,
-          usdBrlRate ?? null,
-        ).filter((position) => Number(position.quantity) > 0),
-        cashRows[0]?.amount ?? "0",
-        input.displayCurrency,
-        usdBrlRate ?? null,
+      const {
+        positions: valued,
+        missing,
+        usdBrlRate,
+        quotes,
+      } = await loadValuedPortfolio({
+        userId: ctx.user.id,
+        displayCurrency: input.displayCurrency,
+        usdBrlRate: input.usdBrlRate,
+        fxSource: input.fxSource,
+        manualRate: input.manualRate,
+        quoteSource: input.quoteSource,
+        manualPrices: input.manualPrices,
+        asOf: snapshotDate,
+        includeCash: true,
+        forceRefresh: input.forceRefresh,
+      });
+      const open = valued.filter((position) =>
+        isOpenQuantity(position.quantity),
       );
 
       let previousComparableValue = ZERO;
@@ -227,7 +129,7 @@ export const positionsRouter = router({
       let declining = 0;
       let unchanged = 0;
 
-      const positions = valued.map((position) => {
+      const positions = open.map((position) => {
         const quote = quotes.get(position.ticker);
 
         if (!quote?.previousClose || position.convertedMarketValue == null) {
@@ -286,7 +188,7 @@ export const positionsRouter = router({
 
       const dailyChange = sub(currentComparableValue, previousComparableValue);
       const portfolio = summarizePositions(
-        valued,
+        open,
         input.displayCurrency,
         usdBrlRate ?? null,
       );
@@ -307,13 +209,13 @@ export const positionsRouter = router({
           declining,
           unchanged,
           comparablePositions: advancing + declining + unchanged,
-          openPositions: valued.length,
+          openPositions: open.length,
           asOf: quoteDates.at(-1) ?? null,
           usdBrlRate: usdBrlRate ?? null,
         },
         quotes: {
           source: input.quoteSource,
-          missing: missing.sort(),
+          missing,
         },
       };
     }),

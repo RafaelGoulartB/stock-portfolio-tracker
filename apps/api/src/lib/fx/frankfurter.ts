@@ -1,3 +1,4 @@
+import { coalesce, pruneExpired } from "../async";
 import { formatDecimal, toDecimal } from "../decimal";
 import type {
   FxProvider,
@@ -16,16 +17,6 @@ const cache = new Map<string, CacheEntry>();
 const seriesCache = new Map<string, SeriesCacheEntry>();
 const pendingQuotes = new Map<string, Promise<FxQuote>>();
 const pendingSeries = new Map<string, Promise<FxSeriesPoint[]>>();
-
-function pruneExpired<T extends { expiresAt: number }>(cache: Map<string, T>) {
-  const now = Date.now();
-
-  for (const [key, entry] of cache) {
-    if (entry.expiresAt <= now) {
-      cache.delete(key);
-    }
-  }
-}
 
 function todayUtc(): string {
   return new Date().toISOString().slice(0, 10);
@@ -66,12 +57,7 @@ export class FrankfurterProvider implements FxProvider {
       return hit.quote;
     }
 
-    const pending = pendingQuotes.get(key);
-    if (pending) {
-      return pending;
-    }
-
-    const result = (async () => {
+    return coalesce(pendingQuotes, key, async () => {
       const endpoint = asOf ?? "latest";
       const response = await fetch(
         `https://api.frankfurter.app/${endpoint}?from=${from}&to=${to}`,
@@ -103,14 +89,7 @@ export class FrankfurterProvider implements FxProvider {
       pruneExpired(cache);
       cache.set(key, { quote, expiresAt: Date.now() + CACHE_TTL_MS });
       return quote;
-    })();
-    pendingQuotes.set(key, result);
-
-    try {
-      return await result;
-    } finally {
-      pendingQuotes.delete(key);
-    }
+    });
   }
 
   /**
@@ -134,12 +113,7 @@ export class FrankfurterProvider implements FxProvider {
       return hit.points;
     }
 
-    const pending = pendingSeries.get(key);
-    if (pending) {
-      return pending;
-    }
-
-    const result = (async () => {
+    return coalesce(pendingSeries, key, async () => {
       const response = await fetch(
         `https://api.frankfurter.app/${start}..${end}?from=${from}&to=${to}`,
         { signal: AbortSignal.timeout(10_000) },
@@ -175,14 +149,7 @@ export class FrankfurterProvider implements FxProvider {
       pruneExpired(seriesCache);
       seriesCache.set(key, { points, expiresAt: Date.now() + CACHE_TTL_MS });
       return points;
-    })();
-    pendingSeries.set(key, result);
-
-    try {
-      return await result;
-    } finally {
-      pendingSeries.delete(key);
-    }
+    });
   }
 }
 

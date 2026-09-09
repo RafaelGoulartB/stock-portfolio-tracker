@@ -43,7 +43,7 @@ import {
   type WatchQuote,
 } from "../../domain/allocation";
 import { usdBrlExecutionRate } from "../../domain/fx-execution";
-import { consolidatePositions } from "../../domain/positions";
+import { consolidatePositions, isOpenQuantity } from "../../domain/positions";
 import { loadScoreConfig } from "../../domain/score-config";
 import {
   add,
@@ -232,6 +232,7 @@ async function quoteWatchOnly(
   assets: readonly AllocationAssetMeta[],
   quoteSource: QuoteSource,
   manualPrices: Record<string, string>,
+  forceRefresh = false,
 ): Promise<{
   quotes: Map<string, WatchQuote>;
   missing: string[];
@@ -250,6 +251,7 @@ async function quoteWatchOnly(
           assetClass: asset.assetClass,
           currency: asset.currency,
           manualPrice: manualPrices[asset.ticker],
+          forceRefresh,
         });
 
         quotes.set(asset.ticker, {
@@ -316,7 +318,7 @@ async function loadAllocationFinder(
   );
   const invested = new Set(
     consolidatePositions(history)
-      .filter((position) => Number(position.quantity) > 0)
+      .filter((position) => isOpenQuantity(position.quantity))
       .map((position) => position.ticker),
   );
   const selected = assets.filter((asset) => {
@@ -431,7 +433,7 @@ export const allocationRouter = router({
        */
       const invested = new Set(
         consolidatePositions(history)
-          .filter((position) => Number(position.quantity) > 0)
+          .filter((position) => isOpenQuantity(position.quantity))
           .map((position) => position.ticker),
       );
       const [portfolio, watch] = await Promise.all([
@@ -445,11 +447,13 @@ export const allocationRouter = router({
           manualPrices: requestManuals,
           storedManualPrices: stored,
           transactions: history,
+          forceRefresh: input.forceRefresh,
         }),
         quoteWatchOnly(
           assets.filter((asset) => !invested.has(asset.ticker)),
           input.quoteSource,
           requestManuals,
+          input.forceRefresh,
         ),
       ]);
       const usdBrlRate = portfolio.usdBrlRate;

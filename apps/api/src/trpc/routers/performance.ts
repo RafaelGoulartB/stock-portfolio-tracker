@@ -14,6 +14,7 @@ import {
 import {
   consolidatePositions,
   filterTransactionsByAsOf,
+  isOpenQuantity,
 } from "../../domain/positions";
 import { getFxProvider } from "../../lib/fx";
 import {
@@ -58,7 +59,7 @@ function assetsToQuote(
   for (const position of consolidatePositions(
     filterTransactionsByAsOf(history, baselineAsOf),
   )) {
-    if (Number(position.quantity) > 0) {
+    if (isOpenQuantity(position.quantity)) {
       assets.set(position.ticker, {
         ticker: position.ticker,
         assetClass: position.assetClass,

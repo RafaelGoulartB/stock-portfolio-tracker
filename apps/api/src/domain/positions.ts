@@ -664,6 +664,11 @@ export function summarizePositions(
   };
 }
 
+/** True when the ledger still holds a live quantity of the ticker. */
+export function isOpenQuantity(quantity: string): boolean {
+  return toDecimal(quantity) > ZERO;
+}
+
 /** One resolved market price used to value a ticker. */
 export type ValuationQuote = {
   ticker: string;
@@ -671,6 +676,8 @@ export type ValuationQuote = {
   price: string;
   /** Calendar day the quote refers to, `YYYY-MM-DD`. */
   asOf: string;
+  previousClose?: string;
+  previousCloseAsOf?: string;
 };
 
 /**

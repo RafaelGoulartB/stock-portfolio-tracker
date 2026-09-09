@@ -215,6 +215,19 @@ export function formatSignedPercent(
   }).format(Number(value));
 }
 
+/** Return ratio (`0.1`) rendered as a signed percent with two decimals. */
+export function formatSignedPercentPrecise(
+  value: string,
+  locale: string = activeLocale(),
+): string {
+  return numberFormatter(locale, "signedPercentPrecise", {
+    style: "percent",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    signDisplay: "exceptZero",
+  }).format(Number(value));
+}
+
 /** Short money for chart axes and labels, e.g. `R$23.6K`. */
 export function formatCompactMoney(
   value: number,

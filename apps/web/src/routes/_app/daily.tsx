@@ -5,6 +5,7 @@ import { positiveDecimal } from "@portifolio-tracker/shared";
 import { createFileRoute } from "@tanstack/react-router";
 import { ArrowDown, ArrowUp, ArrowUpDown, RefreshCw } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { AssetLink } from "@/components/asset-link";
 import { AssetLogo } from "@/components/asset-logo";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,7 @@ import { type RouterOutputs, trpc } from "@/lib/api";
 import {
   formatMoney,
   formatSignedMoney,
-  formatSignedPercent,
+  formatSignedPercentPrecise,
   formatSignedWeightPrecise,
   formatTradeDate,
   pnlClassName,
@@ -52,6 +53,8 @@ function DailyPage() {
   const { displayCurrency, quoteSource, manualPrices } = useSettings();
   const fx = useFxQuote();
   const fxRequest = useFxRequest();
+  const utils = trpc.useUtils();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const sanitizedManualPrices = useMemo(
     () =>
       Object.fromEntries(
@@ -61,15 +64,34 @@ function DailyPage() {
       ),
     [manualPrices],
   );
-  const daily = trpc.positions.daily.useQuery({
-    displayCurrency,
-    ...fxRequest,
-    quoteSource,
-    manualPrices:
-      quoteSource === "manual" && Object.keys(sanitizedManualPrices).length > 0
-        ? sanitizedManualPrices
-        : undefined,
-  });
+  const queryInput = useMemo(
+    () => ({
+      displayCurrency,
+      ...fxRequest,
+      quoteSource,
+      manualPrices:
+        quoteSource === "manual" &&
+        Object.keys(sanitizedManualPrices).length > 0
+          ? sanitizedManualPrices
+          : undefined,
+    }),
+    [displayCurrency, fxRequest, quoteSource, sanitizedManualPrices],
+  );
+  const daily = trpc.positions.daily.useQuery(queryInput);
+
+  async function refreshQuotes() {
+    const forcedInput = { ...queryInput, forceRefresh: true };
+    setIsRefreshing(true);
+    try {
+      await utils.positions.daily.invalidate(forcedInput);
+      const refreshed = await utils.positions.daily.fetch(forcedInput);
+      utils.positions.daily.setData(queryInput, refreshed);
+    } catch (error) {
+      toast.error(queryErrorMessage(error));
+    } finally {
+      setIsRefreshing(false);
+    }
+  }
   const waitingForRate =
     !!daily.error && isFxRateRequired(daily.error) && fx.isPending;
   const fxFailed =
@@ -96,14 +118,14 @@ function DailyPage() {
           type="button"
           variant="outline"
           size="sm"
-          onClick={() => daily.refetch()}
-          disabled={daily.isFetching}
+          onClick={() => void refreshQuotes()}
+          disabled={daily.isFetching || isRefreshing}
         >
           <RefreshCw
-            className={`size-4 ${daily.isFetching ? "animate-spin" : ""}`}
+            className={`size-4 ${daily.isFetching || isRefreshing ? "animate-spin" : ""}`}
             aria-hidden="true"
           />
-          <Trans id="daily.refresh">Refresh quotes</Trans>
+          <Trans id="quotes.refresh">Refresh quotes</Trans>
         </Button>
       </header>
 
@@ -184,7 +206,7 @@ function DailySummary({ data }: { data: DailyData }) {
           hint={
             summary.dailyChangePercent ? (
               <span className={pnlClassName(summary.dailyChange)}>
-                {formatSignedPercent(summary.dailyChangePercent)}
+                {formatSignedPercentPrecise(summary.dailyChangePercent)}
               </span>
             ) : (
               <Trans id="daily.previousCloseComparison">
@@ -451,7 +473,7 @@ function DailyRow({
             {signedOrZero(position.dailyChange, position.displayCurrency)}
             {position.dailyChangePercent ? (
               <span className="text-xs opacity-80">
-                {formatSignedPercent(position.dailyChangePercent)}
+                {formatSignedPercentPrecise(position.dailyChangePercent)}
               </span>
             ) : null}
           </span>

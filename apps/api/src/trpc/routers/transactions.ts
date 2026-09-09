@@ -21,6 +21,7 @@ import {
   tickerCurrencies,
   tradeCashTotal,
 } from "../../domain/positions";
+import { memoizeRequest } from "../../lib/request-memo";
 import { protectedProcedure, router } from "../trpc";
 
 /** A Drizzle transaction handle, or the base `db`, that runs the query. */
@@ -121,6 +122,14 @@ function toConsolidationInput(
 }
 
 export async function loadTransactions(
+  userId: string,
+): Promise<ConsolidationInput[]> {
+  return memoizeRequest(`transactions:${userId}`, () =>
+    loadTransactionsUncached(userId),
+  );
+}
+
+async function loadTransactionsUncached(
   userId: string,
 ): Promise<ConsolidationInput[]> {
   const rows = await db

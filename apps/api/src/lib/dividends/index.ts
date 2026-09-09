@@ -23,44 +23,58 @@ const alphaVantage = new AlphaVantageDividendProvider(
 );
 
 /**
- * Enriches US events with Alpha Vantage payment dates when configured, while
- * retaining Yahoo as a zero-configuration fallback. Duplicate ex-date/amount
- * pairs prefer Alpha Vantage because it exposes the richer calendar fields.
+ * Merges providers in priority order. Calls stay sequential to protect the
+ * Alpha Vantage quota, while Yahoo fills empty and partial primary results.
+ * Duplicate ex-date/amount pairs retain the richer higher-priority event.
  */
+export async function firstSuccessfulDividends(
+  request: DividendRequest,
+  providers: readonly DividendProvider[],
+): Promise<DividendEvent[]> {
+  let lastError: unknown;
+  let succeeded = false;
+  const merged = new Map<string, DividendEvent>();
+
+  for (const provider of providers) {
+    try {
+      const events = await provider.getDividends(request);
+      succeeded = true;
+      for (const event of events) {
+        const key = `${event.exDate}|${event.amountPerShare}`;
+        if (!merged.has(key)) {
+          merged.set(key, event);
+        }
+      }
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (succeeded) {
+    return [...merged.values()].sort((a, b) =>
+      b.exDate.localeCompare(a.exDate),
+    );
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new DividendUnavailableError(request.ticker);
+}
+
 class AutomaticDividendProvider implements DividendProvider {
   readonly id = "yahoo" as const;
   readonly label = "Automatic (Alpha Vantage + Yahoo fallback)";
 
   async getDividends(request: DividendRequest): Promise<DividendEvent[]> {
-    const providers: DividendProvider[] = env.ALPHA_VANTAGE_API_KEY
+    const useAlphaVantage =
+      Boolean(env.ALPHA_VANTAGE_API_KEY) &&
+      request.currency === "USD" &&
+      request.assetClass !== "stock_br";
+    const providers: DividendProvider[] = useAlphaVantage
       ? [alphaVantage, yahoo]
       : [yahoo];
-    const results = await Promise.allSettled(
-      providers.map((provider) => provider.getDividends(request)),
-    );
-    const successful = results.flatMap((result) =>
-      result.status === "fulfilled" ? result.value : [],
-    );
 
-    if (results.every((result) => result.status === "rejected")) {
-      const first = results[0];
-      throw first?.status === "rejected"
-        ? first.reason
-        : new DividendUnavailableError(request.ticker);
-    }
-
-    const merged = new Map<string, DividendEvent>();
-
-    // Yahoo enters first; richer Alpha events overwrite matching entries.
-    for (const event of successful.sort((a, b) =>
-      b.source.localeCompare(a.source),
-    )) {
-      merged.set(`${event.exDate}|${event.amountPerShare}`, event);
-    }
-
-    return [...merged.values()].sort((a, b) =>
-      b.exDate.localeCompare(a.exDate),
-    );
+    return firstSuccessfulDividends(request, providers);
   }
 }
 

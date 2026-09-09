@@ -2,8 +2,9 @@ import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import { positiveDecimal } from "@portifolio-tracker/shared";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
+import { Plus, RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import {
   columnLabels,
   initialColumns,
@@ -50,6 +51,8 @@ function DetailedPositionsPage() {
   const selected = months.find((month) => month.key === monthKey) ?? months[0];
   const fx = useFxQuote(selected?.asOf);
   const fxRequest = useFxRequest();
+  const utils = trpc.useUtils();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const sanitizedManualPrices = useMemo(
     () =>
@@ -61,16 +64,41 @@ function DetailedPositionsPage() {
     [manualPrices],
   );
 
-  const positions = trpc.positions.list.useQuery({
-    displayCurrency,
-    ...fxRequest,
-    asOf: selected?.asOf ?? undefined,
-    quoteSource,
-    manualPrices:
-      quoteSource === "manual" && Object.keys(sanitizedManualPrices).length > 0
-        ? sanitizedManualPrices
-        : undefined,
-  });
+  const queryInput = useMemo(
+    () => ({
+      displayCurrency,
+      ...fxRequest,
+      asOf: selected?.asOf ?? undefined,
+      quoteSource,
+      manualPrices:
+        quoteSource === "manual" &&
+        Object.keys(sanitizedManualPrices).length > 0
+          ? sanitizedManualPrices
+          : undefined,
+    }),
+    [
+      displayCurrency,
+      fxRequest,
+      quoteSource,
+      sanitizedManualPrices,
+      selected?.asOf,
+    ],
+  );
+  const positions = trpc.positions.list.useQuery(queryInput);
+
+  async function refreshQuotes() {
+    const forcedInput = { ...queryInput, forceRefresh: true };
+    setIsRefreshing(true);
+    try {
+      await utils.positions.list.invalidate(forcedInput);
+      const refreshed = await utils.positions.list.fetch(forcedInput);
+      utils.positions.list.setData(queryInput, refreshed);
+    } catch (error) {
+      toast.error(queryErrorMessage(error));
+    } finally {
+      setIsRefreshing(false);
+    }
+  }
   const categoryList = trpc.categories.list.useQuery();
   const categoryByTicker = useMemo(
     () =>
@@ -160,6 +188,19 @@ function DetailedPositionsPage() {
             onSelect={setMonthKey}
             locale={i18n.locale}
           />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void refreshQuotes()}
+            disabled={positions.isFetching || isRefreshing}
+          >
+            <RefreshCw
+              className={`size-4 ${positions.isFetching || isRefreshing ? "animate-spin" : ""}`}
+              aria-hidden="true"
+            />
+            <Trans id="quotes.refresh">Refresh quotes</Trans>
+          </Button>
           <Button asChild size="sm">
             <Link to="/transactions">
               <Plus aria-hidden="true" />

@@ -24,7 +24,11 @@ import {
   ZERO,
 } from "../lib/decimal";
 import { executionPrice } from "./fx-execution";
-import { type ConsolidationInput, convertMoney } from "./positions";
+import {
+  type ConsolidationInput,
+  convertMoney,
+  isOpenQuantity,
+} from "./positions";
 import { averageGrade, scoreAsset } from "./score";
 
 /** Analysis metadata stored per ticker, as read from `allocation_assets`. */
@@ -304,8 +308,8 @@ export function buildAllocationRows(input: AllocationInput): AllocationRow[] {
     reviewsByTicker.set(review.ticker, list);
   }
 
-  const openPositions = input.positions.filter(
-    (position) => Number(position.quantity) > 0,
+  const openPositions = input.positions.filter((position) =>
+    isOpenQuantity(position.quantity),
   );
   const positionByTicker = new Map(
     openPositions.map((position) => [position.ticker, position]),

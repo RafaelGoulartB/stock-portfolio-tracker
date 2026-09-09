@@ -13,6 +13,7 @@ import {
   weightRatio,
 } from "@portifolio-tracker/shared";
 import { createFileRoute } from "@tanstack/react-router";
+import { RefreshCw } from "lucide-react";
 import { type ReactNode, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -43,6 +44,7 @@ import {
 } from "@/components/allocation/allocation-toolbar";
 import { ContributionPlannerButton } from "@/components/allocation/contribution-planner";
 import { PageContent } from "@/components/page-content";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -155,6 +157,7 @@ function AllocationPage() {
   const { displayCurrency, quoteSource, manualPrices } = useSettings();
   const fx = useFxQuote();
   const fxRequest = useFxRequest();
+  const [isRefreshingQuotes, setIsRefreshingQuotes] = useState(false);
 
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<AllocationSort>({
@@ -223,6 +226,20 @@ function AllocationPage() {
       ),
     [nextResultsQuery.data?.results],
   );
+
+  async function refreshQuotes() {
+    const forcedInput = { ...allocationListInput, forceRefresh: true };
+    setIsRefreshingQuotes(true);
+    try {
+      await utils.allocation.list.invalidate(forcedInput);
+      const refreshed = await utils.allocation.list.fetch(forcedInput);
+      utils.allocation.list.setData(allocationListInput, refreshed);
+    } catch (error) {
+      reportError(error);
+    } finally {
+      setIsRefreshingQuotes(false);
+    }
+  }
   /** Latest in-flight mark write per ticker — older failures must not rollback. */
   const markWriteGeneration = useRef(new Map<string, number>());
 
@@ -602,6 +619,19 @@ function AllocationPage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void refreshQuotes()}
+            disabled={allocation.isFetching || isRefreshingQuotes}
+          >
+            <RefreshCw
+              className={`size-4 ${allocation.isFetching || isRefreshingQuotes ? "animate-spin" : ""}`}
+              aria-hidden="true"
+            />
+            <Trans id="quotes.refresh">Refresh quotes</Trans>
+          </Button>
           <ContributionPlannerButton
             rows={allocation.data?.rows ?? []}
             displayCurrency={

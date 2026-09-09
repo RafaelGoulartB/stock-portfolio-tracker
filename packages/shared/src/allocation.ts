@@ -95,6 +95,8 @@ export const allocationListInput = z.object({
   quoteSource: quoteSourceSchema.default("yahoo"),
   /** Per-ticker native prices for `manual` quotes, keyed by upper-case ticker. */
   manualPrices: z.record(z.string(), positiveDecimal).optional(),
+  /** Explicit user action that bypasses completed market-quote cache entries. */
+  forceRefresh: z.boolean().optional(),
 });
 
 export type AllocationListInput = z.input<typeof allocationListInput>;

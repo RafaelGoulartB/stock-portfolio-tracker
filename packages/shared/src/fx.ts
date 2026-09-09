@@ -104,6 +104,8 @@ export const positionsListInput = z.object({
    * upper-case ticker. Owned by the frontend until a server table lands.
    */
   manualPrices: z.record(z.string(), positiveDecimal).optional(),
+  /** Explicit user action that bypasses completed market-quote cache entries. */
+  forceRefresh: z.boolean().optional(),
 });
 
 export type PositionsListInput = z.input<typeof positionsListInput>;

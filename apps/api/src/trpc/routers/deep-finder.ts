@@ -10,7 +10,7 @@ import {
   windowStartDay,
 } from "../../domain/deep-finder";
 import { createSeriesLookup } from "../../domain/performance";
-import { convertMoney } from "../../domain/positions";
+import { convertMoney, isOpenQuantity } from "../../domain/positions";
 import {
   add,
   div,
@@ -68,9 +68,10 @@ export const finder = protectedProcedure
       manualRate: input.manualRate,
       quoteSource: input.quoteSource,
       manualPrices: input.manualPrices,
+      forceRefresh: input.forceRefresh,
     });
-    const open = portfolio.positions.filter(
-      (position) => Number(position.quantity) > 0,
+    const open = portfolio.positions.filter((position) =>
+      isOpenQuantity(position.quantity),
     );
     return buildFinderResult({
       positions: open,
@@ -78,6 +79,8 @@ export const finder = protectedProcedure
       // The rate the portfolio was actually consolidated with, so period
       // baselines convert with the same number as current values.
       input: { ...input, usdBrlRate: portfolio.usdBrlRate ?? undefined },
+      reuseSeriesAcrossWindows: true,
+      forceSeriesRefresh: input.forceRefresh,
     });
   });
 

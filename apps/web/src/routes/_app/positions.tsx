@@ -3,8 +3,9 @@ import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import { positiveDecimal } from "@portifolio-tracker/shared";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Plus } from "lucide-react";
+import { Plus, RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { AllocationCard } from "@/components/positions/allocation-card";
 import { DeepFinderTeaser } from "@/components/positions/deep-finder-teaser";
 import { HoldingsCard } from "@/components/positions/holdings-card";
@@ -36,6 +37,8 @@ function PositionsPage() {
 
   const fx = useFxQuote(selected?.asOf);
   const fxRequest = useFxRequest();
+  const utils = trpc.useUtils();
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Manual prices are raw user input; only valid decimals travel to the API.
   const sanitizedManualPrices = useMemo(() => {
@@ -46,16 +49,42 @@ function PositionsPage() {
     return Object.fromEntries(entries);
   }, [manualPrices]);
 
-  const positions = trpc.positions.list.useQuery({
-    displayCurrency,
-    ...fxRequest,
-    asOf: selected?.asOf ?? undefined,
-    quoteSource,
-    manualPrices:
-      quoteSource === "manual" && Object.keys(sanitizedManualPrices).length > 0
-        ? sanitizedManualPrices
-        : undefined,
-  });
+  const queryInput = useMemo(
+    () => ({
+      displayCurrency,
+      ...fxRequest,
+      asOf: selected?.asOf ?? undefined,
+      quoteSource,
+      manualPrices:
+        quoteSource === "manual" &&
+        Object.keys(sanitizedManualPrices).length > 0
+          ? sanitizedManualPrices
+          : undefined,
+    }),
+    [
+      displayCurrency,
+      fxRequest,
+      quoteSource,
+      sanitizedManualPrices,
+      selected?.asOf,
+    ],
+  );
+  const positions = trpc.positions.list.useQuery(queryInput);
+
+  async function refreshQuotes() {
+    const forcedInput = { ...queryInput, forceRefresh: true };
+    setIsRefreshing(true);
+    try {
+      await utils.positions.list.invalidate(forcedInput);
+      const refreshed = await utils.positions.list.fetch(forcedInput);
+      utils.positions.list.setData(queryInput, refreshed);
+      await utils.positions.finder.invalidate();
+    } catch (error) {
+      toast.error(queryErrorMessage(error));
+    } finally {
+      setIsRefreshing(false);
+    }
+  }
 
   // The portfolio cannot consolidate mixed currencies until the quote
   // arrives; keep the skeleton instead of flashing a rate error.
@@ -104,6 +133,19 @@ function PositionsPage() {
             onSelect={setMonthKey}
             locale={i18n.locale}
           />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => void refreshQuotes()}
+            disabled={positions.isFetching || isRefreshing}
+          >
+            <RefreshCw
+              className={`size-4 ${positions.isFetching || isRefreshing ? "animate-spin" : ""}`}
+              aria-hidden="true"
+            />
+            <Trans id="quotes.refresh">Refresh quotes</Trans>
+          </Button>
           <Button asChild size="sm">
             <Link to="/transactions">
               <Plus className="size-4" aria-hidden="true" />

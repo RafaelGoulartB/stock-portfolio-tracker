@@ -28,6 +28,8 @@ export type QuoteRequest = {
   asOf?: string;
   /** Required by the manual provider. */
   manualPrice?: string;
+  /** Skip a completed provider cache entry while still sharing in-flight work. */
+  forceRefresh?: boolean;
 };
 
 /** A daily-close range request, used to value many past snapshots at once. */

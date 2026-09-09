@@ -1,5 +1,7 @@
 import type { AssetClass, Currency } from "@portifolio-tracker/shared";
+import { coalesce, createConcurrencyLimiter, pruneExpired } from "../async";
 import { formatDecimal, toDecimal } from "../decimal";
+import { spotStaleWhileRevalidateMs, spotTtlMs } from "../market-hours";
 import {
   type MarketQuote,
   type QuoteProvider,
@@ -9,60 +11,239 @@ import {
   QuoteUnavailableError,
 } from "./provider";
 
-type CacheEntry = { quote: MarketQuote; expiresAt: number };
-type SeriesCacheEntry = { points: QuoteSeriesPoint[]; expiresAt: number };
+type CacheEntry = {
+  quote: MarketQuote;
+  expiresAt: number;
+  staleUntil: number;
+};
+
+export type YahooDividendPoint = { exDate: string; amount: string };
+
+type SeriesCacheEntry = {
+  points: QuoteSeriesPoint[];
+  dividends: YahooDividendPoint[];
+  start: string;
+  end: string;
+  expiresAt: number;
+  staleUntil: number;
+};
+
 type FailureEntry = { ticker: string; message: string; expiresAt: number };
 
-const SPOT_TTL_MS = 15 * 60 * 1_000;
+type ChartResult = {
+  meta?: {
+    regularMarketPrice?: number;
+    regularMarketTime?: number;
+  };
+  timestamp?: number[];
+  indicators?: { quote?: { close?: (number | null)[] }[] };
+  events?: {
+    dividends?: Record<string, { amount?: number; date?: number }>;
+  };
+};
+
+type YahooQuoteResult = {
+  symbol?: string;
+  regularMarketPrice?: number;
+  regularMarketTime?: number;
+  regularMarketPreviousClose?: number;
+};
+
+type PendingSpot = {
+  request: QuoteRequest;
+  symbol: string;
+  resolve: (quote: MarketQuote) => void;
+  reject: (error: unknown) => void;
+};
+
 const HISTORY_TTL_MS = 7 * 24 * 60 * 60 * 1_000;
-/** A running month keeps growing, so a series is refreshed a few times a day. */
 const SERIES_TTL_MS = 6 * 60 * 60 * 1_000;
-/**
- * Remembering "this symbol has no data" avoids re-requesting every unquotable
- * ticker on every screen load. That is the slowest path there is: an unknown
- * symbol costs a full upstream round trip, up to the 10s timeout, every time.
- * Kept short so a newly listed ticker starts working without a restart, and
- * never applied to a transient failure.
- */
 const FAILURE_TTL_MS = 10 * 60 * 1_000;
+const CANONICAL_LOOKBACK_MONTHS = 36;
+const SERIES_LEAD_DAYS = 12;
+const QUOTE_BATCH_SIZE = 40;
+const USER_AGENT =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
+
 const cache = new Map<string, CacheEntry>();
 const seriesCache = new Map<string, SeriesCacheEntry>();
 const failureCache = new Map<string, FailureEntry>();
 const pendingQuotes = new Map<string, Promise<MarketQuote>>();
-const pendingSeries = new Map<string, Promise<QuoteSeriesPoint[]>>();
+const pendingSeries = new Map<string, Promise<SeriesCacheEntry>>();
+const limitUpstream = createConcurrencyLimiter(8);
 
-function pruneExpired<T extends { expiresAt: number }>(cache: Map<string, T>) {
+let queuedSpots: PendingSpot[] = [];
+let flushScheduled = false;
+const refreshingSpots = new Set<string>();
+const refreshingSeries = new Set<string>();
+
+function pruneStale<T extends { staleUntil: number }>(entries: Map<string, T>) {
   const now = Date.now();
-
-  for (const [key, entry] of cache) {
-    if (entry.expiresAt <= now) {
-      cache.delete(key);
+  for (const [key, entry] of entries) {
+    if (entry.staleUntil <= now) {
+      entries.delete(key);
     }
   }
 }
 
-/** Replays a remembered "no data" answer, if one is still valid. */
+function todayUtc(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function shiftDays(day: string, delta: number): string {
+  const [year, month, date] = day.split("-").map(Number);
+  const shifted = new Date(Date.UTC(year, month - 1, date + delta));
+  return shifted.toISOString().slice(0, 10);
+}
+
+function shiftMonths(day: string, months: number): string {
+  const [year, month, date] = day.split("-").map(Number);
+  const shifted = new Date(Date.UTC(year, month - 1 + months, date));
+  return shifted.toISOString().slice(0, 10);
+}
+
+function dayToUnix(day: string): number {
+  const [year, month, date] = day.split("-").map(Number);
+  return Math.floor(Date.UTC(year, month - 1, date) / 1_000);
+}
+
+function unixToDay(timestamp: number): string {
+  return new Date(timestamp * 1_000).toISOString().slice(0, 10);
+}
+
+function toPriceString(raw: number, ticker: string): string {
+  if (!Number.isFinite(raw) || raw <= 0) {
+    throw new QuoteUnavailableError(ticker);
+  }
+  return formatDecimal(toDecimal(raw.toFixed(8)), 8);
+}
+
+function covers(entry: SeriesCacheEntry, start: string, end: string): boolean {
+  return entry.start <= start && entry.end >= end;
+}
+
+function closeOnOrBefore(
+  points: readonly QuoteSeriesPoint[],
+  asOf: string,
+): QuoteSeriesPoint | undefined {
+  for (let index = points.length - 1; index >= 0; index -= 1) {
+    const point = points[index];
+    if (point && point.asOf <= asOf) {
+      return point;
+    }
+  }
+  return undefined;
+}
+
+function previousPoint(
+  points: readonly QuoteSeriesPoint[],
+  asOf: string,
+): QuoteSeriesPoint | undefined {
+  const current = closeOnOrBefore(points, asOf);
+  if (!current) {
+    return undefined;
+  }
+  for (let index = points.length - 1; index >= 0; index -= 1) {
+    const point = points[index];
+    if (point && point.asOf < current.asOf) {
+      return point;
+    }
+  }
+  return undefined;
+}
+
+function widenRange(
+  start: string,
+  end: string,
+): { start: string; end: string } {
+  const today = todayUtc();
+  const canonicalStart = shiftDays(
+    shiftMonths(today, -CANONICAL_LOOKBACK_MONTHS),
+    -SERIES_LEAD_DAYS,
+  );
+  return {
+    start: start < canonicalStart ? start : canonicalStart,
+    end: end > today ? end : today,
+  };
+}
+
+function retryDelayMs(attempt: number): number {
+  return process.env.VITEST ? 0 : 250 * 2 ** attempt;
+}
+
+async function fetchYahoo(url: string, ticker: string): Promise<Response> {
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      const response = await limitUpstream(() =>
+        fetch(url, {
+          headers: { "User-Agent": USER_AGENT },
+          signal: AbortSignal.timeout(10_000),
+        }),
+      );
+
+      if (response.status === 429 || response.status >= 500) {
+        lastError = new QuoteUnavailableError(
+          ticker,
+          `Quote request failed (${response.status})`,
+          { transient: true },
+        );
+        if (attempt < 2) {
+          await new Promise((resolve) => {
+            setTimeout(resolve, retryDelayMs(attempt));
+          });
+          continue;
+        }
+        throw lastError;
+      }
+
+      return response;
+    } catch (error) {
+      if (error instanceof QuoteUnavailableError) {
+        lastError = error;
+        if (!error.transient || attempt === 2) {
+          throw error;
+        }
+      } else {
+        lastError = new QuoteUnavailableError(
+          ticker,
+          error instanceof Error ? error.message : "Quote provider failed",
+          { transient: true },
+        );
+        if (attempt === 2) {
+          throw lastError;
+        }
+      }
+      await new Promise((resolve) => {
+        setTimeout(resolve, retryDelayMs(attempt));
+      });
+    }
+  }
+
+  throw lastError instanceof QuoteUnavailableError
+    ? lastError
+    : new QuoteUnavailableError(ticker, "Quote provider failed", {
+        transient: true,
+      });
+}
+
 function cachedFailure(key: string): QuoteUnavailableError | null {
   const hit = failureCache.get(key);
-
   if (!hit) {
     return null;
   }
-
   if (hit.expiresAt <= Date.now()) {
     failureCache.delete(key);
     return null;
   }
-
   return new QuoteUnavailableError(hit.ticker, hit.message);
 }
 
-/** Remembers a definitive "no data" answer; a transient failure is ignored. */
 function rememberFailure(key: string, ticker: string, error: unknown): void {
   if (!(error instanceof QuoteUnavailableError) || error.transient) {
     return;
   }
-
   pruneExpired(failureCache);
   failureCache.set(key, {
     ticker,
@@ -71,38 +252,6 @@ function rememberFailure(key: string, ticker: string, error: unknown): void {
   });
 }
 
-const USER_AGENT =
-  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
-
-function todayUtc(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function dayToUnix(day: string): number {
-  const [year, month, date] = day.split("-").map(Number);
-
-  return Math.floor(Date.UTC(year, month - 1, date) / 1_000);
-}
-
-function unixToDay(timestamp: number): string {
-  return new Date(timestamp * 1_000).toISOString().slice(0, 10);
-}
-
-/** Decimal strings must never be built from floats without rounding first. */
-function toPriceString(raw: number, ticker: string): string {
-  if (!Number.isFinite(raw) || raw <= 0) {
-    throw new QuoteUnavailableError(ticker);
-  }
-
-  return formatDecimal(toDecimal(raw.toFixed(8)), 8);
-}
-
-/**
- * Maps a portfolio ticker to its Yahoo symbol. B3 listings trade with a
- * `.SA` suffix, US listings as-is, and crypto against USD (`BTC` ->
- * `BTC-USD`). Fixed income and opaque `other` assets have no public quote
- * and resolve as unavailable.
- */
 export function toYahooSymbol(
   ticker: string,
   assetClass: AssetClass,
@@ -116,66 +265,78 @@ export function toYahooSymbol(
   if (!normalized) {
     return null;
   }
-
   if (assetClass === "fixed_income" || assetClass === "other") {
     return null;
   }
-
   if (assetClass === "crypto") {
     const base =
       normalized.endsWith("USD") && normalized.length > 3
         ? normalized.slice(0, -3).replaceAll(/[^A-Z0-9]/g, "")
         : normalized.replaceAll(/[^A-Z0-9]/g, "");
-
     return base ? `${base}-USD` : null;
   }
-
   if (currency === "BRL") {
     return normalized.includes(".") ? normalized : `${normalized}.SA`;
   }
-
   return normalized.replaceAll(".", "-");
 }
 
-type ChartResult = {
-  meta?: {
-    currency?: string;
-    regularMarketPrice?: number;
-    regularMarketTime?: number;
+function parseChart(result: ChartResult, ticker: string) {
+  const timestamps = result.timestamp ?? [];
+  const closes = result.indicators?.quote?.[0]?.close ?? [];
+  const points: QuoteSeriesPoint[] = [];
+
+  for (let index = 0; index < timestamps.length; index += 1) {
+    const timestamp = timestamps[index];
+    const close = closes[index];
+    if (timestamp == null || close == null || close <= 0) {
+      continue;
+    }
+    points.push({
+      asOf: unixToDay(timestamp),
+      close: toPriceString(close, ticker),
+    });
+  }
+
+  const dividends = Object.values(result.events?.dividends ?? {}).flatMap(
+    (item): YahooDividendPoint[] => {
+      if (
+        item.date == null ||
+        item.amount == null ||
+        !Number.isFinite(item.amount) ||
+        item.amount <= 0
+      ) {
+        return [];
+      }
+      return [
+        {
+          exDate: unixToDay(item.date),
+          amount: formatDecimal(toDecimal(item.amount.toFixed(8)), 8),
+        },
+      ];
+    },
+  );
+
+  return {
+    points,
+    dividends,
+    spotPrice: result.meta?.regularMarketPrice,
   };
-  timestamp?: number[];
-  indicators?: { quote?: { close?: (number | null)[] }[] };
-};
+}
 
 async function fetchChart(
   symbol: string,
   ticker: string,
-  period1: number,
-  period2: number,
+  start: string,
+  end: string,
 ): Promise<ChartResult> {
-  let response: Response;
-
-  try {
-    response = await fetch(
-      `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&period1=${period1}&period2=${period2}`,
-      {
-        headers: { "User-Agent": USER_AGENT },
-        signal: AbortSignal.timeout(10_000),
-      },
-    );
-  } catch (error) {
-    throw new QuoteUnavailableError(
-      ticker,
-      error instanceof Error ? error.message : "Quote provider failed",
-      { transient: true },
-    );
-  }
+  const response = await fetchYahoo(
+    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&period1=${dayToUnix(start)}&period2=${dayToUnix(end) + 86400}&events=div%2Csplits`,
+    ticker,
+  );
 
   if (!response.ok) {
-    // Yahoo answers 404/400 for a symbol it does not know; anything else
-    // (429, 5xx) is about Yahoo, not about the ticker.
     const unknownSymbol = response.status === 404 || response.status === 400;
-
     throw new QuoteUnavailableError(
       ticker,
       `Quote request failed (${response.status})`,
@@ -187,20 +348,269 @@ async function fetchChart(
     chart?: { result?: ChartResult[] | null };
   };
   const result = body.chart?.result?.[0];
-
   if (!result) {
     throw new QuoteUnavailableError(ticker);
   }
-
   return result;
 }
 
-/**
- * Free delayed market quotes, no API key. Spot prices come from the latest
- * regular session; historical closes take the last daily close on or before
- * the requested day so month-ends on weekends resolve to the previous
- * trading session.
- */
+async function fetchQuoteBatch(
+  symbols: string[],
+  ticker: string,
+): Promise<Map<string, YahooQuoteResult>> {
+  const quoted = new Map<string, YahooQuoteResult>();
+
+  for (let offset = 0; offset < symbols.length; offset += QUOTE_BATCH_SIZE) {
+    const chunk = symbols.slice(offset, offset + QUOTE_BATCH_SIZE);
+    const response = await fetchYahoo(
+      `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(chunk.join(","))}`,
+      ticker,
+    );
+    if (!response.ok) {
+      throw new QuoteUnavailableError(
+        ticker,
+        `Quote request failed (${response.status})`,
+        { transient: response.status !== 404 && response.status !== 400 },
+      );
+    }
+    const body = (await response.json()) as {
+      quoteResponse?: { result?: YahooQuoteResult[] | null };
+    };
+    for (const item of body.quoteResponse?.result ?? []) {
+      if (item.symbol) {
+        quoted.set(item.symbol, item);
+      }
+    }
+  }
+
+  return quoted;
+}
+
+function quoteFromBatch(
+  request: QuoteRequest,
+  raw: YahooQuoteResult,
+): MarketQuote | null {
+  if (raw.regularMarketPrice == null) {
+    return null;
+  }
+  try {
+    return {
+      ticker: request.ticker,
+      price: toPriceString(raw.regularMarketPrice, request.ticker),
+      currency: request.currency,
+      asOf: raw.regularMarketTime
+        ? unixToDay(raw.regularMarketTime)
+        : todayUtc(),
+      previousClose:
+        raw.regularMarketPreviousClose != null &&
+        raw.regularMarketPreviousClose > 0
+          ? toPriceString(raw.regularMarketPreviousClose, request.ticker)
+          : undefined,
+      source: "yahoo",
+    };
+  } catch {
+    return null;
+  }
+}
+
+function quoteFromSeries(
+  request: QuoteRequest,
+  entry: SeriesCacheEntry,
+  asOf: string,
+  spotPrice?: number,
+): MarketQuote {
+  const current = closeOnOrBefore(entry.points, asOf);
+  if (!current && spotPrice == null) {
+    throw new QuoteUnavailableError(request.ticker);
+  }
+  const price =
+    spotPrice != null
+      ? toPriceString(spotPrice, request.ticker)
+      : current?.close;
+  if (!price) {
+    throw new QuoteUnavailableError(request.ticker);
+  }
+  const quoteAsOf = current?.asOf ?? asOf;
+  const previous = previousPoint(entry.points, quoteAsOf);
+  return {
+    ticker: request.ticker,
+    price,
+    currency: request.currency,
+    asOf: quoteAsOf,
+    previousClose: previous?.close,
+    previousCloseAsOf: previous?.asOf,
+    source: "yahoo",
+  };
+}
+
+async function loadSeriesEntry(
+  symbol: string,
+  ticker: string,
+  start: string,
+  end: string,
+  forceRefresh = false,
+): Promise<SeriesCacheEntry> {
+  const now = Date.now();
+  const hit = forceRefresh ? undefined : seriesCache.get(symbol);
+
+  if (hit && covers(hit, start, end) && hit.expiresAt > now) {
+    return hit;
+  }
+  if (hit && covers(hit, start, end) && hit.staleUntil > now) {
+    if (!refreshingSeries.has(symbol)) {
+      refreshingSeries.add(symbol);
+      void loadSeriesEntry(symbol, ticker, start, end, true)
+        .catch(() => undefined)
+        .finally(() => {
+          refreshingSeries.delete(symbol);
+        });
+    }
+    return hit;
+  }
+  if (!forceRefresh) {
+    const remembered = cachedFailure(`series|${symbol}`);
+    if (remembered) {
+      throw remembered;
+    }
+  }
+
+  return coalesce(pendingSeries, symbol, async () => {
+    const range = widenRange(
+      hit && !forceRefresh ? (hit.start < start ? hit.start : start) : start,
+      hit && !forceRefresh ? (hit.end > end ? hit.end : end) : end,
+    );
+    try {
+      const chart = await fetchChart(symbol, ticker, range.start, range.end);
+      const parsed = parseChart(chart, ticker);
+      if (parsed.points.length === 0) {
+        throw new QuoteUnavailableError(ticker);
+      }
+      pruneStale(seriesCache);
+      const entry: SeriesCacheEntry = {
+        points: parsed.points,
+        dividends: parsed.dividends,
+        start: range.start,
+        end: range.end,
+        expiresAt: Date.now() + SERIES_TTL_MS,
+        staleUntil: Date.now() + SERIES_TTL_MS * 2,
+      };
+      seriesCache.set(symbol, entry);
+      return entry;
+    } catch (error) {
+      rememberFailure(`series|${symbol}`, ticker, error);
+      throw error;
+    }
+  });
+}
+
+export async function loadYahooChart(
+  symbol: string,
+  ticker: string,
+  start: string,
+  end: string,
+  forceRefresh = false,
+): Promise<{ points: QuoteSeriesPoint[]; dividends: YahooDividendPoint[] }> {
+  const entry = await loadSeriesEntry(symbol, ticker, start, end, forceRefresh);
+  return {
+    points: entry.points.filter(
+      (point) => point.asOf >= start && point.asOf <= end,
+    ),
+    dividends: entry.dividends.filter(
+      (event) => event.exDate >= start && event.exDate <= end,
+    ),
+  };
+}
+
+function cacheSpot(request: QuoteRequest, symbol: string, quote: MarketQuote) {
+  const ttl = spotTtlMs(request.assetClass, request.currency);
+  pruneStale(cache);
+  cache.set(symbol, {
+    quote,
+    expiresAt: Date.now() + ttl,
+    staleUntil:
+      Date.now() +
+      ttl +
+      spotStaleWhileRevalidateMs(request.assetClass, request.currency),
+  });
+  failureCache.delete(symbol);
+}
+
+async function resolveSpotFromChart(item: PendingSpot): Promise<MarketQuote> {
+  const asOf = todayUtc();
+  const entry = await loadSeriesEntry(
+    item.symbol,
+    item.request.ticker,
+    shiftDays(asOf, -14),
+    asOf,
+    item.request.forceRefresh,
+  );
+  return quoteFromSeries(item.request, entry, asOf);
+}
+
+async function flushQuoteBatch(): Promise<void> {
+  const batch = queuedSpots;
+  queuedSpots = [];
+  flushScheduled = false;
+  if (batch.length === 0) {
+    return;
+  }
+
+  const symbols = [...new Set(batch.map((item) => item.symbol))];
+  let quoted = new Map<string, YahooQuoteResult>();
+  try {
+    quoted = await fetchQuoteBatch(symbols, batch[0]?.request.ticker ?? "");
+  } catch {
+    quoted = new Map();
+  }
+
+  const leftover: PendingSpot[] = [];
+  for (const item of batch) {
+    const raw = quoted.get(item.symbol);
+    const quote = raw ? quoteFromBatch(item.request, raw) : null;
+    if (quote) {
+      cacheSpot(item.request, item.symbol, quote);
+      item.resolve(quote);
+    } else {
+      leftover.push(item);
+    }
+  }
+
+  await Promise.all(
+    leftover.map(async (item) => {
+      try {
+        const quote = await resolveSpotFromChart(item);
+        cacheSpot(item.request, item.symbol, quote);
+        item.resolve(quote);
+      } catch (error) {
+        rememberFailure(item.symbol, item.request.ticker, error);
+        item.reject(error);
+      }
+    }),
+  );
+}
+
+function enqueueSpot(item: PendingSpot) {
+  queuedSpots.push(item);
+  if (!flushScheduled) {
+    flushScheduled = true;
+    queueMicrotask(() => {
+      void flushQuoteBatch();
+    });
+  }
+}
+
+function cachedSpot(symbol: string): CacheEntry | undefined {
+  const hit = cache.get(symbol);
+  if (!hit) {
+    return undefined;
+  }
+  if (hit.staleUntil <= Date.now()) {
+    cache.delete(symbol);
+    return undefined;
+  }
+  return hit;
+}
+
 export class YahooProvider implements QuoteProvider {
   readonly id = "yahoo" as const;
   readonly label = "Yahoo Finance (free, delayed)";
@@ -211,206 +621,69 @@ export class YahooProvider implements QuoteProvider {
       request.assetClass,
       request.currency,
     );
-
     if (!symbol) {
       throw new QuoteUnavailableError(
         request.ticker,
         `No public quote for ${request.ticker}`,
       );
     }
+    if (request.asOf) {
+      return this.historicalQuote(symbol, request, request.asOf);
+    }
 
-    const key = `${this.id}|${symbol}|${request.asOf ?? "spot"}`;
-    const hit = cache.get(key);
-
-    if (hit && hit.expiresAt > Date.now()) {
+    const now = Date.now();
+    const hit = request.forceRefresh ? undefined : cachedSpot(symbol);
+    if (hit && hit.expiresAt > now) {
+      return hit.quote;
+    }
+    if (hit && hit.staleUntil > now) {
+      if (!refreshingSpots.has(symbol)) {
+        refreshingSpots.add(symbol);
+        void this.refreshSpot(symbol, request).finally(() => {
+          refreshingSpots.delete(symbol);
+        });
+      }
       return hit.quote;
     }
 
-    const remembered = cachedFailure(key);
-
+    const remembered = request.forceRefresh ? null : cachedFailure(symbol);
     if (remembered) {
       throw remembered;
     }
 
-    const pending = pendingQuotes.get(key);
-    if (pending) {
-      return pending;
-    }
-
-    const result = (async () => {
-      const quote =
-        request.asOf == null
-          ? await this.spotQuote(symbol, request)
-          : await this.historicalQuote(symbol, request, request.asOf);
-
-      pruneExpired(cache);
-      cache.set(key, {
-        quote,
-        expiresAt:
-          Date.now() + (request.asOf == null ? SPOT_TTL_MS : HISTORY_TTL_MS),
-      });
-
-      return quote;
-    })();
-    pendingQuotes.set(key, result);
-
-    try {
-      return await result;
-    } catch (error) {
-      rememberFailure(key, request.ticker, error);
-      throw error;
-    } finally {
-      pendingQuotes.delete(key);
-    }
+    return coalesce(
+      pendingQuotes,
+      symbol,
+      () =>
+        new Promise<MarketQuote>((resolve, reject) => {
+          enqueueSpot({ request, symbol, resolve, reject });
+        }),
+    );
   }
 
-  /**
-   * One chart request covers the whole range, so a 36-month history costs a
-   * single upstream call per ticker instead of one call per month.
-   */
   async getSeries(request: QuoteSeriesRequest): Promise<QuoteSeriesPoint[]> {
     const symbol = toYahooSymbol(
       request.ticker,
       request.assetClass,
       request.currency,
     );
-
     if (!symbol) {
       throw new QuoteUnavailableError(
         request.ticker,
         `No public quote for ${request.ticker}`,
       );
     }
-
-    const key = `${this.id}|${symbol}|${request.start}..${request.end}`;
-    const hit = request.forceRefresh ? undefined : seriesCache.get(key);
-
-    if (hit && hit.expiresAt > Date.now()) {
-      return hit.points;
-    }
-
-    if (!request.forceRefresh) {
-      const remembered = cachedFailure(key);
-
-      if (remembered) {
-        throw remembered;
-      }
-    }
-
-    const pending = pendingSeries.get(key);
-    if (pending) {
-      return pending;
-    }
-
-    const result = (async () => {
-      const chart = await fetchChart(
-        symbol,
-        request.ticker,
-        dayToUnix(request.start),
-        dayToUnix(request.end) + 86400,
-      );
-      const timestamps = chart.timestamp ?? [];
-      const closes = chart.indicators?.quote?.[0]?.close ?? [];
-      const points: QuoteSeriesPoint[] = [];
-
-      for (let index = 0; index < timestamps.length; index += 1) {
-        const timestamp = timestamps[index];
-        const close = closes[index];
-
-        if (timestamp == null || close == null || close <= 0) {
-          continue;
-        }
-
-        points.push({
-          asOf: unixToDay(timestamp),
-          close: toPriceString(close, request.ticker),
-        });
-      }
-
-      if (points.length === 0) {
-        throw new QuoteUnavailableError(request.ticker);
-      }
-
-      pruneExpired(seriesCache);
-      seriesCache.set(key, { points, expiresAt: Date.now() + SERIES_TTL_MS });
-      return points;
-    })();
-    pendingSeries.set(key, result);
-
-    try {
-      return await result;
-    } catch (error) {
-      rememberFailure(key, request.ticker, error);
-      throw error;
-    } finally {
-      pendingSeries.delete(key);
-    }
-  }
-
-  private async spotQuote(
-    symbol: string,
-    request: QuoteRequest,
-  ): Promise<MarketQuote> {
-    const now = Math.floor(Date.now() / 1_000);
-    const result = await fetchChart(
+    const { points } = await loadYahooChart(
       symbol,
       request.ticker,
-      now - 14 * 86400,
-      now + 86400,
+      request.start,
+      request.end,
+      request.forceRefresh,
     );
-    const price = result.meta?.regularMarketPrice;
-
-    if (price == null) {
+    if (points.length === 0) {
       throw new QuoteUnavailableError(request.ticker);
     }
-
-    const timestamps = result.timestamp ?? [];
-    const closes = result.indicators?.quote?.[0]?.close ?? [];
-    let latestSeriesDay: string | undefined;
-
-    for (let index = timestamps.length - 1; index >= 0; index -= 1) {
-      const timestamp = timestamps[index];
-      const close = closes[index];
-
-      if (timestamp != null && close != null) {
-        latestSeriesDay = unixToDay(timestamp);
-        break;
-      }
-    }
-
-    const quoteAsOf =
-      latestSeriesDay ??
-      (result.meta?.regularMarketTime
-        ? unixToDay(result.meta.regularMarketTime)
-        : todayUtc());
-    let previousCloseAsOf: string | undefined;
-    let previousClose: string | undefined;
-
-    for (let index = timestamps.length - 1; index >= 0; index -= 1) {
-      const timestamp = timestamps[index];
-      const close = closes[index];
-
-      if (timestamp == null || close == null) {
-        continue;
-      }
-
-      const day = unixToDay(timestamp);
-      if (day < quoteAsOf) {
-        previousCloseAsOf = day;
-        previousClose = toPriceString(close, request.ticker);
-        break;
-      }
-    }
-
-    return {
-      ticker: request.ticker,
-      price: toPriceString(price, request.ticker),
-      currency: request.currency,
-      asOf: quoteAsOf,
-      previousClose,
-      previousCloseAsOf,
-      source: this.id,
-    };
+    return points;
   }
 
   private async historicalQuote(
@@ -418,65 +691,54 @@ export class YahooProvider implements QuoteProvider {
     request: QuoteRequest,
     asOf: string,
   ): Promise<MarketQuote> {
-    // The daily series is ascending; the last close at or before the end of
-    // the snapshot day is the snapshot close.
-    const endOfDay = dayToUnix(asOf) + 86400;
-    const result = await fetchChart(
-      symbol,
-      request.ticker,
-      endOfDay - 12 * 86400,
-      endOfDay,
-    );
-
-    const timestamps = result.timestamp ?? [];
-    const closes = result.indicators?.quote?.[0]?.close ?? [];
-
-    for (let index = timestamps.length - 1; index >= 0; index -= 1) {
-      const timestamp = timestamps[index];
-      const close = closes[index];
-
-      if (timestamp == null || timestamp >= endOfDay || close == null) {
-        continue;
-      }
-
-      let previousClose: string | undefined;
-      let previousCloseAsOf: string | undefined;
-
-      for (
-        let previousIndex = index - 1;
-        previousIndex >= 0;
-        previousIndex -= 1
-      ) {
-        const previousTimestamp = timestamps[previousIndex];
-        const previousValue = closes[previousIndex];
-
-        if (previousTimestamp != null && previousValue != null) {
-          previousClose = toPriceString(previousValue, request.ticker);
-          previousCloseAsOf = unixToDay(previousTimestamp);
-          break;
-        }
-      }
-
-      return {
-        ticker: request.ticker,
-        price: toPriceString(close, request.ticker),
-        currency: request.currency,
-        asOf: unixToDay(timestamp),
-        previousClose,
-        previousCloseAsOf,
-        source: this.id,
-      };
+    const remembered = request.forceRefresh ? null : cachedFailure(symbol);
+    if (remembered) {
+      throw remembered;
+    }
+    const key = `${symbol}|${asOf}`;
+    const hit = request.forceRefresh ? undefined : cache.get(key);
+    if (hit && hit.expiresAt > Date.now()) {
+      return hit.quote;
     }
 
-    throw new QuoteUnavailableError(request.ticker);
+    return coalesce(pendingQuotes, key, async () => {
+      const entry = await loadSeriesEntry(
+        symbol,
+        request.ticker,
+        asOf,
+        asOf,
+        request.forceRefresh,
+      );
+      const quote = quoteFromSeries(request, entry, asOf);
+      pruneStale(cache);
+      cache.set(key, {
+        quote,
+        expiresAt: Date.now() + HISTORY_TTL_MS,
+        staleUntil: Date.now() + HISTORY_TTL_MS,
+      });
+      return quote;
+    });
+  }
+
+  private async refreshSpot(symbol: string, request: QuoteRequest) {
+    try {
+      await new Promise<MarketQuote>((resolve, reject) => {
+        enqueueSpot({ request, symbol, resolve, reject });
+      });
+    } catch {
+      // Keep serving the stale quote; the next caller retries.
+    }
   }
 }
 
-/** Clears cached quotes. Exported for tests. */
 export function clearQuoteCache(): void {
   cache.clear();
   seriesCache.clear();
   failureCache.clear();
   pendingQuotes.clear();
   pendingSeries.clear();
+  queuedSpots = [];
+  flushScheduled = false;
+  refreshingSpots.clear();
+  refreshingSeries.clear();
 }
