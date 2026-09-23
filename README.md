@@ -19,20 +19,24 @@ Portfolio Tracker records investment transactions and turns them into positions,
 - **Allocation:** compare target weights with current holdings, review quarterly grades and fair values, and see which assets are taking contributions.
 - **Contribution planning:** rank eligible assets and split a proposed contribution into suggested trade amounts. Nothing is recorded until you register the trades.
 
+### Allocation targets and quarterly reviews
+
+<p align="center">
+  <a href="assets/screenshots/allocation-table.png"><img src="assets/screenshots/allocation-table.png" width="100%" alt="Allocation table comparing target and current weights, gaps, contribution scores, market values, and quarterly grades" /></a>
+</p>
+
+### Portfolio overview and contribution planning
+
 <table>
   <tr>
-    <th width="33%">Portfolio overview</th>
-    <th width="33%">Allocation targets and reviews</th>
-    <th width="33%">Contribution planner</th>
+    <th width="50%">Portfolio overview</th>
+    <th width="50%">Contribution planner</th>
   </tr>
   <tr>
     <td><a href="assets/screenshots/positions-overview.png"><img src="assets/screenshots/positions-overview.png" width="100%" alt="Portfolio positions with market value, invested cost, open result, and allocation grouped by Brazilian stocks, US stocks, and cash" /></a></td>
-    <td><a href="assets/screenshots/allocation-table.png"><img src="assets/screenshots/allocation-table.png" width="100%" alt="Allocation table comparing target and current weights, gaps, contribution scores, market values, and quarterly grades" /></a></td>
     <td><a href="assets/screenshots/contribution-plan.png"><img src="assets/screenshots/contribution-plan.png" width="100%" alt="Contribution planner splitting a BRL contribution across three eligible US holdings and showing USD equivalents" /></a></td>
   </tr>
 </table>
-
-<sub>Captured from local development in English and dark mode using a synthetic BRL/USD portfolio. The screenshots use manually fixed sample prices and a USD/BRL rate of 5.40; values are for demonstration only. Click an image to view it at full resolution.</sub>
 
 ## Record and review investments
 
