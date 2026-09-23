@@ -8,22 +8,16 @@ import {
   CURRENCIES,
   createTransactionInput,
   TRANSACTION_SIDES,
-  type Transaction,
 } from "@portifolio-tracker/shared";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Loader2, Trash2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import type { z } from "zod";
-import {
-  AssetClassLabel,
-  CurrencyBadge,
-  SideLabel,
-} from "@/components/asset-labels";
-import { AssetLink } from "@/components/asset-link";
+import { AssetClassLabel, SideLabel } from "@/components/asset-labels";
 import { BookHoldingsPanel } from "@/components/transactions/book-holdings-panel";
-import { Badge } from "@/components/ui/badge";
+import { TransactionHistory } from "@/components/transactions/transaction-history";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -49,22 +43,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { trpc } from "@/lib/api";
 import { currencyText } from "@/lib/display-labels";
-import { formatMoney, formatQuantity, formatTradeDate } from "@/lib/format";
+import { formatQuantity } from "@/lib/format";
 import {
   bookHoldingsErrorMessage,
   createTradeErrorMessage,
-  queryErrorMessage,
   removeTradeErrorMessage,
 } from "@/lib/trpcErrors";
 import { cn } from "@/lib/utils";
@@ -187,73 +171,16 @@ function TransactionsPage() {
   }
 
   const history = (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          <Trans id="transactions.history">History</Trans>
-        </CardTitle>
-        <CardDescription>
-          <Trans id="transactions.historyHint">Most recent trades first.</Trans>
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {list.isPending ? <Skeleton className="h-64" /> : null}
-
-        {list.error ? (
-          <p className="py-6 text-sm text-destructive">
-            {queryErrorMessage(list.error)}
-          </p>
-        ) : null}
-
-        {list.data?.total === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
-            <Trans id="transactions.empty">Nothing registered yet.</Trans>
-          </p>
-        ) : null}
-
-        {list.data && list.data.items.length > 0 ? (
-          <div className="space-y-4">
-            <HistoryTable
-              transactions={list.data.items}
-              onRemove={(id) => remove.mutate({ id })}
-              removingId={remove.isPending ? remove.variables?.id : undefined}
-            />
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-sm text-muted-foreground">
-                <Trans id="transactions.pageSummary">
-                  {page * list.data.pageSize + 1}–
-                  {Math.min((page + 1) * list.data.pageSize, list.data.total)}{" "}
-                  of {list.data.total}
-                </Trans>
-              </p>
-              <div className="flex gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={page === 0 || list.isFetching}
-                  onClick={() => setPage((value) => Math.max(0, value - 1))}
-                >
-                  <Trans id="transactions.previous">Previous</Trans>
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  disabled={
-                    list.isFetching ||
-                    (page + 1) * list.data.pageSize >= list.data.total
-                  }
-                  onClick={() => setPage((value) => value + 1)}
-                >
-                  <Trans id="transactions.next">Next</Trans>
-                </Button>
-              </div>
-            </div>
-          </div>
-        ) : null}
-      </CardContent>
-    </Card>
+    <TransactionHistory
+      data={list.data}
+      error={list.error}
+      isFetching={list.isFetching}
+      isPending={list.isPending}
+      page={page}
+      removing={remove.isPending}
+      onPageChange={setPage}
+      onRemove={(id) => remove.mutateAsync({ id }).then(() => undefined)}
+    />
   );
 
   return (
@@ -682,130 +609,5 @@ function TransactionsPage() {
         </div>
       )}
     </div>
-  );
-}
-
-type HistoryTableProps = {
-  transactions: Transaction[];
-  onRemove: (id: string) => void;
-  removingId: string | undefined;
-};
-
-function HistoryTable({
-  transactions,
-  onRemove,
-  removingId,
-}: HistoryTableProps) {
-  // Subscribes this table to locale changes; amounts and dates below are
-  // rendered with `Intl` using the active locale.
-  useLingui();
-
-  return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>
-            <Trans id="transactions.colDate">Date</Trans>
-          </TableHead>
-          <TableHead>
-            <Trans id="transactions.colTicker">Ticker</Trans>
-          </TableHead>
-          <TableHead>
-            <Trans id="transactions.colSide">Side</Trans>
-          </TableHead>
-          <TableHead>
-            <Trans id="transactions.colCurrency">Ccy</Trans>
-          </TableHead>
-          <TableHead className="text-right">
-            <Trans id="transactions.colQuantity">Quantity</Trans>
-          </TableHead>
-          <TableHead className="text-right">
-            <Trans id="transactions.colPrice">Price</Trans>
-          </TableHead>
-          <TableHead className="text-right">
-            <Trans id="transactions.colFees">Fees</Trans>
-          </TableHead>
-          <TableHead className="text-right">
-            <Trans id="transactions.colTotal">Total</Trans>
-          </TableHead>
-          <TableHead className="w-[104px]" />
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {transactions.map((transaction) => {
-          const ticker = transaction.ticker;
-          const date = transaction.tradedAt;
-          const removeLabel = t({
-            id: "transactions.remove",
-            message: `Remove ${ticker} trade from ${date}`,
-          });
-
-          return (
-            <TableRow key={transaction.id}>
-              <TableCell className="whitespace-nowrap text-muted-foreground">
-                {formatTradeDate(transaction.tradedAt)}
-              </TableCell>
-              <TableCell className="font-medium">
-                <AssetLink ticker={transaction.ticker}>
-                  {transaction.ticker}
-                </AssetLink>
-                {transaction.notes ? (
-                  <span className="block text-xs font-normal text-muted-foreground">
-                    {transaction.notes}
-                  </span>
-                ) : null}
-              </TableCell>
-              <TableCell>
-                <Badge
-                  variant="outline"
-                  className={
-                    transaction.side === "buy"
-                      ? "border-gain/40 text-gain"
-                      : "border-loss/40 text-loss"
-                  }
-                >
-                  <SideLabel side={transaction.side} />
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <CurrencyBadge currency={transaction.currency} />
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {transaction.assetClass === "fixed_income"
-                  ? "—"
-                  : formatQuantity(transaction.quantity)}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {transaction.assetClass === "fixed_income"
-                  ? "—"
-                  : formatMoney(transaction.price, transaction.currency)}
-              </TableCell>
-              <TableCell className="text-right tabular-nums text-muted-foreground">
-                {transaction.assetClass === "fixed_income"
-                  ? "—"
-                  : formatMoney(transaction.fees, transaction.currency)}
-              </TableCell>
-              <TableCell className="text-right tabular-nums">
-                {formatMoney(transaction.total, transaction.currency)}
-              </TableCell>
-              <TableCell>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  aria-label={removeLabel}
-                  title={removeLabel}
-                  disabled={removingId === transaction.id}
-                  onClick={() => onRemove(transaction.id)}
-                >
-                  <Trash2 className="size-4" aria-hidden="true" />
-                  <Trans id="transactions.delete">Delete</Trans>
-                </Button>
-              </TableCell>
-            </TableRow>
-          );
-        })}
-      </TableBody>
-    </Table>
   );
 }

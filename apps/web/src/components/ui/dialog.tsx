@@ -1,5 +1,6 @@
 "use client";
 
+import { Trans } from "@lingui/react/macro";
 import { XIcon } from "lucide-react";
 import { Dialog as DialogPrimitive } from "radix-ui";
 import type * as React from "react";
@@ -73,7 +74,9 @@ function DialogContent({
             className="absolute top-3.5 right-3.5 flex size-8 items-center justify-center rounded-lg opacity-70 ring-offset-card transition-all outline-none hover:bg-muted hover:opacity-100 focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4"
           >
             <XIcon aria-hidden="true" />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">
+              <Trans id="common.close">Close</Trans>
+            </span>
           </DialogPrimitive.Close>
         ) : null}
       </DialogPrimitive.Content>

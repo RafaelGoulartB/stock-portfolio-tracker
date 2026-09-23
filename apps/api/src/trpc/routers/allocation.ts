@@ -1,18 +1,12 @@
 import {
-  type AllocationMarkColor,
-  type AssetClass,
   allocationFinderInput,
   allocationHistoryInput,
   allocationListInput,
-  allocationMarkColorSchema,
   CASH_TICKER,
-  type Currency,
   deepFinderInput,
   FX_EXECUTION_IOF,
   FX_EXECUTION_SPREAD,
   nextResultsResponseSchema,
-  type ParsedDeepFinderInput,
-  type QuoteSource,
   removeAllocationAssetInput,
   removeAssetReviewInput,
   reorderAllocationInput,
@@ -22,7 +16,7 @@ import {
   upsertAssetReviewInput,
 } from "@portifolio-tracker/shared";
 import { TRPCError } from "@trpc/server";
-import { and, asc, desc, eq, inArray, max, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "../../db";
 import {
   allocationAssets,
@@ -33,14 +27,11 @@ import {
   transactions,
 } from "../../db/schema";
 import {
-  type AllocationAssetMeta,
   buildAllocationRows,
   lastContributions,
   manualPriceFromMarketValue,
   overlayFairValueOnCloses,
-  type StoredReview,
   summarizeAllocation,
-  type WatchQuote,
 } from "../../domain/allocation";
 import { usdBrlExecutionRate } from "../../domain/fx-execution";
 import { consolidatePositions, isOpenQuantity } from "../../domain/positions";
@@ -53,330 +44,26 @@ import {
   toDecimal,
   ZERO,
 } from "../../lib/decimal";
-import {
-  getQuoteProvider,
-  getQuoteWithManualFallback,
-  QuoteUnavailableError,
-} from "../../lib/quotes";
+import { getQuoteProvider, QuoteUnavailableError } from "../../lib/quotes";
 import { getNextResults } from "../../lib/results";
-import { resolveUsdBrlRate } from "../fx-rate";
 import { protectedProcedure, router } from "../trpc";
 import { loadValuedPortfolio } from "../valuation";
-import { buildFinderResult, type FinderPosition } from "./deep-finder";
+import {
+  ensureAsset,
+  loadAsset,
+  loadAssets,
+  loadReviews,
+  nextSortOrder,
+  tradedIdentity,
+} from "./allocation-data";
+import { loadAllocationFinder, quoteWatchOnly } from "./allocation-finder";
+import {
+  monthsAgo,
+  normalizeAssetClass,
+  storedManualPrices,
+  today,
+} from "./allocation-helpers";
 import { loadTransactions, loadTransactionsForTickers } from "./transactions";
-
-const API_TIME_ZONE = "America/Sao_Paulo";
-
-type DbExecutor =
-  | Parameters<Parameters<typeof db.transaction>[0]>[0]
-  | typeof db;
-
-/** Today in the API timezone, `YYYY-MM-DD`, so cooldowns match the log. */
-function today(now = new Date()): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: API_TIME_ZONE,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(now);
-}
-
-/** Inclusive start of an N-month lookback, `YYYY-MM-DD`. */
-function monthsAgo(day: string, months: number): string {
-  const [year, month, date] = day.split("-").map(Number);
-  const shifted = new Date(
-    Date.UTC(year ?? 1970, (month ?? 1) - 1 - months, date ?? 1),
-  );
-
-  return shifted.toISOString().slice(0, 10);
-}
-
-/** Rows written before the BR/US stock split still read back as `stock`. */
-function normalizeAssetClass(value: string): AssetClass {
-  return (value === "stock" ? "stock_br" : value) as AssetClass;
-}
-
-function parseMarkColor(value: string | null): AllocationMarkColor | null {
-  if (value === null) {
-    return null;
-  }
-
-  const parsed = allocationMarkColorSchema.safeParse(value);
-
-  return parsed.success ? parsed.data : null;
-}
-
-async function loadAssets(userId: string): Promise<AllocationAssetMeta[]> {
-  const rows = await db
-    .select()
-    .from(allocationAssets)
-    .where(eq(allocationAssets.userId, userId))
-    .orderBy(asc(allocationAssets.sortOrder), asc(allocationAssets.ticker));
-
-  return rows.map((row) => ({
-    ticker: row.ticker,
-    assetClass: normalizeAssetClass(row.assetClass),
-    currency: row.currency,
-    targetWeight: row.targetWeight,
-    valuationRef: row.valuationRef,
-    manualPrice: row.manualPrice,
-    markColor: parseMarkColor(row.markColor),
-    sortOrder: row.sortOrder,
-  }));
-}
-
-async function loadAsset(
-  userId: string,
-  ticker: string,
-): Promise<AllocationAssetMeta | null> {
-  const [row] = await db
-    .select()
-    .from(allocationAssets)
-    .where(
-      and(
-        eq(allocationAssets.userId, userId),
-        eq(allocationAssets.ticker, ticker),
-      ),
-    )
-    .limit(1);
-
-  return row
-    ? {
-        ticker: row.ticker,
-        assetClass: normalizeAssetClass(row.assetClass),
-        currency: row.currency,
-        targetWeight: row.targetWeight,
-        valuationRef: row.valuationRef,
-        manualPrice: row.manualPrice,
-        markColor: parseMarkColor(row.markColor),
-        sortOrder: row.sortOrder,
-      }
-    : null;
-}
-
-async function loadReviews(userId: string): Promise<StoredReview[]> {
-  const rows = await db
-    .select({
-      ticker: assetReviews.ticker,
-      period: assetReviews.period,
-      grade: assetReviews.grade,
-      notes: assetReviews.notes,
-      fairValue: assetReviews.fairValue,
-      fairValueRef: assetReviews.fairValueRef,
-      watchNext: assetReviews.watchNext,
-    })
-    .from(assetReviews)
-    .where(eq(assetReviews.userId, userId))
-    .orderBy(asc(assetReviews.ticker), asc(assetReviews.period));
-
-  return rows;
-}
-
-/**
- * Class and currency of a ticker as the trade log knows it, so a metadata
- * row created by an inline edit never contradicts its own transactions.
- */
-async function tradedIdentity(
-  userId: string,
-  ticker: string,
-): Promise<{ assetClass: AssetClass; currency: Currency } | null> {
-  const [row] = await db
-    .select({
-      assetClass: transactions.assetClass,
-      currency: transactions.currency,
-    })
-    .from(transactions)
-    .where(
-      and(eq(transactions.userId, userId), eq(transactions.ticker, ticker)),
-    )
-    .orderBy(desc(transactions.tradedAt))
-    .limit(1);
-
-  return row
-    ? {
-        assetClass: normalizeAssetClass(row.assetClass),
-        currency: row.currency,
-      }
-    : null;
-}
-
-async function nextSortOrder(
-  userId: string,
-  executor: DbExecutor = db,
-): Promise<number> {
-  const [row] = await executor
-    .select({ highest: max(allocationAssets.sortOrder) })
-    .from(allocationAssets)
-    .where(eq(allocationAssets.userId, userId));
-
-  return (row?.highest ?? 0) + 1;
-}
-
-function storedManualPrices(
-  assets: readonly AllocationAssetMeta[],
-): Record<string, string> {
-  return Object.fromEntries(
-    assets
-      .filter((asset) => asset.manualPrice !== null)
-      .map((asset) => [asset.ticker, asset.manualPrice as string]),
-  );
-}
-
-/**
- * Prices the tickers that carry no open position. They are not part of the
- * portfolio value, but the screen still shows their price and uses it to
- * size a contribution, so each one gets a quote of its own. A ticker the
- * provider cannot price is reported as missing, never as zero.
- */
-async function quoteWatchOnly(
-  assets: readonly AllocationAssetMeta[],
-  quoteSource: QuoteSource,
-  manualPrices: Record<string, string>,
-  forceRefresh = false,
-): Promise<{
-  quotes: Map<string, WatchQuote>;
-  missing: string[];
-  manual: string[];
-}> {
-  const provider = getQuoteProvider(quoteSource);
-  const quotes = new Map<string, WatchQuote>();
-  const missing: string[] = [];
-  const manual: string[] = [];
-
-  await Promise.all(
-    assets.map(async (asset) => {
-      try {
-        const resolved = await getQuoteWithManualFallback(provider, {
-          ticker: asset.ticker,
-          assetClass: asset.assetClass,
-          currency: asset.currency,
-          manualPrice: manualPrices[asset.ticker],
-          forceRefresh,
-        });
-
-        quotes.set(asset.ticker, {
-          price: resolved.quote.price,
-          currency: resolved.quote.currency,
-        });
-
-        if (resolved.manual) {
-          manual.push(asset.ticker);
-        }
-      } catch {
-        // One unpriced watch asset never fails the table.
-        missing.push(asset.ticker);
-      }
-    }),
-  );
-
-  return { quotes, missing, manual };
-}
-
-/**
- * Guarantees a ticker has an analysis row, so anything attached to it (a
- * quarterly review, a manual position in the free order) keeps the ticker
- * on the screen even with no money in it.
- */
-async function ensureAsset(userId: string, ticker: string): Promise<void> {
-  const traded = await tradedIdentity(userId, ticker);
-
-  await db
-    .insert(allocationAssets)
-    .values({
-      userId,
-      ticker,
-      assetClass: traded?.assetClass ?? "other",
-      currency: traded?.currency ?? "USD",
-      sortOrder: await nextSortOrder(userId),
-    })
-    .onConflictDoNothing({
-      target: [allocationAssets.userId, allocationAssets.ticker],
-    });
-}
-
-async function loadAllocationFinder(
-  userId: string,
-  input: ParsedDeepFinderInput & { categoryId?: string | null },
-  forceSeriesRefresh = false,
-) {
-  const assets = await loadAssets(userId);
-  const [assignments, history] = await Promise.all([
-    db
-      .select({
-        ticker: assetCategories.ticker,
-        categoryId: assetCategories.categoryId,
-      })
-      .from(assetCategories)
-      .where(eq(assetCategories.userId, userId)),
-    loadTransactionsForTickers(
-      userId,
-      assets.map((asset) => asset.ticker),
-    ),
-  ]);
-  const categoryByTicker = new Map(
-    assignments.map((row) => [row.ticker, row.categoryId]),
-  );
-  const invested = new Set(
-    consolidatePositions(history)
-      .filter((position) => isOpenQuantity(position.quantity))
-      .map((position) => position.ticker),
-  );
-  const selected = assets.filter((asset) => {
-    if (invested.has(asset.ticker)) {
-      return false;
-    }
-
-    if (input.categoryId === undefined) {
-      return true;
-    }
-
-    return (categoryByTicker.get(asset.ticker) ?? null) === input.categoryId;
-  });
-
-  const needsRate = selected.some(
-    (asset) => asset.currency !== input.displayCurrency,
-  );
-  const usdBrlRate =
-    needsRate && !input.usdBrlRate
-      ? await resolveUsdBrlRate(input)
-      : input.usdBrlRate;
-
-  if (needsRate && !usdBrlRate) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "An USD/BRL rate is required to compare mixed currencies",
-    });
-  }
-
-  const requestManuals = {
-    ...storedManualPrices(selected),
-    ...Object.fromEntries(
-      Object.entries(input.manualPrices ?? {}).map(([ticker, price]) => [
-        ticker.toUpperCase(),
-        price,
-      ]),
-    ),
-  };
-  const positions: FinderPosition[] = selected.map((asset) => ({
-    ticker: asset.ticker,
-    assetClass: asset.assetClass,
-    currency: asset.currency,
-    quantity: "1",
-    marketPrice: null,
-    convertedMarketValue: null,
-    convertedUnrealizedPnl: null,
-    unrealizedPnlPercent: null,
-  }));
-
-  return buildFinderResult({
-    positions,
-    missing: [],
-    input: { ...input, usdBrlRate, manualPrices: requestManuals },
-    reuseSeriesAcrossWindows: true,
-    deriveCurrentFromSeries: true,
-    forceSeriesRefresh,
-  });
-}
 
 export const allocationRouter = router({
   /**

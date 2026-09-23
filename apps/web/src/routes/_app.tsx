@@ -8,10 +8,10 @@ import {
   redirect,
   useNavigate,
 } from "@tanstack/react-router";
-import { LineChart } from "lucide-react";
 import { AddTransactionButton } from "@/components/add-transaction-button";
 import { AppNav } from "@/components/app-nav";
 import { LogoDevAttribution } from "@/components/asset-logo";
+import { BrandLogo } from "@/components/brand-logo";
 import { DocumentationDialog } from "@/components/documentation-dialog";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { UserMenu } from "@/components/user-menu";
@@ -47,10 +47,16 @@ function AppLayout() {
   return (
     <SettingsProvider>
       <div className="min-h-svh overflow-x-clip bg-muted/30">
+        <a
+          href="#main-content"
+          className="sr-only fixed top-2 left-2 z-[100] rounded-md bg-background px-3 py-2 text-sm font-medium shadow-lg ring-2 ring-ring focus:not-sr-only"
+        >
+          <Trans id="a11y.skipToContent">Skip to main content</Trans>
+        </a>
         <header className="border-b bg-background">
           <div className="mx-auto flex min-h-14 w-full max-w-6xl flex-wrap items-center gap-2 px-4 py-2 lg:h-14 lg:flex-nowrap lg:gap-6 lg:px-6 lg:py-0">
             <Link to="/positions" className="flex shrink-0 items-center gap-2">
-              <LineChart className="size-5" aria-hidden="true" />
+              <BrandLogo className="size-6 shrink-0" />
               <span className="font-semibold tracking-tight">
                 <Trans id="shell.brand">Portfolio Tracker</Trans>
               </span>
@@ -76,7 +82,11 @@ function AppLayout() {
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8">
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="mx-auto w-full max-w-6xl px-4 py-6 outline-none sm:px-6 sm:py-8"
+        >
           <Outlet />
         </main>
         <footer className="mx-auto flex w-full max-w-6xl justify-end px-4 pb-4 sm:px-6">

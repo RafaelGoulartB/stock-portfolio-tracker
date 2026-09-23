@@ -1,7 +1,6 @@
 import type { NextResult } from "@portifolio-tracker/shared";
 import { parse } from "csv-parse/sync";
 import { unzipSync } from "fflate";
-import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import type {
   ParsedResultEvent,
   ResultDateAsset,
@@ -356,6 +355,9 @@ export function parseCvmCalendarText(
 }
 
 async function extractPdfText(bytes: Uint8Array): Promise<string> {
+  // PDF.js is large and this provider is used only on demand. Keeping it out
+  // of API startup materially reduces the idle footprint of local production.
+  const { getDocument } = await import("pdfjs-dist/legacy/build/pdf.mjs");
   const loadingTask = getDocument({
     data: bytes,
     useSystemFonts: true,

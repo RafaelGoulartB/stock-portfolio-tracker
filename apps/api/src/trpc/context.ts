@@ -2,7 +2,7 @@ import { getConnInfo } from "@hono/node-server/conninfo";
 import type { SessionUser } from "@portifolio-tracker/shared";
 import type { Context as HonoContext } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
-import { env, isProduction } from "../env";
+import { env, sessionCookieSecure } from "../env";
 import { resolveClientKey } from "../lib/rate-limit";
 import { findSessionUser, SESSION_COOKIE } from "../lib/session";
 
@@ -31,7 +31,7 @@ export async function createContext(c: HonoContext) {
       setCookie(c, SESSION_COOKIE, value, {
         httpOnly: true,
         sameSite: "Lax",
-        secure: isProduction,
+        secure: sessionCookieSecure,
         path: "/",
         expires: expiresAt,
       });

@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch --env-file=../../.env src/index.ts",
+    "dev": "tsx watch --env-file=../../.env.development.local src/index.ts",
+    "build": "esbuild src/index.ts --bundle --platform=node --format=esm --target=node24 --packages=external --alias:@portifolio-tracker/shared=../../packages/shared/src/index.ts --sourcemap --outfile=dist/index.js",
+    "start:local": "NODE_ENV=production API_PORT=4173 node --env-file=../../.env --enable-source-maps dist/index.js",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
@@ -15,6 +17,7 @@
     "@types/node": "^26.4.1",
     "@vitest/coverage-v8": "5.0.0",
     "drizzle-kit": "^0.31.10",
+    "esbuild": "0.28.2",
     "tsx": "^4.23.13",
     "vitest": "^5.0.0"
   },

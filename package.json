@@ -7,13 +7,16 @@
     "node": ">=24"
   },
   "scripts": {
-    "dev": "pnpm db:migrate && concurrently -n api,web -c blue,green \"pnpm --filter @portifolio-tracker/api dev\" \"pnpm --filter @portifolio-tracker/web dev\"",
+    "dev": "PORTFOLIO_ENV_FILE=.env.development.local pnpm db:migrate && concurrently -n api,web -c blue,green \"pnpm --filter @portifolio-tracker/api dev\" \"pnpm --filter @portifolio-tracker/web dev\"",
     "lint": "biome check .",
     "format": "biome check --write .",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",
     "test:coverage": "pnpm -r test:coverage",
     "build": "pnpm --filter @portifolio-tracker/web build",
+    "build:local": "pnpm build && pnpm --filter @portifolio-tracker/api build",
+    "start:local": "pnpm --filter @portifolio-tracker/api start:local",
+    "db:migrate:production-local": "PORTFOLIO_ENV_FILE=.env pnpm db:migrate",
     "db:generate": "pnpm --filter @portifolio-tracker/api db:generate",
     "db:migrate": "pnpm --filter @portifolio-tracker/api db:migrate"
   },

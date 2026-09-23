@@ -372,7 +372,10 @@ export function ContributionPlanDocumentation() {
                   manual override skips this step.
                 </Trans>
                 <Formula>
-                  N = clamp(round(C / (V × impact(V))), 1, {preview.maxAssets})
+                  <Trans id="documentation.formula.candidateCount">
+                    N = clamp(round(C / (V × impact(V))), 1, {preview.maxAssets}
+                    )
+                  </Trans>
                 </Formula>
               </Rule>
               <Rule
@@ -391,7 +394,11 @@ export function ContributionPlanDocumentation() {
                   name still sits at the table. Manual and &quot;every
                   candidate&quot; keep the ranked list intact.
                 </Trans>
-                <Formula>scored need = score × (V + C) ≥ V × impact(V)</Formula>
+                <Formula>
+                  <Trans id="documentation.formula.scoredNeed">
+                    scored need = score × (V + C) ≥ V × impact(V)
+                  </Trans>
+                </Formula>
               </Rule>
               <Rule
                 number="3"
@@ -406,7 +413,9 @@ export function ContributionPlanDocumentation() {
                   the invited scores.
                 </Trans>
                 <Formula>
-                  asset share = asset score / invited score total
+                  <Trans id="documentation.formula.assetShare">
+                    asset share = asset score / invited score total
+                  </Trans>
                 </Formula>
               </Rule>
               <Rule
@@ -548,8 +557,10 @@ export function ContributionPlanDocumentation() {
               </Trans>
             </p>
             <Formula>
-              execution USD/BRL = spot × (1 + {fxSpread} spread) × (1 + {fxIof}{" "}
-              IOF)
+              <Trans id="documentation.formula.executionRate">
+                execution USD/BRL = spot × (1 + {fxSpread} spread) × (1 +{" "}
+                {fxIof} IOF)
+              </Trans>
             </Formula>
             <p>
               <Trans id="documentation.contribution.vetPolicy">

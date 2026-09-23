@@ -4,11 +4,12 @@ import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import { credentialsSchema } from "@portifolio-tracker/shared";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
-import { LineChart, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
 import { LogoDevAttribution } from "@/components/asset-logo";
+import { BrandLogo } from "@/components/brand-logo";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { ThemeSwitcher } from "@/components/theme-switcher";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -92,7 +93,7 @@ function LoginPage() {
     <main className="flex min-h-svh items-center justify-center bg-muted/40 p-6">
       <div className="w-full max-w-sm space-y-6">
         <div className="flex items-center justify-center gap-2">
-          <LineChart className="size-6" aria-hidden="true" />
+          <BrandLogo className="size-7 shrink-0" />
           <span className="text-lg font-semibold tracking-tight">
             <Trans id="shell.brand">Portfolio Tracker</Trans>
           </span>

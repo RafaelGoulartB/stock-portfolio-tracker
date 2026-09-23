@@ -10,6 +10,7 @@
     "i18n:extract": "lingui extract",
     "i18n:compile": "lingui compile --strict",
     "test": "vitest run",
+    "test:components": "playwright test -c playwright-ct.config.ts",
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
@@ -36,10 +37,12 @@
     "zod": "^4.5.4"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
     "@babel/core": "^8.0.1",
     "@lingui/babel-plugin-lingui-macro": "^6.6.0",
     "@lingui/cli": "^6.6.0",
     "@lingui/vite-plugin": "^6.6.0",
+    "@playwright/experimental-ct-react": "1.62.1",
     "@rolldown/plugin-babel": "^0.2.3",
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/router-plugin": "^1.168.35",
@@ -47,9 +50,9 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
     "@vitejs/plugin-react": "^6.1.1",
+    "@vitest/coverage-v8": "5.0.0",
     "tailwindcss": "^4.3.3",
     "vite": "^8.2.2",
-    "@vitest/coverage-v8": "5.0.0",
     "vitest": "5.0.0"
   }
 }

@@ -1,9 +1,14 @@
 import { existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { loadEnvFile } from "node:process";
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "drizzle-kit";
 
-const envPath = fileURLToPath(new URL("../../.env", import.meta.url));
+const repositoryRoot = fileURLToPath(new URL("../..", import.meta.url));
+const envPath = resolve(
+  repositoryRoot,
+  process.env.PORTFOLIO_ENV_FILE ?? ".env",
+);
 
 if (existsSync(envPath)) {
   loadEnvFile(envPath);

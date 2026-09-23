@@ -316,9 +316,15 @@ function PositionDocumentation() {
             quantity.
           </Trans>
         </p>
-        <Formula>buy cost = quantity × price + fees</Formula>
         <Formula>
-          average price = remaining cost basis / remaining quantity
+          <Trans id="documentation.formula.buyCost">
+            buy cost = quantity × price + fees
+          </Trans>
+        </Formula>
+        <Formula>
+          <Trans id="documentation.formula.averagePrice">
+            average price = remaining cost basis / remaining quantity
+          </Trans>
         </Formula>
       </Topic>
 
@@ -336,9 +342,15 @@ function PositionDocumentation() {
             the units that remain.
           </Trans>
         </p>
-        <Formula>released cost = sold quantity × current average price</Formula>
         <Formula>
-          realized P&amp;L = quantity × sale price - fees - released cost
+          <Trans id="documentation.formula.releasedCost">
+            released cost = sold quantity × current average price
+          </Trans>
+        </Formula>
+        <Formula>
+          <Trans id="documentation.formula.realizedPnl">
+            realized P&amp;L = quantity × sale price - fees - released cost
+          </Trans>
         </Formula>
         <p>
           <Trans id="documentation.positions.zeroQuantity">
@@ -414,11 +426,15 @@ function PerformanceDocumentation() {
           </Trans>
         </p>
         <Formula>
-          flow weight = days remaining in period / days in period
+          <Trans id="documentation.formula.flowWeight">
+            flow weight = days remaining in period / days in period
+          </Trans>
         </Formula>
         <Formula>
-          monthly return = (end value - start value - net flows) / (start value
-          + weighted flows)
+          <Trans id="documentation.formula.monthlyReturn">
+            monthly return = (end value - start value - net flows) / (start
+            value + weighted flows)
+          </Trans>
         </Formula>
       </Topic>
 
@@ -546,7 +562,9 @@ function ComparisonDocumentation() {
           </Trans>
         </p>
         <Formula>
-          daily change = today (fx today) - previous close (fx yesterday)
+          <Trans id="documentation.formula.dailyChange">
+            daily change = today (fx today) - previous close (fx yesterday)
+          </Trans>
         </Formula>
         <p>
           <Trans id="documentation.comparisons.dailyPercent">
@@ -558,7 +576,11 @@ function ComparisonDocumentation() {
         </p>
       </Topic>
 
-      <Topic title="Deep Finder">
+      <Topic
+        title={
+          <Trans id="documentation.comparisons.deepFinder">Deep Finder</Trans>
+        }
+      >
         <Definition
           term={
             <Trans id="documentation.comparisons.costView">Cost view</Trans>
@@ -584,7 +606,9 @@ function ComparisonDocumentation() {
           </Trans>
         </Definition>
         <Formula>
-          period change = current quantity × (current price - baseline price)
+          <Trans id="documentation.formula.periodChange">
+            period change = current quantity × (current price - baseline price)
+          </Trans>
         </Formula>
         <p>
           <Trans id="documentation.comparisons.baselineDescription">
@@ -611,7 +635,9 @@ function ComparisonDocumentation() {
           </Trans>
         </p>
         <Formula>
-          estimated gross income = eligible quantity × amount per share
+          <Trans id="documentation.formula.estimatedIncome">
+            estimated gross income = eligible quantity × amount per share
+          </Trans>
         </Formula>
         <p>
           <Trans id="documentation.comparisons.dividendStatus">

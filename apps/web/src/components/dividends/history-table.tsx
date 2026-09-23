@@ -59,7 +59,9 @@ export function HistoryTable({ data }: { data: DividendData }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Ticker</TableHead>
+              <TableHead>
+                <Trans id="dividends.ticker">Ticker</Trans>
+              </TableHead>
               <TableHead>
                 <Trans id="dividends.exDate">Ex-date</Trans>
               </TableHead>

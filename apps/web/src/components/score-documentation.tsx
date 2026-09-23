@@ -289,7 +289,11 @@ export function ScoreDocumentation() {
                   Fair value; negative when it is above it. A missing Fair value
                   or price is treated as a zero discount by the score.
                 </Trans>
-                <Formula>(fair value - market price) / fair value</Formula>
+                <Formula>
+                  <Trans id="documentation.formula.fairValueDiscount">
+                    (fair value - market price) / fair value
+                  </Trans>
+                </Formula>
               </PipelineStep>
               <PipelineStep
                 step="2"
@@ -303,7 +307,11 @@ export function ScoreDocumentation() {
                   A discount raises the target used for this decision; a premium
                   lowers it.
                 </Trans>
-                <Formula>target weight × (1 + discount)</Formula>
+                <Formula>
+                  <Trans id="documentation.formula.adjustedTarget">
+                    target weight × (1 + discount)
+                  </Trans>
+                </Formula>
               </PipelineStep>
               <PipelineStep
                 step="3"
@@ -313,7 +321,11 @@ export function ScoreDocumentation() {
                   The distance between the adjusted target and the asset&apos;s
                   current portfolio weight.
                 </Trans>
-                <Formula>adjusted target - current weight</Formula>
+                <Formula>
+                  <Trans id="documentation.formula.rawGap">
+                    adjusted target - current weight
+                  </Trans>
+                </Formula>
               </PipelineStep>
             </ol>
             <p className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -716,7 +728,11 @@ export function ScoreDocumentation() {
                 <Trans id="documentation.score.normalCandidateDescription">
                   Clamp a negative gap to zero, then apply the grade multiplier.
                 </Trans>
-                <Formula>max(raw gap, 0) × grade multiplier</Formula>
+                <Formula>
+                  <Trans id="documentation.formula.weightedGap">
+                    max(raw gap, 0) × grade multiplier
+                  </Trans>
+                </Formula>
               </Rule>
             </ol>
           </Topic>

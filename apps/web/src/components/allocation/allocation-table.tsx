@@ -22,7 +22,6 @@ import {
   Timer,
   TriangleAlert,
 } from "lucide-react";
-import { useState } from "react";
 import { AssetLogo } from "@/components/asset-logo";
 import { ExternalAssetLinksMenu } from "@/components/external-asset-links-menu";
 import { Badge } from "@/components/ui/badge";
@@ -56,16 +55,11 @@ import {
   type AllocationSort,
   columnLabels,
 } from "./table/columns";
-import {
-  FOCUS_QUARTER_COL,
-  FOCUS_QUARTERS_KEY,
-  initialFocusQuarters,
-  MARK_ROW,
-  MARK_STICKY,
-} from "./table/marks";
+import { FOCUS_QUARTER_COL, MARK_ROW, MARK_STICKY } from "./table/marks";
 import { RowMenu } from "./table/row-menu";
 import { ScoreCell } from "./table/score-cell";
 import { resultDateTitle, scoreReason } from "./table/score-reason";
+import { useAllocationTableState } from "./table/use-allocation-table-state";
 
 export {
   ALLOCATION_COLUMNS,
@@ -141,62 +135,33 @@ export function AllocationTable({
   const { i18n } = useLingui();
   const labels = columnLabels(i18n);
   const visible = ALLOCATION_COLUMNS.filter((id) => visibleColumns.has(id));
-  const [dragging, setDragging] = useState<string | null>(null);
-  const [dropTarget, setDropTarget] = useState<string | null>(null);
-  const [focusQuarters, setFocusQuarters] =
-    useState<Set<string>>(initialFocusQuarters);
+  const {
+    announcement,
+    dragging,
+    dropTarget,
+    focusQuarters,
+    finishDragging,
+    move,
+    moveBy,
+    setDragging,
+    setDropTarget,
+    toggleFocusQuarter,
+  } = useAllocationTableState(rows, onReorder);
   const highestScore = rows.reduce(
     (highest, row) => Math.max(highest, Number(row.score.value)),
     0,
   );
 
-  /** Moves `ticker` to the slot currently held by `target`. */
-  function move(ticker: string, target: string) {
-    const order = rows.map((row) => row.ticker);
-    const from = order.indexOf(ticker);
-    const to = order.indexOf(target);
-
-    if (from < 0 || to < 0 || from === to) {
-      return;
-    }
-
-    order.splice(from, 1);
-    order.splice(to, 0, ticker);
-    onReorder(order);
-  }
-
-  function moveBy(ticker: string, offset: number) {
-    const order = rows.map((row) => row.ticker);
-    const from = order.indexOf(ticker);
-    const target = order[from + offset];
-
-    if (target !== undefined) {
-      move(ticker, target);
-    }
-  }
-
-  function toggleFocusQuarter(key: string) {
-    setFocusQuarters((current) => {
-      const next = new Set(current);
-
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-
-      try {
-        localStorage.setItem(FOCUS_QUARTERS_KEY, JSON.stringify([...next]));
-      } catch {
-        // The mark still applies for this session.
-      }
-
-      return next;
-    });
-  }
-
   return (
     <Card className="gap-0 overflow-hidden rounded-md py-0 shadow-none">
+      <p
+        className="sr-only"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {announcement}
+      </p>
       <CardContent className="overflow-x-auto p-0">
         <Table className="text-sm">
           <TableHeader className="bg-muted/50">
@@ -334,13 +299,12 @@ export function AllocationTable({
                     freeOrder && row.ticker !== CASH_TICKER
                       ? (event) => {
                           event.preventDefault();
-                          setDropTarget(null);
 
                           if (dragging && dragging !== row.ticker) {
                             move(dragging, row.ticker);
                           }
 
-                          setDragging(null);
+                          finishDragging();
                         }
                       : undefined
                   }
@@ -351,10 +315,7 @@ export function AllocationTable({
                         type="button"
                         draggable
                         onDragStart={() => setDragging(row.ticker)}
-                        onDragEnd={() => {
-                          setDragging(null);
-                          setDropTarget(null);
-                        }}
+                        onDragEnd={finishDragging}
                         onKeyDown={(event) => {
                           if (event.key === "ArrowUp") {
                             event.preventDefault();

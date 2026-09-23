@@ -21,6 +21,14 @@ const envSchema = z.object({
     .enum(["true", "false"])
     .default("false")
     .transform((value) => value === "true"),
+  /**
+   * Production defaults to Secure cookies. A loopback-only HTTP deployment
+   * may explicitly disable this because it cannot terminate TLS itself.
+   */
+  SESSION_COOKIE_SECURE: z
+    .enum(["true", "false"])
+    .transform((value) => value === "true")
+    .optional(),
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
@@ -29,3 +37,15 @@ const envSchema = z.object({
 export const env = envSchema.parse(process.env);
 
 export const isProduction = env.NODE_ENV === "production";
+
+export function resolveSessionCookieSecure(
+  nodeEnv: "development" | "test" | "production",
+  configured: boolean | undefined,
+): boolean {
+  return configured ?? nodeEnv === "production";
+}
+
+export const sessionCookieSecure = resolveSessionCookieSecure(
+  env.NODE_ENV,
+  env.SESSION_COOKIE_SECURE,
+);
