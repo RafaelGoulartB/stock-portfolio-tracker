@@ -10,6 +10,7 @@ import { scoreReason } from "@/components/allocation/allocation-table";
 import { AssetDetailChart } from "@/components/allocation/asset-detail-chart";
 import { AssetMovements } from "@/components/allocation/asset-movements";
 import { AssetReviews } from "@/components/allocation/asset-reviews";
+import { AssetSplits } from "@/components/allocation/asset-splits";
 import { AssetClassLabel, CurrencyBadge } from "@/components/asset-labels";
 import { AssetLogo } from "@/components/asset-logo";
 import { ExternalAssetLinksMenu } from "@/components/external-asset-links-menu";
@@ -413,6 +414,9 @@ export function AssetDetailPage() {
           ) : null}
           {ledger.data ? (
             <AssetMovements row={row} ledger={ledger.data} />
+          ) : null}
+          {ledger.data && ledger.data.trades.length > 0 ? (
+            <AssetSplits ticker={ticker} />
           ) : null}
         </>
       ) : null}
