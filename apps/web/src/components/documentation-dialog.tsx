@@ -359,6 +359,16 @@ function PositionDocumentation() {
             minus its remaining cost basis.
           </Trans>
         </p>
+        <p>
+          <Trans id="documentation.positions.splits">
+            A recorded split or reverse split restates every earlier trade in
+            today&apos;s share units, the same units the quote provider uses for
+            historical prices and dividends. The money of each trade never
+            changes, so the cost basis stays what you paid and the average price
+            follows the new units. The asset page suggests splits Yahoo
+            published, but nothing is applied until you record it.
+          </Trans>
+        </p>
       </Topic>
 
       <Topic
@@ -369,12 +379,22 @@ function PositionDocumentation() {
         }
       >
         <p>
-          <Trans id="documentation.positions.currencyDescription">
-            Native amounts remain in the asset&apos;s currency. The portfolio
-            then converts them to the selected BRL or USD display currency using
-            the current spot rate. Consequently, converted realized P&amp;L on
-            live position screens is an approximation at today&apos;s
-            consolidation rate, not historical-FX tax accounting.
+          <Trans id="documentation.positions.currencyTradeFx">
+            Native amounts remain in the asset&apos;s currency. Market value
+            converts to the selected BRL or USD display currency at the current
+            spot rate, while cost basis and realized P&amp;L use the USD/BRL of
+            each trade date (the BCB PTAX sell rate unless you typed another
+            rate). The moving average is kept in both currencies, so a sale
+            releases the same fraction of each.
+          </Trans>
+        </p>
+        <p>
+          <Trans id="documentation.positions.fxResult">
+            The open result in the display currency therefore includes the FX
+            move since each purchase. FX result isolates that part: cost at
+            today&apos;s rate minus cost at the trade-date rates. Trades still
+            without a trade-date rate convert at today&apos;s rate until you
+            fill them from Transactions.
           </Trans>
         </p>
         <p>
@@ -486,12 +506,22 @@ function PerformanceDocumentation() {
         }
       >
         <p>
-          <Trans id="documentation.performance.historyDescription">
+          <Trans id="documentation.performance.historyTradeFx">
             Month ends use the last available market close on or before the
-            snapshot day. Positions are converted with the USD/BRL rate of that
-            snapshot, and transaction flows use the rate of their own trade day.
-            A manual FX rate has no history, so the same manual rate is applied
-            to every month.
+            snapshot day. Market values are converted with the USD/BRL rate of
+            that snapshot; cost basis and transaction flows use the rate of
+            their own trade day. A manual FX rate has no history, so the same
+            manual rate is applied to every month.
+          </Trans>
+        </p>
+        <p>
+          <Trans id="documentation.performance.liveBalancesDescription">
+            Today&apos;s portfolio value, cost basis and open-result percent
+            include the current cash balance, matching the Positions screen.
+            Fixed-income balances count in today&apos;s value only, never in a
+            calculated return. Monthly values, flows, returns and drawdown
+            exclude both, because only their current balance is stored and past
+            month ends cannot be valued.
           </Trans>
         </p>
         <p>

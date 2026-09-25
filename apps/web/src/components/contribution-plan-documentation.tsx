@@ -461,7 +461,10 @@ export function ContributionPlanDocumentation() {
                   Each money slice is rounded independently to cents. Any
                   rounding difference is disclosed as an unallocated remainder.
                   Units are the slice divided by the asset&apos;s execution
-                  price.
+                  price. B3 shares, FIIs, ETFs and BDRs held in BRL are bought
+                  in whole units: each slice is floored to whole shares, the
+                  freed money buys another share where the slice still has room,
+                  and the rest is disclosed as unallocated.
                 </Trans>
               </Rule>
             </ol>

@@ -15,6 +15,14 @@ export function scoreReason(row: AllocationRow, i18n: I18n): string {
           message: "No target weight set, so there is no gap to close.",
         }),
       );
+    case "no-quote":
+      return i18n._(
+        t({
+          id: "allocation.reasonNoQuote",
+          message:
+            "No live or manual price, so its weight is unknown. Set a manual value to score it.",
+        }),
+      );
     case "trim-overweight":
       return i18n._(
         t({

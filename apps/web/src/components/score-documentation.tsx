@@ -636,6 +636,21 @@ export function ScoreDocumentation() {
               <Rule
                 number="2"
                 title={
+                  <Trans id="documentation.score.noQuoteTitle">
+                    Blocked without a price
+                  </Trans>
+                }
+              >
+                <Trans id="documentation.score.noQuoteDescription">
+                  A held asset that no live or manual price can value has an
+                  unknown weight, not a zero one. It is blocked instead of
+                  looking like the largest gap in the portfolio; set a manual
+                  value to score it again.
+                </Trans>
+              </Rule>
+              <Rule
+                number="3"
+                title={
                   <Trans id="documentation.score.trimTitle">
                     Trim an expensive overweight position
                   </Trans>
@@ -656,7 +671,7 @@ export function ScoreDocumentation() {
                 </Trans>
               </Rule>
               <Rule
-                number="3"
+                number="4"
                 title={
                   <Trans id="documentation.score.absoluteCap">
                     Absolute weight cap
@@ -671,7 +686,7 @@ export function ScoreDocumentation() {
                 </Trans>
               </Rule>
               <Rule
-                number="4"
+                number="5"
                 title={
                   <Trans id="documentation.score.targetCap">
                     Target-relative cap
@@ -691,7 +706,7 @@ export function ScoreDocumentation() {
                 </Trans>
               </Rule>
               <Rule
-                number="5"
+                number="6"
                 title={
                   <Trans id="documentation.score.cooldown">
                     Contribution cooldown
@@ -711,7 +726,7 @@ export function ScoreDocumentation() {
                 </Trans>
               </Rule>
               <Rule
-                number="6"
+                number="7"
                 title={
                   <Trans id="documentation.score.normalCandidate">
                     Normal candidate

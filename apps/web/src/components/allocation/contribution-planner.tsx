@@ -6,6 +6,7 @@ import {
   DEFAULT_CONTRIBUTION_PLAN_CONFIG,
   FX_EXECUTION_IOF,
   FX_EXECUTION_SPREAD,
+  tradesInWholeUnits,
 } from "@portifolio-tracker/shared";
 import { Calculator, Info } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -156,6 +157,7 @@ export function ContributionPlannerButton({
           score: row.score.value,
           executionPrice: row.executionPrice,
           executionFxApplied: row.executionFxApplied,
+          wholeUnits: tradesInWholeUnits(row.assetClass, row.currency),
         })),
         amount,
         portfolioValue,
@@ -190,6 +192,7 @@ export function ContributionPlannerButton({
   const remainderValue = Math.abs(Number(plan.remainder));
   const needRemainder =
     remainderValue >= 0.01 && plan.slices.some((slice) => slice.cappedByNeed);
+  const unitRemainder = Number(plan.unitRoundingRemainder) >= 0.01;
 
   return (
     <Dialog
@@ -291,6 +294,11 @@ export function ContributionPlannerButton({
                 <Trans id="allocation.plannerNoCandidates">
                   No asset is taking contributions right now. Set a target,
                   review a fair value, or wait for a cooldown to expire.
+                </Trans>
+              ) : unitRemainder ? (
+                <Trans id="allocation.plannerBelowOneShare">
+                  This amount cannot buy one whole share of the top candidates.
+                  B3 shares, FIIs, ETFs and BDRs are bought in whole units.
                 </Trans>
               ) : (
                 <Trans id="allocation.plannerAwaitingAmount">
@@ -406,6 +414,11 @@ export function ContributionPlannerButton({
                   Scored need is smaller than this contribution.{" "}
                   {formatMoney(plan.remainder, displayCurrency)} stays
                   unallocated.
+                </Trans>
+              ) : unitRemainder ? (
+                <Trans id="allocation.plannerUnitRemainder">
+                  Buying whole shares on B3 leaves{" "}
+                  {formatMoney(plan.remainder, displayCurrency)} unallocated.
                 </Trans>
               ) : (
                 <Trans id="allocation.plannerRemainder">
