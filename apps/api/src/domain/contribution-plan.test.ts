@@ -22,6 +22,7 @@ function row(
     score,
     executionPrice: "10.00",
     executionFxApplied: false,
+    wholeUnits: false,
     ...overrides,
   };
 }
@@ -339,6 +340,73 @@ describe("planContribution", () => {
 
     expect(result.slices[0]?.units).toBe("5.0000");
     expect(result.slices[0]?.executionFxApplied).toBe(true);
+  });
+
+  it("floors whole-unit slices and reports the money a share cannot use", () => {
+    const result = planContribution({
+      rows: [
+        row("BBSE3", "0.02", { executionPrice: "40.00", wholeUnits: true }),
+      ],
+      amount: "1000",
+      portfolioValue: MILLION,
+    });
+
+    expect(result.slices[0]).toMatchObject({
+      amount: "1000.00",
+      units: "25.0000",
+    });
+
+    const uneven = planContribution({
+      rows: [
+        row("BBSE3", "0.02", { executionPrice: "30.00", wholeUnits: true }),
+      ],
+      amount: "1000",
+      portfolioValue: MILLION,
+    });
+
+    expect(uneven.slices[0]).toMatchObject({
+      amount: "990.00",
+      units: "33.0000",
+    });
+    expect(uneven.remainder).toBe("10.00");
+    expect(uneven.unitRoundingRemainder).toBe("10.00");
+  });
+
+  it("spends whole-unit leftovers on another share where the cap has room", () => {
+    const result = planContribution({
+      rows: [
+        row("TOTS3", "0.02", { executionPrice: "30.00", wholeUnits: true }),
+        row("AAPL", "0.02", {
+          currency: "USD",
+          executionPrice: "1000.00",
+        }),
+      ],
+      amount: "1000",
+      portfolioValue: MILLION,
+      spread: 2,
+    });
+    const tots = result.slices.find((slice) => slice.ticker === "TOTS3");
+    const apple = result.slices.find((slice) => slice.ticker === "AAPL");
+
+    // 500 buys 16 shares (480); the freed 20 cannot buy a 17th.
+    expect(tots).toMatchObject({ amount: "480.00", units: "16.0000" });
+    expect(apple).toMatchObject({ amount: "500.00", units: "0.5000" });
+    expect(result.unitRoundingRemainder).toBe("20.00");
+    expect(result.remainder).toBe("20.00");
+  });
+
+  it("drops a whole-unit slice that cannot afford one share", () => {
+    const result = planContribution({
+      rows: [
+        row("TOTS3", "0.02", { executionPrice: "300.00", wholeUnits: true }),
+      ],
+      amount: "100",
+      portfolioValue: MILLION,
+    });
+
+    expect(result.slices).toHaveLength(0);
+    expect(result.remainder).toBe("100.00");
+    expect(result.unitRoundingRemainder).toBe("100.00");
   });
 
   it("reads custom knobs instead of hard-wired thresholds", () => {

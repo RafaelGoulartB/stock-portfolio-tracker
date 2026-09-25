@@ -31,6 +31,8 @@ export type ContributionPlanRow = {
   score: string;
   executionPrice: string | null;
   executionFxApplied: boolean;
+  /** True when the market only trades whole units (B3 shares, FIIs, BDRs). */
+  wholeUnits: boolean;
 };
 
 export type ContributionSlice = {
@@ -57,6 +59,8 @@ export type ContributionPlanResult = {
   allocated: string;
   /** `amount - allocated`, cents. Includes need-ceiling leftover. */
   remainder: string;
+  /** Part of {@link remainder} left because slices buy whole units only. */
+  unitRoundingRemainder: string;
   /** How the candidate count was chosen. */
   spreadMode: ContributionSpreadMode;
   /** Count the formula or override aimed for, before the need filter. */
@@ -122,6 +126,7 @@ function emptyResult(
     slices: [],
     allocated: formatDecimal(ZERO, MONEY_PLACES),
     remainder: formatDecimal(ZERO, MONEY_PLACES),
+    unitRoundingRemainder: formatDecimal(ZERO, MONEY_PLACES),
     spreadMode,
     targetCount,
     selectedCount: 0,
@@ -383,6 +388,50 @@ function waterfallRemainder(
   return remaining;
 }
 
+function wholeUnitPrice(row: ContributionPlanRow): Decimal | null {
+  if (!row.wholeUnits || row.executionPrice === null) return null;
+  const price = toDecimal(row.executionPrice);
+
+  return price > ZERO ? price : null;
+}
+
+/**
+ * Whole-unit markets cannot buy a fraction of a share: each such slice is
+ * floored to whole units, then the freed money buys one more unit at a
+ * time, best-ranked first, only where the slice's cap still has room. The
+ * money that cannot buy another unit is returned, never spread elsewhere.
+ */
+function roundToWholeUnits(items: PlanItem[]): Decimal {
+  let freed = ZERO;
+
+  for (const item of items) {
+    const price = wholeUnitPrice(item.row);
+    if (price === null) continue;
+
+    const rounded = wholeCount(div(item.allocated, price)) * price;
+    freed = add(freed, sub(item.allocated, rounded));
+    item.allocated = rounded;
+  }
+
+  let bought = true;
+
+  while (bought) {
+    bought = false;
+
+    for (const item of items) {
+      const price = wholeUnitPrice(item.row);
+      if (price === null || price > freed) continue;
+      if (add(item.allocated, price) > item.hardCap) continue;
+
+      item.allocated = add(item.allocated, price);
+      freed = sub(freed, price);
+      bought = true;
+    }
+  }
+
+  return freed;
+}
+
 /**
  * Splits a contribution across the names the score has already ranked.
  *
@@ -461,6 +510,7 @@ export function planContribution(
     maxShareAmount,
     config.maxAssets,
   );
+  const unitRoundingRemainder = roundToWholeUnits(items);
 
   let allocated = ZERO;
   const slices: ContributionSlice[] = items
@@ -494,6 +544,7 @@ export function planContribution(
     slices,
     allocated: formatDecimal(allocated, MONEY_PLACES),
     remainder: formatDecimal(sub(amount, allocated), MONEY_PLACES),
+    unitRoundingRemainder: formatDecimal(unitRoundingRemainder, MONEY_PLACES),
     spreadMode: mode,
     targetCount,
     selectedCount: slices.length,

@@ -32,12 +32,15 @@ function position(overrides: Partial<ValuedPosition> = {}): ValuedPosition {
     convertedAveragePrice: "50.00",
     convertedInvestedCost: "2500.00",
     convertedRealizedPnl: "0.00",
+    tradesMissingFx: 0,
     marketPrice: "76.45",
     marketValue: "3822.50",
     convertedMarketValue: "3000.00",
     unrealizedPnl: "100.00",
     convertedUnrealizedPnl: "500.00",
+    convertedFxPnl: null,
     unrealizedPnlPercent: "0.200000",
+    convertedUnrealizedPnlPercent: "0.200000",
     weight: "0.01460000",
     quoteAsOf: "2026-09-04",
     quoteMissing: false,
@@ -372,6 +375,12 @@ describe("buildAllocationRows", () => {
     expect(row?.valueSource).toBe("none");
     expect(row?.fairValue).toBe("100");
     expect(row?.discount).toBeNull();
+    // The placeholder 0% weight must not rank as the largest gap.
+    expect(row?.score).toMatchObject({
+      value: "0.00000000",
+      ruleId: "no-quote",
+      blocked: true,
+    });
   });
 
   it("prices USD contribution units at the VET rate", () => {

@@ -428,6 +428,7 @@ export function buildAllocationRows(input: AllocationInput): AllocationRow[] {
         {
           targetWeight,
           currentWeight,
+          quoteMissing: position?.quoteMissing ?? false,
           discount,
           averageGrade: grades.average,
           lastContributionAt,

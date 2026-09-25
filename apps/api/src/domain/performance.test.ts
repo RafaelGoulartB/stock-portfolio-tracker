@@ -2,8 +2,10 @@ import { describe, expect, it } from "vitest";
 import {
   buildPerformanceHistory,
   createSeriesLookup,
+  liveFixedIncome,
   type PerformanceBuildInput,
   performanceSnapshots,
+  withLiveBalances,
 } from "./performance";
 import { type ConsolidationInput, tradeCashTotal } from "./positions";
 
@@ -185,11 +187,10 @@ describe("buildPerformanceHistory", () => {
       [
         tx({ side: "buy", quantity: "100", price: "10" }),
         tx({
-          ticker: "CDB",
-          assetClass: "fixed_income",
+          ticker: "DELISTED3",
           side: "buy",
-          quantity: "1",
-          price: "500",
+          quantity: "50",
+          price: "10",
         }),
       ],
       prices,
@@ -202,7 +203,7 @@ describe("buildPerformanceHistory", () => {
     expect(february.unquotedPositions).toBe(1);
     expect(history.summary.unquotedPositions).toBe(1);
     expect(
-      history.byAsset.find((asset) => asset.ticker === "CDB"),
+      history.byAsset.find((asset) => asset.ticker === "DELISTED3"),
     ).toMatchObject({ quoteMissing: true, unrealizedPnl: "0.00" });
   });
 
@@ -444,5 +445,147 @@ describe("month flows", () => {
     expect(
       buildPerformanceHistory({ ...options, transactions: shuffled }),
     ).toEqual(buildPerformanceHistory({ ...options, transactions }));
+  });
+});
+
+describe("withLiveBalances", () => {
+  const holding = [tx({ side: "buy", quantity: "100", price: "10" })];
+  const prices = {
+    ACME: {
+      "2026-01-31": "10",
+      "2026-02-28": "11",
+      "2026-03-31": "12",
+    },
+  };
+
+  it("adds cash to today's totals and keeps the series cash-free", () => {
+    const plain = build(holding, prices);
+    const history = withLiveBalances(plain, {
+      cash: "1000.00",
+      fixedIncome: "0",
+      fixedIncomePositions: 0,
+    });
+
+    expect(history.summary).toMatchObject({
+      currentValue: "2200.00",
+      investedCost: "2000.00",
+      unrealizedPnl: "200.00",
+      // 200 over 1000 of stock cost plus 1000 of cash.
+      unrealizedPnlPercent: "0.100000",
+      cashValue: "1000.00",
+      cumulativeReturn: plain.summary.cumulativeReturn,
+    });
+    expect(history.months).toEqual(plain.months);
+    expect(
+      history.byAssetClass.map((entry) => [entry.assetClass, entry.weight]),
+    ).toEqual([
+      ["stock_br", "0.545455"],
+      ["cash", "0.454545"],
+    ]);
+    expect(history.byAsset[0]?.contribution).toBe("0.100000");
+  });
+
+  it("leaves the history untouched without live balances", () => {
+    const plain = build(holding, prices);
+
+    expect(
+      withLiveBalances(plain, {
+        cash: "0",
+        fixedIncome: "0",
+        fixedIncomePositions: 0,
+      }),
+    ).toBe(plain);
+  });
+});
+
+describe("trade-date FX in performance", () => {
+  it("values cost basis at the purchase rate, not the month-end rate", () => {
+    const history = build(
+      [
+        tx({
+          ticker: "COST",
+          assetClass: "stock_us",
+          currency: "USD",
+          side: "buy",
+          quantity: "10",
+          price: "100",
+          usdBrlRate: "4",
+        }),
+      ],
+      {
+        COST: { "2026-01-31": "100", "2026-02-28": "100", "2026-03-31": "100" },
+      },
+    );
+
+    // Price flat in USD; BRL value 1000 × 5 against cost 1000 × 4.
+    expect(history.summary).toMatchObject({
+      currentValue: "5000.00",
+      investedCost: "4000.00",
+      unrealizedPnl: "1000.00",
+    });
+  });
+});
+
+describe("fixed income in performance", () => {
+  const stock = tx({ side: "buy", quantity: "100", price: "10" });
+  const deposit = tx({
+    ticker: "TESOURO SELIC 2031",
+    assetClass: "fixed_income",
+    side: "buy",
+    quantity: "1",
+    price: "5000",
+    tradedAt: "2026-02-10",
+  });
+  const prices = {
+    ACME: { "2026-01-31": "10", "2026-02-28": "10", "2026-03-31": "10" },
+    // A manual balance series is flat at today's value; it must be ignored.
+    "TESOURO SELIC 2031": {
+      "2026-01-31": "5400",
+      "2026-02-28": "5400",
+      "2026-03-31": "5400",
+    },
+  };
+
+  it("keeps a fixed-income deposit out of monthly values and flows", () => {
+    const history = build([stock, deposit], prices);
+
+    expect(history.months.map((month) => month.marketValue)).toEqual([
+      "1000.00",
+      "1000.00",
+    ]);
+    expect(history.months.map((month) => month.netFlow)).toEqual([
+      "0.00",
+      "0.00",
+    ]);
+    expect(history.months.map((month) => month.monthlyReturn)).toEqual([
+      "0.000000",
+      "0.000000",
+    ]);
+  });
+
+  it("adds today's balance to the value but never to the return base", () => {
+    const plain = build([stock, deposit], prices);
+    const live = liveFixedIncome(
+      [stock, deposit],
+      { "TESOURO SELIC 2031": "5400" },
+      "BRL",
+      null,
+    );
+    const history = withLiveBalances(plain, {
+      cash: "0",
+      fixedIncome: live.value,
+      fixedIncomePositions: live.positions,
+    });
+
+    expect(live).toEqual({ value: "5400.00", positions: 1 });
+    expect(history.summary).toMatchObject({
+      currentValue: "6400.00",
+      investedCost: "1000.00",
+      unrealizedPnl: "0.00",
+      fixedIncomeValue: "5400.00",
+    });
+    expect(
+      history.byAssetClass.find((entry) => entry.assetClass === "fixed_income"),
+    ).toMatchObject({ marketValue: "5400.00", unrealizedPnlPercent: null });
   });
 });

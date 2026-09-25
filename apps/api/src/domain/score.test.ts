@@ -210,3 +210,23 @@ describe("averageGrade", () => {
     expect(averageGrade([])).toEqual({ average: null, quarters: 0 });
   });
 });
+
+describe("no-quote", () => {
+  it("blocks a held asset whose weight could not be measured", () => {
+    const result = scoreAsset(
+      input({ currentWeight: "0", targetWeight: "0.05", quoteMissing: true }),
+    );
+
+    expect(result).toMatchObject({
+      value: "0.00000000",
+      ruleId: "no-quote",
+      blocked: true,
+    });
+  });
+
+  it("still reports a missing target first", () => {
+    expect(
+      scoreAsset(input({ targetWeight: null, quoteMissing: true })).ruleId,
+    ).toBe("no-target");
+  });
+});

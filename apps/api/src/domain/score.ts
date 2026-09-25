@@ -52,6 +52,11 @@ export type ScoreInput = {
   /** Current share of the portfolio, `0`–`1`. */
   currentWeight: string;
   /**
+   * True for a held position that no live or manual price could value. Its
+   * `currentWeight` is then a placeholder `0`, not a measured weight.
+   */
+  quoteMissing?: boolean;
+  /**
    * Signed discount of market price to fair value, usually derived from the
    * user's fair value and the live quote. `null` behaves as `0`.
    */
@@ -68,6 +73,7 @@ export type ScoreInput = {
 export type ScoreContext = {
   target: Decimal | null;
   weight: Decimal;
+  quoteMissing: boolean;
   discount: Decimal;
   /** `target * (1 + discount)`: the target a discount makes more attractive. */
   adjustedTarget: Decimal | null;
@@ -140,6 +146,14 @@ export const SCORE_RULES: readonly ScoreRule[] = [
     score: () => ZERO,
   },
   {
+    // An unvalued holding reads as a 0% weight, which would look like the
+    // biggest gap in the book. Missing data must never rank for capital.
+    id: "no-quote",
+    blocking: true,
+    matches: (context) => context.quoteMissing,
+    score: () => ZERO,
+  },
+  {
     // Expensive and already well past target: suggest giving weight back.
     id: "trim-overweight",
     matches: (context, config) =>
@@ -207,6 +221,7 @@ export function scoreContext(
   return {
     target,
     weight,
+    quoteMissing: input.quoteMissing === true,
     discount,
     adjustedTarget,
     gap: adjustedTarget === null ? null : sub(adjustedTarget, weight),

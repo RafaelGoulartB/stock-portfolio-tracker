@@ -30,8 +30,13 @@ export type DailyTrackingSummary = {
   marketValue: string;
   previousComparableValue: string;
   currentComparableValue: string;
-  dailyChange: string;
+  /**
+   * `null` when open assets exist but none has a previous close: a flat
+   * cash balance alone must not read as a portfolio that did not move.
+   */
+  dailyChange: string | null;
   dailyChangePercent: string | null;
+  /** Breadth and coverage count quoted assets only; cash is excluded. */
   advancing: number;
   declining: number;
   unchanged: number;
@@ -192,14 +197,6 @@ export function buildDailyTracking(input: DailyTrackingInput): DailyTracking {
         toDecimal(position.convertedMarketValue),
       );
 
-      if (change > ZERO) {
-        advancing += 1;
-      } else if (change < ZERO) {
-        declining += 1;
-      } else {
-        unchanged += 1;
-      }
-
       return {
         ...position,
         previousClose: position.marketPrice,
@@ -264,6 +261,11 @@ export function buildDailyTracking(input: DailyTrackingInput): DailyTracking {
   });
 
   const dailyChange = sub(currentComparableValue, previousComparableValue);
+  const comparablePositions = advancing + declining + unchanged;
+  const openAssets = open.filter((position) => !isCashPosition(position));
+  // Cash alone is comparable only when it is the whole book; next to assets
+  // without a previous close it would fake a flat day.
+  const hasComparison = comparablePositions > 0 || openAssets.length === 0;
 
   return {
     positions,
@@ -278,13 +280,17 @@ export function buildDailyTracking(input: DailyTrackingInput): DailyTracking {
         currentComparableValue,
         MONEY_PLACES,
       ),
-      dailyChange: formatDecimal(dailyChange, MONEY_PLACES),
-      dailyChangePercent: ratio(dailyChange, previousComparableValue),
+      dailyChange: hasComparison
+        ? formatDecimal(dailyChange, MONEY_PLACES)
+        : null,
+      dailyChangePercent: hasComparison
+        ? ratio(dailyChange, previousComparableValue)
+        : null,
       advancing,
       declining,
       unchanged,
-      comparablePositions: advancing + declining + unchanged,
-      openPositions: open.length,
+      comparablePositions,
+      openPositions: openAssets.length,
       usdBrlRate: input.usdBrlRate,
       previousUsdBrlRate: previousRate,
     },

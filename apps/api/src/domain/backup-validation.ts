@@ -1,7 +1,9 @@
 import type { BackupRecord } from "../lib/data-backup";
 import {
+  adjustForSplits,
   availableBeforeOversell,
   type ConsolidationInput,
+  type SplitEvent,
   tickerCurrencies,
 } from "./positions";
 
@@ -33,7 +35,8 @@ export class BackupFinancialError extends Error {
  * The rules mirror `transactionsRouter.create`:
  *   - one ticker is tracked in exactly one native currency;
  *   - a sell can never exceed the quantity held at that point in the ledger
- *     (moving-average, no oversell, no backdated coverage);
+ *     (moving-average, no oversell, no backdated coverage), counted in the
+ *     share units the backup's own splits imply;
  *   - a fixed-income "ticker" is a single manual balance, so it may not carry
  *     more than one transaction.
  *
@@ -42,6 +45,7 @@ export class BackupFinancialError extends Error {
  */
 export function assertBackupTransactionsValid(
   transactions: readonly TransactionData[],
+  splits: readonly SplitEvent[] = [],
 ): void {
   const byTicker = new Map<string, ConsolidationInput[]>();
 
@@ -82,7 +86,11 @@ export function assertBackupTransactionsValid(
       );
     }
 
-    const available = availableBeforeOversell(entries, ticker);
+    // Sales after a split are recorded in the new units.
+    const available = availableBeforeOversell(
+      adjustForSplits(entries, splits),
+      ticker,
+    );
     if (available !== null) {
       throw new BackupFinancialError(
         `Backup oversells ${ticker}: only ${available} available`,
