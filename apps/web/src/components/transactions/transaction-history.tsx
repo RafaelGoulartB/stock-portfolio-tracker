@@ -1,11 +1,12 @@
-import { t } from "@lingui/core/macro";
+import { msg, t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import type { Transaction, TransactionList } from "@portifolio-tracker/shared";
-import { Trash2, TriangleAlert } from "lucide-react";
+import { Pencil, Trash2, TriangleAlert } from "lucide-react";
 import { useState } from "react";
 import { CurrencyBadge, SideLabel } from "@/components/asset-labels";
 import { AssetLink } from "@/components/asset-link";
+import { TableSearch } from "@/components/table-toolbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -35,6 +36,7 @@ import {
 } from "@/components/ui/table";
 import { formatMoney, formatQuantity, formatTradeDate } from "@/lib/format";
 import { queryErrorMessage } from "@/lib/trpcErrors";
+import { cn } from "@/lib/utils";
 
 type TransactionHistoryProps = {
   data: TransactionList | undefined;
@@ -43,7 +45,12 @@ type TransactionHistoryProps = {
   isPending: boolean;
   page: number;
   removing: boolean;
+  /** Trade currently loaded into the form, highlighted in the table. */
+  editingId: string | undefined;
+  tickerFilter: string;
+  onTickerFilterChange: (value: string) => void;
   onPageChange: (page: number) => void;
+  onEdit: (transaction: Transaction) => void;
   onRemove: (id: string) => Promise<void>;
 };
 
@@ -55,9 +62,14 @@ export function TransactionHistory({
   isPending,
   page,
   removing,
+  editingId,
+  tickerFilter,
+  onTickerFilterChange,
   onPageChange,
+  onEdit,
   onRemove,
 }: TransactionHistoryProps) {
+  const { i18n } = useLingui();
   const [selected, setSelected] = useState<Transaction | null>(null);
 
   async function confirmRemove() {
@@ -85,7 +97,24 @@ export function TransactionHistory({
             </Trans>
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          <TableSearch
+            value={tickerFilter}
+            onChange={(event) => onTickerFilterChange(event.target.value)}
+            placeholder={i18n._(
+              msg({
+                id: "transactions.filterPlaceholder",
+                message: "Filter by ticker",
+              }),
+            )}
+            ariaLabel={i18n._(
+              msg({
+                id: "transactions.filterLabel",
+                message: "Filter trades by ticker",
+              }),
+            )}
+          />
+
           {isPending ? <Skeleton className="h-64" /> : null}
 
           {error ? (
@@ -96,7 +125,13 @@ export function TransactionHistory({
 
           {data?.total === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">
-              <Trans id="transactions.empty">Nothing registered yet.</Trans>
+              {tickerFilter.trim() ? (
+                <Trans id="transactions.emptyFiltered">
+                  No trades match this ticker.
+                </Trans>
+              ) : (
+                <Trans id="transactions.empty">Nothing registered yet.</Trans>
+              )}
             </p>
           ) : null}
 
@@ -104,7 +139,9 @@ export function TransactionHistory({
             <div className="space-y-4">
               <HistoryTable
                 transactions={data.items}
+                editingId={editingId}
                 removingId={removing ? selected?.id : undefined}
+                onEdit={onEdit}
                 onRequestRemove={setSelected}
               />
               <div className="flex items-center justify-between gap-3">
@@ -254,10 +291,14 @@ function RemoveTransactionDialog({
 
 function HistoryTable({
   transactions,
+  editingId,
+  onEdit,
   onRequestRemove,
   removingId,
 }: {
   transactions: Transaction[];
+  editingId: string | undefined;
+  onEdit: (transaction: Transaction) => void;
   onRequestRemove: (transaction: Transaction) => void;
   removingId: string | undefined;
 }) {
@@ -291,7 +332,7 @@ function HistoryTable({
           <TableHead className="text-right">
             <Trans id="transactions.colTotal">Total</Trans>
           </TableHead>
-          <TableHead className="w-[104px]" />
+          <TableHead className="w-[196px]" />
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -302,9 +343,17 @@ function HistoryTable({
             id: "transactions.remove",
             message: `Review deletion of ${ticker} trade from ${date}`,
           });
+          const editLabel = t({
+            id: "transactions.editLabel",
+            message: `Edit ${ticker} trade from ${date}`,
+          });
+          const isFixedIncome = transaction.assetClass === "fixed_income";
 
           return (
-            <TableRow key={transaction.id}>
+            <TableRow
+              key={transaction.id}
+              data-state={editingId === transaction.id ? "selected" : undefined}
+            >
               <TableCell className="whitespace-nowrap text-muted-foreground">
                 {formatTradeDate(transaction.tradedAt)}
               </TableCell>
@@ -339,9 +388,12 @@ function HistoryTable({
                   : formatQuantity(transaction.quantity)}
               </TableCell>
               <TableCell className="text-right tabular-nums">
-                {transaction.assetClass === "fixed_income"
+                {isFixedIncome
                   ? "—"
                   : formatMoney(transaction.price, transaction.currency)}
+                {transaction.currency === "USD" ? (
+                  <TradeFxLabel rate={transaction.usdBrlRate} />
+                ) : null}
               </TableCell>
               <TableCell className="text-right tabular-nums text-muted-foreground">
                 {transaction.assetClass === "fixed_income"
@@ -352,23 +404,57 @@ function HistoryTable({
                 {formatMoney(transaction.total, transaction.currency)}
               </TableCell>
               <TableCell>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  aria-label={removeLabel}
-                  title={removeLabel}
-                  disabled={removingId === transaction.id}
-                  onClick={() => onRequestRemove(transaction)}
-                >
-                  <Trash2 className="size-4" aria-hidden="true" />
-                  <Trans id="transactions.delete">Delete</Trans>
-                </Button>
+                <div className="flex justify-end gap-2">
+                  {isFixedIncome ? null : (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      aria-label={editLabel}
+                      title={editLabel}
+                      aria-pressed={editingId === transaction.id}
+                      onClick={() => onEdit(transaction)}
+                    >
+                      <Pencil className="size-4" aria-hidden="true" />
+                      <Trans id="transactions.edit">Edit</Trans>
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    aria-label={removeLabel}
+                    title={removeLabel}
+                    disabled={removingId === transaction.id}
+                    onClick={() => onRequestRemove(transaction)}
+                  >
+                    <Trash2 className="size-4" aria-hidden="true" />
+                    <Trans id="transactions.delete">Delete</Trans>
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
           );
         })}
       </TableBody>
     </Table>
+  );
+}
+
+/** The trade-date USD/BRL a USD trade's BRL cost converts at. */
+function TradeFxLabel({ rate }: { rate: string | null }) {
+  return (
+    <span
+      className={cn(
+        "block text-xs",
+        rate === null ? "text-caution" : "text-muted-foreground",
+      )}
+    >
+      {rate === null ? (
+        <Trans id="transactions.fxPending">FX pending</Trans>
+      ) : (
+        <Trans id="transactions.fxAt">USD/BRL {formatQuantity(rate)}</Trans>
+      )}
+    </span>
   );
 }
