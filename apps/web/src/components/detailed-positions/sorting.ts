@@ -42,10 +42,14 @@ function sortableValue(
       return position.convertedUnrealizedPnl == null
         ? null
         : Number(position.convertedUnrealizedPnl);
-    case "unrealizedPnlPercent":
-      return position.unrealizedPnlPercent == null
+    case "fxPnl":
+      return position.convertedFxPnl == null
         ? null
-        : Number(position.unrealizedPnlPercent);
+        : Number(position.convertedFxPnl);
+    case "unrealizedPnlPercent":
+      return position.convertedUnrealizedPnlPercent == null
+        ? null
+        : Number(position.convertedUnrealizedPnlPercent);
     case "returnContribution":
       return position.returnContribution == null
         ? null

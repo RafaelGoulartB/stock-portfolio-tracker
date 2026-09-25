@@ -1,9 +1,15 @@
-import { t } from "@lingui/core/macro";
+import { plural, t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import { positiveDecimal } from "@portifolio-tracker/shared";
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowDown, ArrowUp, ArrowUpDown, RefreshCw } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  RefreshCw,
+  TriangleAlert,
+} from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AssetLink } from "@/components/asset-link";
@@ -176,8 +182,13 @@ function ErrorCard({ children }: { children: ReactNode }) {
 }
 
 function DailySummary({ data }: { data: DailyData }) {
+  useLingui();
   const { summary } = data;
-  const hasComparison = summary.comparablePositions > 0;
+  const dailyChange = summary.dailyChange;
+  const compared = summary.comparablePositions;
+  const partialCoverage =
+    summary.openPositions > 0 &&
+    summary.comparablePositions < summary.openPositions;
   const asOf = summary.asOf ? formatTradeDate(summary.asOf) : null;
 
   return (
@@ -197,16 +208,20 @@ function DailySummary({ data }: { data: DailyData }) {
         <Metric
           label={<Trans id="daily.dayChange">Day change</Trans>}
           value={
-            hasComparison
-              ? signedOrZero(summary.dailyChange, summary.displayCurrency)
-              : "—"
+            dailyChange === null
+              ? "—"
+              : signedOrZero(dailyChange, summary.displayCurrency)
           }
           valueClassName={
-            hasComparison ? pnlClassName(summary.dailyChange) : undefined
+            dailyChange === null ? undefined : pnlClassName(dailyChange)
           }
           hint={
-            summary.dailyChangePercent ? (
-              <span className={pnlClassName(summary.dailyChange)}>
+            dailyChange === null ? (
+              <Trans id="daily.insufficientData">
+                Not enough data: no asset has a previous close to compare.
+              </Trans>
+            ) : summary.dailyChangePercent ? (
+              <span className={pnlClassName(dailyChange)}>
                 {formatSignedPercentPrecise(summary.dailyChangePercent)}
               </span>
             ) : (
@@ -220,20 +235,47 @@ function DailySummary({ data }: { data: DailyData }) {
         <Metric
           label={<Trans id="daily.marketBreadth">Market breadth</Trans>}
           value={`${summary.advancing} ↑  ${summary.declining} ↓`}
-          hint={
-            <Trans id="daily.marketBreadthHint">
-              {summary.comparablePositions} assets with daily comparison.
-            </Trans>
-          }
+          hint={t({
+            id: "daily.marketBreadthCount",
+            message: plural(
+              { count: summary.comparablePositions },
+              {
+                one: "# asset with daily comparison.",
+                other: "# assets with daily comparison.",
+              },
+            ),
+          })}
         />
       </div>
-      <div className="border-t bg-muted/30 px-5 py-2.5 text-xs text-muted-foreground">
-        <Trans id="daily.comparisonCoverage">
-          Daily change covers {summary.comparablePositions} of{" "}
-          {summary.openPositions} open assets. Values are consolidated in{" "}
-          {summary.displayCurrency}, with yesterday converted at that session's
-          USD/BRL rate.
-        </Trans>
+      <div
+        className={`flex items-start gap-2 border-t px-5 py-2.5 text-xs ${
+          partialCoverage
+            ? "bg-caution/10 text-foreground"
+            : "bg-muted/30 text-muted-foreground"
+        }`}
+      >
+        {partialCoverage ? (
+          <TriangleAlert
+            className="mt-px size-3.5 shrink-0 text-caution"
+            aria-hidden="true"
+          />
+        ) : null}
+        <p>
+          {t({
+            id: "daily.comparisonCoverageCount",
+            message: plural(
+              { count: summary.openPositions },
+              {
+                one: `Daily change covers ${compared} of # open asset; cash is included in the value.`,
+                other: `Daily change covers ${compared} of # open assets; cash is included in the value.`,
+              },
+            ),
+          })}{" "}
+          <Trans id="daily.comparisonConsolidation">
+            Values are consolidated in {summary.displayCurrency}, with yesterday
+            converted at that session's USD/BRL rate.
+          </Trans>
+        </p>
       </div>
     </Card>
   );
@@ -394,17 +436,17 @@ function DailyTable({ data, locale }: { data: DailyData; locale: string }) {
                 )}
               </TableCell>
               <TableCell
-                className={`text-right font-semibold tabular-nums ${pnlClassName(data.summary.dailyChange)}`}
+                className={`text-right font-semibold tabular-nums ${pnlClassName(data.summary.dailyChange ?? "0")}`}
               >
-                {data.summary.comparablePositions > 0
-                  ? signedOrZero(
+                {data.summary.dailyChange === null
+                  ? "—"
+                  : signedOrZero(
                       data.summary.dailyChange,
                       data.summary.displayCurrency,
-                    )
-                  : "—"}
+                    )}
               </TableCell>
               <TableCell
-                className={`text-right font-semibold tabular-nums ${pnlClassName(data.summary.dailyChange)}`}
+                className={`text-right font-semibold tabular-nums ${pnlClassName(data.summary.dailyChange ?? "0")}`}
               >
                 {data.summary.dailyChangePercent
                   ? formatSignedPercentPrecise(data.summary.dailyChangePercent)

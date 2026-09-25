@@ -15,6 +15,7 @@ export const COLUMN_IDS = [
   "marketPrice",
   "marketValue",
   "unrealizedPnl",
+  "fxPnl",
   "unrealizedPnlPercent",
   "returnContribution",
   "weight",

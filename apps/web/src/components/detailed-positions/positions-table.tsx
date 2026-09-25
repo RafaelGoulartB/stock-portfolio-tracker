@@ -39,6 +39,7 @@ type Totals = {
   invested: string;
   market: string;
   unrealized: string;
+  fx: string;
   portfolioReturn: string | null;
   realized: string;
 };
@@ -65,6 +66,7 @@ function computeTotals(
     unrealized: sumDecimalStrings(
       openRows.map((row) => row.convertedUnrealizedPnl),
     ),
+    fx: sumDecimalStrings(openRows.map((row) => row.convertedFxPnl)),
     portfolioReturn,
     realized: sumDecimalStrings(rows.map((row) => row.convertedRealizedPnl)),
   };
@@ -199,6 +201,7 @@ function PositionCell({
   position: DetailedPosition;
   missing: boolean;
 }) {
+  const { i18n } = useLingui();
   let content: ReactNode;
   switch (id) {
     case "ticker":
@@ -268,13 +271,45 @@ function PositionCell({
           </span>
         );
       break;
+    case "fxPnl":
+      // Same-currency rows have no FX component, which is not a missing quote.
+      content =
+        position.convertedFxPnl == null ? (
+          <Dash
+            missing={missing && position.currency !== position.displayCurrency}
+          />
+        ) : (
+          <span
+            className={pnlClassName(position.convertedFxPnl)}
+            title={
+              position.tradesMissingFx > 0
+                ? i18n._(
+                    t({
+                      id: "detailedPositions.fxPending",
+                      message:
+                        "Some trades have no trade-date USD/BRL yet and convert at today's rate.",
+                    }),
+                  )
+                : undefined
+            }
+          >
+            {formatSignedMoney(
+              position.convertedFxPnl,
+              position.displayCurrency,
+            )}
+            {position.tradesMissingFx > 0 ? "*" : null}
+          </span>
+        );
+      break;
     case "unrealizedPnlPercent":
       content =
-        position.unrealizedPnlPercent == null ? (
+        position.convertedUnrealizedPnlPercent == null ? (
           <Dash missing={missing} />
         ) : (
-          <span className={pnlClassName(position.unrealizedPnlPercent)}>
-            {formatSignedPercent(position.unrealizedPnlPercent)}
+          <span
+            className={pnlClassName(position.convertedUnrealizedPnlPercent)}
+          >
+            {formatSignedPercent(position.convertedUnrealizedPnlPercent)}
           </span>
         );
       break;
@@ -359,6 +394,12 @@ function totalForColumn(id: ColumnId, totals: Totals, currency: "BRL" | "USD") {
     return (
       <span className={pnlClassName(totals.unrealized)}>
         {formatSignedMoney(totals.unrealized, currency)}
+      </span>
+    );
+  if (id === "fxPnl")
+    return (
+      <span className={pnlClassName(totals.fx)}>
+        {formatSignedMoney(totals.fx, currency)}
       </span>
     );
   if (id === "unrealizedPnlPercent" || id === "returnContribution")
