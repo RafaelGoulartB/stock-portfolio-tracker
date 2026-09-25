@@ -1,7 +1,9 @@
 import { FX_SOURCE_LABELS, type FxSource } from "@portifolio-tracker/shared";
+import { BcbPtaxProvider } from "./bcb-ptax";
 import { FrankfurterProvider } from "./frankfurter";
 import type { FxProvider } from "./provider";
 
+export { clearPtaxCache } from "./bcb-ptax";
 export { clearFxCache } from "./frankfurter";
 export type {
   FxProvider,
@@ -18,6 +20,7 @@ export type {
  */
 export const FX_PROVIDERS: Record<FxSource, FxProvider | null> = {
   frankfurter: new FrankfurterProvider(),
+  bcb_ptax: new BcbPtaxProvider(),
   // `manual` is resolved by the router from the user's own rate, so it has
   // no provider instance.
   manual: null,

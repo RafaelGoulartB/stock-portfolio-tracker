@@ -19,9 +19,13 @@ type CacheEntry = {
 
 export type YahooDividendPoint = { exDate: string; amount: string };
 
+/** `from` old shares became `to` new ones on `effectiveAt` (Yahoo `denominator:numerator`). */
+export type YahooSplitPoint = { effectiveAt: string; from: string; to: string };
+
 type SeriesCacheEntry = {
   points: QuoteSeriesPoint[];
   dividends: YahooDividendPoint[];
+  splits: YahooSplitPoint[];
   start: string;
   end: string;
   expiresAt: number;
@@ -39,6 +43,10 @@ type ChartResult = {
   indicators?: { quote?: { close?: (number | null)[] }[] };
   events?: {
     dividends?: Record<string, { amount?: number; date?: number }>;
+    splits?: Record<
+      string,
+      { date?: number; numerator?: number; denominator?: number }
+    >;
   };
 };
 
@@ -317,9 +325,37 @@ function parseChart(result: ChartResult, ticker: string) {
     },
   );
 
+  const splits = Object.values(result.events?.splits ?? {}).flatMap(
+    (item): YahooSplitPoint[] => {
+      const { date, numerator, denominator } = item;
+
+      if (
+        date == null ||
+        numerator == null ||
+        denominator == null ||
+        !Number.isFinite(numerator) ||
+        !Number.isFinite(denominator) ||
+        numerator <= 0 ||
+        denominator <= 0 ||
+        numerator === denominator
+      ) {
+        return [];
+      }
+
+      return [
+        {
+          effectiveAt: unixToDay(date),
+          from: formatDecimal(toDecimal(denominator.toFixed(8)), 8),
+          to: formatDecimal(toDecimal(numerator.toFixed(8)), 8),
+        },
+      ];
+    },
+  );
+
   return {
     points,
     dividends,
+    splits,
     spotPrice: result.meta?.regularMarketPrice,
   };
 }
@@ -489,6 +525,7 @@ async function loadSeriesEntry(
       const entry: SeriesCacheEntry = {
         points: parsed.points,
         dividends: parsed.dividends,
+        splits: parsed.splits,
         start: range.start,
         end: range.end,
         expiresAt: Date.now() + SERIES_TTL_MS,
@@ -509,7 +546,11 @@ export async function loadYahooChart(
   start: string,
   end: string,
   forceRefresh = false,
-): Promise<{ points: QuoteSeriesPoint[]; dividends: YahooDividendPoint[] }> {
+): Promise<{
+  points: QuoteSeriesPoint[];
+  dividends: YahooDividendPoint[];
+  splits: YahooSplitPoint[];
+}> {
   const entry = await loadSeriesEntry(symbol, ticker, start, end, forceRefresh);
   return {
     points: entry.points.filter(
@@ -517,6 +558,9 @@ export async function loadYahooChart(
     ),
     dividends: entry.dividends.filter(
       (event) => event.exDate >= start && event.exDate <= end,
+    ),
+    splits: entry.splits.filter(
+      (event) => event.effectiveAt >= start && event.effectiveAt <= end,
     ),
   };
 }
