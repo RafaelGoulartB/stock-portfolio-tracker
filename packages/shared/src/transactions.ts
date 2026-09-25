@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { currencySchema, DEFAULT_CURRENCY } from "./currency";
+import { type Currency, currencySchema, DEFAULT_CURRENCY } from "./currency";
 import { isoDate, nonNegativeDecimal, positiveDecimal } from "./decimal";
 
 export const TRANSACTION_SIDES = ["buy", "sell"] as const;
@@ -32,6 +32,25 @@ export const ASSET_CLASS_LABELS: Record<AssetClass, string> = {
   other: "Other",
 };
 
+/** Classes that trade on B3 in whole units when held in BRL. */
+const B3_WHOLE_UNIT_CLASSES: ReadonlySet<AssetClass> = new Set([
+  "stock_br",
+  "reit",
+  "etf",
+  "bdr",
+]);
+
+/**
+ * True when a suggested buy must be a whole number of units. B3 has no
+ * fractional shares below one unit; US brokers and crypto do.
+ */
+export function tradesInWholeUnits(
+  assetClass: AssetClass,
+  currency: Currency,
+): boolean {
+  return currency === "BRL" && B3_WHOLE_UNIT_CLASSES.has(assetClass);
+}
+
 export const TRANSACTION_SIDE_LABELS: Record<TransactionSide, string> = {
   buy: "Buy",
   sell: "Sell",
@@ -63,9 +82,14 @@ export const createTransactionInput = z
      * Fixed-income positions are tracked as a single user-maintained value.
      * Quantity and unit price remain an internal implementation detail.
      */
-    value: positiveDecimal.optional(),
+    value: optionalPositiveDecimal,
     fees: nonNegativeDecimal.optional(),
     tradedAt: isoDate,
+    /**
+     * BRL per 1 USD on the trade date. Omitted means the API resolves the
+     * BCB PTAX of `tradedAt`; an explicit value (a broker's rate) wins.
+     */
+    usdBrlRate: optionalPositiveDecimal,
     notes: z.string().trim().max(280, "Use at most 280 characters").optional(),
   })
   .superRefine((input, ctx) => {
@@ -146,6 +170,14 @@ export type CreateTransactionInput = z.input<typeof createTransactionInput>;
 
 export const deleteTransactionInput = z.object({ id: z.uuid() });
 
+/** Replaces every user-entered field of one trade; the row keeps its id. */
+export const updateTransactionInput = z.object({
+  id: z.uuid(),
+  trade: createTransactionInput,
+});
+
+export type UpdateTransactionInput = z.input<typeof updateTransactionInput>;
+
 export const transactionSchema = z.object({
   id: z.string(),
   ticker: z.string(),
@@ -156,16 +188,39 @@ export const transactionSchema = z.object({
   price: z.string(),
   fees: z.string(),
   tradedAt: z.string(),
+  /** BRL per 1 USD on the trade date, `null` while unresolved. */
+  usdBrlRate: z.string().nullable(),
   notes: z.string().nullable(),
   total: z.string(),
 });
 
 export type Transaction = z.infer<typeof transactionSchema>;
 
+/**
+ * Trades whose trade-date USD/BRL is still missing, by native currency. A
+ * missing rate only matters when the display currency differs from it.
+ */
+export const tradeFxStatusSchema = z.object({
+  missing: z.number().int(),
+  missingByCurrency: z.record(currencySchema, z.number().int()),
+});
+
+export type TradeFxStatus = z.infer<typeof tradeFxStatusSchema>;
+
+export const tradeFxBackfillSchema = z.object({
+  updated: z.number().int(),
+  /** Trades the provider still had no rate for. */
+  missing: z.number().int(),
+});
+
+export type TradeFxBackfill = z.infer<typeof tradeFxBackfillSchema>;
+
 /** A bounded, stable page of the account transaction history. */
 export const transactionListInput = z.object({
   page: z.number().int().min(0).default(0),
   pageSize: z.number().int().min(1).max(100).default(100),
+  /** Case-insensitive ticker substring; blank lists every trade. */
+  ticker: z.string().trim().toUpperCase().max(120).optional(),
 });
 
 export const transactionListSchema = z.object({
@@ -185,11 +240,14 @@ export const tickerLedgerTradeSchema = z.object({
   assetClass: assetClassSchema,
   currency: currencySchema,
   side: transactionSideSchema,
+  /** In today's share units when {@link splitAdjusted}. */
   quantity: z.string(),
   price: z.string(),
+  splitAdjusted: z.boolean(),
   fees: z.string(),
   total: z.string(),
   tradedAt: z.string(),
+  usdBrlRate: z.string().nullable(),
   notes: z.string().nullable(),
   /** Realized P&L of this sell at the then-current moving average. */
   realizedPnl: z.string().nullable(),
@@ -230,10 +288,17 @@ export const positionSchema = z.object({
   lastTradedAt: z.string(),
   /** Currency the portfolio is consolidated into. */
   displayCurrency: currencySchema,
-  /** Same amounts converted at the consolidation rate. */
+  /**
+   * Same amounts in the display currency. Cross-currency trades convert at
+   * their own trade-date USD/BRL, so cost and realized results carry the FX
+   * of each purchase; trades still missing that rate use the consolidation
+   * rate instead.
+   */
   convertedAveragePrice: z.string(),
   convertedInvestedCost: z.string(),
   convertedRealizedPnl: z.string(),
+  /** Trades of this position converted at the consolidation-rate fallback. */
+  tradesMissingFx: z.number().int(),
 });
 
 export type Position = z.infer<typeof positionSchema>;
@@ -254,8 +319,22 @@ export const valuedPositionSchema = positionSchema.extend({
   unrealizedPnl: z.string().nullable(),
   /** Open result converted to the display currency. */
   convertedUnrealizedPnl: z.string().nullable(),
-  /** Open result over invested cost, as a decimal string (`0.1` = +10%). */
+  /**
+   * Part of {@link convertedUnrealizedPnl} caused by USD/BRL moving since the
+   * purchases: cost at today's rate minus cost at trade-date rates. `null`
+   * for same-currency positions or without a quote.
+   */
+  convertedFxPnl: z.string().nullable(),
+  /**
+   * Native open result over native invested cost (`0.1` = +10%): the
+   * asset's own move, without FX.
+   */
   unrealizedPnlPercent: z.string().nullable(),
+  /**
+   * Display-currency open result over display-currency cost at trade-date
+   * FX, so the percent matches {@link convertedUnrealizedPnl}.
+   */
+  convertedUnrealizedPnlPercent: z.string().nullable(),
   /** Share of quoted equity, `0`–`1` as a decimal string. */
   weight: z.string().nullable(),
   /** Calendar day the quote refers to, `YYYY-MM-DD`. */

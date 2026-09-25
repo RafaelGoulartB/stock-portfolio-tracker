@@ -8,14 +8,27 @@ import { quoteSourceSchema } from "./quotes";
  * `FxProvider` interface, so new quote sources can be added by registering
  * another provider without touching routers or the web app.
  */
-export const FX_SOURCE_IDS = ["frankfurter", "manual"] as const;
+export const FX_SOURCE_IDS = ["frankfurter", "bcb_ptax", "manual"] as const;
 export const fxSourceSchema = z.enum(FX_SOURCE_IDS);
 export type FxSource = z.infer<typeof fxSourceSchema>;
 
 export const FX_SOURCE_LABELS: Record<FxSource, string> = {
   frankfurter: "Frankfurter (ECB reference)",
+  bcb_ptax: "BCB PTAX (Banco Central do Brasil)",
   manual: "Manual rate",
 };
+
+/** Official BCB PTAX (sell rate) of a trade date, or the business day before it. */
+export const tradeFxInput = z.object({ tradedAt: isoDate });
+
+export const tradeFxSchema = z.object({
+  /** BRL per 1 USD. */
+  rate: z.string(),
+  /** Business day the PTAX refers to; earlier than the trade on holidays. */
+  asOf: z.string(),
+});
+
+export type TradeFx = z.infer<typeof tradeFxSchema>;
 
 /**
  * Whether an FX quote query can run and whether the manual rate is unusable.

@@ -2,6 +2,7 @@ export * from "./allocation";
 export * from "./auth";
 export * from "./categories";
 export * from "./contribution-plan";
+export * from "./corporate-actions";
 export * from "./currency";
 export * from "./decimal";
 export * from "./deep-finder";

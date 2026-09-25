@@ -102,6 +102,8 @@ export const DEFAULT_SCORE_CONFIG: ScoreConfig = {
  *
  * - `no-target` — no target weight set, so there is nothing to close.
  * - `trim-overweight` — expensive *and* well past target: negative score.
+ * - `no-quote` — held, but neither a live nor a manual price values it, so
+ *   its current weight is unknown rather than zero.
  * - `weight-cap` — past the portfolio ceiling when its target does not
  *   explicitly exceed that ceiling.
  * - `target-overweight` — past its own target by more than the block factor.
@@ -110,6 +112,7 @@ export const DEFAULT_SCORE_CONFIG: ScoreConfig = {
  */
 export const SCORE_RULE_IDS = [
   "no-target",
+  "no-quote",
   "trim-overweight",
   "weight-cap",
   "target-overweight",

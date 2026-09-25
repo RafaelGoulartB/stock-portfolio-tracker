@@ -1,5 +1,6 @@
 import {
   ASSET_CLASSES,
+  CORPORATE_ACTION_KINDS,
   CURRENCIES,
   type GradeBand,
   TRANSACTION_SIDES,
@@ -25,6 +26,10 @@ export const transactionSideEnum = pgEnum(
   TRANSACTION_SIDES,
 );
 export const currencyEnum = pgEnum("currency", CURRENCIES);
+export const corporateActionKindEnum = pgEnum(
+  "corporate_action_kind",
+  CORPORATE_ACTION_KINDS,
+);
 
 /** Money and quantities are `numeric` so no value is ever stored as a float. */
 const DECIMAL = { precision: 22, scale: 8 } as const;
@@ -69,6 +74,12 @@ export const transactions = pgTable(
     price: numeric("price", DECIMAL).notNull(),
     fees: numeric("fees", DECIMAL).notNull().default("0"),
     tradedAt: date("traded_at").notNull(),
+    /**
+     * BRL per 1 USD on the trade date (BCB PTAX sell rate by default). Cost
+     * basis and realized results in the non-native display currency use it.
+     * Null until resolved; such trades fall back to the consolidation rate.
+     */
+    usdBrlRate: numeric("usd_brl_rate", DECIMAL),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -82,6 +93,39 @@ export const transactions = pgTable(
       table.tradedAt,
       table.createdAt,
       table.id,
+    ),
+  ],
+);
+
+/**
+ * Share-unit events of the ledger. A split multiplies the units of every
+ * trade dated before `effective_at` by `to_quantity / from_quantity`
+ * without moving money, which keeps quantities in the same current units
+ * as the provider's split-adjusted prices and dividends.
+ */
+export const corporateActions = pgTable(
+  "corporate_actions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    ticker: text("ticker").notNull(),
+    kind: corporateActionKindEnum("kind").notNull().default("split"),
+    /** First trading day in the new units (the ex-date). */
+    effectiveAt: date("effective_at").notNull(),
+    fromQuantity: numeric("from_quantity", DECIMAL).notNull(),
+    toQuantity: numeric("to_quantity", DECIMAL).notNull(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("corporate_actions_user_ticker_day_key").on(
+      table.userId,
+      table.ticker,
+      table.effectiveAt,
     ),
   ],
 );
@@ -290,6 +334,7 @@ export const userContributionPlanConfigs = pgTable(
 export type UserRow = typeof users.$inferSelect;
 export type SessionRow = typeof sessions.$inferSelect;
 export type TransactionRow = typeof transactions.$inferSelect;
+export type CorporateActionRow = typeof corporateActions.$inferSelect;
 export type AllocationAssetRow = typeof allocationAssets.$inferSelect;
 export type CashBalanceRow = typeof cashBalances.$inferSelect;
 export type AssetReviewRow = typeof assetReviews.$inferSelect;
