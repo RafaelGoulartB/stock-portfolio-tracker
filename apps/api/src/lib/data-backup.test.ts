@@ -54,11 +54,92 @@ describe("portable data backups", () => {
       },
     });
 
-    expect(manifest.version).toBe(6);
+    expect(manifest.version).toBe(8);
     if (record.entity !== "transactions") {
       throw new Error("expected transaction record");
     }
     expect(record.data.createdAt).toBeInstanceOf(Date);
+    // A pre-v7 trade restores with its trade-date rate still unresolved.
+    expect(record.data.usdBrlRate).toBeNull();
+  });
+
+  it("accepts a v8 split record and defaults its count for older manifests", () => {
+    const record = backupRecordSchema.parse({
+      type: "record",
+      entity: "corporateActions",
+      data: {
+        ticker: "PETR4",
+        kind: "split",
+        effectiveAt: "2026-03-01",
+        fromQuantity: "1.00000000",
+        toQuantity: "2.00000000",
+        notes: null,
+        createdAt: "2026-03-01T12:00:00.000Z",
+      },
+    });
+
+    expect(record.entity).toBe("corporateActions");
+    expect(() =>
+      backupRecordSchema.parse({
+        type: "record",
+        entity: "corporateActions",
+        data: {
+          ticker: "PETR4",
+          kind: "split",
+          effectiveAt: "2026-03-01",
+          fromQuantity: "2",
+          toQuantity: "2",
+          notes: null,
+          createdAt: "2026-03-01T12:00:00.000Z",
+        },
+      }),
+    ).toThrow();
+    expect(
+      manifestSchema.parse({
+        type: "manifest",
+        format: BACKUP_FORMAT,
+        version: 7,
+        exportedAt: "2026-09-06T20:00:00.000Z",
+        counts: {
+          categories: 0,
+          allocationAssets: 0,
+          assetReviews: 0,
+          transactions: 0,
+          assetCategories: 0,
+        },
+      }).counts.corporateActions,
+    ).toBe(0);
+  });
+
+  it("round-trips a trade-date USD/BRL and rejects a zero rate", () => {
+    const trade = {
+      ticker: "COST",
+      assetClass: "stock_us",
+      currency: "USD",
+      side: "buy",
+      quantity: "2.00000000",
+      price: "900.00000000",
+      fees: "0.00000000",
+      tradedAt: "2025-01-20",
+      notes: null,
+      createdAt: "2025-01-20T12:00:00.000Z",
+    };
+    const record = backupRecordSchema.parse({
+      type: "record",
+      entity: "transactions",
+      data: { ...trade, usdBrlRate: "6.10420000" },
+    });
+
+    expect(record.entity === "transactions" && record.data.usdBrlRate).toBe(
+      "6.10420000",
+    );
+    expect(() =>
+      backupRecordSchema.parse({
+        type: "record",
+        entity: "transactions",
+        data: { ...trade, usdBrlRate: "0" },
+      }),
+    ).toThrow();
   });
 
   it("accepts a v1 manifest without scoreConfigs and defaults the count", () => {

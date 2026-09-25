@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import {
   ASSET_CLASSES,
+  CORPORATE_ACTION_KINDS,
   CURRENCIES,
   DEFAULT_CONTRIBUTION_PLAN_CONFIG,
   TRANSACTION_SIDES,
@@ -8,7 +9,7 @@ import {
 import { z } from "zod";
 
 export const BACKUP_FORMAT = "portifolio-tracker-backup";
-export const BACKUP_VERSION = 6;
+export const BACKUP_VERSION = 8;
 export const BACKUP_MEDIA_TYPE = "application/x-portifolio-backup+gzip";
 
 /**
@@ -35,6 +36,7 @@ export const BACKUP_ENTITIES = [
   "cashBalances",
   "assetReviews",
   "transactions",
+  "corporateActions",
   "assetCategories",
   "scoreConfigs",
   "contributionPlanConfigs",
@@ -73,6 +75,7 @@ const backupCountsSchema = z.strictObject({
   cashBalances: z.number().int().nonnegative().default(0),
   assetReviews: z.number().int().nonnegative(),
   transactions: z.number().int().nonnegative(),
+  corporateActions: z.number().int().nonnegative().default(0),
   assetCategories: z.number().int().nonnegative(),
   scoreConfigs: z.number().int().nonnegative().default(0),
   contributionPlanConfigs: z.number().int().nonnegative().default(0),
@@ -88,6 +91,8 @@ export const manifestSchema = z.object({
     z.literal(4),
     z.literal(5),
     z.literal(6),
+    z.literal(7),
+    z.literal(8),
   ]),
   exportedAt: timestamp,
   counts: backupCountsSchema,
@@ -162,9 +167,30 @@ const transactionRecord = z.strictObject({
     price: positiveDecimal,
     fees: decimal,
     tradedAt: z.iso.date(),
+    /** Added in v7; older backups restore with the rate unresolved. */
+    usdBrlRate: positiveDecimal.nullable().default(null),
     notes: z.string().nullable(),
     createdAt: databaseTimestamp,
   }),
+});
+
+/** Added in v8; older backups carry no split events. */
+const corporateActionRecord = z.strictObject({
+  type: z.literal("record"),
+  entity: z.literal("corporateActions"),
+  data: z
+    .strictObject({
+      ticker: z.string().min(1),
+      kind: z.enum(CORPORATE_ACTION_KINDS),
+      effectiveAt: z.iso.date(),
+      fromQuantity: positiveDecimal,
+      toQuantity: positiveDecimal,
+      notes: z.string().nullable(),
+      createdAt: databaseTimestamp,
+    })
+    .refine((row) => Number(row.fromQuantity) !== Number(row.toQuantity), {
+      message: "A split must change the number of shares",
+    }),
 });
 
 const assetCategoryRecord = z.strictObject({
@@ -238,6 +264,7 @@ export const backupRecordSchema = z.discriminatedUnion("entity", [
   cashBalanceRecord,
   assetReviewRecord,
   transactionRecord,
+  corporateActionRecord,
   assetCategoryRecord,
   scoreConfigRecord,
   contributionPlanConfigRecord,
@@ -266,6 +293,7 @@ export function emptyBackupCounts(): BackupCounts {
     cashBalances: 0,
     assetReviews: 0,
     transactions: 0,
+    corporateActions: 0,
     assetCategories: 0,
     scoreConfigs: 0,
     contributionPlanConfigs: 0,

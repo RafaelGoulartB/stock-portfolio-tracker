@@ -9,6 +9,7 @@ import {
   assetReviews,
   cashBalances,
   categories,
+  corporateActions,
   transactions,
   userContributionPlanConfigs,
   userScoreConfigs,
@@ -218,13 +219,29 @@ async function* exportBackup(userId: string): AsyncGenerator<string> {
 
     for await (const rows of connection`
       select ticker, asset_class as "assetClass", currency, side, quantity,
-        price, fees, traded_at as "tradedAt", notes, created_at as "createdAt"
+        price, fees, traded_at as "tradedAt", usd_brl_rate as "usdBrlRate",
+        notes, created_at as "createdAt"
       from transactions where user_id = ${userId} order by id
     `.cursor(BATCH_SIZE)) {
       for (const data of rows) {
         yield emit({
           type: "record",
           entity: "transactions",
+          data: serializeRow(data),
+        });
+      }
+    }
+
+    for await (const rows of connection`
+      select ticker, kind, effective_at as "effectiveAt",
+        from_quantity as "fromQuantity", to_quantity as "toQuantity", notes,
+        created_at as "createdAt"
+      from corporate_actions where user_id = ${userId} order by id
+    `.cursor(BATCH_SIZE)) {
+      for (const data of rows) {
+        yield emit({
+          type: "record",
+          entity: "corporateActions",
           data: serializeRow(data),
         });
       }
@@ -310,6 +327,7 @@ type ParsedBackup = {
   cashBalances: RecordData<"cashBalances">[];
   assetReviews: RecordData<"assetReviews">[];
   transactions: RecordData<"transactions">[];
+  corporateActions: RecordData<"corporateActions">[];
   assetCategories: RecordData<"assetCategories">[];
   scoreConfigs: RecordData<"scoreConfigs">[];
   contributionPlanConfigs: RecordData<"contributionPlanConfigs">[];
@@ -353,6 +371,7 @@ async function parseBackup(
     cashBalances: [],
     assetReviews: [],
     transactions: [],
+    corporateActions: [],
     assetCategories: [],
     scoreConfigs: [],
     contributionPlanConfigs: [],
@@ -421,6 +440,9 @@ async function parseBackup(
       case "transactions":
         parsed.transactions.push(record.data);
         break;
+      case "corporateActions":
+        parsed.corporateActions.push(record.data);
+        break;
       case "assetCategories":
         parsed.assetCategories.push(record.data);
         break;
@@ -445,7 +467,7 @@ async function parseBackup(
   }
 
   // Replaying a backup must never smuggle in a state a live write would refuse.
-  assertBackupTransactionsValid(parsed.transactions);
+  assertBackupTransactionsValid(parsed.transactions, parsed.corporateActions);
 
   return parsed;
 }
@@ -464,6 +486,9 @@ async function replaceAccountData(parsed: ParsedBackup, userId: string) {
       .where(eq(allocationAssets.userId, userId));
     await tx.delete(cashBalances).where(eq(cashBalances.userId, userId));
     await tx.delete(transactions).where(eq(transactions.userId, userId));
+    await tx
+      .delete(corporateActions)
+      .where(eq(corporateActions.userId, userId));
     await tx.delete(categories).where(eq(categories.userId, userId));
     await tx
       .delete(userScoreConfigs)
@@ -527,6 +552,20 @@ async function replaceAccountData(parsed: ParsedBackup, userId: string) {
         .insert(transactions)
         .values(
           parsed.transactions
+            .slice(index, index + BATCH_SIZE)
+            .map((row) => ({ ...row, userId })),
+        );
+    }
+
+    for (
+      let index = 0;
+      index < parsed.corporateActions.length;
+      index += BATCH_SIZE
+    ) {
+      await tx
+        .insert(corporateActions)
+        .values(
+          parsed.corporateActions
             .slice(index, index + BATCH_SIZE)
             .map((row) => ({ ...row, userId })),
         );
