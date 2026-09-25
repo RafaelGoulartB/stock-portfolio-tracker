@@ -2,9 +2,12 @@ import {
   FX_SOURCE_LABELS,
   type FxRate,
   getFxRateInput,
+  type TradeFx,
+  tradeFxInput,
 } from "@portifolio-tracker/shared";
 import { TRPCError } from "@trpc/server";
 import { getFxProvider, listFxSources } from "../../lib/fx";
+import { tradeDateRates } from "../../lib/fx/trade-rates";
 import { protectedProcedure, router } from "../trpc";
 
 function todayUtc(): string {
@@ -14,6 +17,34 @@ function todayUtc(): string {
 export const fxRouter = router({
   /** Quote sources the user can pick from. New providers appear here. */
   listSources: protectedProcedure.query(() => listFxSources()),
+
+  /** BCB PTAX a trade on `tradedAt` converts at, shown in the trade form. */
+  tradeRate: protectedProcedure
+    .input(tradeFxInput)
+    .query(async ({ input }): Promise<TradeFx> => {
+      let point: TradeFx | undefined;
+
+      try {
+        point = (await tradeDateRates([input.tradedAt])).get(input.tradedAt);
+      } catch (error) {
+        throw new TRPCError({
+          code: "BAD_GATEWAY",
+          message:
+            error instanceof Error
+              ? `BCB PTAX failed: ${error.message}`
+              : "BCB PTAX failed",
+        });
+      }
+
+      if (!point) {
+        throw new TRPCError({
+          code: "NOT_FOUND",
+          message: `No PTAX published on or before ${input.tradedAt}`,
+        });
+      }
+
+      return point;
+    }),
 
   getRate: protectedProcedure
     .input(getFxRateInput)

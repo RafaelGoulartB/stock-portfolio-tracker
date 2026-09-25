@@ -214,4 +214,140 @@ describeIntegration("transactions router (Postgres integration)", () => {
       expect(ledger.trades).toHaveLength(0);
     });
   });
+  it("edits a trade in place and replays the ledger it touches", async () => {
+    await withUser(async (userId) => {
+      const caller = callerFor(userId);
+      const ticker = `INTG${randomUUID().slice(0, 8).toUpperCase()}`;
+      const base = {
+        ticker,
+        assetClass: "stock_br" as const,
+        currency: "BRL" as const,
+        fees: "0",
+      };
+      const buy = await caller.create({
+        ...base,
+        side: "buy",
+        quantity: "10",
+        price: "20",
+        tradedAt: "2026-01-05",
+      });
+      await caller.create({
+        ...base,
+        side: "sell",
+        quantity: "6",
+        price: "25",
+        tradedAt: "2026-01-07",
+      });
+
+      // Shrinking the buy below the later sale must be rejected untouched.
+      await expect(
+        caller.update({
+          id: buy.id,
+          trade: {
+            ...base,
+            side: "buy",
+            quantity: "5",
+            price: "20",
+            tradedAt: "2026-01-05",
+          },
+        }),
+      ).rejects.toMatchObject({ code: "BAD_REQUEST" });
+
+      // A USD rewrite would mix currencies with the remaining sale.
+      await expect(
+        caller.update({
+          id: buy.id,
+          trade: {
+            ...base,
+            currency: "USD",
+            side: "buy",
+            quantity: "10",
+            price: "20",
+            tradedAt: "2026-01-05",
+          },
+        }),
+      ).rejects.toMatchObject({ code: "PRECONDITION_FAILED" });
+
+      const edited = await caller.update({
+        id: buy.id,
+        trade: {
+          ...base,
+          side: "buy",
+          quantity: "8",
+          price: "21",
+          fees: "1",
+          tradedAt: "2026-01-04",
+          notes: "Corrected broker note",
+        },
+      });
+
+      expect(edited).toMatchObject({
+        id: buy.id,
+        quantity: "8.00000000",
+        tradedAt: "2026-01-04",
+        notes: "Corrected broker note",
+      });
+
+      const ledger = await caller.forTicker({ ticker });
+      expect(ledger.trades).toHaveLength(2);
+      expect(ledger.quantity).toBe("2.00000000");
+    });
+  });
+
+  it("never edits another account's trade", async () => {
+    await withUser(async (ownerId) => {
+      const owner = callerFor(ownerId);
+      const ticker = `INTG${randomUUID().slice(0, 8).toUpperCase()}`;
+      const trade = {
+        ticker,
+        assetClass: "stock_br" as const,
+        currency: "BRL" as const,
+        side: "buy" as const,
+        quantity: "10",
+        price: "20",
+        fees: "0",
+        tradedAt: "2026-01-05",
+      };
+      const created = await owner.create(trade);
+
+      await withUser(async (otherId) => {
+        await expect(
+          callerFor(otherId).update({
+            id: created.id,
+            trade: { ...trade, quantity: "1" },
+          }),
+        ).rejects.toMatchObject({ code: "NOT_FOUND" });
+      });
+
+      const ledger = await owner.forTicker({ ticker });
+      expect(ledger.quantity).toBe("10.00000000");
+    });
+  });
+
+  it("filters the history by a ticker substring within the account", async () => {
+    await withUser(async (userId) => {
+      const caller = callerFor(userId);
+      const suffix = randomUUID().slice(0, 6).toUpperCase();
+      const trade = {
+        assetClass: "stock_br" as const,
+        currency: "BRL" as const,
+        side: "buy" as const,
+        quantity: "1",
+        price: "10",
+        fees: "0",
+        tradedAt: "2026-01-05",
+      };
+
+      await caller.create({ ...trade, ticker: `AAA${suffix}` });
+      await caller.create({ ...trade, ticker: `BBB${suffix}` });
+
+      const filtered = await caller.list({ ticker: `aaa${suffix}` });
+      expect(filtered.total).toBe(1);
+      expect(filtered.items[0]?.ticker).toBe(`AAA${suffix}`);
+
+      // A literal wildcard must not match every row.
+      const wildcard = await caller.list({ ticker: "%" });
+      expect(wildcard.total).toBe(0);
+    });
+  });
 });

@@ -5,14 +5,20 @@ import {
   performanceHistoryInput,
 } from "@portifolio-tracker/shared";
 import { TRPCError } from "@trpc/server";
+import { eq } from "drizzle-orm";
+import { db } from "../../db";
+import { cashBalances } from "../../db/schema";
 import {
   buildPerformanceHistory,
   createSeriesLookup,
+  liveFixedIncome,
   type PerformanceRateLookup,
   performanceSnapshots,
+  withLiveBalances,
 } from "../../domain/performance";
 import {
   consolidatePositions,
+  convertMoney,
   filterTransactionsByAsOf,
   isOpenQuantity,
 } from "../../domain/positions";
@@ -93,10 +99,17 @@ export const performanceRouter = router({
   history: protectedProcedure
     .input(performanceHistoryInput)
     .query(async ({ ctx, input }) => {
-      const [history, storedManualPrices] = await Promise.all([
+      const [history, storedManualPrices, cashRows] = await Promise.all([
         loadTransactions(ctx.user.id),
         loadStoredManualPrices(ctx.user.id),
+        db
+          .select({ amount: cashBalances.amount })
+          .from(cashBalances)
+          .where(eq(cashBalances.userId, ctx.user.id))
+          .limit(1),
       ]);
+      const cashBrl = cashRows[0]?.amount ?? "0";
+      const hasCash = Number(cashBrl) !== 0;
       const snapshots = performanceSnapshots(input.months);
       const baseline = snapshots[0];
       const last = snapshots[snapshots.length - 1];
@@ -109,10 +122,18 @@ export const performanceRouter = router({
           ...input.manualPrices,
         }).map(([ticker, price]) => [ticker.toUpperCase(), price]),
       );
-      const assets = assetsToQuote(history, baseline.asOf);
-      const needsFx = assets.some(
-        (asset) => asset.currency !== input.displayCurrency,
+      // Fixed income has no month-end value, so it is never quoted here.
+      const assets = assetsToQuote(history, baseline.asOf).filter(
+        (asset) => asset.assetClass !== "fixed_income",
       );
+      const needsFx =
+        assets.some((asset) => asset.currency !== input.displayCurrency) ||
+        history.some(
+          (entry) =>
+            entry.assetClass === "fixed_income" &&
+            entry.currency !== input.displayCurrency,
+        ) ||
+        (hasCash && input.displayCurrency !== "BRL");
 
       let rateAt: PerformanceRateLookup = () => null;
 
@@ -205,12 +226,34 @@ export const performanceRouter = router({
       }
 
       try {
-        const result = buildPerformanceHistory({
+        const built = buildPerformanceHistory({
           transactions: history,
           snapshots,
           displayCurrency: input.displayCurrency,
           priceAt: (ticker, day) => lookups.get(ticker)?.(day) ?? null,
           rateAt,
+        });
+        const liveRate = rateAt(last.asOf);
+
+        if (hasCash && input.displayCurrency !== "BRL" && liveRate == null) {
+          throw new Error(`No USD/BRL rate available for ${last.asOf}`);
+        }
+
+        const fixedIncome = liveFixedIncome(
+          history,
+          manualPrices,
+          input.displayCurrency,
+          liveRate,
+        );
+        const result = withLiveBalances(built, {
+          cash: convertMoney(
+            cashBrl,
+            "BRL",
+            input.displayCurrency,
+            liveRate ?? "1",
+          ),
+          fixedIncome: fixedIncome.value,
+          fixedIncomePositions: fixedIncome.positions,
         });
 
         return {
