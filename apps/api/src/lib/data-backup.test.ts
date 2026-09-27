@@ -54,7 +54,7 @@ describe("portable data backups", () => {
       },
     });
 
-    expect(manifest.version).toBe(8);
+    expect(manifest.version).toBe(9);
     if (record.entity !== "transactions") {
       throw new Error("expected transaction record");
     }
@@ -190,6 +190,40 @@ describe("portable data backups", () => {
     expect(record.data.largeBookImpact).toBe("0.00500000");
     expect(record.data.maxShare).toBe("0.70000000");
     expect(record.data.maxAssets).toBe(5);
+    // A v8 planner record predates the starter fraction.
+    expect(record.data.starterFraction).toBe("0.5");
+  });
+
+  it("maps a v1 score config onto the v2 policy", () => {
+    const record = backupRecordSchema.parse({
+      type: "record",
+      entity: "scoreConfigs",
+      data: {
+        version: "custom",
+        absoluteWeightCap: "0.06000000",
+        overweightBlockFactor: "1.30000000",
+        trimFactor: "1.40000000",
+        cooldownDays: 30,
+        gradeWindowQuarters: 4,
+        gradeBands: [{ minGrade: "0", multiplier: "1" }],
+        ungradedMultiplier: "1.00000000",
+        updatedAt: "2026-09-07T12:00:00.000Z",
+      },
+    });
+
+    if (record.entity !== "scoreConfigs") {
+      throw new Error("expected score config record");
+    }
+    expect(record.data).toMatchObject({
+      absoluteWeightCap: "0.06000000",
+      trimRelativeBand: "0.40000000",
+      trimAbsoluteBand: "0.05",
+      cooldownDays: 30,
+      cooldownFloor: "0.25",
+      valuationDeadZone: "0.05",
+      fairValueHalfLifeQuarters: 2,
+    });
+    expect("trimFactor" in record.data).toBe(false);
   });
 
   it("defaults a missing review watchNext flag on older backups", () => {

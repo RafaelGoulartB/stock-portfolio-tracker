@@ -127,13 +127,15 @@ async function* exportBackup(userId: string): AsyncGenerator<string> {
             ? "cash_balances"
             : entity === "assetReviews"
               ? "asset_reviews"
-              : entity === "assetCategories"
-                ? "asset_categories"
-                : entity === "scoreConfigs"
-                  ? "user_score_configs"
-                  : entity === "contributionPlanConfigs"
-                    ? "user_contribution_plan_configs"
-                    : entity;
+              : entity === "corporateActions"
+                ? "corporate_actions"
+                : entity === "assetCategories"
+                  ? "asset_categories"
+                  : entity === "scoreConfigs"
+                    ? "user_score_configs"
+                    : entity === "contributionPlanConfigs"
+                      ? "user_contribution_plan_configs"
+                      : entity;
       const [result] = await connection`
         select count(*)::text as value
         from ${connection(tableName)}
@@ -266,10 +268,18 @@ async function* exportBackup(userId: string): AsyncGenerator<string> {
     for await (const rows of connection`
       select version, absolute_weight_cap as "absoluteWeightCap",
         overweight_block_factor as "overweightBlockFactor",
-        trim_factor as "trimFactor", cooldown_days as "cooldownDays",
+        trim_absolute_band as "trimAbsoluteBand",
+        trim_relative_band as "trimRelativeBand",
+        cooldown_days as "cooldownDays", cooldown_floor as "cooldownFloor",
         grade_window_quarters as "gradeWindowQuarters",
+        grade_half_life_quarters as "gradeHalfLifeQuarters",
+        grade_prior_quarters as "gradePriorQuarters",
         grade_bands as "gradeBands",
         ungraded_multiplier as "ungradedMultiplier",
+        valuation_dead_zone as "valuationDeadZone",
+        valuation_sensitivity as "valuationSensitivity",
+        tilt_min as "tiltMin", tilt_max as "tiltMax",
+        fair_value_half_life_quarters as "fairValueHalfLifeQuarters",
         updated_at as "updatedAt"
       from user_score_configs where user_id = ${userId} order by user_id
     `.cursor(BATCH_SIZE)) {
@@ -286,6 +296,7 @@ async function* exportBackup(userId: string): AsyncGenerator<string> {
       select version, small_book_impact as "smallBookImpact",
         large_book_impact as "largeBookImpact",
         max_share as "maxShare", max_assets as "maxAssets",
+        starter_fraction as "starterFraction",
         updated_at as "updatedAt"
       from user_contribution_plan_configs where user_id = ${userId}
       order by user_id
