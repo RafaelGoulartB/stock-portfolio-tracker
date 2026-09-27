@@ -86,22 +86,6 @@ export function activeFilterCount(filters: AllocationFilterState): number {
   );
 }
 
-/** Whether a row's category passes `filters`. */
-export function matchesStatus(
-  filters: AllocationFilterState,
-  hasPosition: boolean,
-): boolean {
-  if (filters.status === "invested") {
-    return hasPosition;
-  }
-
-  if (filters.status === "radar") {
-    return !hasPosition;
-  }
-
-  return true;
-}
-
 function statusLabels(i18n: I18n) {
   return {
     any: i18n._(t({ id: "allocation.statusAny", message: "Any" })),
