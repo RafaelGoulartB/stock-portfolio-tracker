@@ -1,0 +1,1 @@
+ALTER TABLE "user_score_configs" DROP COLUMN "trim_factor";

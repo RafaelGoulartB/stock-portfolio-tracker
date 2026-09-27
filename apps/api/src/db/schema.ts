@@ -300,11 +300,20 @@ export const userScoreConfigs = pgTable("user_score_configs", {
   version: text("version").notNull(),
   absoluteWeightCap: numeric("absolute_weight_cap", DECIMAL).notNull(),
   overweightBlockFactor: numeric("overweight_block_factor", DECIMAL).notNull(),
-  trimFactor: numeric("trim_factor", DECIMAL).notNull(),
+  trimAbsoluteBand: numeric("trim_absolute_band", DECIMAL).notNull(),
+  trimRelativeBand: numeric("trim_relative_band", DECIMAL).notNull(),
   cooldownDays: integer("cooldown_days").notNull(),
+  cooldownFloor: numeric("cooldown_floor", DECIMAL).notNull(),
   gradeWindowQuarters: integer("grade_window_quarters").notNull(),
+  gradeHalfLifeQuarters: integer("grade_half_life_quarters").notNull(),
+  gradePriorQuarters: numeric("grade_prior_quarters", DECIMAL).notNull(),
   gradeBands: jsonb("grade_bands").$type<GradeBand[]>().notNull(),
   ungradedMultiplier: numeric("ungraded_multiplier", DECIMAL).notNull(),
+  valuationDeadZone: numeric("valuation_dead_zone", DECIMAL).notNull(),
+  valuationSensitivity: numeric("valuation_sensitivity", DECIMAL).notNull(),
+  tiltMin: numeric("tilt_min", DECIMAL).notNull(),
+  tiltMax: numeric("tilt_max", DECIMAL).notNull(),
+  fairValueHalfLifeQuarters: integer("fair_value_half_life_quarters").notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -325,6 +334,7 @@ export const userContributionPlanConfigs = pgTable(
     largeBookImpact: numeric("large_book_impact", DECIMAL).notNull(),
     maxShare: numeric("max_share", DECIMAL).notNull(),
     maxAssets: integer("max_assets").notNull(),
+    starterFraction: numeric("starter_fraction", DECIMAL).notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
