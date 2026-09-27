@@ -13,7 +13,7 @@ import {
   weightRatio,
 } from "@portifolio-tracker/shared";
 import { createFileRoute } from "@tanstack/react-router";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, TriangleAlert } from "lucide-react";
 import { type ReactNode, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -43,10 +43,12 @@ import {
   QUARTER_COUNTS,
 } from "@/components/allocation/allocation-toolbar";
 import { ContributionPlannerButton } from "@/components/allocation/contribution-planner";
+import { SellPlannerButton } from "@/components/allocation/sell-planner";
 import { PageContent } from "@/components/page-content";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAllocationListInput } from "@/lib/allocation-query";
 import {
   findReview,
   removeReviewFromList,
@@ -60,7 +62,7 @@ import {
   CATEGORY_NONE,
   matchesCategory,
 } from "@/lib/category-filter";
-import { useFxQuote, useFxRequest } from "@/lib/fx";
+import { useFxQuote } from "@/lib/fx";
 import { parseDecimalInput, parsePercentInput } from "@/lib/numeric-input";
 import {
   currentQuarter,
@@ -154,9 +156,8 @@ function defaultQuarterEnd(rows: readonly AllocationRow[]): Quarter {
 function AllocationPage() {
   const { i18n } = useLingui();
   const utils = trpc.useUtils();
-  const { displayCurrency, quoteSource, manualPrices } = useSettings();
+  const { displayCurrency, quoteSource } = useSettings();
   const fx = useFxQuote();
-  const fxRequest = useFxRequest();
   const [isRefreshingQuotes, setIsRefreshingQuotes] = useState(false);
 
   const [search, setSearch] = useState("");
@@ -182,29 +183,7 @@ function AllocationPage() {
     readStoredFilters(),
   );
 
-  const sanitizedManualPrices = useMemo(
-    () =>
-      Object.fromEntries(
-        Object.entries(manualPrices).filter(
-          ([, price]) => positiveDecimal.safeParse(price).success,
-        ),
-      ),
-    [manualPrices],
-  );
-
-  const allocationListInput = useMemo(
-    () => ({
-      displayCurrency,
-      ...fxRequest,
-      quoteSource,
-      manualPrices:
-        quoteSource === "manual" &&
-        Object.keys(sanitizedManualPrices).length > 0
-          ? sanitizedManualPrices
-          : undefined,
-    }),
-    [displayCurrency, fxRequest, quoteSource, sanitizedManualPrices],
-  );
+  const allocationListInput = useAllocationListInput();
 
   const allocation = trpc.allocation.list.useQuery(allocationListInput);
   const categories = trpc.categories.list.useQuery();
@@ -641,6 +620,20 @@ function AllocationPage() {
             fx={allocation.data?.fx}
             disabled={!allocation.data}
           />
+          <SellPlannerButton
+            rows={allocation.data?.rows ?? []}
+            displayCurrency={
+              allocation.data?.summary.displayCurrency ?? displayCurrency
+            }
+            portfolioValue={allocation.data?.summary.totalMarketValue ?? "0"}
+            usdBrlRate={allocation.data?.fx.usdBrlRate ?? null}
+            soldThisMonthBrl={
+              allocation.data?.sales.exemptSoldThisMonthBrl ?? "0"
+            }
+            skill={allocation.data?.valuationSkill}
+            config={allocation.data?.scoreConfig}
+            disabled={!allocation.data}
+          />
           <AllocationDeepFinderButton
             rows={allocation.data?.rows ?? []}
             categories={categoryOptions}
@@ -650,12 +643,7 @@ function AllocationPage() {
             }
             usdBrlRate={fx.effectiveRate}
             quoteSource={quoteSource}
-            manualPrices={
-              quoteSource === "manual" &&
-              Object.keys(sanitizedManualPrices).length > 0
-                ? sanitizedManualPrices
-                : undefined
-            }
+            manualPrices={allocationListInput.manualPrices}
             disabled={!allocation.data || categories.isPending}
             onSetMarkColor={(ticker, markColor) =>
               setMarkColor.mutate({ ticker, markColor })
@@ -692,6 +680,13 @@ function AllocationPage() {
           storeValue(FREE_ORDER_KEY, String(checked));
         }}
       />
+
+      {allocation.data ? (
+        <MarketSignalsNotice
+          available={allocation.data.marketSignals.available}
+          unavailable={allocation.data.marketSignals.unavailable}
+        />
+      ) : null}
 
       {allocation.isPending || waitingForRate ? <TableSkeleton /> : null}
       {fxFailed ? (
@@ -762,6 +757,42 @@ function AllocationPage() {
         </p>
       ) : null}
     </PageContent>
+  );
+}
+
+/**
+ * Says when price history is missing, because trend, review warnings and the
+ * valuation track record then change without anything else on screen.
+ */
+function MarketSignalsNotice({
+  available,
+  unavailable,
+}: {
+  available: boolean;
+  unavailable: readonly string[];
+}) {
+  if (available && unavailable.length === 0) return null;
+
+  const shown = unavailable.slice(0, 5).join(", ");
+  const count = unavailable.length;
+
+  return (
+    <p className="flex items-start gap-2 text-xs text-amber-600 dark:text-amber-400">
+      <TriangleAlert className="mt-px size-3.5 shrink-0" aria-hidden="true" />
+      {!available ? (
+        <Trans id="allocation.signalsManual">
+          Manual quotes carry no price history: the 12-month trend, review
+          warnings and the valuation track record are off.
+        </Trans>
+      ) : (
+        <Trans id="allocation.signalsUnavailable">
+          No price history for {count} assets ({shown}
+          {count > 5 ? "…" : ""}): they get no trend or review warning, and fair
+          values due for their 12-month outcome are left out of the track
+          record.
+        </Trans>
+      )}
+    </p>
   );
 }
 

@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Score de aporte v3 — plano consolidado</title>
+<style>
+.viz-root {
+  color-scheme: light;
+  --page: #f9f9f7; --surface-1: #fcfcfb; --text-primary: #0b0b0b; --text-secondary: #52514e;
+  --muted: #898781; --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,0.10); --code-bg: #f0efec;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4;
+  --pos: #2a78d6; --neg: #e34948; --mid: #f0efec; --good-text: #006300; --bad-text: #b3261e;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) .viz-root {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface-1: #1a1a19; --text-primary: #ffffff; --text-secondary: #c3c2b7;
+    --muted: #898781; --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10); --code-bg: #262624;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181;
+    --pos: #3987e5; --neg: #e66767; --mid: #383835; --good-text: #0ca30c; --bad-text: #e66767;
+  }
+}
+:root[data-theme="dark"] .viz-root {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface-1: #1a1a19; --text-primary: #ffffff; --text-secondary: #c3c2b7;
+  --muted: #898781; --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10); --code-bg: #262624;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500; --s5: #d55181;
+  --pos: #3987e5; --neg: #e66767; --mid: #383835; --good-text: #0ca30c; --bad-text: #e66767;
+}
+* { box-sizing: border-box; } body { margin: 0; }
+.viz-root { background: var(--page); color: var(--text-primary); font: 15px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; min-height: 100vh; }
+main { max-width: 1000px; margin: 0 auto; padding: 40px 20px 80px; }
+h1 { font-size: 30px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -0.01em; }
+h2 { font-size: 21px; margin: 56px 0 6px; letter-spacing: -0.01em; }
+h3 { font-size: 16px; margin: 0 0 6px; }
+p { margin: 0 0 12px; }
+.lead { color: var(--text-secondary); font-size: 17px; max-width: 780px; }
+.sub { color: var(--text-secondary); margin-bottom: 18px; max-width: 800px; }
+.muted { color: var(--muted); }
+code { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-top: 28px; }
+.tile .value { font-size: 28px; font-weight: 650; line-height: 1.15; margin: 6px 0 4px; }
+.tile .label { color: var(--text-secondary); font-size: 13px; }
+.tile .note { color: var(--muted); font-size: 12px; margin-top: 6px; }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 16px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+th { color: var(--text-secondary); font-weight: 600; font-size: 12.5px; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.table-wrap { overflow-x: auto; }
+.table-wrap > table { min-width: 680px; }
+.table-wrap > table.compact { min-width: 0; }
+.text td, .text th { text-align: left !important; white-space: normal !important; }
+.heat td.cell { text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; border: 2px solid var(--surface-1); border-radius: 6px; }
+.chart-card { margin-top: 16px; }
+.chart-head { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--text-secondary); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { display: inline-block; width: 16px; height: 2px; border-radius: 1px; }
+.legend i.dot { width: 10px; height: 10px; border-radius: 50%; }
+.legend i.ring { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--muted); background: transparent; }
+.legend i.band { width: 16px; height: 10px; border-radius: 2px; opacity: 0.25; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.seg button { font: inherit; font-size: 13px; background: transparent; color: var(--text-secondary); border: 0; padding: 6px 12px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--code-bg); color: var(--text-primary); font-weight: 600; }
+.seg button:focus-visible { outline: 2px solid var(--s1); outline-offset: -2px; }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { fill: var(--muted); font-size: 11px; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+svg .direct { font-size: 12px; font-weight: 600; fill: var(--text-secondary); }
+.tooltip { position: fixed; pointer-events: none; background: var(--surface-1); border: 1px solid var(--border); box-shadow: 0 6px 20px rgba(0,0,0,0.14); border-radius: 8px; padding: 8px 10px; font-size: 12.5px; z-index: 10; min-width: 170px; display: none; }
+.tooltip .t { color: var(--text-secondary); margin-bottom: 4px; }
+.tooltip .row { display: flex; align-items: center; gap: 10px; justify-content: space-between; }
+.tooltip .row b { font-variant-numeric: tabular-nums; }
+.tooltip .key { display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary); }
+.tooltip .key i { width: 12px; height: 2px; display: inline-block; }
+details { margin-top: 10px; font-size: 13px; } details summary { cursor: pointer; color: var(--text-secondary); }
+details table { margin-top: 8px; font-size: 12.5px; }
+.callout { border-left: 3px solid var(--s1); padding: 12px 16px; background: var(--surface-1); border-radius: 0 8px 8px 0; margin-top: 16px; color: var(--text-secondary); }
+.callout.warn { border-left-color: var(--s2); }
+.callout strong { color: var(--text-primary); }
+ul.clean { padding-left: 20px; margin: 8px 0 0; color: var(--text-secondary); }
+ul.clean li { margin-bottom: 8px; } ul.clean li strong { color: var(--text-primary); }
+.changes { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 12px; }
+.change .tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--code-bg); color: var(--text-secondary); margin-bottom: 8px; }
+.change .ba { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; margin-top: 10px; font-size: 13px; }
+.change .ba div { background: var(--code-bg); border-radius: 6px; padding: 6px 8px; text-align: center; }
+.change .ba .arrow { background: none; color: var(--muted); padding: 0; }
+.change p { color: var(--text-secondary); font-size: 14px; margin: 0; }
+.flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; align-items: stretch; }
+.flow .node { position: relative; }
+.flow .node .n { display: inline-flex; width: 22px; height: 22px; border-radius: 50%; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; background: var(--code-bg); margin-bottom: 6px; }
+.flow .node p { color: var(--text-secondary); font-size: 13.5px; margin: 4px 0 0; }
+.flow .node.new { border-color: var(--s1); border-width: 1.5px; }
+.formula { display: block; margin-top: 8px; font: 12px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--code-bg); padding: 6px 8px; border-radius: 6px; color: var(--text-primary); }
+.mock { max-width: 460px; }
+.mock .top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
+.meter { height: 10px; border-radius: 999px; background: var(--code-bg); overflow: hidden; margin: 12px 0 6px; }
+.meter span { display: block; height: 100%; border-radius: 999px; background: var(--s1); }
+.mock .scale { display: flex; justify-content: space-between; font-size: 11.5px; color: var(--muted); }
+.states { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 12px; }
+.states .card p { font-size: 13.5px; color: var(--text-secondary); margin: 6px 0 0; }
+.rank { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.up { color: var(--good-text); } .down { color: var(--bad-text); }
+@media (max-width: 600px) { main { padding: 28px 14px 60px; } h1 { font-size: 24px; } .card { padding: 14px; } }
+</style>
+</head>
+<body>
+<div class="viz-root">
+<main>
+  <p class="muted" style="margin-bottom:6px">Portfolio Tracker · plano consolidado da v3 · ainda não implementado</p>
+  <h1>Score de aporte v3: um score que aprende se o seu valuation acerta</h1>
+  <p class="lead">A v2 confia no seu fair value sempre com a mesma força. A v3 mede, com o seu próprio histórico, se os descontos que você aponta de fato viram retorno, e ajusta sozinha o peso deles: mais força quando você acerta, nenhuma quando erra de forma sistemática. Um momentum leve funciona como desempate entre "comprar a queda" e "seguir a tendência", e um aviso pede para refazer o valuation quando o preço se afasta dele. Este documento consolida o plano, os números da simulação, o estudo sobre comprar o que sobe ou o que cai e como tudo isso afetaria a sua carteira hoje.</p>
+
+  <div class="tiles" id="tiles"></div>
+
+  <h2>O plano em uma frase por mudança</h2>
+  <p class="sub">Oito mudanças. As marcadas como "nova" são mecanismos que a v2 não tem; as demais corrigem a calibragem que a simulação mostrou estar tímida ou errada. A intensidade do momentum saiu do estudo da seção 3.</p>
+  <div class="changes">
+    <div class="card change"><span class="tag">nova</span><h3>Confiança aprendida (IC)</h3><p>A cada trimestre, o app compara o desconto que você apontou com o retorno dos 12 meses seguintes, entre todos os ativos. Essa correlação, o <em>information coefficient</em>, vira a confiança no seu valuation.</p><div class="ba"><div>confiança fixa</div><div class="arrow">→</div><div>0 a 100%, pelo histórico</div></div></div>
+    <div class="card change"><span class="tag">ajuste</span><h3>Força do fair value</h3><p>A meta é multiplicada por (FV ÷ preço)<sup>k</sup>, e o k acompanha a confiança. Sem histórico, você começa em k = 1,5.</p><div class="ba"><div>k = 1 fixo</div><div class="arrow">→</div><div>k = 3 × confiança</div></div></div>
+    <div class="card change"><span class="tag">ajuste</span><h3>Sem zona de ruído</h3><p>Ignorar desvios pequenos joga informação fora. O erro do valuation é tratado reduzindo a força do sinal inteiro (encolhimento), não cortando uma faixa.</p><div class="ba"><div>ignora ±5%</div><div class="arrow">→</div><div>usa tudo, encolhido</div></div></div>
+    <div class="card change"><span class="tag">ajuste</span><h3>Limites mais largos e reescala justa</h3><p>O valuation pode mover mais a meta, e o peso que ele tira de um ativo caro vai só para outros ativos com fair value. ETFs e ativos sem valuation ficam neutros. O teto absoluto de 5% para metas pequenas continua.</p><div class="ba"><div>×0,5–×1,5 · teto 1,3×</div><div class="arrow">→</div><div>×0,2–×3 · teto 2×</div></div></div>
+    <div class="card change"><span class="tag">nova</span><h3>Momentum leve como desempate</h3><p>A tendência de 12 meses (sem o último mês), em z-score limitado a ±2, move a meta só de ×0,82 a ×1,22. Protege quando o seu valuation fica "grudado" num alvo errado, sem deixar de comprar quedas.</p><div class="ba"><div>não existe</div><div class="arrow">→</div><div>e^(0,10 × z)</div></div></div>
+    <div class="card change"><span class="tag">nova</span><h3>Aviso para refazer o valuation</h3><p>Quando o preço se afasta muito do fair value desde a última revisão, o app pede para refazer o valuation do zero, e não só ajustar o antigo. Na simulação, isso vale +7 bps/ano, mais que qualquer ajuste de momentum.</p><div class="ba"><div>silêncio</div><div class="arrow">→</div><div>"revise do zero"</div></div></div>
+    <div class="card change"><span class="tag">nova</span><h3>Vendas isentas, com trava</h3><p>Sugere vender o excesso de ações brasileiras caras e acima de 125% da meta, dentro dos R$ 20 mil/mês isentos, e só quando a confiança passar de 80%.</p><div class="ba"><div>só aportes</div><div class="arrow">→</div><div>aportes + vendas (se provado)</div></div></div>
+    <div class="card change"><span class="tag">nova</span><h3>Painel "Seu valuation acerta?"</h3><p>Mostra o IC, a confiança atual e quanto histórico falta. Vira um feedback para você melhorar os próprios valuations.</p><div class="ba"><div>invisível</div><div class="arrow">→</div><div>visível e explicado</div></div></div>
+  </div>
+
+  <h2>Como a v3 decide</h2>
+  <div class="flow">
+    <div class="card node"><span class="n">1</span><h3>Sinal de valuation</h3><p>Desconto em log: ln(fair value ÷ preço).</p></div>
+    <div class="card node new"><span class="n">2</span><h3>Confiança (IC)</h3><p>Seu histórico de acertos, partindo de 50%.</p><span class="formula">k = 3 × mín(1, IC ÷ 0,10)</span></div>
+    <div class="card node new"><span class="n">3</span><h3>Momentum leve</h3><p>12 meses menos o último, em z-score entre ±2, com peso pequeno.</p><span class="formula">e^(0,10 × z) → ×0,82 a ×1,22</span></div>
+    <div class="card node"><span class="n">4</span><h3>Meta ajustada</h3><p>Valuation reescalado só entre os ativos com fair value, depois o momentum; limitada a ×0,2–×3, 2× a meta e 5% absoluto.</p><span class="formula">meta × (FV ÷ preço)^k × e^(0,10·z)</span></div>
+    <div class="card node"><span class="n">5</span><h3>Score e aporte</h3><p>Lacuna relativa × prioridade, e o mesmo planejador da v2 (enche primeiro as metas mais vazias, com teto de 70% por nome).</p></div>
+    <div class="card node new"><span class="n">6</span><h3>Vendas isentas</h3><p>Só com confiança ≥ 80%, ativo caro, acima de 125% da meta ajustada, até R$ 20 mil/mês em ações BR.</p></div>
+  </div>
+
+  <h2>1 · A confiança aprende com o tempo</h2>
+  <p class="sub">A intensidade do fair value (k) ao longo de 10 anos, para cinco tipos de investidor (mediana de 3.000 cenários). Todos começam em 1,5. Quem tem valuation informativo chega perto de 3; quem não tem, ou erra de forma sistemática, cai para perto de zero, e aí o app vira "só gap" sozinho.</p>
+  <div class="card chart-card">
+    <div class="chart-head"><strong>Intensidade k do fair value (mediana)</strong><div class="legend" aria-hidden="true" id="legend-conf"></div></div>
+    <div id="chart-conf" role="img" aria-label="Linhas: intensidade do fair value ao longo de 10 anos para cinco qualidades de valuation"></div>
+    <details><summary>Ver tabela</summary><div class="table-wrap" id="table-conf"></div></details>
+  </div>
+
+  <h2>2 · A vantagem acumulada, mês a mês</h2>
+  <p class="sub">Patrimônio de cada versão contra o "só gap" no mesmo cenário (mediana, %). A faixa azul é o intervalo de 80% dos cenários da v3. "k = 3 fixo" é a referência de confiar sempre no máximo, sem aprender: ganha mais quando o valuation é bom e perde muito quando ele é enviesado.</p>
+  <div class="card chart-card">
+    <div class="chart-head"><strong>Patrimônio vs "só gap" (%)</strong>
+      <div class="seg" role="group" aria-label="Cenário">
+        <button type="button" data-world="amador" aria-pressed="true">Valuation amador</button>
+        <button type="button" data-world="enviesado" aria-pressed="false">Valuation enviesado (pior mundo)</button>
+      </div></div>
+    <div class="legend" aria-hidden="true" id="legend-adv" style="margin-bottom:6px"></div>
+    <div id="chart-adv" role="img" aria-label="Linhas: vantagem acumulada de patrimônio contra só gap"></div>
+    <details><summary>Ver tabela</summary><div class="table-wrap" id="table-adv"></div></details>
+  </div>
+
+  <h2>3 · Comprar o que cai ou o que sobe? O estudo do momentum</h2>
+  <p class="sub">Esta foi a parte mais discutida do plano. A primeira versão tinha momentum forte. Depois ele foi retirado por criar viés de comprar o que sobe. Você trouxe um contraponto válido: se o seu fair value estiver errado, a queda pode ser o mercado avisando que o alvo é outro. Refiz o estudo para dar chance justa às duas hipóteses.</p>
+  <div class="two">
+    <div class="card"><h3>Hipótese a favor do momentum (a sua)</h3><p style="color:var(--text-secondary);margin:0">Um ativo que sobe em direção ao fair value confirma o valuation. Um que cai pode ser um alvo errado, e comprar nele é pegar a faca caindo. O perigo é maior quando o valuation fica "grudado" no valor antigo enquanto os fundamentos pioram.</p></div>
+    <div class="card"><h3>Hipótese contra o momentum (a minha)</h3><p style="color:var(--text-secondary);margin:0">Quando o preço erra e depois corrige, quem caiu mais é quem mais vai voltar. Seguir a tendência significa comprar mais caro e perder justamente esses ganhos, principalmente se a reversão for rápida.</p></div>
+  </div>
+  <p class="sub" style="margin-top:16px">Para testar, adicionei dois mundos que favorecem a sua hipótese:</p>
+  <ul class="clean" style="margin-bottom:12px">
+    <li><strong>Fundamentos com tendência:</strong> o crescimento de cada empresa muda aos poucos, então quem começa a piorar continua piorando.</li>
+    <li><strong>Fair value pegajoso:</strong> a cada revisão, 75% do novo valuation fica ancorado no antigo.</li>
+  </ul>
+  <p class="sub">E mantive o mundo que favorece a minha: <strong>reversão rápida</strong>. Ao todo são 48 mundos. Testei 10 formas de usar (ou não) a tendência.</p>
+
+  <div class="card chart-card">
+    <div class="chart-head"><strong>As 10 alternativas, da mais robusta para a menos robusta</strong></div>
+    <div class="table-wrap"><div id="table-study"></div></div>
+    <p class="muted" style="font-size:12.5px;margin-top:8px">bps/ano contra o "só gap". <strong>Arrependimento máximo</strong> = quanto a estratégia fica atrás da melhor alternativa no mundo mais desfavorável para ela; quanto menor, mais segura a escolha quando não sabemos em que mundo estamos.</p>
+  </div>
+
+  <div class="card chart-card">
+    <div class="chart-head"><strong>Quanto momentum? Retorno por intensidade</strong>
+      <div class="legend" aria-hidden="true" id="legend-sweep"></div></div>
+    <div id="chart-sweep" role="img" aria-label="Linhas: retorno em função da intensidade do momentum, em três grupos de mundos e no pior caso"></div>
+    <details><summary>Ver tabela</summary><div class="table-wrap" id="table-sweep"></div></details>
+  </div>
+
+  <div class="card chart-card">
+    <div class="chart-head"><strong>Para onde vai o aporte: ativos que mais caíram vs que mais subiram em 12 meses</strong>
+      <div class="legend" aria-hidden="true"><span><i class="dot" style="background:var(--s1)"></i>entre os 20% que mais caíram</span><span><i class="dot" style="background:var(--s2)"></i>entre os 20% que mais subiram</span></div></div>
+    <div id="chart-bias" role="img" aria-label="Barras: parcela do aporte em ativos em queda e em alta, por estratégia"></div>
+    <div class="table-wrap" style="margin-top:12px"><table id="table-bias"></table></div>
+  </div>
+
+  <div class="two" style="margin-top:16px">
+    <div class="card"><h3>A decisão: momentum leve (0,10)</h3><ul class="clean">
+      <li><strong>As duas hipóteses se confirmam</strong>, cada uma no seu mundo. Com fair value pegajoso, o momentum ajuda (+21,7 sem, +23,1 leve, +24,5 forte). Com reversão rápida, atrapalha (+27,4 sem, +26,2 leve, +20,8 forte).</li>
+      <li><strong>O leve é o único que melhora a média e o pior caso ao mesmo tempo</strong> (+17,5 e −16,9 contra +17,1 e −19,2 sem momentum), com o menor arrependimento máximo.</li>
+      <li><strong>Continua comprando quedas:</strong> 35% do aporte vai para quem mais caiu (51% no "só gap", 19% no forte), e o desconto real pago praticamente não muda (9,1% contra 9,3%).</li>
+      <li><strong>Surpresas:</strong> confirmar o momentum só nos ativos que você diz estarem baratos e comprar quedas em parcelas renderam <em>menos</em> que o momentum simples.</li>
+    </ul></div>
+    <div class="card"><h3>A faca caindo, na prática</h3><ul class="clean">
+      <li><strong>O gap continua comprando quedas.</strong> O momentum leve só desempata: no máximo −18% na meta de quem mais cai.</li>
+      <li><strong>Se as suas "baratas" nunca se recuperam</strong>, o IC cai e a força do valuation some sozinha. Essa é a proteção principal.</li>
+      <li><strong>A raiz do problema é o valuation grudado.</strong> Refazer o fair value do zero, em vez de ajustar o antigo, vale <strong id="review-value">+7 bps/ano</strong>, 15× o efeito do momentum. Por isso o plano inclui um aviso para refazer o valuation.</li>
+      <li><strong>Limites de concentração</strong> (2× a meta, 5% absoluto, 70% do aporte por nome) impedem dobrar a aposta sem fim.</li>
+    </ul></div>
+  </div>
+
+  <h2>4 · Resumo do impacto em 48 mundos</h2>
+  <p class="sub">Diferença de retorno anual contra o "só gap", em pontos-base (100 = 1 p.p./ano), com média nos 8 tipos de mercado. Azul é ganho e vermelho é perda.</p>
+  <div class="card chart-card table-wrap"><table class="heat" id="heat"></table></div>
+
+  <h2>5 · A sua carteira hoje, na v3</h2>
+  <p class="sub">Calculado com a cópia do seu banco, os seus fair values de 2026T2 e o momentum real de 12 meses (Yahoo). Sem histórico, a confiança está em 50% (k = 1,5). A comparação é entre a meta original, a meta ajustada da v2 e a da v3 (já limitada pelos tetos), para os candidatos a aporte e os casos que mais mudam.</p>
+  <div class="card chart-card">
+    <div class="chart-head"><strong>Meta original vs meta ajustada (v2 e v3)</strong>
+      <div class="legend" aria-hidden="true"><span><i class="ring"></i>meta original</span><span><i class="dot" style="background:var(--s2)"></i>v2</span><span><i class="dot" style="background:var(--s1)"></i>v3 hoje</span></div></div>
+    <div id="chart-dumbbell" role="img" aria-label="Halteres: meta original, meta ajustada da v2 e da v3 por ativo"></div>
+    <details><summary>Ver tabela completa</summary><div class="table-wrap" id="table-portfolio"></div></details>
+  </div>
+  <div class="two" style="margin-top:16px">
+    <div class="card"><h3>O que muda no ranking</h3><ul class="clean" id="rank-notes"></ul></div>
+    <div class="card"><h3>O perfil do que seria comprado</h3><div id="table-profile"></div>
+      <p class="muted" style="font-size:12.5px;margin-top:8px">Média ponderada pelo score entre os candidatos. "Em queda" = momentum de 12 meses entre os 20% piores da carteira.</p></div>
+  </div>
+
+  <h2>6 · Como apareceria no app</h2>
+  <p class="sub">Um cartão na Alocação que mostra a confiança, de onde ela vem e o que falta.</p>
+  <div class="card mock" role="img" aria-label="Protótipo do cartão Seu valuation acerta">
+    <div class="top"><h3 style="margin:0">Seu valuation acerta?</h3><span class="muted" style="font-size:12.5px">1 trimestre de histórico</span></div>
+    <div class="meter"><span style="width:50%"></span></div>
+    <div class="scale"><span>0% · só gap</span><span>50% · hoje (k = 1,5)</span><span>100% · k = 3</span></div>
+    <p style="margin-top:12px;color:var(--text-secondary);font-size:14px">Ainda aprendendo. Com ~8 trimestres de revisões, dá para saber se os seus descontos antecipam retorno. Até lá, o fair value pesa pela metade e as vendas ficam desativadas.</p>
+  </div>
+  <div class="states">
+    <div class="card"><h3>Acertando</h3><p>IC acima de 0,10: k = 3. As vendas isentas são liberadas a partir de IC 0,08, e o valuation passa a mandar mais.</p></div>
+    <div class="card"><h3>Neutro</h3><p>IC perto de 0: k perto de 0. O score vira "só gap", com meta e disciplina, e nada se perde.</p></div>
+    <div class="card"><h3>Errando</h3><p>IC negativo: o fair value é ignorado, e o painel sugere revisar premissas, em especial crescimento e armadilhas.</p></div>
+  </div>
+
+  <h2>7 · Plano de implementação</h2>
+  <p class="sub">Em fases, cada uma com um critério de pronto. As vendas ficam para uma segunda etapa: elas só destravam com histórico, então não há pressa.</p>
+  <div class="card table-wrap"><div id="table-plan"></div></div>
+
+  <h2>Decisões que ainda são suas</h2>
+  <div class="two">
+    <div class="card"><h3>Antes de implementar</h3><ul class="clean">
+      <li><strong>Confiança inicial:</strong> 50% (k = 1,5, recomendado) ou 100% (k = 3). Começar em 100% rende ~+3 bps a mais e piora o pior caso de −19 para −22, só com aportes. As vendas sempre esperam histórico.</li>
+      <li><strong>CASH:</strong> hoje a meta residual de 11,75% absorve o aporte inteiro. Vale redistribuir as metas ou tirar o caixa da disputa.</li>
+      <li><strong>Vendas isentas:</strong> entram agora (desligadas até haver histórico) ou numa etapa separada.</li>
+    </ul></div>
+    <div class="card"><h3>Riscos e limites</h3><ul class="clean">
+      <li>São simulações: o ganho depende de existir prêmio de valor, que varia por década.</li>
+      <li>O aprendizado é lento: o IC só tem poder estatístico depois de ~2 anos de revisões.</li>
+      <li>Em ~25% dos cenários, a v3 rende menos que o "só gap". Ela melhora as chances, não garante resultado.</li>
+      <li>O simulador simplifica o app (frações de ação, uma moeda, sem o limite de 5 ativos por aporte). A versão final precisa ser validada no motor real.</li>
+    </ul></div>
+  </div>
+  <p class="muted" style="margin-top:28px;font-size:13px">Base: Monte Carlo com 8 mercados × 6 qualidades de valuation × 3.000 cenários de 10 anos (R$ 280 mil + R$ 5 mil/mês). Referências: Grinold & Kahn (information coefficient); James–Stein (encolhimento); Perold & Sharpe (1988), sobre quando rebalancear ajuda; Asness, Moskowitz & Pedersen (2013) e Daniel & Moskowitz (2016), sobre momentum e seus colapsos; Lei 11.033/2004, art. 3º.</p>
+</main>
+<div class="tooltip" id="tooltip" role="status" aria-live="polite"></div>
+</div>
+<script>
+const D = {"impact": [{"key": "v2", "label": "v2 atual", "byQuality": {"bom": 20.847949916438623, "amador": 17.09338207172904, "ruim": 12.100328358414055, "pegajoso": 13.399794733922024, "cego_crescimento": -11.01006271689619, "inutil": -0.03853826299262225}, "worst": -46.12156970967697, "informative": 16.68055344886057, "wealth": 1864578.8530773032}, {"key": "k3", "label": "k = 3 fixo (refer\u00eancia)", "byQuality": {"bom": 47.058923533352626, "amador": 37.36380213220643, "ruim": 26.668510238934456, "pegajoso": 28.011135801127814, "cego_crescimento": -24.125549230618894, "inutil": -0.13655725957691495}, "worst": -81.7805037464201, "informative": 37.0304119681645, "wealth": 1898208.1610891456}, {"key": "v3", "label": "v3 (s\u00f3 aportes)", "byQuality": {"bom": 40.32735633842198, "amador": 30.05735325758162, "ruim": 19.462610618569357, "pegajoso": 23.093585063263834, "cego_crescimento": -7.2510088055124875, "inutil": -0.6027943002549291}, "worst": -16.918112245066673, "informative": 29.949106738190988, "wealth": 1878407.9320863208}, {"key": "v3s", "label": "v3 + vendas isentas", "byQuality": {"bom": 107.29031117650379, "amador": 78.08421100683259, "ruim": 49.30148750558703, "pegajoso": 67.06785497111802, "cego_crescimento": 4.580159980395575, "inutil": 0.12143616193986717}, "worst": -23.298374965530495, "informative": 78.22533656297446, "wealth": 1951492.897039346}], "gapWealth": 1826680.9581275214, "confidence": {"Bom": [1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.746, 1.94, 2.107, 2.237, 2.328, 2.395, 2.534, 2.622, 2.684, 2.724, 2.811, 2.864, 2.907, 2.962, 2.996, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0, 3.0], "Amador": [1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.625, 1.705, 1.786, 1.843, 1.903, 1.927, 2.002, 2.06, 2.101, 2.133, 2.209, 2.271, 2.274, 2.317, 2.354, 2.389, 2.366, 2.374, 2.394, 2.451, 2.469, 2.494, 2.526, 2.551, 2.566, 2.555, 2.567, 2.563, 2.586, 2.569, 2.576, 2.565, 2.558, 2.587, 2.583, 2.611, 2.631, 2.628, 2.646, 2.662, 2.687, 2.691, 2.706, 2.718, 2.744, 2.744, 2.739, 2.756, 2.768, 2.778, 2.776, 2.792, 2.781, 2.787, 2.788, 2.793, 2.786, 2.792, 2.816, 2.817, 2.813, 2.819, 2.83, 2.84, 2.856, 2.857, 2.852, 2.839, 2.855, 2.86, 2.86, 2.868, 2.874, 2.889, 2.9, 2.888, 2.888, 2.891, 2.89, 2.888, 2.872, 2.875, 2.88, 2.887, 2.891, 2.883, 2.892, 2.895, 2.9, 2.885, 2.882, 2.88, 2.886, 2.884, 2.893, 2.887, 2.888, 2.882, 2.888, 2.892, 2.898, 2.898, 2.894, 2.892, 2.908, 2.911, 2.905, 2.904], "Ruim": [1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.571, 1.61, 1.641, 1.697, 1.748, 1.784, 1.826, 1.881, 1.91, 1.928, 1.929, 1.939, 1.94, 1.943, 1.924, 1.92, 1.91, 1.928, 1.931, 1.946, 1.955, 1.947, 1.967, 1.978, 1.979, 1.975, 1.987, 1.972, 1.972, 1.99, 1.981, 1.972, 1.956, 1.985, 2.0, 1.971, 1.998, 2.0, 1.976, 1.987, 1.973, 1.994, 1.965, 1.984, 2.011, 2.019, 2.028, 2.036, 2.058, 2.072, 2.056, 2.048, 2.063, 2.073, 2.084, 2.08, 2.088, 2.083, 2.097, 2.099, 2.095, 2.088, 2.071, 2.093, 2.088, 2.074, 2.077, 2.088, 2.085, 2.084, 2.074, 2.074, 2.077, 2.089, 2.091, 2.093, 2.098, 2.106, 2.103, 2.1, 2.108, 2.114, 2.106, 2.122, 2.128, 2.136, 2.135, 2.132, 2.125, 2.13, 2.131, 2.134, 2.146, 2.151, 2.15, 2.154, 2.16, 2.185, 2.174, 2.161, 2.166, 2.168, 2.167, 2.175, 2.18, 2.172, 2.172, 2.175], "Sem informa\u00e7\u00e3o": [1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.385, 1.302, 1.252, 1.18, 1.126, 1.054, 1.002, 0.97, 0.948, 0.911, 0.91, 0.87, 0.839, 0.804, 0.781, 0.756, 0.73, 0.723, 0.702, 0.684, 0.669, 0.651, 0.641, 0.638, 0.624, 0.605, 0.609, 0.597, 0.586, 0.566, 0.555, 0.532, 0.533, 0.524, 0.506, 0.482, 0.474, 0.497, 0.498, 0.49, 0.464, 0.447, 0.44, 0.455, 0.461, 0.455, 0.455, 0.449, 0.442, 0.442, 0.428, 0.423, 0.418, 0.415, 0.41, 0.412, 0.413, 0.408, 0.399, 0.4, 0.396, 0.398, 0.389, 0.385, 0.375, 0.374, 0.37, 0.362, 0.368, 0.365, 0.357, 0.366, 0.362, 0.349, 0.356, 0.352, 0.343, 0.351, 0.348, 0.339, 0.338, 0.335, 0.344, 0.349, 0.347, 0.342, 0.341, 0.339, 0.348, 0.354, 0.351, 0.347, 0.341, 0.339, 0.326, 0.326, 0.324, 0.323, 0.315, 0.313, 0.314, 0.316, 0.314, 0.314, 0.31, 0.308, 0.294, 0.293], "Enviesado": [1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.5, 1.069, 0.723, 0.403, 0.124, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]}, "advantage": {"amador": {"v2": [0.002, 0.008, 0.016, 0.028, 0.032, 0.044, 0.052, 0.066, 0.079, 0.099, 0.105, 0.124, 0.132, 0.155, 0.164, 0.191, 0.193, 0.222, 0.232, 0.255, 0.277, 0.304, 0.309, 0.33, 0.358, 0.363, 0.391, 0.415, 0.436, 0.452, 0.45, 0.478, 0.49, 0.504, 0.528, 0.538, 0.569, 0.568, 0.584, 0.605, 0.628, 0.645, 0.657, 0.685, 0.688, 0.713, 0.726, 0.745, 0.755, 0.769, 0.798, 0.813, 0.812, 0.814, 0.842, 0.868, 0.876, 0.892, 0.912, 0.926, 0.964, 0.968, 0.991, 0.976, 1.024, 1.029, 1.04, 1.063, 1.063, 1.083, 1.107, 1.126, 1.131, 1.15, 1.183, 1.182, 1.225, 1.231, 1.259, 1.28, 1.286, 1.32, 1.328, 1.327, 1.324, 1.323, 1.336, 1.351, 1.376, 1.372, 1.389, 1.394, 1.412, 1.423, 1.432, 1.436, 1.467, 1.465, 1.48, 1.51, 1.512, 1.521, 1.527, 1.54, 1.571, 1.581, 1.601, 1.597, 1.594, 1.622, 1.637, 1.657, 1.664, 1.654, 1.631, 1.659, 1.68, 1.687, 1.682, 1.704], "k3": [0.005, 0.013, 0.026, 0.041, 0.062, 0.072, 0.094, 0.133, 0.143, 0.184, 0.198, 0.233, 0.266, 0.299, 0.304, 0.331, 0.381, 0.435, 0.468, 0.482, 0.527, 0.598, 0.624, 0.638, 0.727, 0.787, 0.822, 0.825, 0.894, 0.919, 0.918, 0.975, 1.022, 1.066, 1.107, 1.135, 1.14, 1.24, 1.247, 1.284, 1.377, 1.4, 1.451, 1.524, 1.512, 1.562, 1.582, 1.626, 1.647, 1.669, 1.707, 1.735, 1.779, 1.802, 1.867, 1.929, 1.989, 2.02, 2.043, 2.049, 2.125, 2.126, 2.138, 2.14, 2.15, 2.261, 2.263, 2.272, 2.358, 2.319, 2.393, 2.446, 2.459, 2.531, 2.563, 2.618, 2.624, 2.72, 2.75, 2.749, 2.808, 2.856, 2.897, 2.965, 2.968, 2.985, 3.014, 2.999, 2.993, 3.106, 3.158, 3.17, 3.218, 3.238, 3.274, 3.294, 3.365, 3.346, 3.385, 3.424, 3.433, 3.447, 3.468, 3.514, 3.468, 3.507, 3.575, 3.612, 3.61, 3.66, 3.722, 3.767, 3.819, 3.807, 3.725, 3.791, 3.755, 3.753, 3.788, 3.843], "v3": [0.003, 0.012, 0.021, 0.034, 0.049, 0.061, 0.084, 0.109, 0.121, 0.152, 0.162, 0.192, 0.2, 0.227, 0.226, 0.25, 0.259, 0.275, 0.305, 0.312, 0.317, 0.342, 0.363, 0.38, 0.406, 0.429, 0.428, 0.437, 0.465, 0.487, 0.476, 0.525, 0.538, 0.545, 0.544, 0.601, 0.625, 0.644, 0.696, 0.69, 0.734, 0.744, 0.75, 0.805, 0.818, 0.824, 0.842, 0.87, 0.849, 0.869, 0.886, 0.913, 0.942, 0.933, 0.935, 0.977, 1.003, 1.016, 1.045, 1.078, 1.117, 1.104, 1.131, 1.14, 1.176, 1.25, 1.264, 1.258, 1.334, 1.319, 1.361, 1.362, 1.386, 1.389, 1.396, 1.448, 1.48, 1.495, 1.574, 1.605, 1.661, 1.654, 1.661, 1.645, 1.679, 1.71, 1.723, 1.754, 1.805, 1.868, 1.87, 1.877, 1.913, 1.945, 1.965, 1.991, 2.036, 2.038, 2.059, 2.05, 2.094, 2.126, 2.109, 2.123, 2.118, 2.188, 2.227, 2.22, 2.199, 2.304, 2.305, 2.324, 2.386, 2.401, 2.4, 2.419, 2.447, 2.445, 2.439, 2.466], "v3lo": [-0.086, -0.163, -0.233, -0.274, -0.341, -0.398, -0.47, -0.512, -0.554, -0.614, -0.642, -0.675, -0.73, -0.747, -0.766, -0.787, -0.813, -0.83, -0.895, -0.927, -0.938, -0.933, -0.992, -1.006, -1.021, -0.987, -1.029, -1.061, -1.081, -1.078, -1.117, -1.126, -1.116, -1.123, -1.145, -1.152, -1.136, -1.192, -1.219, -1.19, -1.24, -1.205, -1.218, -1.21, -1.208, -1.247, -1.273, -1.259, -1.293, -1.318, -1.303, -1.322, -1.321, -1.336, -1.337, -1.363, -1.366, -1.337, -1.373, -1.381, -1.349, -1.351, -1.331, -1.346, -1.356, -1.366, -1.35, -1.347, -1.346, -1.351, -1.331, -1.313, -1.356, -1.347, -1.388, -1.364, -1.38, -1.436, -1.378, -1.339, -1.382, -1.387, -1.39, -1.356, -1.379, -1.401, -1.41, -1.397, -1.399, -1.384, -1.381, -1.402, -1.391, -1.411, -1.454, -1.404, -1.382, -1.409, -1.389, -1.383, -1.422, -1.396, -1.383, -1.397, -1.421, -1.449, -1.491, -1.5, -1.49, -1.44, -1.487, -1.492, -1.459, -1.442, -1.448, -1.487, -1.551, -1.53, -1.559, -1.547], "v3hi": [0.1, 0.191, 0.287, 0.387, 0.486, 0.583, 0.69, 0.796, 0.877, 0.977, 1.055, 1.142, 1.255, 1.359, 1.44, 1.507, 1.641, 1.768, 1.824, 1.88, 1.995, 2.081, 2.168, 2.177, 2.254, 2.375, 2.466, 2.603, 2.703, 2.806, 2.925, 3.075, 3.203, 3.202, 3.344, 3.467, 3.53, 3.561, 3.682, 3.784, 3.813, 3.934, 4.089, 4.156, 4.191, 4.265, 4.336, 4.328, 4.461, 4.552, 4.685, 4.748, 4.821, 4.929, 4.957, 4.988, 5.081, 5.139, 5.271, 5.346, 5.382, 5.383, 5.586, 5.633, 5.749, 5.686, 5.814, 5.835, 6.017, 5.922, 5.983, 6.018, 6.048, 6.172, 6.291, 6.327, 6.408, 6.496, 6.626, 6.599, 6.709, 6.831, 6.838, 6.893, 7.018, 7.031, 7.114, 7.171, 7.23, 7.32, 7.373, 7.411, 7.416, 7.515, 7.585, 7.678, 7.715, 7.784, 7.764, 7.877, 7.852, 7.878, 7.924, 8.018, 8.064, 8.054, 8.129, 8.203, 8.392, 8.248, 8.289, 8.454, 8.528, 8.588, 8.684, 8.607, 8.632, 8.76, 8.8, 8.817], "v3s": [0.003, 0.012, 0.021, 0.034, 0.049, 0.061, 0.084, 0.109, 0.121, 0.152, 0.162, 0.192, 0.197, 0.217, 0.217, 0.234, 0.234, 0.267, 0.278, 0.3, 0.306, 0.351, 0.357, 0.414, 0.423, 0.437, 0.466, 0.478, 0.522, 0.531, 0.558, 0.619, 0.669, 0.695, 0.746, 0.739, 0.805, 0.909, 0.951, 0.972, 1.009, 1.091, 1.118, 1.22, 1.293, 1.268, 1.283, 1.306, 1.414, 1.423, 1.534, 1.596, 1.685, 1.646, 1.719, 1.788, 1.85, 1.892, 1.878, 1.958, 2.006, 2.083, 2.149, 2.158, 2.252, 2.362, 2.395, 2.38, 2.422, 2.496, 2.639, 2.632, 2.661, 2.729, 2.828, 2.86, 3.003, 3.11, 3.267, 3.382, 3.4, 3.616, 3.628, 3.658, 3.576, 3.773, 3.762, 3.963, 3.983, 4.066, 4.157, 4.208, 4.354, 4.331, 4.399, 4.312, 4.397, 4.507, 4.648, 4.752, 4.729, 4.971, 4.941, 5.057, 5.094, 5.074, 5.112, 5.097, 5.19, 5.378, 5.523, 5.544, 5.616, 5.724, 5.773, 5.77, 5.823, 5.857, 6.036, 6.012]}, "enviesado": {"v2": [-0.003, -0.008, -0.02, -0.036, -0.048, -0.074, -0.095, -0.121, -0.141, -0.159, -0.185, -0.215, -0.249, -0.265, -0.297, -0.336, -0.355, -0.387, -0.447, -0.486, -0.521, -0.545, -0.581, -0.629, -0.664, -0.705, -0.725, -0.784, -0.796, -0.838, -0.85, -0.882, -0.923, -0.947, -0.995, -1.015, -1.067, -1.097, -1.107, -1.171, -1.217, -1.265, -1.303, -1.32, -1.342, -1.381, -1.446, -1.466, -1.519, -1.521, -1.572, -1.615, -1.647, -1.691, -1.733, -1.767, -1.802, -1.818, -1.832, -1.896, -1.949, -1.956, -2.011, -2.053, -2.066, -2.086, -2.123, -2.158, -2.184, -2.224, -2.253, -2.304, -2.35, -2.404, -2.458, -2.481, -2.521, -2.581, -2.582, -2.631, -2.713, -2.742, -2.752, -2.802, -2.857, -2.877, -2.934, -2.944, -2.999, -3.027, -3.086, -3.116, -3.183, -3.194, -3.236, -3.301, -3.386, -3.422, -3.412, -3.466, -3.496, -3.516, -3.546, -3.635, -3.704, -3.727, -3.798, -3.813, -3.84, -3.868, -3.928, -3.97, -4.007, -4.046, -4.046, -4.094, -4.119, -4.185, -4.185, -4.23], "k3": [-0.005, -0.014, -0.024, -0.047, -0.075, -0.104, -0.125, -0.158, -0.212, -0.246, -0.291, -0.337, -0.372, -0.402, -0.488, -0.518, -0.553, -0.586, -0.683, -0.739, -0.789, -0.843, -0.904, -0.992, -1.058, -1.108, -1.18, -1.233, -1.275, -1.351, -1.394, -1.467, -1.521, -1.596, -1.675, -1.732, -1.786, -1.78, -1.817, -1.913, -2.001, -2.038, -2.085, -2.155, -2.237, -2.325, -2.385, -2.402, -2.468, -2.503, -2.571, -2.696, -2.698, -2.783, -2.844, -2.876, -2.952, -3.019, -3.045, -3.203, -3.293, -3.324, -3.419, -3.467, -3.53, -3.583, -3.601, -3.668, -3.698, -3.731, -3.841, -3.897, -4.023, -4.148, -4.195, -4.213, -4.29, -4.409, -4.482, -4.527, -4.597, -4.721, -4.786, -4.832, -4.932, -5.004, -5.085, -5.147, -5.252, -5.31, -5.448, -5.531, -5.542, -5.634, -5.687, -5.832, -5.918, -5.936, -5.965, -6.12, -6.169, -6.219, -6.276, -6.372, -6.505, -6.621, -6.616, -6.686, -6.846, -6.917, -7.005, -6.984, -7.16, -7.201, -7.31, -7.401, -7.399, -7.402, -7.479, -7.57], "v3": [-0.007, -0.019, -0.027, -0.053, -0.077, -0.111, -0.152, -0.182, -0.238, -0.26, -0.324, -0.376, -0.435, -0.459, -0.529, -0.578, -0.618, -0.651, -0.728, -0.777, -0.808, -0.84, -0.87, -0.909, -0.933, -0.953, -0.984, -0.991, -1.015, -1.035, -1.027, -1.038, -1.065, -1.092, -1.112, -1.129, -1.137, -1.12, -1.151, -1.162, -1.176, -1.184, -1.182, -1.198, -1.197, -1.199, -1.217, -1.217, -1.232, -1.217, -1.225, -1.231, -1.224, -1.245, -1.256, -1.266, -1.274, -1.276, -1.295, -1.297, -1.288, -1.288, -1.296, -1.288, -1.29, -1.294, -1.303, -1.297, -1.299, -1.322, -1.297, -1.311, -1.309, -1.316, -1.304, -1.312, -1.315, -1.319, -1.326, -1.331, -1.33, -1.309, -1.313, -1.299, -1.295, -1.31, -1.319, -1.326, -1.336, -1.327, -1.33, -1.317, -1.312, -1.306, -1.322, -1.313, -1.327, -1.311, -1.317, -1.323, -1.321, -1.321, -1.323, -1.319, -1.316, -1.307, -1.315, -1.315, -1.31, -1.29, -1.297, -1.3, -1.288, -1.302, -1.299, -1.303, -1.306, -1.309, -1.296, -1.3], "v3lo": [-0.126, -0.248, -0.381, -0.507, -0.633, -0.759, -0.879, -1.027, -1.179, -1.318, -1.491, -1.626, -1.736, -1.832, -1.914, -2.013, -2.081, -2.157, -2.213, -2.247, -2.317, -2.391, -2.432, -2.5, -2.504, -2.544, -2.571, -2.61, -2.612, -2.663, -2.703, -2.702, -2.75, -2.746, -2.795, -2.795, -2.799, -2.825, -2.835, -2.905, -2.88, -2.923, -2.917, -2.939, -2.992, -3.026, -3.036, -3.07, -3.066, -3.112, -3.138, -3.106, -3.102, -3.153, -3.13, -3.148, -3.135, -3.218, -3.18, -3.162, -3.192, -3.202, -3.251, -3.27, -3.291, -3.312, -3.339, -3.376, -3.357, -3.368, -3.382, -3.408, -3.43, -3.444, -3.428, -3.443, -3.463, -3.507, -3.504, -3.483, -3.505, -3.574, -3.546, -3.545, -3.537, -3.571, -3.565, -3.632, -3.65, -3.678, -3.712, -3.723, -3.723, -3.739, -3.769, -3.793, -3.759, -3.833, -3.841, -3.868, -3.832, -3.852, -3.885, -3.855, -3.864, -3.908, -3.896, -3.907, -3.93, -3.902, -3.975, -3.97, -3.96, -4.009, -4.043, -4.063, -4.099, -4.092, -4.082, -4.123], "v3hi": [0.107, 0.206, 0.309, 0.391, 0.451, 0.535, 0.588, 0.64, 0.704, 0.763, 0.806, 0.814, 0.875, 0.923, 0.926, 0.969, 0.983, 0.928, 0.93, 0.957, 0.918, 0.92, 0.896, 0.916, 0.925, 0.876, 0.874, 0.826, 0.819, 0.771, 0.759, 0.71, 0.683, 0.678, 0.672, 0.594, 0.589, 0.608, 0.584, 0.553, 0.522, 0.569, 0.539, 0.529, 0.483, 0.468, 0.482, 0.471, 0.428, 0.408, 0.375, 0.38, 0.362, 0.33, 0.374, 0.344, 0.355, 0.346, 0.358, 0.381, 0.38, 0.366, 0.363, 0.335, 0.34, 0.321, 0.336, 0.293, 0.306, 0.282, 0.297, 0.322, 0.29, 0.295, 0.305, 0.29, 0.296, 0.29, 0.27, 0.265, 0.271, 0.246, 0.234, 0.243, 0.217, 0.27, 0.28, 0.26, 0.276, 0.29, 0.285, 0.279, 0.28, 0.254, 0.282, 0.292, 0.285, 0.264, 0.282, 0.282, 0.295, 0.275, 0.267, 0.248, 0.262, 0.249, 0.301, 0.294, 0.295, 0.305, 0.32, 0.318, 0.309, 0.307, 0.306, 0.314, 0.305, 0.309, 0.287, 0.255], "v3s": [-0.007, -0.019, -0.027, -0.053, -0.077, -0.111, -0.152, -0.182, -0.238, -0.26, -0.324, -0.376, -0.436, -0.46, -0.536, -0.594, -0.638, -0.683, -0.767, -0.812, -0.87, -0.886, -0.923, -0.954, -0.991, -1.013, -1.04, -1.05, -1.08, -1.085, -1.114, -1.126, -1.146, -1.157, -1.176, -1.209, -1.204, -1.186, -1.211, -1.231, -1.227, -1.246, -1.257, -1.265, -1.267, -1.28, -1.284, -1.3, -1.325, -1.289, -1.307, -1.298, -1.299, -1.326, -1.329, -1.343, -1.351, -1.349, -1.374, -1.377, -1.366, -1.354, -1.372, -1.369, -1.363, -1.366, -1.38, -1.382, -1.385, -1.396, -1.368, -1.392, -1.402, -1.386, -1.384, -1.385, -1.406, -1.398, -1.405, -1.387, -1.404, -1.398, -1.396, -1.375, -1.379, -1.393, -1.403, -1.393, -1.4, -1.395, -1.398, -1.412, -1.392, -1.396, -1.4, -1.4, -1.38, -1.379, -1.404, -1.389, -1.398, -1.39, -1.399, -1.388, -1.404, -1.4, -1.391, -1.393, -1.39, -1.362, -1.352, -1.358, -1.373, -1.371, -1.368, -1.368, -1.38, -1.386, -1.371, -1.366]}}, "bias": [{"key": "gap", "label": "S\u00f3 gap", "ret": 0.0, "worst": 0.0, "falling": 0.5093935976999481, "rising": 0.011821822284739525, "trueDisc": 0.05004760637622677}, {"key": "v2", "label": "v2 atual", "ret": 8.732142350102487, "worst": -46.12156970967697, "falling": 0.5126159868592235, "rising": 0.016930146939065985, "trueDisc": 0.07807176232029774}, {"key": "v3_sem", "label": "v3 sem momentum", "ret": 17.07530264921557, "worst": -19.212051599202855, "falling": 0.482327619613176, "rising": 0.028688298240840616, "trueDisc": 0.09281457482526889}, {"key": "v3", "label": "v3 com momentum leve (proposta)", "ret": 17.514517028678227, "worst": -16.918112245066673, "falling": 0.34760060137995924, "rising": 0.08438850420921484, "trueDisc": 0.09135686995626478}, {"key": "v3_forte", "label": "v3 com momentum forte", "ret": 17.33126602180051, "worst": -19.392178576723566, "falling": 0.18901210568494164, "rising": 0.22885929919838496, "trueDisc": 0.08341596451714255}], "study": [{"key": "mom_leve", "label": "Momentum leve (0,10)", "mean": 17.514517028678227, "worst": -16.918112245066673, "sticky": 23.09358506326383, "reversal": 26.156247297978794, "reversalWorst": -5.693514656279202, "biasedWorst": -16.918112245066673, "falling": 0.34760060137995924, "maxRegret": 7.38052013872427}, {"key": "mom_velocidade", "label": "Momentum s\u00f3 na velocidade", "mean": 17.122368950660135, "worst": -17.90251061413474, "sticky": 23.4026231878414, "reversal": 21.848641366944012, "reversalWorst": -8.630344764397345, "biasedWorst": -17.90251061413474, "falling": 0.2688589175563859, "maxRegret": 8.451041538976463}, {"key": "confirmacao", "label": "Confirma\u00e7\u00e3o do seu valuation", "mean": 16.770685782191975, "worst": -18.806311199171766, "sticky": 22.063260945579984, "reversal": 25.374013890937402, "reversalWorst": -3.48959183534402, "biasedWorst": -18.806311199171766, "falling": 0.41233558262451314, "maxRegret": 9.716776671973903}, {"key": "so_freio", "label": "S\u00f3 freio em baratos que caem", "mean": 16.62053378129851, "worst": -18.673855560731887, "sticky": 21.815053220769414, "reversal": 25.862991313528397, "reversalWorst": -2.738764989684794, "biasedWorst": -18.673855560731887, "falling": 0.4217553268113419, "maxRegret": 9.784007715898086}, {"key": "v3", "label": "Sem momentum", "mean": 17.07530264921557, "worst": -19.212051599202855, "sticky": 21.738849940337147, "reversal": 27.429957909692686, "reversalWorst": -1.2029819500598238, "biasedWorst": -19.212051599202855, "falling": 0.482327619613176, "maxRegret": 9.854227941726416}, {"key": "parcelas", "label": "Compra em parcelas", "mean": 16.565679520782833, "worst": -17.720712827534125, "sticky": 22.595345842316043, "reversal": 19.842979004991086, "reversalWorst": -10.086185062081125, "biasedWorst": -17.720712827534125, "falling": 0.19177333824307966, "maxRegret": 9.897282558332448}, {"key": "paciencia", "label": "Rel\u00f3gio de paci\u00eancia", "mean": 15.836166469694808, "worst": -18.36291943142041, "sticky": 20.52664471506488, "reversal": 26.06496882500223, "reversalWorst": -1.0057280048912425, "biasedWorst": -18.36291943142041, "falling": 0.4839749013297691, "maxRegret": 10.406354045212424}, {"key": "confirmacao_parcelas", "label": "Confirma\u00e7\u00e3o + parcelas", "mean": 16.337000135760196, "worst": -17.639471828749834, "sticky": 22.486358904857944, "reversal": 17.94546763034112, "reversalWorst": -12.073385984654658, "biasedWorst": -17.639471828749834, "falling": 0.16360168987032295, "maxRegret": 11.884483480905981}, {"key": "tudo_moderado", "label": "Tudo moderado", "mean": 15.040739965552246, "worst": -16.803751218661304, "sticky": 20.98469957574126, "reversal": 16.32304277280183, "reversalWorst": -11.34215106801149, "biasedWorst": -16.803751218661304, "falling": 0.1663657383918227, "maxRegret": 14.372747582046202}, {"key": "mom_forte", "label": "Momentum forte (0,25)", "mean": 17.33126602180051, "worst": -19.392178576723566, "sticky": 24.518990090789988, "reversal": 20.78737346331867, "reversalWorst": -19.392178576723566, "biasedWorst": -10.38525082839782, "falling": 0.18901210568494164, "maxRegret": 18.390801836783314}], "sweep": {"ks": [0, 0.05, 0.075, 0.1, 0.125, 0.15, 0.2], "all": [17.07530264921557, 17.34797845445881, 17.445076319360812, 17.514517028678227, 17.553262724979835, 17.562797551896235, 17.499124192894953], "sticky": [21.738849940337147, 22.445946066884208, 22.779385822660508, 23.09358506326383, 23.386188437236704, 23.660742315355364, 24.110591346626155], "reversal": [27.429957909692686, 27.008544501243616, 26.637304062757195, 26.156247297978794, 25.522314589124438, 24.745923086347023, 22.9029775979827], "worst": [-19.212051599202855, -18.21941261147177, -17.624627386092158, -16.918112245066673, -16.048439289447252, -15.023306168885716, -14.49633077184969], "regret": [7.075679266057582, 6.078739186364949, 5.389913990410168, 4.69213791633895, 6.5714011308742535, 8.729437350074175, 13.494954031909439], "falling": [0.482327619613176, 0.4148701025448121, 0.3809096423426774, 0.34760060137995924, 0.3156020261835766, 0.2854975117232185, 0.23239391491933406]}, "reviewValue": 6.963768194317787, "portfolio": {"assets": [{"ticker": "RDDT", "target": 0.0125, "current": 0.00333366, "discount": 0.14377143, "momZ": -0.9029824468831238, "mom": -0.3134887868781464, "v2Target": 0.01272171, "v2Rank": 1, "v3Target": 0.012061012091174097, "v3Rank": 1, "v3SemTarget": 0.013067496671494913, "v3SemRank": 1, "v3ForteRank": 1, "v3K3Target": 0.012024412009283796, "v3K3Rank": 1}, {"ticker": "PNVL3", "target": 0.0175, "current": 0.00872243, "discount": 0.12928571, "momZ": 0.5546114605907564, "mom": 0.3186763790057451, "v2Target": 0.01784435, "v2Rank": 2, "v3Target": 0.019049577675975184, "v3Rank": 2, "v3SemTarget": 0.017839862310943852, "v3SemRank": 2, "v3ForteRank": 2, "v3K3Target": 0.01851980937131846, "v3K3Rank": 2}, {"ticker": "TIMS3", "target": 0.0175, "current": 0.00998714, "discount": 0.17691287, "momZ": -0.621257898517363, "mom": -0.1913035575505485, "v2Target": 0.01865198, "v2Rank": 3, "v3Target": 0.018427345817727956, "v3Rank": 3, "v3SemTarget": 0.019410480652844498, "v3SemRank": 3, "v3ForteRank": 5, "v3K3Target": 0.019492104807899622, "v3K3Rank": 4}, {"ticker": "TEND3", "target": 0.025, "current": 0.02760731, "discount": 0.35597888, "momZ": 0.3313326092588055, "mom": 0.22183931666150852, "v2Target": 0.034465, "v2Rank": 7, "v3Target": 0.04183634907171206, "v3Rank": 4, "v3SemTarget": 0.040064230102774046, "v3SemRank": 5, "v3ForteRank": 4, "v3K3Target": 0.05, "v3K3Rank": 3}, {"ticker": "TTEN3", "target": 0.025, "current": 0.0253945, "discount": 0.36625, "momZ": -1.2167543166007777, "mom": -0.4495730865261359, "v2Target": 0.03500132, "v2Rank": 4, "v3Target": 0.036710848565596574, "v3Rank": 5, "v3SemTarget": 0.04104214096969968, "v3SemRank": 4, "v3ForteRank": 8, "v3K3Target": 0.04388916362376778, "v3K3Rank": 5}, {"ticker": "SMFT3", "target": 0.035, "current": 0.03813093, "discount": 0.34702336, "momZ": -0.9389588375093239, "mom": -0.3290919125714548, "v2Target": 0.04758925, "v2Rank": 8, "v3Target": 0.05, "v3Rank": 6, "v3SemTarget": 0.05, "v3SemRank": 9, "v3ForteRank": 11, "v3K3Target": 0.05, "v3K3Rank": 10}, {"ticker": "ALPK3", "target": 0.0125, "current": 0.01287971, "discount": 0.27066451, "momZ": -0.046212312975006456, "mom": 0.05809635151273605, "v2Target": 0.01521672, "v2Rank": 9, "v3Target": 0.016714229406928894, "v3Rank": 7, "v3SemTarget": 0.01662210226193576, "v3SemRank": 10, "v3ForteRank": 7, "v3K3Target": 0.02119629748910143, "v3K3Rank": 6}, {"ticker": "UBER", "target": 0.015, "current": 0.01419831, "discount": 0.26715789, "momZ": -0.9462477618480883, "mom": -0.33225315250262044, "v2Target": 0.01783635, "v2Rank": 6, "v3Target": 0.018199311475416067, "v3Rank": 8, "v3SemTarget": 0.019803529148259856, "v3SemRank": 6, "v3ForteRank": 12, "v3K3Target": 0.02291416317479219, "v3K3Rank": 7}, {"ticker": "SEER3", "target": 0.015, "current": 0.01929095, "discount": 0.326, "momZ": 0.7637264891912884, "mom": 0.4093705264402485, "v2Target": 0.01975922, "v2Rank": 16, "v3Target": 0.024481835524870686, "v3Rank": 9, "v3SemTarget": 0.022452689568159476, "v3SemRank": 13, "v3ForteRank": 6, "v3K3Target": 0.03, "v3K3Rank": 8}, {"ticker": "MU", "target": 0.0125, "current": 0.0126413, "discount": null, "momZ": 2, "mom": 1.5755659129505888, "v2Target": 0.01166711, "v2Rank": null, "v3Target": 0.015423264035828372, "v3Rank": 10, "v3SemTarget": 0.0125, "v3SemRank": null, "v3ForteRank": 3, "v3K3Target": 0.015539691911734085, "v3K3Rank": 11}, {"ticker": "SGOV", "target": 0.03, "current": 0.02491423, "discount": null, "momZ": -0.10526525419092013, "mom": 0.0324848199412385, "v2Target": 0.02800106, "v2Rank": 11, "v3Target": 0.029988657689164006, "v3Rank": 11, "v3SemTarget": 0.03, "v3SemRank": 11, "v3ForteRank": 10, "v3K3Target": 0.030215037507852326, "v3K3Rank": 13}, {"ticker": "DIRR3", "target": 0.03, "current": 0.02454301, "discount": 0.16239316, "momZ": -1.2068476359586608, "mom": -0.44527651367455473, "v2Target": 0.03179944, "v2Rank": 5, "v3Target": 0.029021679836886995, "v3Rank": 12, "v3SemTarget": 0.03241364635635516, "v3SemRank": 8, "v3ForteRank": null, "v3K3Target": 0.02990383530759257, "v3K3Rank": 12}, {"ticker": "INTR", "target": 0.03, "current": 0.03264152, "discount": 0.31866667, "momZ": -1.519559081654713, "mom": -0.5809009025585888, "v2Target": 0.03836956, "v2Rank": 10, "v3Target": 0.03834092020961201, "v3Rank": 13, "v3SemTarget": 0.04418234477853648, "v3SemRank": 7, "v3ForteRank": null, "v3K3Target": 0.05, "v3K3Rank": 9}, {"ticker": "VOO", "target": 0.04, "current": 0.03492173, "discount": null, "momZ": 0.11702170502622354, "mom": 0.12889169412395704, "v2Target": 0.03733474, "v2Rank": 14, "v3Target": 0.04088364075598876, "v3Rank": 14, "v3SemTarget": 0.04, "v3SemRank": 15, "v3ForteRank": 9, "v3K3Target": 0.041192265145836106, "v3K3Rank": 15}, {"ticker": "DLO", "target": 0.015, "current": 0.01305216, "discount": null, "momZ": -0.266202165839701, "mom": -0.03731425710458534, "v2Target": 0.01400053, "v2Rank": 13, "v3Target": 0.014754946188988252, "v3Rank": 15, "v3SemTarget": 0.015, "v3SemRank": 14, "v3ForteRank": 13, "v3K3Target": 0.01486632903505095, "v3K3Rank": 16}, {"ticker": "VIVA3", "target": 0.035, "current": 0.03427578, "discount": 0.20428571, "momZ": -0.9617397651423699, "mom": -0.3389721054168627, "v2Target": 0.03842081, "v2Rank": 12, "v3Target": 0.037474756746066054, "v3Rank": 16, "v3SemTarget": 0.04084127256091304, "v3SemRank": 12, "v3ForteRank": null, "v3K3Target": 0.041703043827941516, "v3K3Rank": 14}, {"ticker": "AMZN", "target": 0.035, "current": 0.03425374, "discount": null, "momZ": -0.1319572157297523, "mom": 0.02090839374499724, "v2Target": 0.0326679, "v2Rank": null, "v3Target": 0.03489350528198651, "v3Rank": 17, "v3SemTarget": 0.035, "v3SemRank": 16, "v3ForteRank": null, "v3K3Target": 0.03515691104962746, "v3K3Rank": 18}, {"ticker": "MULT3", "target": 0.025, "current": 0.02225328, "discount": -0.00322581, "momZ": 0.17894491408626015, "mom": 0.15574807402975904, "v2Target": 0.02333421, "v2Rank": 15, "v3Target": 0.02119277289162721, "v3Rank": null, "v3SemTarget": 0.02060672242576473, "v3SemRank": null, "v3ForteRank": null, "v3K3Target": 0.01665921017275769, "v3K3Rank": null}, {"ticker": "AUGO", "target": 0.035, "current": 0.04803099, "discount": null, "momZ": 2, "mom": 0.9710581844594547, "v2Target": 0.0326679, "v2Rank": null, "v3Target": 0.04318513930031944, "v3Rank": null, "v3SemTarget": 0.035, "v3SemRank": null, "v3ForteRank": 14, "v3K3Target": 0.043511137352855445, "v3K3Rank": null}, {"ticker": "BMOB3", "target": 0.03, "current": 0.04181435, "discount": -0.1, "momZ": 0.39776964236203327, "mom": 0.2506533627666568, "v2Target": 0.02676064, "v2Rank": null, "v3Target": 0.02264026389689058, "v3Rank": null, "v3SemTarget": 0.021537693116812008, "v3SemRank": null, "v3ForteRank": null, "v3K3Target": 0.015500907520741828, "v3K3Rank": null}, {"ticker": "BPAC11", "target": 0.03, "current": 0.02916182, "discount": -0.39333333, "momZ": 0.4585341692067607, "mom": 0.2770072168790318, "v2Target": 0.02112682, "v2Rank": null, "v3Target": 0.015978166533281303, "v3Rank": null, "v3SemTarget": 0.01510795467597435, "v3SemRank": null, "v3ForteRank": null, "v3K3Target": 0.007673775199452763, "v3K3Rank": null}, {"ticker": "CSUD3", "target": 0.02, "current": 0.0227005, "discount": 0.18449971, "momZ": -0.4933093359531812, "mom": -0.13581167887072432, "v2Target": 0.0214702, "v2Rank": null, "v3Target": 0.02162937674612258, "v3Rank": null, "v3SemTarget": 0.022493693519874656, "v3SemRank": null, "v3ForteRank": null, "v3K3Target": 0.023199172486320294, "v3K3Rank": 19}, {"ticker": "FIQE3", "target": 0.04, "current": 0.05078901, "discount": -0.014, "momZ": 0.46018071422931345, "mom": 0.27772133101053315, "v2Target": 0.03733474, "v2Rank": null, "v3Target": 0.03432122615407463, "v3Rank": null, "v3SemTarget": 0.03244666137849067, "v3SemRank": null, "v3ForteRank": null, "v3K3Target": 0.0265503671304444, "v3K3Rank": null}, {"ticker": "FLRY3", "target": 0.025, "current": 0.03111166, "discount": -0.244419, "momZ": 0.9558732815681201, "mom": 0.49270547196528264, "v2Target": 0.01971248, "v2Rank": null, "v3Target": 0.01657972983317837, "v3Rank": null, "v3SemTarget": 0.014916159414959876, "v3SemRank": null, "v3ForteRank": null, "v3K3Target": 0.00943391953428913, "v3K3Rank": null}, {"ticker": "GOOG", "target": 0.035, "current": 0.03022686, "discount": -0.54334842, "momZ": 0.25185173914849485, "mom": 0.18736809859435907, "v2Target": 0.02225215, "v2Rank": null, "v3Target": 0.015663333523103583, "v3Rank": null, "v3SemTarget": 0.01511955570523506, "v3SemRank": null, "v3ForteRank": null, "v3K3Target": 0.006452869635365261, "v3K3Rank": null}, {"ticker": "ITUB3", "target": 0.045, "current": 0.05771364, "discount": -0.21130092, "momZ": 0.7024531933101326, "mom": 0.3827960168622728, "v2Target": 0.03645259, "v2Rank": null, "v3Target": 0.030298138002587193, "v3Rank": null, "v3SemTarget": 0.027957697448134772, "v3SemRank": null, "v3ForteRank": null, "v3K3Target": 0.01795157413958341, "v3K3Rank": null}, {"ticker": "LAVV3", "target": 0.025, "current": 0.03342286, "discount": 0.23507738, "momZ": -0.6801947685545995, "mom": -0.21686474851925774, "v2Target": 0.02844542, "v2Rank": null, "v3Target": 0.029211079791238676, "v3Rank": null, "v3SemTarget": 0.030951429397829338, "v3SemRank": null, "v3ForteRank": null, "v3K3Target": 0.03448943051652841, "v3K3Rank": 17}, {"ticker": "META", "target": 0.02, "current": 0.01741963, "discount": -0.4709589, "momZ": 0.24674931008732984, "mom": 0.18515515169788616, "v2Target": 0.01334127, "v2Rank": null, "v3Target": 0.009614345310421093, "v3Rank": null, "v3SemTarget": 0.009285304400410824, "v3SemRank": null, "v3ForteRank": null, "v3K3Target": 0.004256803246054649, "v3K3Rank": null}, {"ticker": "PRIO3", "target": 0.045, "current": 0.06370092, "discount": 0.17569444, "momZ": 1.022856781363255, "mom": 0.5217565231821895, "v2Target": 0.04846885, "v2Rank": null, "v3Target": 0.05, "v3Rank": null, "v3SemTarget": 0.04980203940100156, "v3SemRank": null, "v3ForteRank": null, "v3K3Target": 0.05, "v3K3Rank": null}, {"ticker": "PSSA3", "target": 0.04, "current": 0.03874898, "discount": 0.03345649, "momZ": -0.08947865570852873, "mom": 0.03933154014032261, "v2Target": 0.03733474, "v2Rank": null, "v3Target": 0.034907296171088856, "v3Rank": null, "v3SemTarget": 0.03486541471110643, "v3SemRank": null, "v3ForteRank": null, "v3K3Target": 0.029016749833471446, "v3K3Rank": null}, {"ticker": "TFCO4", "target": 0.035, "current": 0.04035465, "discount": -0.02708978, "momZ": -0.8713914409588692, "mom": -0.2997876226525384, "v2Target": 0.0326679, "v2Rank": null, "v3Target": 0.02578610369890188, "v3Rank": null, "v3SemTarget": 0.02784981984786052, "v3SemRank": null, "v3ForteRank": null, "v3K3Target": 0.019567609886777443, "v3K3Rank": null}, {"ticker": "VULC3", "target": 0.03, "current": 0.03348368, "discount": 0.10568562, "momZ": -0.9550092332527236, "mom": -0.33605304285307974, "v2Target": 0.02978307, "v2Rank": null, "v3Target": 0.02697644713175808, "v3Rank": null, "v3SemTarget": 0.029380074405781574, "v3SemRank": null, "v3ForteRank": null, "v3K3Target": 0.02519498468364309, "v3K3Rank": null}], "profiles": {"v2": {"avgDiscount": 0.21417762879069882, "fallingShare": 0.541252578828585, "candidates": 16}, "v3": {"avgDiscount": 0.23330339055518276, "fallingShare": 0.44068480521309045, "candidates": 17}, "v3sem": {"avgDiscount": 0.23400379008563588, "fallingShare": 0.5246474699006279, "candidates": 16}, "v3forte": {"avgDiscount": 0.2264921620911157, "fallingShare": 0.288840706864394, "candidates": 14}, "v3k3": {"avgDiscount": 0.24720795218506494, "fallingShare": 0.4594237542732098, "candidates": 19}}, "portfolioValue": "279509.31"}, "worlds": 48};
+const NS = "http://www.w3.org/2000/svg";
+const tooltip = document.getElementById("tooltip");
+const css = (n) => getComputedStyle(document.querySelector(".viz-root")).getPropertyValue(n).trim();
+const num = (v, d = 1) => v.toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
+const sign = (v, d = 1) => { const r = Number(Math.abs(v).toFixed(d)); return (r === 0 ? "" : v > 0 ? "+" : "−") + num(Math.abs(v), d); };
+const pct = (v, d = 2) => num(v * 100, d) + "%";
+const brl = (v) => "R$ " + Math.round(v).toLocaleString("pt-BR");
+function el(tag, attrs = {}, parent) { const n = document.createElementNS(NS, tag); for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v); if (parent) parent.appendChild(n); return n; }
+function tip(evt, title, rows) {
+  tooltip.replaceChildren();
+  const t = document.createElement("div"); t.className = "t"; t.textContent = title; tooltip.appendChild(t);
+  for (const r of rows) {
+    const row = document.createElement("div"); row.className = "row";
+    const key = document.createElement("span"); key.className = "key";
+    if (r.color) { const i = document.createElement("i"); i.style.background = r.color; key.appendChild(i); }
+    key.appendChild(document.createTextNode(r.name));
+    const b = document.createElement("b"); b.textContent = r.value; row.append(key, b); tooltip.appendChild(row);
+  }
+  tooltip.style.display = "block";
+  const w = tooltip.offsetWidth, h = tooltip.offsetHeight;
+  let x = evt.clientX + 14, y = evt.clientY + 14;
+  if (x + w > innerWidth - 8) x = evt.clientX - w - 14; if (y + h > innerHeight - 8) y = evt.clientY - h - 14;
+  tooltip.style.left = x + "px"; tooltip.style.top = y + "px";
+}
+const hide = () => { tooltip.style.display = "none"; };
+function table(container, head, rows) {
+  const t = document.createElement("table"); const tr = document.createElement("tr");
+  head.forEach((h, i) => { const th = document.createElement("th"); th.textContent = h; if (i) th.className = "num"; tr.appendChild(th); });
+  const thead = document.createElement("thead"); thead.appendChild(tr); t.appendChild(thead);
+  const tb = document.createElement("tbody");
+  rows.forEach((r) => { const row = document.createElement("tr"); r.forEach((c, i) => { const td = document.createElement("td"); td.textContent = c; if (i) td.className = "num"; row.appendChild(td); }); tb.appendChild(row); });
+  t.appendChild(tb); container.replaceChildren(t);
+}
+function legend(id, items) {
+  const lg = document.getElementById(id); lg.replaceChildren();
+  for (const [name, color, kind] of items) { const s = document.createElement("span"); const i = document.createElement("i"); if (kind) i.className = kind; i.style.background = color; s.append(i, document.createTextNode(name)); lg.appendChild(s); }
+}
+
+/** Generic multi-line chart with optional band and crosshair tooltip. */
+function lineChart(container, { xs, series, band, yMin, yMax, yTicks, yFmt, xFmt, xTicks, xLabel }) {
+  container.replaceChildren();
+  const W = Math.max(300, container.clientWidth || 900), H = W < 600 ? 250 : 320;
+  const m = { t: 12, r: W < 600 ? 72 : 118, b: 40, l: 46 };
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}` }, container);
+  const x = (v) => m.l + ((v - xs[0]) / (xs[xs.length - 1] - xs[0])) * (W - m.l - m.r);
+  const y = (v) => m.t + (1 - (v - yMin) / (yMax - yMin)) * (H - m.t - m.b);
+  for (const t of yTicks) { el("line", { x1: m.l, x2: W - m.r, y1: y(t), y2: y(t), stroke: t === 0 ? css("--axis") : css("--grid") }, svg); const tx = el("text", { x: m.l - 8, y: y(t) + 4, "text-anchor": "end" }, svg); tx.textContent = yFmt(t); }
+  for (const t of xTicks) { const tx = el("text", { x: x(t), y: H - m.b + 18, "text-anchor": "middle" }, svg); tx.textContent = xFmt(t); }
+  if (xLabel) { const tx = el("text", { x: (m.l + W - m.r) / 2, y: H - 4, "text-anchor": "middle" }, svg); tx.textContent = xLabel; }
+  if (band) {
+    let d = ""; band.hi.forEach((v, i) => { d += (i ? "L" : "M") + x(xs[i]) + "," + y(Math.min(yMax, v)); });
+    for (let i = band.lo.length - 1; i >= 0; i -= 1) d += "L" + x(xs[i]) + "," + y(Math.max(yMin, band.lo[i]));
+    el("path", { d: d + "Z", fill: band.color, opacity: 0.16 }, svg);
+  }
+  const labelY = [];
+  for (const s of series) {
+    let d = ""; s.values.forEach((v, i) => { d += (i ? "L" : "M") + x(xs[i]) + "," + y(v); });
+    el("path", { d, fill: "none", stroke: s.color, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }, svg);
+    let ly = y(s.values[s.values.length - 1]) + 4;
+    for (const o of labelY.sort((a, b) => a - b)) if (Math.abs(o - ly) < 13) ly = o + 13;
+    labelY.push(ly);
+    const lab = el("text", { x: W - m.r + 6, y: ly, class: "direct" }, svg); lab.textContent = s.name;
+  }
+  const cross = el("line", { y1: m.t, y2: H - m.b, stroke: css("--axis"), visibility: "hidden" }, svg);
+  const dots = series.map((s) => el("circle", { r: 4, fill: s.color, stroke: css("--surface-1"), "stroke-width": 2, visibility: "hidden" }, svg));
+  const hit = el("rect", { x: m.l, y: m.t, width: W - m.l - m.r, height: H - m.t - m.b, fill: "transparent", tabindex: 0 }, svg);
+  let fi = xs.length - 1;
+  const at = (i, e) => {
+    cross.setAttribute("x1", x(xs[i])); cross.setAttribute("x2", x(xs[i])); cross.setAttribute("visibility", "visible");
+    series.forEach((s, k) => { dots[k].setAttribute("cx", x(xs[i])); dots[k].setAttribute("cy", y(s.values[i])); dots[k].setAttribute("visibility", "visible"); });
+    const r = svg.getBoundingClientRect(); const ev = e || { clientX: r.left + (x(xs[i]) / W) * r.width, clientY: r.top + 40 };
+    const rows = series.map((s) => ({ name: s.name, value: yFmt(s.values[i], true), color: s.color }));
+    if (band) rows.push({ name: band.name, value: yFmt(band.lo[i], true) + " a " + yFmt(band.hi[i], true) });
+    tip(ev, xFmt(xs[i], true), rows);
+  };
+  const off = () => { cross.setAttribute("visibility", "hidden"); dots.forEach((d) => d.setAttribute("visibility", "hidden")); hide(); };
+  hit.addEventListener("pointermove", (e) => { const r = svg.getBoundingClientRect(); const vx = ((e.clientX - r.left) / r.width) * W; let b = 0; xs.forEach((v, i) => { if (Math.abs(x(v) - vx) < Math.abs(x(xs[b]) - vx)) b = i; }); at(b, e); });
+  hit.addEventListener("pointerleave", off); hit.addEventListener("focus", () => at(fi)); hit.addEventListener("blur", off);
+  hit.addEventListener("keydown", (e) => { if (e.key === "ArrowRight") fi = Math.min(xs.length - 1, fi + 1); else if (e.key === "ArrowLeft") fi = Math.max(0, fi - 1); else return; e.preventDefault(); at(fi); });
+}
+const months = Array.from({ length: 120 }, (_, i) => i + 1);
+const monthFmt = (v, long) => long ? `Mês ${v} (ano ${num(v / 12, 1)})` : `${Math.round(v / 12)}a`;
+const bps = (v) => sign(v, 0);
+
+(function tiles() {
+  const by = Object.fromEntries(D.impact.map((r) => [r.key, r]));
+  const items = [
+    ["Ganho da v3 (só aportes)", sign(by.v3.informative / 100, 2) + " p.p./ano", `Média com valuation informativo. Pior mundo: ${sign(by.v3.worst / 100, 2)} p.p./ano (v2: ${sign(by.v2.worst / 100, 2)})`],
+    ["v3 + vendas isentas", sign(by.v3s.informative / 100, 2) + " p.p./ano", `Pior mundo: ${sign(by.v3s.worst / 100, 2)} p.p./ano, graças à trava pela confiança`],
+    ["Patrimônio mediano em 10 anos", "+" + brl(by.v3.wealth - D.gapWealth), `Contra o "só gap" (${brl(D.gapWealth)}); com vendas: +${brl(by.v3s.wealth - D.gapWealth)}. v2: +${brl(by.v2.wealth - D.gapWealth)}`],
+    ["Onde você começa", "k = 1,5", "Confiança de 50% sem histórico; as vendas só destravam com confiança ≥ 80%"],
+  ];
+  const box = document.getElementById("tiles");
+  for (const [label, value, note] of items) {
+    const c = document.createElement("div"); c.className = "card tile";
+    const l = document.createElement("div"); l.className = "label"; l.textContent = label;
+    const v = document.createElement("div"); v.className = "value"; v.textContent = value;
+    const n = document.createElement("div"); n.className = "note"; n.textContent = note;
+    c.append(l, v, n); box.appendChild(c);
+  }
+})();
+
+function renderConf() {
+  const colors = ["--s1", "--s2", "--s3", "--s4", "--s5"];
+  const names = Object.keys(D.confidence);
+  const series = names.map((n, i) => ({ name: n, values: D.confidence[n], color: css(colors[i]) }));
+  legend("legend-conf", series.map((s) => [s.name, s.color]));
+  lineChart(document.getElementById("chart-conf"), { xs: months, series, yMin: 0, yMax: 3.2, yTicks: [0, 1, 2, 3], yFmt: (v, l) => "k=" + num(v, l ? 2 : 0), xFmt: monthFmt, xTicks: [12, 36, 60, 84, 108, 120], xLabel: "anos de histórico" });
+  table(document.getElementById("table-conf"), ["Valuation", "Início", "Ano 2", "Ano 5", "Ano 10"],
+    names.map((n) => { const c = D.confidence[n]; return [n, num(c[0], 2), num(c[23], 2), num(c[59], 2), num(c[119], 2)]; }));
+}
+
+let world = "amador";
+function renderAdv() {
+  const a = D.advantage[world];
+  const series = [
+    { name: "v3 + vendas", values: a.v3s, color: css("--s3") },
+    { name: "k=3 fixo", values: a.k3, color: css("--s4") },
+    { name: "v3", values: a.v3, color: css("--s1") },
+    { name: "v2 atual", values: a.v2, color: css("--s2") },
+  ];
+  legend("legend-adv", [...series.map((s) => [s.name, s.color]), ["faixa 80% da v3", css("--s1"), "band"]]);
+  const all = [...a.v3lo, ...a.v3hi, ...series.flatMap((s) => s.values)];
+  const lo = Math.floor(Math.min(...all)), hi = Math.ceil(Math.max(...all));
+  const step = hi - lo > 12 ? 4 : 2;
+  const ticks = []; for (let t = Math.ceil(lo / step) * step; t <= hi; t += step) ticks.push(t);
+  lineChart(document.getElementById("chart-adv"), { xs: months, series, band: { lo: a.v3lo, hi: a.v3hi, color: css("--s1"), name: "faixa 80% (v3)" }, yMin: lo, yMax: hi, yTicks: ticks, yFmt: (v, l) => sign(v, l ? 2 : 0) + "%", xFmt: monthFmt, xTicks: [12, 36, 60, 84, 108, 120], xLabel: "anos" });
+  table(document.getElementById("table-adv"), ["Versão", "Ano 1", "Ano 3", "Ano 5", "Ano 10"], series.map((s) => [s.name, ...[11, 35, 59, 119].map((i) => sign(s.values[i], 2) + "%")]));
+}
+document.querySelectorAll(".seg button").forEach((b) => b.addEventListener("click", () => { world = b.dataset.world; document.querySelectorAll(".seg button").forEach((o) => o.setAttribute("aria-pressed", String(o === b))); renderAdv(); }));
+
+/** Horizontal paired bars: one row per group, two bars per row. */
+function pairedBars(container, rows, { a, b, fmt, domain, highlight }) {
+  container.replaceChildren();
+  const W = Math.max(300, container.clientWidth || 900), narrow = W < 600;
+  const rowH = 52, m = { t: 8, r: 44, b: 30, l: narrow ? 168 : 200 }, H = m.t + m.b + rows.length * rowH;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}` }, container);
+  const x = (v) => m.l + ((v - domain[0]) / (domain[1] - domain[0])) * (W - m.l - m.r);
+  const ticks = domain[1] - domain[0] > 60 ? 4 : 5;
+  for (let i = 0; i <= ticks; i += 1) { const v = domain[0] + ((domain[1] - domain[0]) * i) / ticks; el("line", { x1: x(v), x2: x(v), y1: m.t, y2: H - m.b, stroke: Math.abs(v) < 1e-9 ? css("--axis") : css("--grid") }, svg); const tx = el("text", { x: x(v), y: H - m.b + 18, "text-anchor": "middle" }, svg); tx.textContent = fmt(v); }
+  rows.forEach((r, i) => {
+    const y0 = m.t + i * rowH + 6;
+    const lab = el("text", { x: m.l - 10, y: y0 + 22, "text-anchor": "end", class: "direct" }, svg); lab.textContent = r.label;
+    if (highlight && highlight(r)) lab.setAttribute("style", "fill:var(--text-primary)");
+    [[a, 0], [b, 1]].forEach(([spec, k]) => {
+      const v = spec.value(r), yy = y0 + k * 20, h = 16, x0 = x(0), x1 = x(v);
+      el("rect", { x: Math.min(x0, x1), y: yy, width: Math.max(Math.abs(x1 - x0), 1), height: h, rx: 3, fill: spec.color }, svg);
+      const vt = el("text", { x: v >= 0 ? x1 + 6 : x1 - 6, y: yy + 12, "text-anchor": v >= 0 ? "start" : "end", class: "direct" }, svg); vt.textContent = fmt(v);
+    });
+    const hit = el("rect", { x: 0, y: y0 - 4, width: W, height: rowH - 4, fill: "transparent", tabindex: 0 }, svg);
+    const show = (e) => tip(e, r.label, [{ name: a.name, value: fmt(a.value(r)), color: a.color }, { name: b.name, value: fmt(b.value(r)), color: b.color }]);
+    hit.addEventListener("pointermove", show); hit.addEventListener("pointerleave", hide);
+    hit.addEventListener("focus", () => { const bb = hit.getBoundingClientRect(); show({ clientX: bb.left + bb.width / 2, clientY: bb.top }); }); hit.addEventListener("blur", hide);
+  });
+}
+
+function renderStudy() {
+  const c = document.getElementById("table-study"); c.replaceChildren();
+  const t = document.createElement("table");
+  const head = ["Alternativa", "Média (48 mundos)", "FV pegajoso", "Reversão rápida", "Pior (enviesado)", "Aporte em quem cai", "Arrependimento máx."];
+  const tr = document.createElement("tr"); head.forEach((h, i) => { const th = document.createElement("th"); th.textContent = h; if (i) th.className = "num"; tr.appendChild(th); });
+  const thead = document.createElement("thead"); thead.appendChild(tr); t.appendChild(thead);
+  const tb = document.createElement("tbody");
+  for (const r of D.study) {
+    const row = document.createElement("tr");
+    [r.label, bps(r.mean), bps(r.sticky), bps(r.reversal), bps(r.biasedWorst), pct(r.falling, 0), num(r.maxRegret, 1)].forEach((v, i) => {
+      const td = document.createElement("td"); td.textContent = v; if (i) td.className = "num"; if (r.key === "mom_leve") td.style.fontWeight = "650"; row.appendChild(td);
+    });
+    tb.appendChild(row);
+  }
+  t.appendChild(tb); c.appendChild(t);
+}
+
+function renderSweep() {
+  const sw = D.sweep;
+  const series = [
+    { name: "FV pegajoso", values: sw.sticky, color: css("--s2") },
+    { name: "Reversão rápida", values: sw.reversal, color: css("--s3") },
+    { name: "Média geral", values: sw.all, color: css("--s1") },
+    { name: "Pior mundo", values: sw.worst, color: css("--s5") },
+  ];
+  legend("legend-sweep", series.map((s) => [s.name, s.color]));
+  lineChart(document.getElementById("chart-sweep"), {
+    xs: sw.ks, series, yMin: -25, yMax: 30, yTicks: [-20, -10, 0, 10, 20, 30],
+    yFmt: (v, l) => sign(v, l ? 1 : 0) + (l ? " bps" : ""), xFmt: (v, l) => (l ? "intensidade " : "") + (v === 0 ? "0" : num(v, 3).replace(/0+$/, "")),
+    xTicks: [0, 0.05, 0.1, 0.15, 0.2], xLabel: "intensidade do momentum (0 = sem; 0,10 = proposta; 0,25 = forte)",
+  });
+  const svg = document.querySelector("#chart-sweep svg");
+  if (svg) {
+    const W = Number(svg.getAttribute("viewBox").split(" ")[2]);
+    const m = { l: 46, r: W < 600 ? 72 : 118 };
+    const x = m.l + (0.1 / 0.2) * (W - m.l - m.r);
+    const line = el("line", { x1: x, x2: x, y1: 12, y2: (W < 600 ? 250 : 320) - 40, stroke: css("--axis"), "stroke-dasharray": "3 3" });
+    svg.insertBefore(line, svg.firstChild.nextSibling);
+    const lab = el("text", { x: x + 4, y: 22 }, svg); lab.textContent = "proposta";
+  }
+  table(document.getElementById("table-sweep"), ["Intensidade", "Média geral", "FV pegajoso", "Reversão rápida", "Pior mundo", "Arrependimento máx.", "Aporte em quem cai"],
+    sw.ks.map((k, i) => [num(k, 3), bps(sw.all[i]), bps(sw.sticky[i]), bps(sw.reversal[i]), bps(sw.worst[i]), num(sw.regret[i], 1), pct(sw.falling[i], 0)]));
+}
+
+function renderBias() {
+  const pctFmt = (v) => num(v, 0) + "%";
+  pairedBars(document.getElementById("chart-bias"), D.bias, {
+    a: { name: "em queda (20% piores)", value: (r) => r.falling * 100, color: css("--s1") },
+    b: { name: "em alta (20% melhores)", value: (r) => r.rising * 100, color: css("--s2") },
+    fmt: pctFmt, domain: [0, 60], highlight: (r) => r.key === "v3",
+  });
+  const t = document.getElementById("table-bias"); t.replaceChildren();
+  const head = ["Estratégia", "Em queda", "Em alta", "Desconto real pago", "Retorno médio", "Pior mundo"];
+  const tr = document.createElement("tr"); head.forEach((h, i) => { const th = document.createElement("th"); th.textContent = h; if (i) th.className = "num"; tr.appendChild(th); });
+  const thead = document.createElement("thead"); thead.appendChild(tr); t.appendChild(thead);
+  const tb = document.createElement("tbody");
+  for (const r of D.bias) {
+    const row = document.createElement("tr");
+    [r.label, pct(r.falling, 0), pct(r.rising, 0), pct(r.trueDisc, 1), bps(r.ret) + " bps", bps(r.worst) + " bps"].forEach((c, i) => { const td = document.createElement("td"); td.textContent = c; if (i) td.className = "num"; if (r.key === "v3") td.style.fontWeight = "650"; row.appendChild(td); });
+    tb.appendChild(row);
+  }
+  t.appendChild(tb);
+  document.getElementById("review-value").textContent = sign(D.reviewValue, 0) + " bps/ano";
+}
+
+function renderHeat() {
+  const t = document.getElementById("heat"); t.replaceChildren();
+  const heads = ["Versão", "Valuation bom", "Amador", "Ruim", "Pegajoso", "Enviesado", "Sem informação", "Pior mundo"];
+  const tr = document.createElement("tr"); heads.forEach((h, i) => { const th = document.createElement("th"); th.textContent = h; if (i) th.style.textAlign = "center"; tr.appendChild(th); });
+  const thead = document.createElement("thead"); thead.appendChild(tr); t.appendChild(thead);
+  const tb = document.createElement("tbody");
+  for (const s of D.impact) {
+    const row = document.createElement("tr");
+    const n = document.createElement("td"); n.textContent = s.label; if (s.key.startsWith("v3")) n.style.fontWeight = "650"; row.appendChild(n);
+    const q = s.byQuality;
+    for (const v of [q.bom, q.amador, q.ruim, q.pegajoso, q.cego_crescimento, q.inutil, s.worst]) {
+      const td = document.createElement("td"); td.className = "cell";
+      const p = Math.min(1, Math.abs(v) / 60) * 100;
+      td.style.background = `color-mix(in oklab, ${v >= 0 ? "var(--pos)" : "var(--neg)"} ${p.toFixed(0)}%, var(--mid))`;
+      td.style.color = p > 55 ? "#ffffff" : "var(--text-primary)";
+      td.textContent = bps(v); row.appendChild(td);
+    }
+    tb.appendChild(row);
+  }
+  t.appendChild(tb);
+}
+
+function renderDumbbell() {
+  const pick = new Set(["GOOG", "META", "VOO", "MU", "AUGO"]);
+  const rows = D.portfolio.assets.filter((a) => a.v3Rank || a.v2Rank || pick.has(a.ticker)).slice(0, 22);
+  const c = document.getElementById("chart-dumbbell"); c.replaceChildren();
+  const W = Math.max(300, c.clientWidth || 900), rowH = 26, m = { t: 8, r: 24, b: 30, l: 70 };
+  const H = m.t + m.b + rows.length * rowH;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}` }, c);
+  const max = Math.ceil(Math.max(...rows.flatMap((r) => [r.target, r.v2Target, r.v3Target])) * 100);
+  const x = (v) => m.l + (v * 100 / max) * (W - m.l - m.r);
+  for (let t = 0; t <= max; t += 1) { el("line", { x1: x(t / 100), x2: x(t / 100), y1: m.t, y2: H - m.b, stroke: css("--grid") }, svg); if (t % (W < 600 ? 2 : 1) === 0) { const tx = el("text", { x: x(t / 100), y: H - m.b + 18, "text-anchor": "middle" }, svg); tx.textContent = t + "%"; } }
+  rows.forEach((r, i) => {
+    const cy = m.t + i * rowH + rowH / 2;
+    const lab = el("text", { x: m.l - 10, y: cy + 4, "text-anchor": "end", class: "direct" }, svg); lab.textContent = r.ticker;
+    const xs = [r.target, r.v2Target, r.v3Target].map(x);
+    el("line", { x1: Math.min(...xs), x2: Math.max(...xs), y1: cy, y2: cy, stroke: css("--axis"), "stroke-width": 2 }, svg);
+    el("circle", { cx: x(r.target), cy, r: 5, fill: css("--surface-1"), stroke: css("--muted"), "stroke-width": 2 }, svg);
+    el("circle", { cx: x(r.v2Target), cy, r: 5, fill: css("--s2"), stroke: css("--surface-1"), "stroke-width": 2 }, svg);
+    el("circle", { cx: x(r.v3Target), cy, r: 6, fill: css("--s1"), stroke: css("--surface-1"), "stroke-width": 2 }, svg);
+    const hit = el("rect", { x: 0, y: cy - rowH / 2, width: W, height: rowH, fill: "transparent", tabindex: 0 }, svg);
+    const show = (e) => tip(e, r.ticker, [
+      { name: "meta original", value: pct(r.target) }, { name: "v2", value: pct(r.v2Target), color: css("--s2") }, { name: "v3 hoje (k=1,5)", value: pct(r.v3Target), color: css("--s1") },
+      { name: "peso atual", value: pct(r.current) }, { name: "desconto", value: r.discount === null ? "sem FV" : sign(r.discount * 100, 1) + "%" },
+      { name: "momentum 12m", value: sign(r.mom * 100, 0) + "%" }, { name: "posição v2 → v3", value: `${r.v2Rank ?? "—"} → ${r.v3Rank ?? "—"}` }]);
+    hit.addEventListener("pointermove", show); hit.addEventListener("pointerleave", hide);
+    hit.addEventListener("focus", () => { const b = hit.getBoundingClientRect(); show({ clientX: b.left + b.width / 2, clientY: b.top }); }); hit.addEventListener("blur", hide);
+  });
+  table(document.getElementById("table-portfolio"), ["Ativo", "Meta", "Atual", "Desconto", "Momentum 12m", "Meta v2", "Meta v3 hoje", "Meta v3 (k=3)", "Posição v2", "Posição v3", "v3 sem momentum", "v3 momentum forte"],
+    D.portfolio.assets.map((a) => [a.ticker, pct(a.target), pct(a.current), a.discount === null ? "—" : sign(a.discount * 100, 1) + "%", sign(a.mom * 100, 0) + "%", pct(a.v2Target), pct(a.v3Target), pct(a.v3K3Target), a.v2Rank ?? "—", a.v3Rank ?? "—", a.v3SemRank ?? "—", a.v3ForteRank ?? "—"]));
+  const p = D.portfolio.profiles;
+  table(document.getElementById("table-profile"), ["Versão", "Desconto médio", "Peso em queda", "Candidatos"], [
+    ["v2 atual", pct(p.v2.avgDiscount, 1), pct(p.v2.fallingShare, 0), p.v2.candidates],
+    ["v3 sem momentum", pct(p.v3sem.avgDiscount, 1), pct(p.v3sem.fallingShare, 0), p.v3sem.candidates],
+    ["v3 com momentum leve (proposta)", pct(p.v3.avgDiscount, 1), pct(p.v3.fallingShare, 0), p.v3.candidates],
+    ["v3 com momentum forte", pct(p.v3forte.avgDiscount, 1), pct(p.v3forte.fallingShare, 0), p.v3forte.candidates],
+    ["v3 depois de provar acerto (k=3)", pct(p.v3k3.avgDiscount, 1), pct(p.v3k3.fallingShare, 0), p.v3k3.candidates],
+  ]);
+}
+
+function renderNotes() {
+  const by = Object.fromEntries(D.portfolio.assets.map((a) => [a.ticker, a]));
+  const notes = [
+    ["Mesmo topo", `RDDT, PNVL3 e TIMS3 continuam nas posições 1–3: metas pequenas bem abaixo do alvo.`],
+    ["Sobem", `TEND3 (${by.TEND3.v2Rank}→${by.TEND3.v3Rank}), SMFT3 (${by.SMFT3.v2Rank}→${by.SMFT3.v3Rank}) e SEER3 (${by.SEER3.v2Rank}→${by.SEER3.v3Rank}): descontos de 30%+ ganham mais força sem a zona de ruído e com o teto de 2×.`],
+    ["Baratos e caindo seguem candidatos", `TTEN3 (${by.TTEN3.v3Rank}º), UBER (${by.UBER.v3Rank}º), DIRR3 (${by.DIRR3.v3Rank}º), INTR (${by.INTR.v3Rank}º) e VIVA3 (${by.VIVA3.v3Rank}º) continuam na lista, só um pouco atrás. Com momentum forte, DIRR3, INTR e VIVA3 sairiam.`],
+    ["Tendência desempata", `MU (alta forte, sem valuation) entra em ${by.MU.v3Rank}º com meta de ${pct(by.MU.v3Target, 1)}, contra 3º com momentum forte.`],
+    ["Caros perdem meta", `GOOG (${pct(by.GOOG.target, 1)} → ${pct(by.GOOG.v3Target, 1)}) e META (${pct(by.META.target, 1)} → ${pct(by.META.v3Target, 1)}) deixam de receber aporte; a sugestão de venda só viria com histórico.`],
+  ];
+  const ul = document.getElementById("rank-notes"); ul.replaceChildren();
+  for (const [h, t] of notes) { const li = document.createElement("li"); const b = document.createElement("strong"); b.textContent = h + ": "; li.append(b, document.createTextNode(t)); ul.appendChild(li); }
+}
+
+function renderPlan() {
+  const tEl = document.getElementById("table-plan"); tEl.classList.add("text");
+  table(tEl, ["Fase", "O que entra", "Pronto quando"], [
+    ["1 · Dados", "Guardar o preço de referência de cada revisão (fim do trimestre) junto do fair value, com backfill do histórico existente; séries mensais de preço dos ativos com meta, em cache, para o momentum.", "Cada fair value tem preço de referência; backup/import/delete-all cobrem o novo dado; falha do provedor não trava o score (momentum neutro)."],
+    ["2 · IC e confiança", "O domínio calcula o IC (desconto × retorno dos 12 meses seguintes, entre ativos), com encolhimento para o prior 0,05; k = 3 × mín(1, IC ÷ 0,10).", "Testes de propriedade: sem histórico, IC = prior; valuation perfeito faz k subir; valuation invertido leva k a 0."],
+    ["3 · Meta ajustada", "Sem zona de ruído; limites ×0,2–×3; teto de 2× a meta, mantendo 5% absoluto; reescala só entre ativos com fair value; momentum 12-1 em z-score ±2 com peso 0,10.", "Soma das metas preservada; ativos sem FV intactos pelo valuation; o momentum nunca move a meta além de ×0,82–×1,22."],
+    ["4 · Painel e aviso", "Cartão \"Seu valuation acerta?\" e aviso para refazer o valuation do zero quando o preço se afasta muito desde a última revisão; textos en e pt-BR.", "Estados aprendendo/acertando/errando; o aviso aparece e some conforme a regra."],
+    ["5 · Validação", "Rodar a v3 no motor real contra a cópia do banco e a simulação; comparar com esta proposta.", "Resultados batem com a simulação; revisão sua antes de virar padrão."],
+    ["6 · Vendas isentas (etapa 2)", "Sugestões de venda só para ações BR, com confiança ≥ 80%, caras e acima de 125% da meta ajustada, até R$ 20 mil/mês.", "Nunca sugere venda sem histórico; FIIs, ETFs e BDRs ficam de fora."],
+  ]);
+}
+
+function renderAll() { renderConf(); renderAdv(); renderStudy(); renderSweep(); renderBias(); renderHeat(); renderDumbbell(); renderNotes(); renderPlan(); }
+renderAll();
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", renderAll);
+let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(renderAll, 120); });
+
+</script>
+</body>
+</html>

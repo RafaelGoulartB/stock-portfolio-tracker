@@ -78,6 +78,7 @@ type ColumnPreset = keyof typeof COLUMN_PRESETS;
 const SIZING_COLUMNS: AllocationColumn[] = [
   "ticker",
   "targetWeight",
+  "adjustedTarget",
   "currentWeight",
   "gapWeight",
   "marketValue",

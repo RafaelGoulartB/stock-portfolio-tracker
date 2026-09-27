@@ -11,10 +11,15 @@ export function sortableValue(
       return row.ticker;
     case "targetWeight":
       return row.targetWeight === null ? null : Number(row.targetWeight);
+    case "adjustedTarget":
+      return row.score.tiltedTarget === null
+        ? null
+        : Number(row.score.tiltedTarget);
     case "currentWeight":
       return Number(row.currentWeight);
     case "gapWeight":
-      return row.gapWeight === null ? null : Number(row.gapWeight);
+      // The distance the score actually closes: to the adjusted target.
+      return row.score.gap === null ? null : Number(row.score.gap);
     case "score":
       return Number(row.score.value);
     case "nextResult":

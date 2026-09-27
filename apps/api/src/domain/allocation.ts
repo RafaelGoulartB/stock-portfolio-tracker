@@ -23,13 +23,13 @@ import {
   toDecimal,
   ZERO,
 } from "../lib/decimal";
-import { executionPrice } from "./fx-execution";
+import { executionCostRatio, executionPrice } from "./fx-execution";
 import {
   type ConsolidationInput,
   convertMoney,
   isOpenQuantity,
 } from "./positions";
-import { averageGrade, scoreAsset } from "./score";
+import { gradeSignal, type ScoreInput, scoreAssets } from "./score";
 
 /** Analysis metadata stored per ticker, as read from `allocation_assets`. */
 export type AllocationAssetMeta = {
@@ -45,7 +45,11 @@ export type AllocationAssetMeta = {
   sortOrder: number;
 };
 
-export type StoredReview = AssetReview & { ticker: string };
+export type StoredReview = AssetReview & {
+  ticker: string;
+  /** Local day of the review's last edit, `YYYY-MM-DD`. */
+  editedOn?: string | null;
+};
 
 /** A quote resolved for a ticker with no open position (watch-only). */
 export type WatchQuote = { price: string; currency: Currency };
@@ -279,13 +283,25 @@ export type AllocationInput = {
   /** Reference day for the cooldown rule, `YYYY-MM-DD`. */
   today: string;
   config?: ScoreConfig;
+  /** 12-1 month log return per ticker; missing tickers get no momentum. */
+  momentumByTicker?: ReadonlyMap<string, string>;
+  /** Close on the day each `ticker|period` fair value was known. */
+  referencePrices?: ReadonlyMap<string, string>;
+  /**
+   * Fair value per `ticker|period` in today's share units (see
+   * `fairValueReviews`). Missing keys use the stored value unchanged.
+   */
+  fairValuesInTodayUnits?: ReadonlyMap<string, string>;
+  /** Learned valuation exponent (see `valuation-skill.ts`); omitted = prior. */
+  valuationStrength?: string;
 };
 
 /**
  * Joins the three sources behind the allocation screen into one row per
  * ticker: the consolidated position, the analysis metadata (target, manual
- * order) and the quarterly reviews. Every row is scored. Discount comes from
- * the newest review that carries a fair value.
+ * order) and the quarterly reviews. Rows are scored together, because the
+ * valuation tilt renormalizes every target against the rest of the book.
+ * Valuation reads the newest review that carries a fair value.
  */
 export function buildAllocationRows(input: AllocationInput): AllocationRow[] {
   const config = input.config ?? DEFAULT_SCORE_CONFIG;
@@ -330,7 +346,8 @@ export function buildAllocationRows(input: AllocationInput): AllocationRow[] {
     ...assetByTicker.keys(),
   ]);
 
-  const rows = [...tickers].map((ticker): AllocationRow => {
+  const scoreInputs: ScoreInput[] = [];
+  const unscored = [...tickers].map((ticker): Omit<AllocationRow, "score"> => {
     const isCash = ticker === CASH_TICKER;
     const position = positionByTicker.get(ticker);
     const asset = assetByTicker.get(ticker);
@@ -345,9 +362,14 @@ export function buildAllocationRows(input: AllocationInput): AllocationRow[] {
       a.period.localeCompare(b.period),
     );
     const latest = latestFairValue(reviews);
-    const fairValue = latest?.fairValue ?? null;
+    // Compared with today's price, so a split after the review rescales it.
+    const fairValue =
+      latest === null
+        ? null
+        : (input.fairValuesInTodayUnits?.get(`${ticker}|${latest.period}`) ??
+          latest.fairValue);
     const discount = discountFromFairValue(fairValue, marketPrice);
-    const grades = averageGrade(reviews, config);
+    const grades = gradeSignal(reviews, input.today, config);
     const currentWeight = formatDecimal(
       toDecimal(position?.weight ?? "0"),
       WEIGHT_PLACES,
@@ -373,6 +395,28 @@ export function buildAllocationRows(input: AllocationInput): AllocationRow[] {
       input.displayCurrency,
       input.usdBrlRate ?? null,
     );
+    const quoteMissing = position?.quoteMissing ?? false;
+
+    scoreInputs.push({
+      targetWeight,
+      currentWeight,
+      quoteMissing,
+      fairValue,
+      marketPrice,
+      fairValuePeriod: latest?.period ?? null,
+      // BRL-funded USD buys pay spread and IOF whatever the display
+      // currency, so the ranking does not flip with the currency toggle.
+      buyCost: currency === "USD" ? executionCostRatio() : null,
+      grade: grades,
+      lastContributionAt,
+      today: input.today,
+      tiltable: !isCash,
+      momentum: isCash ? null : (input.momentumByTicker?.get(ticker) ?? null),
+      referencePrice:
+        latest === null
+          ? null
+          : (input.referencePrices?.get(`${ticker}|${latest.period}`) ?? null),
+    });
     const valueSource =
       marketValue === null
         ? "none"
@@ -423,21 +467,21 @@ export function buildAllocationRows(input: AllocationInput): AllocationRow[] {
       valuationRef: asset?.valuationRef ?? null,
       markColor: asset?.markColor ?? null,
       sortOrder: isCash ? -1 : (asset?.sortOrder ?? UNRANKED),
-      quoteMissing: position?.quoteMissing ?? false,
-      score: scoreAsset(
-        {
-          targetWeight,
-          currentWeight,
-          quoteMissing: position?.quoteMissing ?? false,
-          discount,
-          averageGrade: grades.average,
-          lastContributionAt,
-          today: input.today,
-        },
-        config,
-      ),
+      quoteMissing,
       reviews,
     };
+  });
+  const scores = scoreAssets(scoreInputs, config, {
+    valuationStrength: input.valuationStrength,
+  });
+  const rows = unscored.map((row, index): AllocationRow => {
+    const score = scores[index];
+
+    if (!score) {
+      throw new Error(`Missing score for ${row.ticker}`);
+    }
+
+    return { ...row, score };
   });
 
   return rows.sort(

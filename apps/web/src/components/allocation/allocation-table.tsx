@@ -19,6 +19,7 @@ import {
   ArrowUpDown,
   ExternalLink,
   GripVertical,
+  RefreshCcw,
   Timer,
   TriangleAlert,
 } from "lucide-react";
@@ -50,6 +51,10 @@ import { cn } from "@/lib/utils";
 import { InlineEditCell } from "./inline-edit-cell";
 import { QuarterReviewCell } from "./quarter-review-cell";
 import {
+  AdjustedTargetCell,
+  adjustedTargetExplanation,
+} from "./table/adjusted-target-cell";
+import {
   ALLOCATION_COLUMNS,
   type AllocationColumn,
   type AllocationSort,
@@ -58,7 +63,7 @@ import {
 import { FOCUS_QUARTER_COL, MARK_ROW, MARK_STICKY } from "./table/marks";
 import { RowMenu } from "./table/row-menu";
 import { ScoreCell } from "./table/score-cell";
-import { resultDateTitle, scoreReason } from "./table/score-reason";
+import { resultDateTitle, reviewNote, scoreReason } from "./table/score-reason";
 import { useAllocationTableState } from "./table/use-allocation-table-state";
 
 export {
@@ -69,7 +74,7 @@ export {
   defaultSortDirection,
   type SortDirection,
 } from "./table/columns";
-export { scoreReason } from "./table/score-reason";
+export { reviewNote, scoreReason } from "./table/score-reason";
 export { compareRows, sortableValue } from "./table/sorting";
 export { summarizeVisibleRows } from "./table/summary";
 
@@ -406,8 +411,27 @@ export function AllocationTable({
                             className="shrink-0 opacity-60 transition-opacity focus:opacity-100 data-[state=open]:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
                           />
                         )}
-                        {missing.includes(row.ticker) || !row.hasPosition ? (
+                        {missing.includes(row.ticker) ||
+                        !row.hasPosition ||
+                        reviewNote(row, i18n) !== null ? (
                           <div className="ml-auto flex shrink-0 items-center gap-1">
+                            {reviewNote(row, i18n) !== null ? (
+                              // A link, so keyboard and touch users reach the
+                              // full warning on the asset page, not only the
+                              // hover title.
+                              <Link
+                                to="/assets/$ticker"
+                                params={{ ticker: row.ticker }}
+                                aria-label={reviewNote(row, i18n) ?? undefined}
+                                title={reviewNote(row, i18n) ?? undefined}
+                                className="rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              >
+                                <RefreshCcw
+                                  className="size-3 text-amber-600 dark:text-amber-400"
+                                  aria-hidden="true"
+                                />
+                              </Link>
+                            ) : null}
                             {missing.includes(row.ticker) ? (
                               <TriangleAlert
                                 className="size-3 text-amber-600 dark:text-amber-400"
@@ -471,6 +495,15 @@ export function AllocationTable({
                     </TableCell>
                   ) : null}
 
+                  {visibleColumns.has("adjustedTarget") ? (
+                    <TableCell
+                      className="px-2.5 py-2 text-right"
+                      title={adjustedTargetExplanation(row, i18n)}
+                    >
+                      <AdjustedTargetCell row={row} i18n={i18n} />
+                    </TableCell>
+                  ) : null}
+
                   {visibleColumns.has("currentWeight") ? (
                     <TableCell className="px-2.5 py-2.5 text-right tabular-nums">
                       {formatWeightPrecise(row.currentWeight)}
@@ -478,12 +511,24 @@ export function AllocationTable({
                   ) : null}
 
                   {visibleColumns.has("gapWeight") ? (
-                    <TableCell className="px-2.5 py-2.5 text-right tabular-nums">
-                      {row.gapWeight === null ? (
+                    <TableCell
+                      className="px-2.5 py-2.5 text-right tabular-nums"
+                      title={
+                        row.score.gap === null || row.gapWeight === null
+                          ? undefined
+                          : i18n._(
+                              t({
+                                id: "allocation.gapTooltip",
+                                message: `${formatSignedWeightPrecise(row.score.gap)} to the adjusted target the score aims for; ${formatSignedWeightPrecise(row.gapWeight)} to your original target.`,
+                              }),
+                            )
+                      }
+                    >
+                      {row.score.gap === null ? (
                         <span className="text-muted-foreground">—</span>
                       ) : (
-                        <span className={pnlClassName(row.gapWeight)}>
-                          {formatSignedWeightPrecise(row.gapWeight)}
+                        <span className={pnlClassName(row.score.gap)}>
+                          {formatSignedWeightPrecise(row.score.gap)}
                         </span>
                       )}
                     </TableCell>
@@ -606,8 +651,8 @@ export function AllocationTable({
                               className="size-3 text-muted-foreground"
                               aria-label={i18n._(
                                 t({
-                                  id: "allocation.cooldownIcon",
-                                  message: `In cooldown until ${row.score.cooldownUntil}`,
+                                  id: "allocation.cooldownRampIcon",
+                                  message: `Lower priority until ${row.score.cooldownUntil}`,
                                 }),
                               )}
                             />

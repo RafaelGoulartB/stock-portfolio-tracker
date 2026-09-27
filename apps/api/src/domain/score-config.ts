@@ -11,28 +11,15 @@ import { db } from "../db";
 import { type UserScoreConfigRow, userScoreConfigs } from "../db/schema";
 
 function rowToConfig(row: UserScoreConfigRow): ScoreConfig {
-  return scoreConfigSchema.parse({
-    version: row.version,
-    absoluteWeightCap: row.absoluteWeightCap,
-    overweightBlockFactor: row.overweightBlockFactor,
-    trimFactor: row.trimFactor,
-    cooldownDays: row.cooldownDays,
-    gradeWindowQuarters: row.gradeWindowQuarters,
-    gradeBands: row.gradeBands,
-    ungradedMultiplier: row.ungradedMultiplier,
-  });
+  const { userId: _userId, updatedAt: _updatedAt, ...config } = row;
+
+  return scoreConfigSchema.parse(config);
 }
 
 function configValues(config: ScoreConfig) {
   return {
-    version: config.version,
-    absoluteWeightCap: config.absoluteWeightCap,
-    overweightBlockFactor: config.overweightBlockFactor,
-    trimFactor: config.trimFactor,
-    cooldownDays: config.cooldownDays,
-    gradeWindowQuarters: config.gradeWindowQuarters,
+    ...config,
     gradeBands: config.gradeBands as GradeBand[],
-    ungradedMultiplier: config.ungradedMultiplier,
     updatedAt: new Date(),
   };
 }

@@ -3,7 +3,7 @@ import {
   FX_EXECUTION_IOF,
   FX_EXECUTION_SPREAD,
 } from "@portifolio-tracker/shared";
-import { add, formatDecimal, mul, toDecimal } from "../lib/decimal";
+import { add, formatDecimal, mul, sub, toDecimal } from "../lib/decimal";
 import { convertMoney } from "./positions";
 
 const ONE = toDecimal("1");
@@ -19,6 +19,24 @@ export function usdBrlExecutionRate(spot: string): string {
   );
 
   return formatDecimal(mul(toDecimal(spot), factor), 8);
+}
+
+/**
+ * Extra fraction a BRL-funded USD purchase pays over spot:
+ * `(1 + spread) × (1 + IOF) - 1`. The score uses it as a hurdle a cheap USD
+ * asset must clear before valuation tilts its target up.
+ */
+export function executionCostRatio(): string {
+  return formatDecimal(
+    sub(
+      mul(
+        add(ONE, toDecimal(FX_EXECUTION_SPREAD)),
+        add(ONE, toDecimal(FX_EXECUTION_IOF)),
+      ),
+      ONE,
+    ),
+    8,
+  );
 }
 
 /**

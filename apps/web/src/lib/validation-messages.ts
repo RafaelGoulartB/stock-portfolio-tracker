@@ -157,6 +157,10 @@ const VALIDATION_MESSAGES: Record<string, MessageDescriptor> = {
     id: "validation.gradeBandsAscending",
     message: "Grade bands must be strictly ascending by minimum grade",
   }),
+  "Must be between -1 and 1": msg({
+    id: "validation.betweenMinusOneAndOne",
+    message: "Must be between -1 and 1",
+  }),
 
   // holdings-import.ts issues
   "Expected ticker, quantity and average price": msg({
@@ -186,6 +190,16 @@ const importDuplicateMessage = msg({
   message: "Duplicate ticker {0}",
 });
 
+/** Score policy bounds embed their limit, e.g. `Must be at most 1`. */
+const atMostMessage = msg({
+  id: "validation.atMost",
+  message: "Must be at most {0}",
+});
+const atLeastMessage = msg({
+  id: "validation.atLeast",
+  message: "Must be at least {0}",
+});
+
 /**
  * Translates a known validation source string. Unknown strings are returned
  * unchanged so callers never render an empty message. The optional `i18n`
@@ -209,6 +223,14 @@ export function localizeValidationMessage(
     // The descriptor keeps the message extractable; the runtime call passes
     // the ticker as the `{0}` placeholder value.
     return i18n._(importDuplicateMessage.id ?? "", { 0: duplicate[1] });
+  }
+
+  const bound = /^Must be at (most|least) (.+)$/.exec(message);
+
+  if (bound) {
+    const descriptor = bound[1] === "most" ? atMostMessage : atLeastMessage;
+
+    return i18n._(descriptor.id ?? "", { 0: bound[2] });
   }
 
   return message;

@@ -5,6 +5,7 @@ import { t } from "@lingui/core/macro";
 export const ALLOCATION_COLUMNS = [
   "ticker",
   "targetWeight",
+  "adjustedTarget",
   "currentWeight",
   "gapWeight",
   "discount",
@@ -35,10 +36,15 @@ export function columnLabels(i18n: I18n): Record<AllocationColumn, string> {
   return {
     ticker: i18n._(t({ id: "allocation.colTicker", message: "Asset" })),
     targetWeight: i18n._(t({ id: "allocation.colTarget", message: "Target" })),
+    adjustedTarget: i18n._(
+      t({ id: "allocation.colAdjustedTarget", message: "Adjusted target" }),
+    ),
     currentWeight: i18n._(
       t({ id: "allocation.colCurrent", message: "Current" }),
     ),
-    gapWeight: i18n._(t({ id: "allocation.colGap", message: "Gap" })),
+    gapWeight: i18n._(
+      t({ id: "allocation.colGapAdjusted", message: "Adj. gap" }),
+    ),
     score: i18n._(t({ id: "allocation.colScore", message: "Score" })),
     nextResult: i18n._(
       t({ id: "allocation.colNextResult", message: "Next result" }),

@@ -1,7 +1,32 @@
 import type { I18n } from "@lingui/core";
 import { t } from "@lingui/core/macro";
 import type { AllocationRow, NextResult } from "@portifolio-tracker/shared";
-import { formatWeightPrecise } from "@/lib/format";
+import {
+  formatMultiplier,
+  formatSignedWeightPrecise,
+  formatWeightPrecise,
+} from "@/lib/format";
+import { formatQuarterTitle, toQuarter } from "@/lib/quarters";
+
+/**
+ * Warning that the price drifted far enough from the fair value's reference
+ * close to warrant a fresh valuation, or `null` when no review is suggested.
+ */
+export function reviewNote(row: AllocationRow, i18n: I18n): string | null {
+  const drift = row.score.priceSinceFairValue;
+  if (!row.score.reviewSuggested || drift === null) return null;
+
+  const period = row.fairValuePeriod
+    ? formatQuarterTitle(toQuarter(row.fairValuePeriod))
+    : "";
+
+  return i18n._(
+    t({
+      id: "allocation.reviewSuggested",
+      message: `Price moved ${formatSignedWeightPrecise(drift)} since the ${period} fair value: redo the valuation from scratch`,
+    }),
+  );
+}
 
 /** Plain-language reason behind a score, shown on hover. */
 export function scoreReason(row: AllocationRow, i18n: I18n): string {
@@ -26,9 +51,8 @@ export function scoreReason(row: AllocationRow, i18n: I18n): string {
     case "trim-overweight":
       return i18n._(
         t({
-          id: "allocation.reasonTrim",
-          message:
-            "Above target and no longer cheap: consider trimming instead of buying.",
+          id: "allocation.reasonTrimV3",
+          message: `Priced above your fair value and past the tolerance band around ${weight(score.trimTarget)}, the lowest weight its own valuation justifies: consider trimming instead of buying.`,
         }),
       );
     case "weight-cap":
@@ -48,18 +72,40 @@ export function scoreReason(row: AllocationRow, i18n: I18n): string {
     case "cooldown":
       return i18n._(
         t({
-          id: "allocation.reasonCooldown",
-          message: `Bought recently; free again on ${score.cooldownUntil ?? ""}.`,
+          id: "allocation.reasonCooldownV2",
+          message: `Bought recently: priority ${formatMultiplier(score.recencyMultiplier)} until ${score.cooldownUntil ?? ""}. ${weight(score.relativeGap)} of its valuation-adjusted target is still missing.`,
         }),
       );
     case "gap-weighted":
+      if (score.relativeGap === null || Number(score.relativeGap) <= 0) {
+        return i18n._(
+          t({
+            id: "allocation.reasonAtTarget",
+            message: `At or above its valuation-adjusted target of ${weight(score.tiltedTarget)}.`,
+          }),
+        );
+      }
+
+      if (score.momentumZ === null) {
+        return i18n._(
+          t({
+            id: "allocation.reasonGapV3NoTrend",
+            message: `Target ${weight(row.targetWeight)} adjusted to ${weight(score.tiltedTarget)} (valuation ${formatMultiplier(score.valuationTilt ?? "1")}, book rebalance ${formatMultiplier(score.momentumTilt ?? "1")}); ${formatWeightPrecise(row.currentWeight)} held leaves ${weight(score.relativeGap)} of it missing, at priority ${formatMultiplier(score.priority)}.`,
+          }),
+        );
+      }
+
       return i18n._(
         t({
-          id: "allocation.reasonGap",
-          message: `Discount-adjusted target ${score.adjustedTarget === null ? "" : formatWeightPrecise(score.adjustedTarget)} against ${formatWeightPrecise(row.currentWeight)} held, times ${score.multiplier} for quality.`,
+          id: "allocation.reasonGapV3",
+          message: `Target ${weight(row.targetWeight)} adjusted to ${weight(score.tiltedTarget)} (valuation ${formatMultiplier(score.valuationTilt ?? "1")}, trend ${formatMultiplier(score.momentumTilt ?? "1")}); ${formatWeightPrecise(row.currentWeight)} held leaves ${weight(score.relativeGap)} of it missing, at priority ${formatMultiplier(score.priority)}.`,
         }),
       );
   }
+}
+
+function weight(value: string | null): string {
+  return value === null ? "—" : formatWeightPrecise(value);
 }
 
 export function resultDateTitle(
