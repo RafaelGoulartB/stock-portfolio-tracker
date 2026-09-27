@@ -280,6 +280,11 @@ async function* exportBackup(userId: string): AsyncGenerator<string> {
         valuation_sensitivity as "valuationSensitivity",
         tilt_min as "tiltMin", tilt_max as "tiltMax",
         fair_value_half_life_quarters as "fairValueHalfLifeQuarters",
+        ic_reference as "icReference", ic_prior as "icPrior",
+        ic_prior_pairs as "icPriorPairs",
+        momentum_weight as "momentumWeight",
+        momentum_z_cap as "momentumZCap", review_drift as "reviewDrift",
+        sell_band as "sellBand", sell_confidence as "sellConfidence",
         updated_at as "updatedAt"
       from user_score_configs where user_id = ${userId} order by user_id
     `.cursor(BATCH_SIZE)) {

@@ -54,7 +54,7 @@ describe("portable data backups", () => {
       },
     });
 
-    expect(manifest.version).toBe(9);
+    expect(manifest.version).toBe(10);
     if (record.entity !== "transactions") {
       throw new Error("expected transaction record");
     }
@@ -194,6 +194,47 @@ describe("portable data backups", () => {
     expect(record.data.starterFraction).toBe("0.5");
   });
 
+  it("maps a v2 score config onto the v3 policy", () => {
+    const record = backupRecordSchema.parse({
+      type: "record",
+      entity: "scoreConfigs",
+      data: {
+        version: "custom",
+        absoluteWeightCap: "0.05000000",
+        overweightBlockFactor: "1.30000000",
+        trimAbsoluteBand: "0.05000000",
+        trimRelativeBand: "0.25000000",
+        cooldownDays: 45,
+        cooldownFloor: "0.25000000",
+        gradeWindowQuarters: 4,
+        gradeHalfLifeQuarters: 4,
+        gradePriorQuarters: "1.00000000",
+        gradeBands: [{ minGrade: "0", multiplier: "1" }],
+        ungradedMultiplier: "1.00000000",
+        valuationDeadZone: "0.05000000",
+        valuationSensitivity: "1.00000000",
+        tiltMin: "0.50000000",
+        tiltMax: "1.50000000",
+        fairValueHalfLifeQuarters: 2,
+        updatedAt: "2026-09-26T12:00:00.000Z",
+      },
+    });
+
+    if (record.entity !== "scoreConfigs") {
+      throw new Error("expected score config record");
+    }
+    // The user's v2 knobs survive; only the v3 knobs take defaults.
+    expect(record.data).toMatchObject({
+      overweightBlockFactor: "1.30000000",
+      valuationSensitivity: "1.00000000",
+      icReference: "0.10",
+      icPrior: "0.05",
+      icPriorPairs: 240,
+      momentumWeight: "0.10",
+      sellConfidence: "0.8",
+    });
+  });
+
   it("maps a v1 score config onto the v2 policy", () => {
     const record = backupRecordSchema.parse({
       type: "record",
@@ -220,7 +261,8 @@ describe("portable data backups", () => {
       trimAbsoluteBand: "0.05",
       cooldownDays: 30,
       cooldownFloor: "0.25",
-      valuationDeadZone: "0.05",
+      valuationDeadZone: "0",
+      momentumWeight: "0.10",
       fairValueHalfLifeQuarters: 2,
     });
     expect("trimFactor" in record.data).toBe(false);

@@ -11,7 +11,7 @@ import { z } from "zod";
 import { formatDecimal, sub, toDecimal, ZERO } from "./decimal";
 
 export const BACKUP_FORMAT = "portifolio-tracker-backup";
-export const BACKUP_VERSION = 9;
+export const BACKUP_VERSION = 10;
 export const BACKUP_MEDIA_TYPE = "application/x-portifolio-backup+gzip";
 
 /**
@@ -96,6 +96,7 @@ export const manifestSchema = z.object({
     z.literal(7),
     z.literal(8),
     z.literal(9),
+    z.literal(10),
   ]),
   exportedAt: timestamp,
   counts: backupCountsSchema,
@@ -223,32 +224,60 @@ const gradeBandsRecord = z
   )
   .min(1);
 
+/** Knobs added by score v3, filled with defaults for older exports. */
+const V3_SCORE_DEFAULTS = {
+  icReference: DEFAULT_SCORE_CONFIG.icReference,
+  icPrior: DEFAULT_SCORE_CONFIG.icPrior,
+  icPriorPairs: DEFAULT_SCORE_CONFIG.icPriorPairs,
+  momentumWeight: DEFAULT_SCORE_CONFIG.momentumWeight,
+  momentumZCap: DEFAULT_SCORE_CONFIG.momentumZCap,
+  reviewDrift: DEFAULT_SCORE_CONFIG.reviewDrift,
+  sellBand: DEFAULT_SCORE_CONFIG.sellBand,
+  sellConfidence: DEFAULT_SCORE_CONFIG.sellConfidence,
+};
+
+const scoreV2Fields = {
+  version: z.string().min(1),
+  absoluteWeightCap: decimal,
+  overweightBlockFactor: decimal,
+  trimAbsoluteBand: decimal,
+  trimRelativeBand: decimal,
+  cooldownDays: z.number().int().nonnegative(),
+  cooldownFloor: decimal,
+  gradeWindowQuarters: z.number().int().positive(),
+  gradeHalfLifeQuarters: z.number().int().positive(),
+  gradePriorQuarters: decimal,
+  gradeBands: gradeBandsRecord,
+  ungradedMultiplier: decimal,
+  valuationDeadZone: decimal,
+  valuationSensitivity: decimal,
+  tiltMin: decimal,
+  tiltMax: decimal,
+  fairValueHalfLifeQuarters: z.number().int().positive(),
+  updatedAt: databaseTimestamp,
+};
+
 const scoreConfigRecord = z.strictObject({
   type: z.literal("record"),
   entity: z.literal("scoreConfigs"),
   data: z.union([
     z.strictObject({
-      version: z.string().min(1),
-      absoluteWeightCap: decimal,
-      overweightBlockFactor: decimal,
-      trimAbsoluteBand: decimal,
-      trimRelativeBand: decimal,
-      cooldownDays: z.number().int().nonnegative(),
-      cooldownFloor: decimal,
-      gradeWindowQuarters: z.number().int().positive(),
-      gradeHalfLifeQuarters: z.number().int().positive(),
-      gradePriorQuarters: decimal,
-      gradeBands: gradeBandsRecord,
-      ungradedMultiplier: decimal,
-      valuationDeadZone: decimal,
-      valuationSensitivity: decimal,
-      tiltMin: decimal,
-      tiltMax: decimal,
-      fairValueHalfLifeQuarters: z.number().int().positive(),
-      updatedAt: databaseTimestamp,
+      ...scoreV2Fields,
+      icReference: decimal,
+      icPrior: signedDecimal,
+      icPriorPairs: z.number().int().nonnegative(),
+      momentumWeight: decimal,
+      momentumZCap: decimal,
+      reviewDrift: decimal,
+      sellBand: decimal,
+      sellConfidence: decimal,
     }),
+    // Score v2 exports: every v3 knob takes its default, as in migration 0012.
+    z
+      .strictObject(scoreV2Fields)
+      .transform((row) => ({ ...row, ...V3_SCORE_DEFAULTS })),
     // Score v1 exports: the trim factor becomes the relative trim band, as
-    // in migration 0010, and every v2 knob takes its default.
+    // in migration 0010, and every later knob takes its default.
     z
       .strictObject({
         version: z.string().min(1),
@@ -280,6 +309,7 @@ const scoreConfigRecord = z.strictObject({
         tiltMax: DEFAULT_SCORE_CONFIG.tiltMax,
         fairValueHalfLifeQuarters:
           DEFAULT_SCORE_CONFIG.fairValueHalfLifeQuarters,
+        ...V3_SCORE_DEFAULTS,
         updatedAt: row.updatedAt,
       })),
   ]),
