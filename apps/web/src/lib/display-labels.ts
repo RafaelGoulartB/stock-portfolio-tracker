@@ -21,6 +21,13 @@ export function fxSourceText(source: FxSource, i18n: I18n): string {
           message: "Frankfurter (ECB reference)",
         }),
       );
+    case "bcb_ptax":
+      return i18n._(
+        msg({
+          id: "fxSource.bcbPtax",
+          message: "BCB PTAX (Banco Central do Brasil)",
+        }),
+      );
     case "manual":
       return i18n._(msg({ id: "fxSource.manual", message: "Manual rate" }));
   }

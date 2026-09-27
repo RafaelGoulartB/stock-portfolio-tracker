@@ -54,11 +54,92 @@ describe("portable data backups", () => {
       },
     });
 
-    expect(manifest.version).toBe(6);
+    expect(manifest.version).toBe(10);
     if (record.entity !== "transactions") {
       throw new Error("expected transaction record");
     }
     expect(record.data.createdAt).toBeInstanceOf(Date);
+    // A pre-v7 trade restores with its trade-date rate still unresolved.
+    expect(record.data.usdBrlRate).toBeNull();
+  });
+
+  it("accepts a v8 split record and defaults its count for older manifests", () => {
+    const record = backupRecordSchema.parse({
+      type: "record",
+      entity: "corporateActions",
+      data: {
+        ticker: "PETR4",
+        kind: "split",
+        effectiveAt: "2026-03-01",
+        fromQuantity: "1.00000000",
+        toQuantity: "2.00000000",
+        notes: null,
+        createdAt: "2026-03-01T12:00:00.000Z",
+      },
+    });
+
+    expect(record.entity).toBe("corporateActions");
+    expect(() =>
+      backupRecordSchema.parse({
+        type: "record",
+        entity: "corporateActions",
+        data: {
+          ticker: "PETR4",
+          kind: "split",
+          effectiveAt: "2026-03-01",
+          fromQuantity: "2",
+          toQuantity: "2",
+          notes: null,
+          createdAt: "2026-03-01T12:00:00.000Z",
+        },
+      }),
+    ).toThrow();
+    expect(
+      manifestSchema.parse({
+        type: "manifest",
+        format: BACKUP_FORMAT,
+        version: 7,
+        exportedAt: "2026-09-06T20:00:00.000Z",
+        counts: {
+          categories: 0,
+          allocationAssets: 0,
+          assetReviews: 0,
+          transactions: 0,
+          assetCategories: 0,
+        },
+      }).counts.corporateActions,
+    ).toBe(0);
+  });
+
+  it("round-trips a trade-date USD/BRL and rejects a zero rate", () => {
+    const trade = {
+      ticker: "COST",
+      assetClass: "stock_us",
+      currency: "USD",
+      side: "buy",
+      quantity: "2.00000000",
+      price: "900.00000000",
+      fees: "0.00000000",
+      tradedAt: "2025-01-20",
+      notes: null,
+      createdAt: "2025-01-20T12:00:00.000Z",
+    };
+    const record = backupRecordSchema.parse({
+      type: "record",
+      entity: "transactions",
+      data: { ...trade, usdBrlRate: "6.10420000" },
+    });
+
+    expect(record.entity === "transactions" && record.data.usdBrlRate).toBe(
+      "6.10420000",
+    );
+    expect(() =>
+      backupRecordSchema.parse({
+        type: "record",
+        entity: "transactions",
+        data: { ...trade, usdBrlRate: "0" },
+      }),
+    ).toThrow();
   });
 
   it("accepts a v1 manifest without scoreConfigs and defaults the count", () => {
@@ -109,6 +190,145 @@ describe("portable data backups", () => {
     expect(record.data.largeBookImpact).toBe("0.00500000");
     expect(record.data.maxShare).toBe("0.70000000");
     expect(record.data.maxAssets).toBe(5);
+    // A v8 planner record predates the starter fraction.
+    expect(record.data.starterFraction).toBe("0.5");
+  });
+
+  it("maps a v2 score config onto the v3 policy", () => {
+    const record = backupRecordSchema.parse({
+      type: "record",
+      entity: "scoreConfigs",
+      data: {
+        version: "custom",
+        absoluteWeightCap: "0.05000000",
+        overweightBlockFactor: "1.30000000",
+        trimAbsoluteBand: "0.05000000",
+        trimRelativeBand: "0.25000000",
+        cooldownDays: 45,
+        cooldownFloor: "0.25000000",
+        gradeWindowQuarters: 4,
+        gradeHalfLifeQuarters: 4,
+        gradePriorQuarters: "1.00000000",
+        gradeBands: [{ minGrade: "0", multiplier: "1" }],
+        ungradedMultiplier: "1.00000000",
+        valuationDeadZone: "0.05000000",
+        valuationSensitivity: "1.00000000",
+        tiltMin: "0.50000000",
+        tiltMax: "1.50000000",
+        fairValueHalfLifeQuarters: 2,
+        updatedAt: "2026-09-26T12:00:00.000Z",
+      },
+    });
+
+    if (record.entity !== "scoreConfigs") {
+      throw new Error("expected score config record");
+    }
+    // The user's v2 knobs survive; only the v3 knobs take defaults.
+    expect(record.data).toMatchObject({
+      overweightBlockFactor: "1.30000000",
+      valuationSensitivity: "1.00000000",
+      icReference: "0.10",
+      icPrior: "0.05",
+      icPriorPairs: 240,
+      momentumWeight: "0.10",
+      sellConfidence: "0.8",
+    });
+  });
+
+  const v3Policy = {
+    version: "custom",
+    absoluteWeightCap: "0.05000000",
+    overweightBlockFactor: "2.00000000",
+    trimAbsoluteBand: "0.05000000",
+    trimRelativeBand: "0.25000000",
+    cooldownDays: 45,
+    cooldownFloor: "0.25000000",
+    gradeWindowQuarters: 4,
+    gradeHalfLifeQuarters: 4,
+    gradePriorQuarters: "1.00000000",
+    gradeBands: [{ minGrade: "0", multiplier: "1" }],
+    ungradedMultiplier: "1.00000000",
+    valuationDeadZone: "0.00000000",
+    valuationSensitivity: "3.00000000",
+    tiltMin: "0.20000000",
+    tiltMax: "3.00000000",
+    fairValueHalfLifeQuarters: 2,
+    icReference: "0.10000000",
+    icPrior: "0.05000000",
+    icPriorPairs: 240,
+    momentumWeight: "0.10000000",
+    momentumZCap: "2.00000000",
+    reviewDrift: "0.25000000",
+    sellBand: "0.25000000",
+    sellConfidence: "0.80000000",
+    updatedAt: "2026-09-27T12:00:00.000Z",
+  };
+
+  it("keeps every knob of a v3 score config", () => {
+    const record = backupRecordSchema.parse({
+      type: "record",
+      entity: "scoreConfigs",
+      data: v3Policy,
+    });
+
+    if (record.entity !== "scoreConfigs") {
+      throw new Error("expected score config record");
+    }
+    expect(record.data).toMatchObject({
+      icReference: "0.10000000",
+      icPriorPairs: 240,
+      momentumZCap: "2.00000000",
+      sellConfidence: "0.80000000",
+    });
+  });
+
+  it("rejects a score config the engine could not load", () => {
+    for (const broken of [
+      { icReference: "0" },
+      { momentumWeight: "30" },
+      { sellConfidence: "1.5" },
+    ]) {
+      expect(() =>
+        backupRecordSchema.parse({
+          type: "record",
+          entity: "scoreConfigs",
+          data: { ...v3Policy, ...broken },
+        }),
+      ).toThrow();
+    }
+  });
+
+  it("maps a v1 score config onto the v2 policy", () => {
+    const record = backupRecordSchema.parse({
+      type: "record",
+      entity: "scoreConfigs",
+      data: {
+        version: "custom",
+        absoluteWeightCap: "0.06000000",
+        overweightBlockFactor: "1.30000000",
+        trimFactor: "1.40000000",
+        cooldownDays: 30,
+        gradeWindowQuarters: 4,
+        gradeBands: [{ minGrade: "0", multiplier: "1" }],
+        ungradedMultiplier: "1.00000000",
+        updatedAt: "2026-09-07T12:00:00.000Z",
+      },
+    });
+
+    if (record.entity !== "scoreConfigs") {
+      throw new Error("expected score config record");
+    }
+    expect(record.data).toMatchObject({
+      absoluteWeightCap: "0.06000000",
+      trimRelativeBand: "0.40000000",
+      trimAbsoluteBand: "0.05",
+      cooldownDays: 30,
+      cooldownFloor: "0.25",
+      valuationDeadZone: "0",
+      momentumWeight: "0.10",
+      fairValueHalfLifeQuarters: 2,
+    });
+    expect("trimFactor" in record.data).toBe(false);
   });
 
   it("defaults a missing review watchNext flag on older backups", () => {

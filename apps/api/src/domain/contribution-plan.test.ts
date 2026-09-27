@@ -11,17 +11,25 @@ import {
   weightImpactForPortfolio,
 } from "./contribution-plan";
 
+/** A held candidate at full priority; weights are shares of the book. */
 function row(
   ticker: string,
-  score: string,
+  tiltedTarget: string,
+  currentWeight: string,
   overrides: Partial<ContributionPlanRow> = {},
 ): ContributionPlanRow {
   return {
     ticker,
     currency: "BRL",
-    score,
+    score: "1",
+    priority: "1",
+    tiltedTarget,
+    currentWeight,
+    maxWeight: null,
+    held: true,
     executionPrice: "10.00",
     executionFxApplied: false,
+    wholeUnits: false,
     ...overrides,
   };
 }
@@ -173,161 +181,191 @@ describe("planContribution", () => {
   it("returns nothing without a positive amount or a candidate", () => {
     expect(
       planContribution({
-        rows: [row("WEGE3", "0.02")],
+        rows: [row("WEGE3", "0.06", "0.04")],
         amount: "0",
         portfolioValue: MILLION,
       }).slices,
     ).toEqual([]);
     expect(
       planContribution({
-        rows: [row("WEGE3", "0")],
+        rows: [row("WEGE3", "0.06", "0.04", { score: "0" })],
         amount: "1000",
         portfolioValue: MILLION,
       }).slices,
     ).toEqual([]);
   });
 
+  it("sizes the need against the book after the contribution", () => {
+    // 50% of R$150,000 minus R$40,000 held; v1 stopped at R$15,000.
+    const result = planContribution({
+      rows: [row("WEGE3", "0.5", "0.4")],
+      amount: "50000",
+      portfolioValue: "100000",
+    });
+
+    expect(result.slices[0]).toMatchObject({
+      amount: "35000.00",
+      cappedByNeed: true,
+    });
+    expect(result.remainder).toBe("15000.00");
+  });
+
+  it("funds the emptier target before the fuller one", () => {
+    // Same 2 p.p. gap: 10% → 8% is 80% full, 2% → 0.2% is 10% full.
+    const result = planContribution({
+      rows: [row("WEGE3", "0.10", "0.08"), row("TOTS3", "0.02", "0.002")],
+      amount: "10000",
+      portfolioValue: MILLION,
+      spread: 0,
+    });
+
+    expect(result.slices.map((slice) => [slice.ticker, slice.amount])).toEqual([
+      ["TOTS3", "7000.00"],
+      ["WEGE3", "3000.00"],
+    ]);
+    expect(result.slices[0]?.cappedByShare).toBe(true);
+  });
+
+  it("fills a higher priority closer to its target", () => {
+    const result = planContribution({
+      rows: [
+        row("WEGE3", "0.05", "0.03"),
+        row("ITUB4", "0.05", "0.03", { priority: "0.5" }),
+      ],
+      amount: "20000",
+      portfolioValue: MILLION,
+      config: { ...config, maxShare: "1" },
+      spread: 0,
+    });
+
+    expect(result.slices.map((slice) => [slice.ticker, slice.amount])).toEqual([
+      ["WEGE3", "13666.67"],
+      ["ITUB4", "6333.33"],
+    ]);
+  });
+
+  it("stops at the post-contribution weight ceiling", () => {
+    const result = planContribution({
+      rows: [row("WEGE3", "0.07", "0.05", { maxWeight: "0.065" })],
+      amount: "100000",
+      portfolioValue: MILLION,
+    });
+
+    expect(result.slices[0]).toMatchObject({
+      amount: "21500.00",
+      cappedByLimit: true,
+      cappedByNeed: false,
+    });
+    expect(result.remainder).toBe("78500.00");
+  });
+
+  it("builds a new position over several cheques", () => {
+    const result = planContribution({
+      rows: [row("WEGE3", "0.05", "0", { held: false })],
+      amount: "100000",
+      portfolioValue: MILLION,
+    });
+
+    // Half of 5% of R$1.1M.
+    expect(result.slices[0]).toMatchObject({
+      amount: "27500.00",
+      cappedByLimit: true,
+    });
+  });
+
+  it("does not limit the first cheque of an empty book", () => {
+    const result = planContribution({
+      rows: [row("WEGE3", "0.5", "0", { held: false })],
+      amount: "10000",
+      portfolioValue: "0",
+    });
+
+    expect(result.slices[0]).toMatchObject({
+      amount: "5000.00",
+      cappedByNeed: true,
+      cappedByLimit: false,
+    });
+  });
+
   it("sends a R$1,000 cheque on a R$1M book to a single name", () => {
     const result = planContribution({
-      rows: [row("WEGE3", "0.02"), row("ITUB4", "0.015"), row("B3SA3", "0.01")],
+      rows: [
+        row("WEGE3", "0.06", "0.04"),
+        row("ITUB4", "0.05", "0.04"),
+        row("B3SA3", "0.045", "0.04"),
+      ],
       amount: "1000",
       portfolioValue: MILLION,
     });
 
     expect(result.spreadMode).toBe("auto");
     expect(result.targetCount).toBe(1);
-    expect(result.selectedCount).toBe(1);
-    expect(result.slices[0]?.ticker).toBe("WEGE3");
-    expect(result.slices[0]?.amount).toBe("1000.00");
-    expect(result.allocated).toBe("1000.00");
+    expect(result.slices).toHaveLength(1);
+    expect(result.slices[0]).toMatchObject({
+      ticker: "WEGE3",
+      amount: "1000.00",
+    });
     expect(result.remainder).toBe("0.00");
   });
 
-  it("splits R$15,000 on a R$1M book across three names", () => {
-    const result = planContribution({
-      rows: [row("WEGE3", "0.02"), row("ITUB4", "0.015"), row("B3SA3", "0.01")],
-      amount: "15000",
-      portfolioValue: MILLION,
-    });
-
-    expect(result.targetCount).toBe(3);
-    expect(result.slices.map((slice) => slice.ticker)).toEqual([
-      "WEGE3",
-      "ITUB4",
-      "B3SA3",
-    ]);
-    expect(result.allocated).toBe("15000.00");
-  });
-
-  it("does not sprinkle crumbs onto names with a negligible scored need", () => {
+  it("does not seat names whose room is below a meaningful slice", () => {
     const result = planContribution({
       rows: [
-        row("WEGE3", "0.05"),
-        row("ITUB4", "0.0001"),
-        row("B3SA3", "0.0001"),
+        row("WEGE3", "0.10", "0.05"),
+        row("ITUB4", "0.0501", "0.05"),
+        row("B3SA3", "0.0501", "0.05"),
       ],
-      amount: "5000",
+      amount: "15000",
       portfolioValue: MILLION,
     });
 
     expect(result.slices).toHaveLength(1);
-    expect(result.slices[0]?.ticker).toBe("WEGE3");
-    expect(result.slices[0]?.amount).toBe("5000.00");
+    expect(result.slices[0]).toMatchObject({
+      ticker: "WEGE3",
+      amount: "15000.00",
+    });
   });
 
-  it("caps a dominant score at maxShare and redistributes the rest", () => {
+  it("drops crumb slices but keeps two seats under the share cap", () => {
     const result = planContribution({
       rows: [
-        row("WEGE3", "0.05"),
-        row("ITUB4", "0.008"),
-        row("B3SA3", "0.007"),
+        row("WEGE3", "0.10", "0.05"),
+        row("ITUB4", "0.03", "0.02"),
+        row("B3SA3", "0.029", "0.02"),
       ],
       amount: "15000",
       portfolioValue: MILLION,
     });
 
-    expect(result.slices).toHaveLength(3);
-    expect(result.slices[0]?.ticker).toBe("WEGE3");
-    expect(result.slices[0]?.amount).toBe("10500.00");
+    expect(result.slices.map((slice) => [slice.ticker, slice.amount])).toEqual([
+      ["WEGE3", "10500.00"],
+      ["ITUB4", "4500.00"],
+    ]);
     expect(result.slices[0]?.cappedByShare).toBe(true);
-    expect(result.slices[1]?.amount).toBe("2400.00");
-    expect(result.slices[2]?.amount).toBe("2100.00");
+  });
+
+  it("seats the next names when every seat is full", () => {
+    const result = planContribution({
+      rows: ["AAAA3", "BBBB3", "CCCC3", "DDDD3"].map((ticker) =>
+        row(ticker, "0.044", "0.04"),
+      ),
+      amount: "15000",
+      portfolioValue: MILLION,
+    });
+
+    expect(result.slices.map((slice) => slice.amount)).toEqual([
+      "3750.00",
+      "3750.00",
+      "3750.00",
+      "3750.00",
+    ]);
     expect(result.allocated).toBe("15000.00");
-  });
-
-  it("waterfalls leftover need onto the next names instead of abandoning it", () => {
-    const result = planContribution({
-      rows: [
-        row("WEGE3", "0.001"),
-        row("ITUB4", "0.001"),
-        row("B3SA3", "0.001"),
-      ],
-      amount: "50000",
-      portfolioValue: MILLION,
-    });
-
-    expect(result.slices).toHaveLength(3);
-    expect(result.slices.every((slice) => slice.amount === "1050.00")).toBe(
-      true,
-    );
-    expect(result.allocated).toBe("3150.00");
-    expect(result.remainder).toBe("46850.00");
-  });
-
-  it("fills every invited name up to its need when the override is all", () => {
-    const result = planContribution({
-      rows: [
-        row("WEGE3", "0.001"),
-        row("ITUB4", "0.001"),
-        row("B3SA3", "0.001"),
-      ],
-      amount: "50000",
-      portfolioValue: MILLION,
-      spread: 0,
-    });
-
-    expect(result.spreadMode).toBe("all");
-    expect(result.slices).toHaveLength(3);
-    expect(result.allocated).toBe("3150.00");
-  });
-
-  it("spreads the first cheque on an empty book up to maxAssets", () => {
-    const result = planContribution({
-      rows: [
-        row("WEGE3", "0.20"),
-        row("ITUB4", "0.20"),
-        row("B3SA3", "0.20"),
-        row("PETR4", "0.20"),
-        row("VALE3", "0.20"),
-        row("BBAS3", "0.20"),
-      ],
-      amount: "10000",
-      portfolioValue: "0",
-    });
-
-    expect(result.targetCount).toBe(5);
-    expect(result.selectedCount).toBe(5);
-    expect(result.relativeSize).toBeNull();
-    expect(result.slices[0]?.amount).toBe("2000.00");
-  });
-
-  it("lets a manual spread ignore the automatic count but still cap need", () => {
-    const result = planContribution({
-      rows: [row("WEGE3", "0.02"), row("ITUB4", "0.015"), row("B3SA3", "0.01")],
-      amount: "1000",
-      portfolioValue: MILLION,
-      spread: 3,
-    });
-
-    expect(result.spreadMode).toBe("manual");
-    expect(result.targetCount).toBe(3);
-    expect(result.slices).toHaveLength(3);
   });
 
   it("sizes units from the execution price and keeps FX flags", () => {
     const result = planContribution({
       rows: [
-        row("AAPL", "0.02", {
+        row("AAPL", "0.06", "0.04", {
           currency: "USD",
           executionPrice: "200.00",
           executionFxApplied: true,
@@ -341,6 +379,85 @@ describe("planContribution", () => {
     expect(result.slices[0]?.executionFxApplied).toBe(true);
   });
 
+  it("floors whole-unit slices and reports the money a share cannot use", () => {
+    const result = planContribution({
+      rows: [
+        row("BBSE3", "0.06", "0.04", {
+          executionPrice: "40.00",
+          wholeUnits: true,
+        }),
+      ],
+      amount: "1000",
+      portfolioValue: MILLION,
+    });
+
+    expect(result.slices[0]).toMatchObject({
+      amount: "1000.00",
+      units: "25.0000",
+    });
+
+    const uneven = planContribution({
+      rows: [
+        row("BBSE3", "0.06", "0.04", {
+          executionPrice: "30.00",
+          wholeUnits: true,
+        }),
+      ],
+      amount: "1000",
+      portfolioValue: MILLION,
+    });
+
+    expect(uneven.slices[0]).toMatchObject({
+      amount: "990.00",
+      units: "33.0000",
+    });
+    expect(uneven.remainder).toBe("10.00");
+    expect(uneven.unitRoundingRemainder).toBe("10.00");
+  });
+
+  it("spends whole-unit leftovers on another share where the cap has room", () => {
+    const result = planContribution({
+      rows: [
+        row("TOTS3", "0.06", "0.04", {
+          executionPrice: "30.00",
+          wholeUnits: true,
+        }),
+        row("AAPL", "0.06", "0.04", {
+          currency: "USD",
+          executionPrice: "1000.00",
+        }),
+      ],
+      amount: "1000",
+      portfolioValue: MILLION,
+      spread: 2,
+    });
+    const tots = result.slices.find((slice) => slice.ticker === "TOTS3");
+    const apple = result.slices.find((slice) => slice.ticker === "AAPL");
+
+    // 500 buys 16 shares (480); the freed 20 cannot buy a 17th.
+    expect(tots).toMatchObject({ amount: "480.00", units: "16.0000" });
+    expect(apple).toMatchObject({ amount: "500.00", units: "0.5000" });
+    expect(result.unitRoundingRemainder).toBe("20.00");
+    expect(result.remainder).toBe("20.00");
+  });
+
+  it("drops a whole-unit slice that cannot afford one share", () => {
+    const result = planContribution({
+      rows: [
+        row("TOTS3", "0.06", "0.04", {
+          executionPrice: "300.00",
+          wholeUnits: true,
+        }),
+      ],
+      amount: "100",
+      portfolioValue: MILLION,
+    });
+
+    expect(result.slices).toHaveLength(0);
+    expect(result.remainder).toBe("100.00");
+    expect(result.unitRoundingRemainder).toBe("100.00");
+  });
+
   it("reads custom knobs instead of hard-wired thresholds", () => {
     const custom: ContributionPlanConfig = {
       ...DEFAULT_CONTRIBUTION_PLAN_CONFIG,
@@ -349,14 +466,19 @@ describe("planContribution", () => {
       maxShare: "0.60",
       maxAssets: 2,
     };
+    const rows = [
+      row("WEGE3", "0.10", "0.05"),
+      row("ITUB4", "0.03", "0.02"),
+      row("B3SA3", "0.03", "0.02"),
+    ];
     const small = planContribution({
-      rows: [row("WEGE3", "0.05"), row("ITUB4", "0.04"), row("B3SA3", "0.03")],
+      rows,
       amount: "5000",
       portfolioValue: MILLION,
       config: custom,
     });
     const large = planContribution({
-      rows: [row("WEGE3", "0.08"), row("ITUB4", "0.02"), row("B3SA3", "0.02")],
+      rows,
       amount: "40000",
       portfolioValue: MILLION,
       config: custom,
@@ -364,8 +486,79 @@ describe("planContribution", () => {
 
     expect(small.selectedCount).toBe(1);
     expect(large.targetCount).toBe(2);
-    expect(large.slices[0]?.amount).toBe("24000.00");
-    expect(large.slices[0]?.cappedByShare).toBe(true);
-    expect(large.slices[1]?.amount).toBe("16000.00");
+    expect(large.slices[0]).toMatchObject({
+      amount: "24000.00",
+      cappedByShare: true,
+    });
+    // 3% of R$1.04M minus R$20,000 held; maxAssets keeps the rest unspent.
+    expect(large.slices[1]).toMatchObject({
+      amount: "11200.00",
+      cappedByNeed: true,
+    });
+    expect(large.remainder).toBe("4800.00");
+  });
+});
+
+describe("planContribution invariants", () => {
+  /** Deterministic LCG so every run explores the same books. */
+  function random(seed: number) {
+    let state = seed;
+
+    return () => {
+      state = (state * 1_664_525 + 1_013_904_223) % 4_294_967_296;
+      return state / 4_294_967_296;
+    };
+  }
+
+  it("conserves money and never exceeds a need or a ceiling", () => {
+    const next = random(42);
+    const fixed = (value: number, places = 4) => value.toFixed(places);
+
+    for (let book = 0; book < 300; book += 1) {
+      const portfolioValue = next() < 0.1 ? "0" : fixed(next() * 2_000_000, 2);
+      const amount = fixed(100 + next() * 100_000, 2);
+      const spreadRoll = Math.floor(next() * 7);
+      const spread = spreadRoll === 6 ? null : spreadRoll;
+      const rows = Array.from({ length: 1 + Math.floor(next() * 8) }, (_, i) =>
+        row(`T${i}`, fixed(next() * 0.2), fixed(next() * 0.2), {
+          score: next() < 0.8 ? "1" : "0",
+          priority: fixed(0.1 + next() * 0.9),
+          maxWeight: next() < 0.5 ? fixed(next() * 0.3) : null,
+          held: next() < 0.8,
+        }),
+      );
+      const result = planContribution({
+        rows,
+        amount,
+        portfolioValue,
+        spread,
+      });
+      const postValue = Number(portfolioValue) + Number(amount);
+
+      expect(
+        formatDecimal(
+          toDecimal(result.allocated) + toDecimal(result.remainder),
+          2,
+        ),
+      ).toBe(amount);
+
+      for (const slice of result.slices) {
+        const source = rows.find(
+          (candidate) => candidate.ticker === slice.ticker,
+        );
+        const held = Number(source?.currentWeight) * Number(portfolioValue);
+        const need = Number(source?.tiltedTarget) * postValue - held;
+
+        expect(Number(slice.amount)).toBeGreaterThan(0);
+        expect(source?.score).toBe("1");
+        expect(Number(slice.amount)).toBeLessThanOrEqual(need + 0.01);
+
+        if (source?.maxWeight != null) {
+          expect(Number(slice.amount)).toBeLessThanOrEqual(
+            Number(source.maxWeight) * postValue - held + 0.01,
+          );
+        }
+      }
+    }
   });
 });

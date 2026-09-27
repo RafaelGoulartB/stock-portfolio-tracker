@@ -25,6 +25,7 @@ export const PRESETS: Record<"compact" | "standard" | "all", ColumnId[]> = {
     "marketPrice",
     "marketValue",
     "unrealizedPnl",
+    "fxPnl",
     "unrealizedPnlPercent",
     "returnContribution",
     "weight",
@@ -123,6 +124,12 @@ export function columnLabels(i18n: I18n): Record<ColumnId, string> {
       t({
         id: "detailedPositions.colOpenResult",
         message: "Open result",
+      }),
+    ),
+    fxPnl: i18n._(
+      t({
+        id: "detailedPositions.colFxResult",
+        message: "FX result",
       }),
     ),
     unrealizedPnlPercent: i18n._(

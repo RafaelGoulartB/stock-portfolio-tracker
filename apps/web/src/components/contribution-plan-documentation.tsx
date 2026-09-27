@@ -77,6 +77,9 @@ export function ContributionPlanDocumentation() {
       DEFAULT_CONTRIBUTION_PLAN_CONFIG.largeBookImpact,
     maxShare: watched.maxShare ?? DEFAULT_CONTRIBUTION_PLAN_CONFIG.maxShare,
     maxAssets: watched.maxAssets ?? DEFAULT_CONTRIBUTION_PLAN_CONFIG.maxAssets,
+    starterFraction:
+      watched.starterFraction ??
+      DEFAULT_CONTRIBUTION_PLAN_CONFIG.starterFraction,
   };
 
   useEffect(() => {
@@ -172,6 +175,7 @@ export function ContributionPlanDocumentation() {
   const smallImpact = percentLabel(preview.smallBookImpact);
   const largeImpact = percentLabel(preview.largeBookImpact);
   const shareCap = percentLabel(preview.maxShare);
+  const starterShare = percentLabel(preview.starterFraction);
   const smallBook = Number(CONTRIBUTION_PLAN_SMALL_BOOK_VALUE).toLocaleString(
     i18n.locale,
   );
@@ -338,6 +342,21 @@ export function ContributionPlanDocumentation() {
                   </FormItem>
                 )}
               />
+              <PercentField
+                name="starterFraction"
+                label={
+                  <Trans id="documentation.contribution.field.starterFraction">
+                    Starter position size
+                  </Trans>
+                }
+                description={
+                  <Trans id="documentation.contribution.field.starterFractionHint">
+                    Share of its target a not-yet-held asset may reach in one
+                    contribution, so new positions are built over several
+                    cheques.
+                  </Trans>
+                }
+              />
             </div>
           </Topic>
 
@@ -381,40 +400,45 @@ export function ContributionPlanDocumentation() {
               <Rule
                 number="2"
                 title={
-                  <Trans id="documentation.contribution.inviteNames">
-                    Invite names with enough scored need
+                  <Trans id="documentation.contribution.measureNeed">
+                    Measure each need after the contribution
                   </Trans>
                 }
               >
-                <Trans id="documentation.contribution.inviteNamesDescription">
-                  Keep assets with a score above zero, ranked highest first.
-                  Automatic mode then skips a name whose scored need is smaller
-                  than a minimum-impact slice of the current book, so a dominant
-                  score cannot sprinkle crumbs. If nobody qualifies, the top
-                  name still sits at the table. Manual and &quot;every
-                  candidate&quot; keep the ranked list intact.
+                <Trans id="documentation.contribution.measureNeedDescription">
+                  A contribution dilutes every weight, so each candidate&apos;s
+                  need is measured against the book after it: the money that
+                  takes it exactly to its valuation-adjusted target. Room is
+                  then limited by the weight ceilings of the score and, for an
+                  asset not yet held, by the starter size of {starterShare} of
+                  its target. Automatic mode seats the best-ranked names whose
+                  room is at least a minimum-impact slice.
                 </Trans>
                 <Formula>
-                  <Trans id="documentation.formula.scoredNeed">
-                    scored need = score × (V + C) ≥ V × impact(V)
+                  <Trans id="documentation.formula.postNeed">
+                    need = adjusted target × (V + C) - held value
                   </Trans>
                 </Formula>
               </Rule>
               <Rule
                 number="3"
                 title={
-                  <Trans id="documentation.contribution.proportionalShare">
-                    Assign a proportional share
+                  <Trans id="documentation.contribution.waterFilling">
+                    Fill the emptiest targets first
                   </Trans>
                 }
               >
-                <Trans id="documentation.contribution.proportionalShareDescription">
-                  Each invited asset starts with its score divided by the sum of
-                  the invited scores.
+                <Trans id="documentation.contribution.waterFillingDescription">
+                  The split minimizes the priority-weighted squared distance to
+                  target, relative to each target. The solution raises the
+                  emptiest assets first until all funded names share the same
+                  priority-weighted fill level, like water filling containers of
+                  different heights. A higher priority ends closer to its
+                  target. The level is solved exactly, not by iteration.
                 </Trans>
                 <Formula>
-                  <Trans id="documentation.formula.assetShare">
-                    asset share = asset score / invited score total
+                  <Trans id="documentation.formula.waterFilling">
+                    slice = clamp(need - level × target / priority, 0, room)
                   </Trans>
                 </Formula>
               </Rule>
@@ -427,11 +451,12 @@ export function ContributionPlanDocumentation() {
                 }
                 badge={<ThresholdChip>{shareCap}</ThresholdChip>}
               >
-                <Trans id="documentation.contribution.shareCapDescription">
+                <Trans id="documentation.contribution.shareCapDescriptionV2">
                   With two or more names, nobody receives more than {shareCap}{" "}
-                  of the contribution. Independently, nobody receives more than
-                  their scored need. Excess is redistributed to invited names
-                  that still have room.
+                  of the contribution, and the level is solved again with that
+                  cap. In automatic mode, a seat whose slice is below a
+                  minimum-impact slice is released when the others can absorb
+                  its money, keeping at least two names.
                 </Trans>
               </Rule>
               <Rule
@@ -442,11 +467,11 @@ export function ContributionPlanDocumentation() {
                   </Trans>
                 }
               >
-                <Trans id="documentation.contribution.waterfallDescription">
-                  Money the first club cannot absorb still flows down the ranked
-                  list, one name at a time, up to {preview.maxAssets}. A name is
-                  skipped when its scored need is below one cent. Only leftover
-                  after that walk is disclosed as unallocated.
+                <Trans id="documentation.contribution.waterfallDescriptionV2">
+                  When every seated name reached its room and money is left, the
+                  next ranked name takes a seat and the split is solved again,
+                  up to {preview.maxAssets} names. Only money no candidate has
+                  room for is disclosed as unallocated.
                 </Trans>
               </Rule>
               <Rule
@@ -461,7 +486,10 @@ export function ContributionPlanDocumentation() {
                   Each money slice is rounded independently to cents. Any
                   rounding difference is disclosed as an unallocated remainder.
                   Units are the slice divided by the asset&apos;s execution
-                  price.
+                  price. B3 shares, FIIs, ETFs and BDRs held in BRL are bought
+                  in whole units: each slice is floored to whole shares, the
+                  freed money buys another share where the slice still has room,
+                  and the rest is disclosed as unallocated.
                 </Trans>
               </Rule>
             </ol>
@@ -511,29 +539,31 @@ export function ContributionPlanDocumentation() {
               </li>
               <li className="rounded-lg border px-3.5 py-3">
                 <p className="font-medium text-foreground">
-                  <Trans id="documentation.contribution.exampleCrumbTitle">
-                    Tiny scored need and leftover capital
+                  <Trans id="documentation.contribution.exampleFillTitle">
+                    Same gap, different targets
                   </Trans>
                 </p>
                 <p>
-                  <Trans id="documentation.contribution.exampleCrumbDescription">
-                    Three names at 0.001 on a R$ 1,000,000 book with a R$ 50,000
-                    cheque: each need is filled in score order, then leftover
-                    that nobody can absorb stays unallocated.
+                  <Trans id="documentation.contribution.exampleFillDescription">
+                    R$ 10,000 on a R$ 1,000,000 book: one asset is at 8% of a
+                    10% target, another at 0.2% of a 2% target. Both miss 2
+                    points, but the second is 90% empty, so it is funded first
+                    and receives R$ 7,000 (the share cap) against R$ 3,000.
                   </Trans>
                 </p>
               </li>
               <li className="rounded-lg border px-3.5 py-3">
                 <p className="font-medium text-foreground">
-                  <Trans id="documentation.contribution.exampleCapTitle">
-                    A large cheque with one very high score
+                  <Trans id="documentation.contribution.exampleStarterTitle">
+                    A brand-new position
                   </Trans>
                 </p>
                 <p>
-                  <Trans id="documentation.contribution.exampleCapDescription">
-                    When the unconstrained split would give one name more than{" "}
-                    {shareCap}, that name is pinned at the cap and the rest is
-                    redistributed by score.
+                  <Trans id="documentation.contribution.exampleStarterDescription">
+                    A watch-only asset with a 5% target on a R$ 1,000,000 book
+                    receiving R$ 100,000 gets at most {starterShare} of 5% of R$
+                    1,100,000 in this cheque; the rest of its target waits for
+                    later contributions.
                   </Trans>
                 </p>
               </li>
@@ -609,7 +639,7 @@ function PercentField({
   label,
   description,
 }: {
-  name: "smallBookImpact" | "largeBookImpact" | "maxShare";
+  name: "smallBookImpact" | "largeBookImpact" | "maxShare" | "starterFraction";
   label: ReactNode;
   description: ReactNode;
 }) {

@@ -32,12 +32,15 @@ function position(overrides: Partial<ValuedPosition> = {}): ValuedPosition {
     convertedAveragePrice: "50.00",
     convertedInvestedCost: "2500.00",
     convertedRealizedPnl: "0.00",
+    tradesMissingFx: 0,
     marketPrice: "76.45",
     marketValue: "3822.50",
     convertedMarketValue: "3000.00",
     unrealizedPnl: "100.00",
     convertedUnrealizedPnl: "500.00",
+    convertedFxPnl: null,
     unrealizedPnlPercent: "0.200000",
+    convertedUnrealizedPnlPercent: "0.200000",
     weight: "0.01460000",
     quoteAsOf: "2026-09-04",
     quoteMissing: false,
@@ -203,8 +206,11 @@ describe("buildAllocationRows", () => {
       valuationRef: "1Q26",
       marketValue: "3000.00",
     });
-    // 1.5% target * 1.2355 = 1.85325%, minus the 1.46% held, times 1.0.
-    expect(row?.score.value).toBe("0.00393250");
+    // DLO is the only targeted asset, so renormalization cancels its tilt:
+    // valuation only moves weight *between* assets. 1 - 1.46% / 1.5%.
+    expect(row?.score.tiltedTarget).toBe("0.01500000");
+    expect(Number(row?.score.valuationSignal)).toBeGreaterThan(0);
+    expect(row?.score.value).toBe("0.02666667");
     expect(row?.score.ruleId).toBe("gap-weighted");
     expect(row?.valueSource).toBe("quote");
     expect(row?.manualPrice).toBeNull();
@@ -372,6 +378,12 @@ describe("buildAllocationRows", () => {
     expect(row?.valueSource).toBe("none");
     expect(row?.fairValue).toBe("100");
     expect(row?.discount).toBeNull();
+    // The placeholder 0% weight must not rank as the largest gap.
+    expect(row?.score).toMatchObject({
+      value: "0.00000000",
+      ruleId: "no-quote",
+      blocked: true,
+    });
   });
 
   it("prices USD contribution units at the VET rate", () => {
@@ -498,9 +510,11 @@ describe("summarizeAllocation", () => {
       displayCurrency: "BRL",
       investedAssets: 3,
       watchOnlyAssets: 1,
-      candidates: 1,
+      // DLO is cheap; VOO is bought five days ago, which now lowers its
+      // priority instead of blocking it; AUGO is expensive past its band.
+      candidates: 2,
       trimCandidates: 1,
-      blocked: 1,
+      blocked: 0,
       totalTargetWeight: "0.09000000",
     });
     expect(summary.totalMarketValue).toBe("9000.00");

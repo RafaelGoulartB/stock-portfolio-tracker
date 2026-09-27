@@ -251,7 +251,41 @@ describe("buildDailyTracking", () => {
       dailyChange: "-10.00",
       dailyChangePercent: "-0.09090909",
     });
-    expect(result.summary.declining).toBe(1);
+    // A cash-only book is fully comparable, but cash is not market breadth.
+    expect(result.summary).toMatchObject({
+      dailyChange: "-10.00",
+      declining: 0,
+      comparablePositions: 0,
+      openPositions: 0,
+    });
+  });
+
+  it("reports no day change when only cash is comparable next to assets", () => {
+    const petr = valued({
+      ticker: "PETR4",
+      quantity: "100",
+      cost: "10",
+      price: "11",
+      display: "BRL",
+      rate: null,
+    });
+    const positions = withCashPosition([petr], "50", "BRL", null);
+    const result = buildDailyTracking({
+      positions,
+      quotes: new Map([
+        ["PETR4", { ticker: "PETR4", price: "11", asOf: "2026-09-09" }],
+      ]),
+      displayCurrency: "BRL",
+      usdBrlRate: null,
+      previousUsdBrlRate: null,
+    });
+
+    expect(result.summary).toMatchObject({
+      dailyChange: null,
+      dailyChangePercent: null,
+      comparablePositions: 0,
+      openPositions: 1,
+    });
   });
 
   it("keeps BRL cash flat when the display is BRL", () => {
@@ -293,8 +327,8 @@ describe("buildDailyTracking", () => {
       currentComparableValue: "1150.00",
       dailyChange: "100.00",
       dailyChangePercent: "0.09523810",
-      comparablePositions: 2,
-      unchanged: 1,
+      comparablePositions: 1,
+      unchanged: 0,
       advancing: 1,
     });
   });

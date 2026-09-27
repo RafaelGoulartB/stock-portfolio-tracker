@@ -3,24 +3,45 @@ import {
   bookHoldingsInput,
   createTransactionInput,
   deleteTransactionInput,
+  type TradeFxStatus,
   type Transaction,
   tickerLedgerInput,
   transactionListInput,
+  updateTransactionInput,
 } from "@portifolio-tracker/shared";
 import { TRPCError } from "@trpc/server";
-import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
-import { db } from "../../db";
-import { allocationAssets, transactions } from "../../db/schema";
 import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  ilike,
+  inArray,
+  isNull,
+  type SQL,
+  sql,
+} from "drizzle-orm";
+import { db } from "../../db";
+import {
+  allocationAssets,
+  corporateActions,
+  transactions,
+} from "../../db/schema";
+import {
+  adjustForSplits,
   availableBeforeOversell,
   buildTickerLedger,
   type ConsolidationInput,
   type IdentifiedEntry,
   oversellAfterRemoval,
+  oversellAfterReplacement,
+  type SplitEvent,
   type TickerLedgerEntry,
   tickerCurrencies,
   tradeCashTotal,
 } from "../../domain/positions";
+import { tradeDateRateOrNull, tradeDateRates } from "../../lib/fx/trade-rates";
 import { memoizeRequest } from "../../lib/request-memo";
 import { protectedProcedure, router } from "../trpc";
 
@@ -90,6 +111,7 @@ const displayColumns = {
   price: transactions.price,
   fees: transactions.fees,
   tradedAt: transactions.tradedAt,
+  usdBrlRate: transactions.usdBrlRate,
   notes: transactions.notes,
   createdAt: transactions.createdAt,
 };
@@ -104,6 +126,7 @@ const calculationColumns = {
   price: transactions.price,
   fees: transactions.fees,
   tradedAt: transactions.tradedAt,
+  usdBrlRate: transactions.usdBrlRate,
   createdAt: transactions.createdAt,
 };
 
@@ -121,6 +144,46 @@ function toConsolidationInput(
   };
 }
 
+const splitColumns = {
+  ticker: corporateActions.ticker,
+  effectiveAt: corporateActions.effectiveAt,
+  fromQuantity: corporateActions.fromQuantity,
+  toQuantity: corporateActions.toQuantity,
+};
+
+/**
+ * Recorded splits of an account, optionally limited to some tickers. Call
+ * after {@link lockTickers} inside a write so the set cannot change under it.
+ */
+export async function readSplits(
+  executor: DbExecutor,
+  userId: string,
+  tickers?: readonly string[],
+): Promise<SplitEvent[]> {
+  const unique = tickers ? [...new Set(tickers)] : null;
+
+  if (unique && unique.length === 0) {
+    return [];
+  }
+
+  return executor
+    .select(splitColumns)
+    .from(corporateActions)
+    .where(
+      unique
+        ? and(
+            eq(corporateActions.userId, userId),
+            inArray(corporateActions.ticker, unique),
+          )
+        : eq(corporateActions.userId, userId),
+    )
+    .orderBy(asc(corporateActions.effectiveAt));
+}
+
+/**
+ * The account ledger in today's share units (see `adjustForSplits`), which
+ * is what every valuation, snapshot and dividend entitlement reads.
+ */
 export async function loadTransactions(
   userId: string,
 ): Promise<ConsolidationInput[]> {
@@ -132,13 +195,19 @@ export async function loadTransactions(
 async function loadTransactionsUncached(
   userId: string,
 ): Promise<ConsolidationInput[]> {
-  const rows = await db
-    .select(calculationColumns)
-    .from(transactions)
-    .where(eq(transactions.userId, userId))
-    .orderBy(asc(transactions.tradedAt), asc(transactions.createdAt));
+  const [rows, splits] = await Promise.all([
+    db
+      .select(calculationColumns)
+      .from(transactions)
+      .where(eq(transactions.userId, userId))
+      .orderBy(asc(transactions.tradedAt), asc(transactions.createdAt)),
+    readSplits(db, userId),
+  ]);
 
-  return rows.map((row) => toConsolidationInput(row));
+  return adjustForSplits(
+    rows.map((row) => toConsolidationInput(row)),
+    splits,
+  );
 }
 
 /**
@@ -184,18 +253,24 @@ export async function loadTransactionsForTickers(
     return [];
   }
 
-  const rows = await db
-    .select(calculationColumns)
-    .from(transactions)
-    .where(
-      and(
-        eq(transactions.userId, userId),
-        inArray(transactions.ticker, [...new Set(tickers)]),
-      ),
-    )
-    .orderBy(asc(transactions.tradedAt), asc(transactions.createdAt));
+  const [rows, splits] = await Promise.all([
+    db
+      .select(calculationColumns)
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.userId, userId),
+          inArray(transactions.ticker, [...new Set(tickers)]),
+        ),
+      )
+      .orderBy(asc(transactions.tradedAt), asc(transactions.createdAt)),
+    readSplits(db, userId, tickers),
+  ]);
 
-  return rows.map((row) => toConsolidationInput(row));
+  return adjustForSplits(
+    rows.map((row) => toConsolidationInput(row)),
+    splits,
+  );
 }
 
 function toDto(row: ConsolidationInput & { id: string; notes: string | null }) {
@@ -214,20 +289,33 @@ function toDto(row: ConsolidationInput & { id: string; notes: string | null }) {
     price: row.price,
     fees: row.fees,
     tradedAt: row.tradedAt,
+    usdBrlRate: row.usdBrlRate ?? null,
     notes: row.notes,
     total: tradeCashTotal(row),
   } satisfies Transaction;
+}
+
+/** Escapes `LIKE` wildcards so a typed `%` or `_` matches literally. */
+function likeContains(value: string): string {
+  return `%${value.replace(/[\\%_]/g, (char) => `\\${char}`)}%`;
 }
 
 export const transactionsRouter = router({
   list: protectedProcedure
     .input(transactionListInput)
     .query(async ({ ctx, input }) => {
+      const filters: SQL[] = [eq(transactions.userId, ctx.user.id)];
+
+      if (input.ticker) {
+        filters.push(ilike(transactions.ticker, likeContains(input.ticker)));
+      }
+
+      const where = and(...filters);
       const [rows, totals] = await Promise.all([
         db
           .select(displayColumns)
           .from(transactions)
-          .where(eq(transactions.userId, ctx.user.id))
+          .where(where)
           .orderBy(
             desc(transactions.tradedAt),
             desc(transactions.createdAt),
@@ -235,10 +323,7 @@ export const transactionsRouter = router({
           )
           .limit(input.pageSize)
           .offset(input.page * input.pageSize),
-        db
-          .select({ value: count() })
-          .from(transactions)
-          .where(eq(transactions.userId, ctx.user.id)),
+        db.select({ value: count() }).from(transactions).where(where),
       ]);
 
       return {
@@ -256,15 +341,18 @@ export const transactionsRouter = router({
   forTicker: protectedProcedure
     .input(tickerLedgerInput)
     .query(async ({ ctx, input }) => {
-      const rows = await db
-        .select(displayColumns)
-        .from(transactions)
-        .where(
-          and(
-            eq(transactions.userId, ctx.user.id),
-            eq(transactions.ticker, input.ticker),
+      const [rows, splits] = await Promise.all([
+        db
+          .select(displayColumns)
+          .from(transactions)
+          .where(
+            and(
+              eq(transactions.userId, ctx.user.id),
+              eq(transactions.ticker, input.ticker),
+            ),
           ),
-        );
+        readSplits(db, ctx.user.id, [input.ticker]),
+      ]);
 
       const entries: TickerLedgerEntry[] = rows.map((row) => {
         const rawClass: string = row.assetClass;
@@ -277,13 +365,16 @@ export const transactionsRouter = router({
         };
       });
 
-      return buildTickerLedger(input.ticker, entries);
+      return buildTickerLedger(input.ticker, adjustForSplits(entries, splits));
     }),
 
   create: protectedProcedure
     .input(createTransactionInput)
     .mutation(async ({ ctx, input }) => {
       const trade = input;
+      // Resolved before the ledger lock so a slow BCB call never holds it.
+      const usdBrlRate =
+        trade.usdBrlRate ?? (await tradeDateRateOrNull(trade.tradedAt));
       const row = await db.transaction(async (tx) => {
         // Serialize writes for one account/ticker so simultaneous sales do
         // not both validate against the same available quantity.
@@ -312,8 +403,13 @@ export const transactionsRouter = router({
           });
         }
 
+        // A backdated trade before a recorded split is scaled like the rest.
+        const splits = await readSplits(tx, ctx.user.id, [trade.ticker]);
         const available = availableBeforeOversell(
-          [...history, { ...trade, createdAt: new Date() }],
+          adjustForSplits(
+            [...history, { ...trade, createdAt: new Date() }],
+            splits,
+          ),
           trade.ticker,
         );
         if (available !== null) {
@@ -335,6 +431,7 @@ export const transactionsRouter = router({
             price: trade.price,
             fees: trade.fees,
             tradedAt: trade.tradedAt,
+            usdBrlRate,
             notes: trade.notes && trade.notes.length > 0 ? trade.notes : null,
           })
           .returning(displayColumns);
@@ -396,6 +493,7 @@ export const transactionsRouter = router({
           ? input.notes
           : "Opening position";
       const batchTickers = input.holdings.map((holding) => holding.ticker);
+      const usdBrlRate = await tradeDateRateOrNull(input.tradedAt);
 
       const inserted = await db.transaction(async (tx) => {
         // Lock in a deterministic order across the whole batch so two
@@ -431,6 +529,7 @@ export const transactionsRouter = router({
               price: holding.price,
               fees: "0",
               tradedAt: input.tradedAt,
+              usdBrlRate,
               notes: note,
             })
             .returning(displayColumns);
@@ -447,6 +546,215 @@ export const transactionsRouter = router({
 
       return inserted.map(toDto);
     }),
+
+  /**
+   * Rewrites one trade in place. Fixed-income balances stay maintained from
+   * Allocation, so neither side of the edit may be fixed income. Both the
+   * old and the new ticker are locked and replayed, because moving, shrinking
+   * or renaming a buy can retroactively oversell a later sell.
+   */
+  update: protectedProcedure
+    .input(updateTransactionInput)
+    .mutation(async ({ ctx, input }) => {
+      const trade = input.trade;
+
+      if (trade.assetClass === "fixed_income") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Fixed-income balances are maintained from Allocation.",
+        });
+      }
+
+      const usdBrlRate =
+        trade.usdBrlRate ?? (await tradeDateRateOrNull(trade.tradedAt));
+      const row = await db.transaction(async (tx) => {
+        const [target] = await tx
+          .select({ ticker: transactions.ticker })
+          .from(transactions)
+          .where(
+            and(
+              eq(transactions.id, input.id),
+              eq(transactions.userId, ctx.user.id),
+            ),
+          )
+          .limit(1);
+
+        if (!target) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Transaction not found",
+          });
+        }
+
+        await lockTickers(tx, ctx.user.id, [target.ticker, trade.ticker]);
+        const history = await readIdentifiedHistory(tx, ctx.user.id, [
+          target.ticker,
+          trade.ticker,
+        ]);
+        const current = history.find((entry) => entry.id === input.id);
+
+        // The ticker may have changed between the unlocked read and the lock.
+        if (!current || current.ticker !== target.ticker) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: "This trade changed meanwhile. Reload and try again.",
+          });
+        }
+
+        if (current.assetClass === "fixed_income") {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Fixed-income balances are maintained from Allocation.",
+          });
+        }
+
+        // One ticker, one currency, judged without the trade being replaced.
+        const others = history.filter((entry) => entry.id !== input.id);
+        const used = tickerCurrencies(others, trade.ticker);
+        if (used.length > 0 && !used.includes(trade.currency)) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: `Ticker ${trade.ticker} is tracked in ${used.join(", ")}. Register this trade in the same currency.`,
+          });
+        }
+
+        // Keep the original insertion time so same-day ordering is stable.
+        const splits = await readSplits(tx, ctx.user.id, [
+          target.ticker,
+          trade.ticker,
+        ]);
+        const oversell = oversellAfterReplacement(
+          history,
+          input.id,
+          { ...trade, createdAt: current.createdAt },
+          splits,
+        );
+        if (oversell !== null) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: `This edit would oversell ${oversell.ticker}: only ${oversell.available} would be available for a later sale.`,
+          });
+        }
+
+        const [updated] = await tx
+          .update(transactions)
+          .set({
+            ticker: trade.ticker,
+            assetClass: trade.assetClass,
+            currency: trade.currency,
+            side: trade.side,
+            quantity: trade.quantity,
+            price: trade.price,
+            fees: trade.fees,
+            tradedAt: trade.tradedAt,
+            usdBrlRate,
+            notes: trade.notes && trade.notes.length > 0 ? trade.notes : null,
+          })
+          .where(
+            and(
+              eq(transactions.id, input.id),
+              eq(transactions.userId, ctx.user.id),
+            ),
+          )
+          .returning(displayColumns);
+
+        if (!updated) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        }
+
+        return updated;
+      });
+
+      return toDto(row);
+    }),
+
+  /** How many of the account's trades still lack a trade-date USD/BRL. */
+  tradeFxStatus: protectedProcedure.query(
+    async ({ ctx }): Promise<TradeFxStatus> => {
+      const rows = await db
+        .select({ currency: transactions.currency, value: count() })
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.userId, ctx.user.id),
+            isNull(transactions.usdBrlRate),
+          ),
+        )
+        .groupBy(transactions.currency);
+      const missingByCurrency: TradeFxStatus["missingByCurrency"] = {
+        BRL: 0,
+        USD: 0,
+      };
+
+      for (const row of rows) {
+        missingByCurrency[row.currency] = Number(row.value);
+      }
+
+      return {
+        missing: missingByCurrency.BRL + missingByCurrency.USD,
+        missingByCurrency,
+      };
+    },
+  ),
+
+  /**
+   * Fills the BCB PTAX of every trade still missing its trade-date rate, in
+   * one provider request. Rates never overwrite a stored value, so a rate
+   * typed by the user or written by a concurrent edit always wins.
+   */
+  fillTradeFx: protectedProcedure.mutation(async ({ ctx }) => {
+    const pending = await db
+      .select({ tradedAt: transactions.tradedAt })
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.userId, ctx.user.id),
+          isNull(transactions.usdBrlRate),
+        ),
+      );
+
+    if (pending.length === 0) {
+      return { updated: 0, missing: 0 };
+    }
+
+    let rates: Awaited<ReturnType<typeof tradeDateRates>>;
+
+    try {
+      rates = await tradeDateRates(pending.map((row) => row.tradedAt));
+    } catch (error) {
+      throw new TRPCError({
+        code: "BAD_GATEWAY",
+        message:
+          error instanceof Error
+            ? `BCB PTAX failed: ${error.message}`
+            : "BCB PTAX failed",
+      });
+    }
+
+    const updated = await db.transaction(async (tx) => {
+      let total = 0;
+
+      for (const [tradedAt, point] of rates) {
+        const rows = await tx
+          .update(transactions)
+          .set({ usdBrlRate: point.rate })
+          .where(
+            and(
+              eq(transactions.userId, ctx.user.id),
+              eq(transactions.tradedAt, tradedAt),
+              isNull(transactions.usdBrlRate),
+            ),
+          )
+          .returning({ id: transactions.id });
+
+        total += rows.length;
+      }
+
+      return total;
+    });
+
+    return { updated, missing: Math.max(0, pending.length - updated) };
+  }),
 
   remove: protectedProcedure
     .input(deleteTransactionInput)
@@ -496,6 +804,7 @@ export const transactionsRouter = router({
           history,
           target.ticker,
           target.id,
+          await readSplits(tx, ctx.user.id, [target.ticker]),
         );
 
         if (available !== null) {

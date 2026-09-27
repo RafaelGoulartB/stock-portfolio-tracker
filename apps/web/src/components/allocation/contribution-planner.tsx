@@ -3,14 +3,17 @@ import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import type { AllocationRow, Currency } from "@portifolio-tracker/shared";
 import {
+  CASH_TICKER,
   DEFAULT_CONTRIBUTION_PLAN_CONFIG,
   FX_EXECUTION_IOF,
   FX_EXECUTION_SPREAD,
+  tradesInWholeUnits,
 } from "@portifolio-tracker/shared";
 import { Calculator, Info } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AssetLink } from "@/components/asset-link";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -122,6 +125,16 @@ function sumContributionTotals(
   };
 }
 
+const IGNORE_CASH_KEY = "portfolio.allocation.plannerIgnoreCash";
+
+function storedIgnoreCash(): boolean {
+  try {
+    return localStorage.getItem(IGNORE_CASH_KEY) === "true";
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Opens the contribution planner in a dialog so the allocation screen stays
  * focused on the table.
@@ -144,27 +157,43 @@ export function ContributionPlannerButton({
   const [open, setOpen] = useState(false);
   const [amountText, setAmountText] = useState("");
   const [spread, setSpread] = useState<SpreadChoice>("auto");
+  const [ignoreCash, setIgnoreCash] = useState(storedIgnoreCash);
+  const hasCash = rows.some((row) => row.ticker === CASH_TICKER);
+  // The cash target stays in the book; only this contribution skips it.
+  const plannedRows = useMemo(
+    () =>
+      ignoreCash ? rows.filter((row) => row.ticker !== CASH_TICKER) : rows,
+    [rows, ignoreCash],
+  );
 
   const amount = parseDecimalInput(amountText) ?? "0";
   const config = policy.data?.config ?? DEFAULT_CONTRIBUTION_PLAN_CONFIG;
   const plan = useMemo(
     () =>
       planContribution({
-        rows: rows.map((row) => ({
+        rows: plannedRows.map((row) => ({
           ticker: row.ticker,
           currency: row.currency,
           score: row.score.value,
+          priority: row.score.priority,
+          tiltedTarget: row.score.tiltedTarget,
+          currentWeight: row.currentWeight,
+          maxWeight: row.score.maxWeight,
+          held: row.hasPosition,
           executionPrice: row.executionPrice,
           executionFxApplied: row.executionFxApplied,
+          wholeUnits: tradesInWholeUnits(row.assetClass, row.currency),
         })),
         amount,
         portfolioValue,
         config,
         spread: spread === "auto" ? null : Number(spread),
       }),
-    [rows, amount, portfolioValue, config, spread],
+    [plannedRows, amount, portfolioValue, config, spread],
   );
-  const candidates = rows.filter((row) => Number(row.score.value) > 0).length;
+  const candidates = plannedRows.filter(
+    (row) => Number(row.score.value) > 0,
+  ).length;
   const executionUsdBrlRate = Number(fx?.executionUsdBrlRate);
   const validExecutionUsdBrlRate =
     Number.isFinite(executionUsdBrlRate) && executionUsdBrlRate > 0
@@ -188,8 +217,12 @@ export function ContributionPlannerButton({
     Number(fx?.executionSpread ?? FX_EXECUTION_SPREAD) * 100;
   const iofPercent = Number(fx?.executionIof ?? FX_EXECUTION_IOF) * 100;
   const remainderValue = Math.abs(Number(plan.remainder));
+  // Blame targets and size limits only for money whole-unit rounding did not
+  // already account for.
   const needRemainder =
-    remainderValue >= 0.01 && plan.slices.some((slice) => slice.cappedByNeed);
+    Number(plan.remainder) - Number(plan.unitRoundingRemainder) >= 0.01 &&
+    plan.slices.some((slice) => slice.cappedByNeed || slice.cappedByLimit);
+  const unitRemainder = Number(plan.unitRoundingRemainder) >= 0.01;
 
   return (
     <Dialog
@@ -288,9 +321,14 @@ export function ContributionPlannerButton({
           {plan.slices.length === 0 ? (
             <p className="rounded-lg border bg-muted/40 px-4 py-6 text-center text-sm text-muted-foreground">
               {candidates === 0 ? (
-                <Trans id="allocation.plannerNoCandidates">
-                  No asset is taking contributions right now. Set a target,
-                  review a fair value, or wait for a cooldown to expire.
+                <Trans id="allocation.plannerNoCandidatesV2">
+                  No asset is below its target right now. Set or raise a target,
+                  or review a fair value.
+                </Trans>
+              ) : unitRemainder ? (
+                <Trans id="allocation.plannerBelowOneShare">
+                  This amount cannot buy one whole share of the top candidates.
+                  B3 shares, FIIs, ETFs and BDRs are bought in whole units.
                 </Trans>
               ) : (
                 <Trans id="allocation.plannerAwaitingAmount">
@@ -341,15 +379,21 @@ export function ContributionPlannerButton({
                         >
                           {slice.ticker}
                         </AssetLink>
-                        {slice.cappedByShare || slice.cappedByNeed ? (
+                        {slice.cappedByShare ||
+                        slice.cappedByNeed ||
+                        slice.cappedByLimit ? (
                           <span className="block text-[10px] text-muted-foreground">
                             {slice.cappedByShare ? (
                               <Trans id="allocation.plannerCappedShare">
                                 Share cap
                               </Trans>
+                            ) : slice.cappedByNeed ? (
+                              <Trans id="allocation.plannerCappedTarget">
+                                At target
+                              </Trans>
                             ) : (
-                              <Trans id="allocation.plannerCappedNeed">
-                                Need cap
+                              <Trans id="allocation.plannerCappedLimit">
+                                Size limit
                               </Trans>
                             )}
                           </span>
@@ -402,10 +446,15 @@ export function ContributionPlannerButton({
           {plan.slices.length > 0 && remainderValue >= 0.01 ? (
             <p className="text-xs text-muted-foreground">
               {needRemainder ? (
-                <Trans id="allocation.plannerNeedRemainder">
-                  Scored need is smaller than this contribution.{" "}
+                <Trans id="allocation.plannerLimitRemainder">
+                  Candidates reach their targets or size limits first.{" "}
                   {formatMoney(plan.remainder, displayCurrency)} stays
                   unallocated.
+                </Trans>
+              ) : unitRemainder ? (
+                <Trans id="allocation.plannerUnitRemainder">
+                  Buying whole shares on B3 leaves{" "}
+                  {formatMoney(plan.remainder, displayCurrency)} unallocated.
                 </Trans>
               ) : (
                 <Trans id="allocation.plannerRemainder">
@@ -471,50 +520,78 @@ export function ContributionPlannerButton({
             </div>
           ) : null}
 
-          {hasCrossCurrencySlice ? (
-            <div className="flex justify-end">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
-                    aria-label={i18n._(
-                      t({
-                        id: "allocation.plannerFxAria",
-                        message:
-                          "How FX is used for contribution amounts and units",
-                      }),
-                    )}
+          {hasCash || hasCrossCurrencySlice ? (
+            <div className="flex items-center justify-between gap-3">
+              {hasCash ? (
+                <div className="flex items-center gap-1.5">
+                  <Checkbox
+                    id="allocation-ignore-cash"
+                    checked={ignoreCash}
+                    className="size-3.5"
+                    onCheckedChange={(checked) => {
+                      const next = checked === true;
+                      setIgnoreCash(next);
+                      try {
+                        localStorage.setItem(IGNORE_CASH_KEY, String(next));
+                      } catch {
+                        // The choice still applies to this session.
+                      }
+                    }}
+                  />
+                  <Label
+                    htmlFor="allocation-ignore-cash"
+                    className="text-xs font-normal text-muted-foreground"
                   >
-                    <Info className="size-3.5" aria-hidden="true" />
-                    <span className="text-xs">
-                      <Trans id="allocation.plannerFxHint">
-                        VET / FX costs
-                      </Trans>
-                    </span>
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent side="top" className="space-y-1.5 text-left">
-                  <p>
-                    <Trans id="allocation.plannerFxTooltip">
-                      Contribution totals are split by asset currency. USD
-                      assets budgeted in BRL use the execution rate (spot ×{" "}
-                      {spreadPercent.toFixed(1)}% spread ×{" "}
-                      {iofPercent.toFixed(2)}% IOF) for their amount and units;
-                      BRL assets budgeted in USD use spot. Portfolio value still
-                      uses the spot dollar.
-                    </Trans>
-                  </p>
-                  {fx?.usdBrlRate && fx.executionUsdBrlRate ? (
-                    <p className="tabular-nums opacity-90">
-                      <Trans id="allocation.plannerFxRates">
-                        Spot {fx.usdBrlRate} → execution{" "}
-                        {fx.executionUsdBrlRate}
+                    <Trans id="allocation.plannerIgnoreCash">Ignore cash</Trans>
+                  </Label>
+                </div>
+              ) : (
+                <span />
+              )}
+              {hasCrossCurrencySlice ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground"
+                      aria-label={i18n._(
+                        t({
+                          id: "allocation.plannerFxAria",
+                          message:
+                            "How FX is used for contribution amounts and units",
+                        }),
+                      )}
+                    >
+                      <Info className="size-3.5" aria-hidden="true" />
+                      <span className="text-xs">
+                        <Trans id="allocation.plannerFxHint">
+                          VET / FX costs
+                        </Trans>
+                      </span>
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="top" className="space-y-1.5 text-left">
+                    <p>
+                      <Trans id="allocation.plannerFxTooltip">
+                        Contribution totals are split by asset currency. USD
+                        assets budgeted in BRL use the execution rate (spot ×{" "}
+                        {spreadPercent.toFixed(1)}% spread ×{" "}
+                        {iofPercent.toFixed(2)}% IOF) for their amount and
+                        units; BRL assets budgeted in USD use spot. Portfolio
+                        value still uses the spot dollar.
                       </Trans>
                     </p>
-                  ) : null}
-                </TooltipContent>
-              </Tooltip>
+                    {fx?.usdBrlRate && fx.executionUsdBrlRate ? (
+                      <p className="tabular-nums opacity-90">
+                        <Trans id="allocation.plannerFxRates">
+                          Spot {fx.usdBrlRate} → execution{" "}
+                          {fx.executionUsdBrlRate}
+                        </Trans>
+                      </p>
+                    ) : null}
+                  </TooltipContent>
+                </Tooltip>
+              ) : null}
             </div>
           ) : null}
         </div>

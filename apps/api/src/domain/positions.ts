@@ -30,7 +30,117 @@ export type ConsolidationInput = {
   fees: string;
   tradedAt: string;
   createdAt: Date;
+  /**
+   * BRL per 1 USD on the trade date. Omitted or `null` when unresolved; the
+   * trade then converts at the consolidation rate.
+   */
+  usdBrlRate?: string | null;
+  /**
+   * Units multiplier from splits effective after this trade, as the ratio
+   * `to / from`. Omitted means `1`. Only share units scale; the cash of the
+   * trade (`quantity × price + fees`) never changes. See {@link adjustForSplits}.
+   */
+  unitScale?: { to: string; from: string };
 };
+
+/** A recorded split: `fromQuantity` old shares become `toQuantity` new ones. */
+export type SplitEvent = {
+  ticker: string;
+  /** First trading day in the new units. */
+  effectiveAt: string;
+  fromQuantity: string;
+  toQuantity: string;
+};
+
+/** Share units a trade represents today, after every later split. */
+export function effectiveQuantity(entry: {
+  quantity: string;
+  unitScale?: { to: string; from: string };
+}): Decimal {
+  const quantity = toDecimal(entry.quantity);
+
+  return entry.unitScale
+    ? div(
+        mul(quantity, toDecimal(entry.unitScale.to)),
+        toDecimal(entry.unitScale.from),
+      )
+    : quantity;
+}
+
+/**
+ * Expresses every trade in today's share units: a trade dated before a
+ * split's `effectiveAt` has its units multiplied by that split's ratio.
+ *
+ * Market data providers publish split-adjusted historical closes and
+ * dividends, i.e. already in today's units. Scaling the ledger the same way
+ * keeps live values, month-end snapshots, dividend entitlements and oversell
+ * checks consistent, while cost basis stays the cash actually paid.
+ */
+export function adjustForSplits<T extends ConsolidationInput>(
+  entries: readonly T[],
+  splits: readonly SplitEvent[],
+): T[] {
+  if (splits.length === 0) {
+    return [...entries];
+  }
+
+  const byTicker = new Map<string, SplitEvent[]>();
+
+  for (const split of splits) {
+    const list = byTicker.get(split.ticker) ?? [];
+    list.push(split);
+    byTicker.set(split.ticker, list);
+  }
+
+  return entries.map((entry) => {
+    const later = (byTicker.get(entry.ticker) ?? []).filter(
+      (split) => split.effectiveAt > entry.tradedAt,
+    );
+
+    if (later.length === 0) {
+      return entry;
+    }
+
+    let to = toDecimal("1");
+    let from = toDecimal("1");
+
+    for (const split of later) {
+      to = mul(to, toDecimal(split.toQuantity));
+      from = mul(from, toDecimal(split.fromQuantity));
+    }
+
+    return {
+      ...entry,
+      unitScale: {
+        to: formatDecimal(to, QUANTITY_PLACES),
+        from: formatDecimal(from, QUANTITY_PLACES),
+      },
+    };
+  });
+}
+
+/**
+ * Published splits worth offering to the user: effective after the first
+ * trade (so the ledger held shares before it) and not recorded yet.
+ */
+export function pendingSplitSuggestions<T extends { effectiveAt: string }>(
+  published: readonly T[],
+  recorded: readonly { effectiveAt: string }[],
+  firstTradedAt: string | null,
+): T[] {
+  if (firstTradedAt === null) {
+    return [];
+  }
+
+  const known = new Set(recorded.map((split) => split.effectiveAt));
+
+  return published
+    .filter(
+      (split) =>
+        split.effectiveAt > firstTradedAt && !known.has(split.effectiveAt),
+    )
+    .sort((a, b) => a.effectiveAt.localeCompare(b.effectiveAt));
+}
 
 type Accumulator = {
   ticker: string;
@@ -40,6 +150,22 @@ type Accumulator = {
   /** Acquisition cost still held, fees included, in the native currency. */
   costBasis: Decimal;
   realizedPnl: Decimal;
+  /**
+   * The same moving average kept in the *other* currency (USD for a BRL
+   * asset, BRL for a USD asset), each trade converted at its own trade-date
+   * rate. Selling releases the same fraction here as in the native ledger.
+   */
+  fxCost: Decimal;
+  fxRealizedPnl: Decimal;
+  /**
+   * Native-currency share of cost and realized result coming from trades
+   * without a trade-date rate. Converted later at the consolidation rate;
+   * the split is linear, so releasing a fraction of each bucket on a sale is
+   * the same as releasing that fraction of the total.
+   */
+  unratedCost: Decimal;
+  unratedRealizedPnl: Decimal;
+  tradesMissingFx: number;
   transactionCount: number;
   lastTradedAt: string;
 };
@@ -98,12 +224,17 @@ export function cashPosition(
     convertedAveragePrice: converted,
     convertedInvestedCost: converted,
     convertedRealizedPnl: "0.00",
+    tradesMissingFx: 0,
     marketPrice: nativeAmount,
     marketValue: nativeAmount,
     convertedMarketValue: converted,
     unrealizedPnl: "0.00",
     convertedUnrealizedPnl: "0.00",
+    // Cash is a BRL balance, not an FX position: its converted value moves
+    // with the rate but carries no trade-date cost to compare against.
+    convertedFxPnl: null,
     unrealizedPnlPercent: "0.000000",
+    convertedUnrealizedPnlPercent: "0.000000",
     weight: null,
     quoteAsOf: null,
     quoteMissing: false,
@@ -160,9 +291,13 @@ export type TickerLedgerTrade = {
   side: TransactionSide;
   quantity: string;
   price: string;
+  /** True when `quantity` and `price` are restated in today's units. */
+  splitAdjusted: boolean;
   fees: string;
   total: string;
   tradedAt: string;
+  /** BRL per 1 USD on the trade date, `null` while unresolved. */
+  usdBrlRate: string | null;
   notes: string | null;
   /** Realized P&L of this sell at the then-current moving average. Null on buys. */
   realizedPnl: string | null;
@@ -203,9 +338,30 @@ function emptyAccumulator(entry: ConsolidationInput): Accumulator {
     quantity: ZERO,
     costBasis: ZERO,
     realizedPnl: ZERO,
+    fxCost: ZERO,
+    fxRealizedPnl: ZERO,
+    unratedCost: ZERO,
+    unratedRealizedPnl: ZERO,
+    tradesMissingFx: 0,
     transactionCount: 0,
     lastTradedAt: entry.tradedAt,
   };
+}
+
+/** Converts a native amount into the other currency at a BRL-per-USD rate. */
+function toOtherCurrency(
+  amount: Decimal,
+  native: Currency,
+  rate: Decimal,
+): Decimal {
+  return native === "USD" ? mul(amount, rate) : div(amount, rate);
+}
+
+function tradeRate(entry: ConsolidationInput): Decimal | null {
+  if (entry.usdBrlRate == null) return null;
+  const rate = toDecimal(entry.usdBrlRate);
+
+  return rate > ZERO ? rate : null;
 }
 
 function averagePriceOf(position: Accumulator): Decimal {
@@ -238,39 +394,93 @@ export function tradeCashTotal(entry: {
  * this trade (`ZERO` on a buy).
  */
 function applyTrade(current: Accumulator, entry: ConsolidationInput): Decimal {
-  const quantity = toDecimal(entry.quantity);
-  const price = toDecimal(entry.price);
+  // Units move in today's share units; money uses the trade as entered.
+  const quantity = effectiveQuantity(entry);
+  const gross = mul(toDecimal(entry.quantity), toDecimal(entry.price));
   const fees = toDecimal(entry.fees);
+
+  const rate = tradeRate(entry);
 
   current.assetClass = entry.assetClass;
   current.transactionCount += 1;
   current.lastTradedAt = entry.tradedAt;
 
+  if (rate === null) {
+    current.tradesMissingFx += 1;
+  }
+
   if (entry.side === "buy") {
+    const cost = add(gross, fees);
     current.quantity = add(current.quantity, quantity);
-    current.costBasis = add(current.costBasis, add(mul(quantity, price), fees));
+    current.costBasis = add(current.costBasis, cost);
+
+    if (rate === null) {
+      current.unratedCost = add(current.unratedCost, cost);
+    } else {
+      current.fxCost = add(
+        current.fxCost,
+        toOtherCurrency(cost, entry.currency, rate),
+      );
+    }
 
     return ZERO;
   }
 
   const sold = current.quantity > quantity ? quantity : current.quantity;
-  const releasedCost = isZero(current.quantity)
-    ? ZERO
-    : div(mul(current.costBasis, sold), current.quantity);
-  const proceeds = sub(mul(quantity, price), fees);
+  const release = (bucket: Decimal) =>
+    isZero(current.quantity) ? ZERO : div(mul(bucket, sold), current.quantity);
+  const releasedCost = release(current.costBasis);
+  const releasedFxCost = release(current.fxCost);
+  const releasedUnratedCost = release(current.unratedCost);
+  const proceeds = sub(gross, fees);
   const realized = sub(proceeds, releasedCost);
 
   current.realizedPnl = add(current.realizedPnl, realized);
   current.quantity = sub(current.quantity, quantity);
   current.costBasis = sub(current.costBasis, releasedCost);
+  current.fxCost = sub(current.fxCost, releasedFxCost);
+  current.unratedCost = sub(current.unratedCost, releasedUnratedCost);
+
+  if (rate === null) {
+    current.fxRealizedPnl = sub(current.fxRealizedPnl, releasedFxCost);
+    current.unratedRealizedPnl = add(
+      current.unratedRealizedPnl,
+      sub(proceeds, releasedUnratedCost),
+    );
+  } else {
+    current.fxRealizedPnl = add(
+      current.fxRealizedPnl,
+      sub(toOtherCurrency(proceeds, entry.currency, rate), releasedFxCost),
+    );
+    current.unratedRealizedPnl = sub(
+      current.unratedRealizedPnl,
+      releasedUnratedCost,
+    );
+  }
 
   if (current.quantity <= ZERO) {
     current.quantity = ZERO;
     current.costBasis = ZERO;
+    current.fxCost = ZERO;
+    current.unratedCost = ZERO;
   }
 
   return realized;
 }
+
+/**
+ * Trade-date FX figures of a consolidated position. Internal to the API:
+ * {@link convertPositions} folds them into the display-currency amounts.
+ */
+export type TradeFxBasis = {
+  /** Cost still held in the other currency, rated trades only. */
+  fxCost: string;
+  fxRealizedPnl: string;
+  /** Native cost and realized result of trades without a rate. */
+  unratedCost: string;
+  unratedRealizedPnl: string;
+  tradesMissingFx: number;
+};
 
 type ConsolidatedPosition = Omit<
   Position,
@@ -278,7 +488,9 @@ type ConsolidatedPosition = Omit<
   | "convertedAveragePrice"
   | "convertedInvestedCost"
   | "convertedRealizedPnl"
->;
+  | "tradesMissingFx"
+> &
+  TradeFxBasis;
 
 /**
  * The trade log already arrives ordered from SQL, so the common case only
@@ -311,6 +523,14 @@ function projectPositions(
       realizedPnl: formatDecimal(position.realizedPnl, MONEY_PLACES),
       transactionCount: position.transactionCount,
       lastTradedAt: position.lastTradedAt,
+      fxCost: formatDecimal(position.fxCost, QUANTITY_PLACES),
+      fxRealizedPnl: formatDecimal(position.fxRealizedPnl, QUANTITY_PLACES),
+      unratedCost: formatDecimal(position.unratedCost, QUANTITY_PLACES),
+      unratedRealizedPnl: formatDecimal(
+        position.unratedRealizedPnl,
+        QUANTITY_PLACES,
+      ),
+      tradesMissingFx: position.tradesMissingFx,
     }))
     .sort(
       (a, b) =>
@@ -437,11 +657,11 @@ export function buildTickerLedger(
 
     if (entry.side === "buy") {
       buyCount += 1;
-      buyQuantity = add(buyQuantity, toDecimal(entry.quantity));
+      buyQuantity = add(buyQuantity, effectiveQuantity(entry));
       buyTotal = add(buyTotal, cash);
     } else {
       sellCount += 1;
-      sellQuantity = add(sellQuantity, toDecimal(entry.quantity));
+      sellQuantity = add(sellQuantity, effectiveQuantity(entry));
       sellTotal = add(sellTotal, cash);
     }
 
@@ -451,11 +671,22 @@ export function buildTickerLedger(
       assetClass: current.assetClass,
       currency: entry.currency,
       side: entry.side,
-      quantity: entry.quantity,
-      price: entry.price,
+      // In today's units, like the average after it; the cash is unchanged.
+      quantity: formatDecimal(effectiveQuantity(entry), QUANTITY_PLACES),
+      price: entry.unitScale
+        ? formatDecimal(
+            div(
+              mul(toDecimal(entry.price), toDecimal(entry.unitScale.from)),
+              toDecimal(entry.unitScale.to),
+            ),
+            QUANTITY_PLACES,
+          )
+        : entry.price,
+      splitAdjusted: entry.unitScale !== undefined,
       fees: entry.fees,
       total: tradeCashTotal(entry),
       tradedAt: entry.tradedAt,
+      usdBrlRate: entry.usdBrlRate ?? null,
       notes: entry.notes,
       realizedPnl:
         entry.side === "sell" ? formatDecimal(realized, MONEY_PLACES) : null,
@@ -513,18 +744,66 @@ export function convertMoney(
 }
 
 /**
- * Attaches display-currency amounts to every native position. Realized P&L
- * converts at the current consolidation rate; it is an approximation, not a
- * historical-FX accounting.
+ * Display-currency cost basis and realized result of one consolidated
+ * position. The native currency passes through; the other currency reads
+ * the trade-date FX ledger and converts only unrated trades at `usdBrlRate`.
+ */
+export function convertedCostBasis(
+  position: Pick<
+    ConsolidatedPosition,
+    "currency" | "investedCost" | "realizedPnl"
+  > &
+    TradeFxBasis,
+  displayCurrency: Currency,
+  usdBrlRate: UsdBrlRate | null,
+): { investedCost: Decimal; realizedPnl: Decimal } {
+  if (position.currency === displayCurrency) {
+    return {
+      investedCost: toDecimal(position.investedCost),
+      realizedPnl: toDecimal(position.realizedPnl),
+    };
+  }
+
+  const unratedCost = toDecimal(position.unratedCost);
+  const unratedRealizedPnl = toDecimal(position.unratedRealizedPnl);
+  let investedCost = toDecimal(position.fxCost);
+  let realizedPnl = toDecimal(position.fxRealizedPnl);
+
+  if (!isZero(unratedCost) || !isZero(unratedRealizedPnl)) {
+    if (usdBrlRate === null) {
+      throw new Error(
+        "An USD/BRL rate is required to convert trades without a trade-date rate",
+      );
+    }
+
+    const rate = toDecimal(usdBrlRate);
+
+    if (rate <= ZERO) {
+      throw new Error(`Invalid USD/BRL rate: ${usdBrlRate}`);
+    }
+
+    investedCost = add(
+      investedCost,
+      toOtherCurrency(unratedCost, position.currency, rate),
+    );
+    realizedPnl = add(
+      realizedPnl,
+      toOtherCurrency(unratedRealizedPnl, position.currency, rate),
+    );
+  }
+
+  return { investedCost, realizedPnl };
+}
+
+/**
+ * Attaches display-currency amounts to every native position. Cost and
+ * realized results of cross-currency trades use each trade's own USD/BRL, so
+ * the open result in the display currency includes the FX move since each
+ * purchase. Trades without that rate fall back to the consolidation rate
+ * and are counted in `tradesMissingFx`.
  */
 export function convertPositions(
-  positions: readonly Omit<
-    Position,
-    | "displayCurrency"
-    | "convertedAveragePrice"
-    | "convertedInvestedCost"
-    | "convertedRealizedPnl"
-  >[],
+  positions: readonly ConsolidatedPosition[],
   displayCurrency: Currency,
   usdBrlRate: UsdBrlRate | null,
 ): Position[] {
@@ -537,28 +816,31 @@ export function convertPositions(
     );
   }
 
-  return positions.map((position) => ({
-    ...position,
-    displayCurrency,
-    convertedAveragePrice: convertMoney(
-      position.averagePrice,
-      position.currency,
+  return positions.map((consolidated) => {
+    const {
+      fxCost: _fxCost,
+      fxRealizedPnl: _fxRealizedPnl,
+      unratedCost: _unratedCost,
+      unratedRealizedPnl: _unratedRealizedPnl,
+      tradesMissingFx,
+      ...position
+    } = consolidated;
+    const basis = convertedCostBasis(consolidated, displayCurrency, usdBrlRate);
+    const quantity = toDecimal(position.quantity);
+
+    return {
+      ...position,
       displayCurrency,
-      usdBrlRate ?? "1",
-    ),
-    convertedInvestedCost: convertMoney(
-      position.investedCost,
-      position.currency,
-      displayCurrency,
-      usdBrlRate ?? "1",
-    ),
-    convertedRealizedPnl: convertMoney(
-      position.realizedPnl,
-      position.currency,
-      displayCurrency,
-      usdBrlRate ?? "1",
-    ),
-  }));
+      convertedAveragePrice: formatDecimal(
+        isZero(quantity) ? ZERO : div(basis.investedCost, quantity),
+        MONEY_PLACES,
+      ),
+      convertedInvestedCost: formatDecimal(basis.investedCost, MONEY_PLACES),
+      convertedRealizedPnl: formatDecimal(basis.realizedPnl, MONEY_PLACES),
+      tradesMissingFx:
+        position.currency === displayCurrency ? 0 : tradesMissingFx,
+    };
+  });
 }
 
 export function summarizePositions(
@@ -719,7 +1001,9 @@ export function valuePositions(
         convertedMarketValue: null,
         unrealizedPnl: null,
         convertedUnrealizedPnl: null,
+        convertedFxPnl: null,
         unrealizedPnlPercent: null,
+        convertedUnrealizedPnlPercent: null,
         weight: null,
         quoteAsOf: null,
         quoteMissing: false,
@@ -736,7 +1020,9 @@ export function valuePositions(
         convertedMarketValue: null,
         unrealizedPnl: null,
         convertedUnrealizedPnl: null,
+        convertedFxPnl: null,
         unrealizedPnlPercent: null,
+        convertedUnrealizedPnlPercent: null,
         weight: null,
         quoteAsOf: null,
         quoteMissing: true,
@@ -750,33 +1036,62 @@ export function valuePositions(
     const investedCost = toDecimal(position.investedCost);
     const isManualFixedIncome = position.assetClass === "fixed_income";
     const unrealizedPnl = sub(toDecimal(marketValue), investedCost);
+    const convertedMarketValue = convertMoney(
+      marketValue,
+      position.currency,
+      displayCurrency,
+      usdBrlRate ?? "1",
+    );
+    const convertedInvestedCost = toDecimal(position.convertedInvestedCost);
+    // Market value at today's rate against cost at each trade's own rate:
+    // the FX move since the purchases is part of the display-currency result.
+    const convertedUnrealizedPnl = sub(
+      toDecimal(convertedMarketValue),
+      convertedInvestedCost,
+    );
+    const crossCurrency = position.currency !== displayCurrency;
 
     return {
       ...position,
       marketPrice: formatDecimal(toDecimal(quote.price), MONEY_PLACES),
       marketValue,
-      convertedMarketValue: convertMoney(
-        marketValue,
-        position.currency,
-        displayCurrency,
-        usdBrlRate ?? "1",
-      ),
+      convertedMarketValue,
       unrealizedPnl: isManualFixedIncome
         ? null
         : formatDecimal(unrealizedPnl, MONEY_PLACES),
       convertedUnrealizedPnl: isManualFixedIncome
         ? null
-        : convertMoney(
-            formatDecimal(unrealizedPnl, MONEY_PLACES),
-            position.currency,
-            displayCurrency,
-            usdBrlRate ?? "1",
-          ),
+        : formatDecimal(convertedUnrealizedPnl, MONEY_PLACES),
+      // Cost at today's rate minus cost at the trade-date rates.
+      convertedFxPnl:
+        isManualFixedIncome || !crossCurrency
+          ? null
+          : formatDecimal(
+              sub(
+                toDecimal(
+                  convertMoney(
+                    position.investedCost,
+                    position.currency,
+                    displayCurrency,
+                    usdBrlRate ?? "1",
+                  ),
+                ),
+                convertedInvestedCost,
+              ),
+              MONEY_PLACES,
+            ),
       // Both amounts share the native currency, so the ratio needs no rate.
       unrealizedPnlPercent:
         isManualFixedIncome || isZero(investedCost)
           ? null
           : formatDecimal(div(unrealizedPnl, investedCost), RATE_PLACES),
+      convertedUnrealizedPnlPercent:
+        isManualFixedIncome || isZero(convertedInvestedCost)
+          ? null
+          : formatDecimal(
+              div(convertedUnrealizedPnl, convertedInvestedCost),
+              RATE_PLACES,
+            ),
       // Weights need the portfolio total first; filled in below.
       weight: null,
       quoteAsOf: quote.asOf,
@@ -838,7 +1153,7 @@ export function availableBeforeOversell(
       continue;
     }
 
-    const amount = toDecimal(entry.quantity);
+    const amount = effectiveQuantity(entry);
 
     if (entry.side === "sell") {
       if (amount > quantity) {
@@ -870,12 +1185,45 @@ export function oversellAfterRemoval(
   history: readonly IdentifiedEntry[],
   ticker: string,
   removeId: string,
+  splits: readonly SplitEvent[] = [],
 ): string | null {
   const remaining = history.filter(
     (entry) => entry.id !== removeId && entry.ticker === ticker,
   );
 
-  return availableBeforeOversell(remaining, ticker);
+  return availableBeforeOversell(adjustForSplits(remaining, splits), ticker);
+}
+
+/**
+ * Simulates replacing the entry with `replaceId` and replays every ticker the
+ * edit touches (the old one and, when renamed, the new one). Returns the
+ * first ticker whose history would sell more than it holds, with the balance
+ * before that sell, or `null` when every replayed ledger stays valid.
+ */
+export function oversellAfterReplacement(
+  history: readonly IdentifiedEntry[],
+  replaceId: string,
+  replacement: ConsolidationInput,
+  splits: readonly SplitEvent[] = [],
+): { ticker: string; available: string } | null {
+  const target = history.find((entry) => entry.id === replaceId);
+  const next = adjustForSplits(
+    [...history.filter((entry) => entry.id !== replaceId), replacement],
+    splits,
+  );
+  const tickers = [
+    ...new Set([replacement.ticker, ...(target ? [target.ticker] : [])]),
+  ];
+
+  for (const ticker of tickers) {
+    const available = availableBeforeOversell(next, ticker);
+
+    if (available !== null) {
+      return { ticker, available };
+    }
+  }
+
+  return null;
 }
 
 /** Native currencies already used by a ticker, e.g. to enforce one per ticker. */

@@ -13,7 +13,13 @@ Its allocation target is derived, never stored:
 The cash amount is stored as `numeric(22, 8)`. Editing it in USD converts the
 display amount back to BRL with the explicit USD/BRL rate. Live portfolio
 totals and weights include cash; historical snapshots do not, because this
-model stores the current balance rather than a cash ledger.
+model stores the current balance rather than a cash ledger. Performance adds
+the live balance to today's totals only (portfolio value, cost basis, the
+open-result percent base and a `cash` category) so they match Positions;
+its monthly values, returns and drawdown stay cash-free and say so.
+Fixed-income balances follow the same rule for the same reason, except that
+they join today's value only, never the cost basis or a calculated return,
+matching how Positions treats them; their deposits are not monthly flows.
 
 The live cash position uses a virtual quantity of one. Its average cost,
 invested cost, market price, and market value all equal the current cash

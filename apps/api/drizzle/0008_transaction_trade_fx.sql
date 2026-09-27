@@ -1,0 +1,1 @@
+ALTER TABLE "transactions" ADD COLUMN "usd_brl_rate" numeric(22, 8);

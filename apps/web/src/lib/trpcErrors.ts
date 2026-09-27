@@ -62,6 +62,28 @@ const transactionMissing = msg({
   message: "Transaction not found.",
 });
 
+const editOversells = msg({
+  id: "transactions.editOversells",
+  message:
+    "This edit would leave a later sale without enough shares. Adjust or remove that sale first.",
+});
+
+const removeOversells = msg({
+  id: "transactions.removeOversells",
+  message:
+    "Removing this trade would leave a later sale without enough shares. Remove or adjust that sale first.",
+});
+
+const editConflict = msg({
+  id: "transactions.editConflict",
+  message: "This trade changed meanwhile. Reload and try again.",
+});
+
+const ptaxUnavailable = msg({
+  id: "transactions.ptaxUnavailable",
+  message: "Could not reach the BCB PTAX service. Try again later.",
+});
+
 const loadFailed = msg({
   id: "error.loadFailed",
   message: "Could not load this data. Try again.",
@@ -157,11 +179,88 @@ export function isFxRateRequired(error: unknown): boolean {
   return message.toLowerCase().includes("rate");
 }
 
+export function updateTradeErrorMessage(error: unknown): string {
+  const code = codeOf(error);
+
+  if (code === "NOT_FOUND") {
+    return i18n._(transactionMissing);
+  }
+
+  if (code === "CONFLICT") {
+    return i18n._(editConflict);
+  }
+
+  if (code === "PRECONDITION_FAILED") {
+    return i18n._(currencyMismatch);
+  }
+
+  if (code === "BAD_REQUEST") {
+    return i18n._(editOversells);
+  }
+
+  if (isAuthCode(code)) {
+    return i18n._(sessionExpired);
+  }
+
+  return i18n._(unknownError);
+}
+
+export function fillTradeFxErrorMessage(error: unknown): string {
+  const code = codeOf(error);
+
+  if (code === "BAD_GATEWAY") {
+    return i18n._(ptaxUnavailable);
+  }
+
+  if (isAuthCode(code)) {
+    return i18n._(sessionExpired);
+  }
+
+  return i18n._(unknownError);
+}
+
+const splitNoHolding = msg({
+  id: "splits.noHolding",
+  message: "There is no trade of this ticker before that date.",
+});
+
+const splitExists = msg({
+  id: "splits.exists",
+  message: "A split on this date is already recorded.",
+});
+
+const splitOversells = msg({
+  id: "splits.oversells",
+  message:
+    "This would leave a later sale without enough shares in the new units.",
+});
+
+const splitMissing = msg({
+  id: "splits.notFound",
+  message: "Split not found.",
+});
+
+export function splitErrorMessage(error: unknown): string {
+  const code = codeOf(error);
+
+  if (code === "PRECONDITION_FAILED") return i18n._(splitNoHolding);
+  if (code === "CONFLICT") return i18n._(splitExists);
+  if (code === "BAD_REQUEST") return i18n._(splitOversells);
+  if (code === "NOT_FOUND") return i18n._(splitMissing);
+  if (isAuthCode(code)) return i18n._(sessionExpired);
+
+  return i18n._(unknownError);
+}
+
 export function removeTradeErrorMessage(error: unknown): string {
   const code = codeOf(error);
 
   if (code === "NOT_FOUND") {
     return i18n._(transactionMissing);
+  }
+
+  if (code === "BAD_REQUEST") {
+    return i18n._(removeOversells);
   }
 
   if (isAuthCode(code)) {

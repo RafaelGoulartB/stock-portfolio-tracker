@@ -1,5 +1,6 @@
 import {
   ASSET_CLASSES,
+  CORPORATE_ACTION_KINDS,
   CURRENCIES,
   type GradeBand,
   TRANSACTION_SIDES,
@@ -25,6 +26,10 @@ export const transactionSideEnum = pgEnum(
   TRANSACTION_SIDES,
 );
 export const currencyEnum = pgEnum("currency", CURRENCIES);
+export const corporateActionKindEnum = pgEnum(
+  "corporate_action_kind",
+  CORPORATE_ACTION_KINDS,
+);
 
 /** Money and quantities are `numeric` so no value is ever stored as a float. */
 const DECIMAL = { precision: 22, scale: 8 } as const;
@@ -69,6 +74,12 @@ export const transactions = pgTable(
     price: numeric("price", DECIMAL).notNull(),
     fees: numeric("fees", DECIMAL).notNull().default("0"),
     tradedAt: date("traded_at").notNull(),
+    /**
+     * BRL per 1 USD on the trade date (BCB PTAX sell rate by default). Cost
+     * basis and realized results in the non-native display currency use it.
+     * Null until resolved; such trades fall back to the consolidation rate.
+     */
+    usdBrlRate: numeric("usd_brl_rate", DECIMAL),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -82,6 +93,39 @@ export const transactions = pgTable(
       table.tradedAt,
       table.createdAt,
       table.id,
+    ),
+  ],
+);
+
+/**
+ * Share-unit events of the ledger. A split multiplies the units of every
+ * trade dated before `effective_at` by `to_quantity / from_quantity`
+ * without moving money, which keeps quantities in the same current units
+ * as the provider's split-adjusted prices and dividends.
+ */
+export const corporateActions = pgTable(
+  "corporate_actions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    ticker: text("ticker").notNull(),
+    kind: corporateActionKindEnum("kind").notNull().default("split"),
+    /** First trading day in the new units (the ex-date). */
+    effectiveAt: date("effective_at").notNull(),
+    fromQuantity: numeric("from_quantity", DECIMAL).notNull(),
+    toQuantity: numeric("to_quantity", DECIMAL).notNull(),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("corporate_actions_user_ticker_day_key").on(
+      table.userId,
+      table.ticker,
+      table.effectiveAt,
     ),
   ],
 );
@@ -256,11 +300,28 @@ export const userScoreConfigs = pgTable("user_score_configs", {
   version: text("version").notNull(),
   absoluteWeightCap: numeric("absolute_weight_cap", DECIMAL).notNull(),
   overweightBlockFactor: numeric("overweight_block_factor", DECIMAL).notNull(),
-  trimFactor: numeric("trim_factor", DECIMAL).notNull(),
+  trimAbsoluteBand: numeric("trim_absolute_band", DECIMAL).notNull(),
+  trimRelativeBand: numeric("trim_relative_band", DECIMAL).notNull(),
   cooldownDays: integer("cooldown_days").notNull(),
+  cooldownFloor: numeric("cooldown_floor", DECIMAL).notNull(),
   gradeWindowQuarters: integer("grade_window_quarters").notNull(),
+  gradeHalfLifeQuarters: integer("grade_half_life_quarters").notNull(),
+  gradePriorQuarters: numeric("grade_prior_quarters", DECIMAL).notNull(),
   gradeBands: jsonb("grade_bands").$type<GradeBand[]>().notNull(),
   ungradedMultiplier: numeric("ungraded_multiplier", DECIMAL).notNull(),
+  valuationDeadZone: numeric("valuation_dead_zone", DECIMAL).notNull(),
+  valuationSensitivity: numeric("valuation_sensitivity", DECIMAL).notNull(),
+  tiltMin: numeric("tilt_min", DECIMAL).notNull(),
+  tiltMax: numeric("tilt_max", DECIMAL).notNull(),
+  fairValueHalfLifeQuarters: integer("fair_value_half_life_quarters").notNull(),
+  icReference: numeric("ic_reference", DECIMAL).notNull(),
+  icPrior: numeric("ic_prior", DECIMAL).notNull(),
+  icPriorPairs: integer("ic_prior_pairs").notNull(),
+  momentumWeight: numeric("momentum_weight", DECIMAL).notNull(),
+  momentumZCap: numeric("momentum_z_cap", DECIMAL).notNull(),
+  reviewDrift: numeric("review_drift", DECIMAL).notNull(),
+  sellBand: numeric("sell_band", DECIMAL).notNull(),
+  sellConfidence: numeric("sell_confidence", DECIMAL).notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -281,6 +342,7 @@ export const userContributionPlanConfigs = pgTable(
     largeBookImpact: numeric("large_book_impact", DECIMAL).notNull(),
     maxShare: numeric("max_share", DECIMAL).notNull(),
     maxAssets: integer("max_assets").notNull(),
+    starterFraction: numeric("starter_fraction", DECIMAL).notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -290,6 +352,7 @@ export const userContributionPlanConfigs = pgTable(
 export type UserRow = typeof users.$inferSelect;
 export type SessionRow = typeof sessions.$inferSelect;
 export type TransactionRow = typeof transactions.$inferSelect;
+export type CorporateActionRow = typeof corporateActions.$inferSelect;
 export type AllocationAssetRow = typeof allocationAssets.$inferSelect;
 export type CashBalanceRow = typeof cashBalances.$inferSelect;
 export type AssetReviewRow = typeof assetReviews.$inferSelect;

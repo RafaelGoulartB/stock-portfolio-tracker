@@ -53,7 +53,7 @@ Money, prices, quantities, rates, percentages, and grades are stored as PostgreS
 
 ## Market data
 
-Yahoo Finance provides quotes and income data without configuration. Frankfurter is the default source for USD/BRL rates, with a manual rate available as a fallback. Set `ALPHA_VANTAGE_API_KEY` in `.env` to enrich US dividend data; Yahoo remains the fallback provider.
+Yahoo Finance provides quotes and income data without configuration. Frankfurter is the default source for USD/BRL rates, with BCB PTAX and a manual rate also available. Each trade stores the BCB PTAX of its trade date, so cross-currency cost basis and realized results keep the FX of each purchase; trades without a published rate can be filled later from Transactions. Set `ALPHA_VANTAGE_API_KEY` in `.env` to enrich US dividend data; Yahoo remains the fallback provider.
 
 ## Run locally
 

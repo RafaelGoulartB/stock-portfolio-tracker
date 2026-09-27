@@ -280,11 +280,12 @@ Acceptance criteria:
 
 - allocation list response size is bounded by assets times the quarter cap;
 - scoring receives every review required by `DEFAULT_SCORE_CONFIG`;
-- use the effective user score policy: `averageGrade` takes the newest N
+- use the effective user score policy: `gradeSignal` reads the newest N
   **graded** reviews, not N calendar quarters; sparse grades may be older than
   the visible window;
-- preserve the latest non-null fair value and its reference even when older
-  than the visible window; a simple date cutoff would change discounts;
+- preserve the latest non-null fair value, its period and its reference even
+  when older than the visible window; a simple date cutoff would change
+  valuation tilts;
 - asset detail can still access older reviews;
 - no scoring threshold is duplicated in a router or screen.
 

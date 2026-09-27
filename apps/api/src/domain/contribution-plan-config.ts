@@ -21,6 +21,7 @@ function rowToConfig(
     largeBookImpact: row.largeBookImpact,
     maxShare: row.maxShare,
     maxAssets: row.maxAssets,
+    starterFraction: row.starterFraction,
   });
 }
 
@@ -31,6 +32,7 @@ function configValues(config: ContributionPlanConfig) {
     largeBookImpact: config.largeBookImpact,
     maxShare: config.maxShare,
     maxAssets: config.maxAssets,
+    starterFraction: config.starterFraction,
     updatedAt: new Date(),
   };
 }

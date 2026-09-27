@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  adjustForSplits,
   availableBeforeOversell,
   availableQuantity,
   buildTickerLedger,
@@ -7,13 +8,18 @@ import {
   consolidatePositions,
   convertMoney,
   convertPositions,
+  effectiveQuantity,
   filterTransactionsByAsOf,
   type IdentifiedEntry,
   oversellAfterRemoval,
+  oversellAfterReplacement,
+  pendingSplitSuggestions,
   portfolioReturnContribution,
+  type SplitEvent,
   summarizePositions,
   type TickerLedgerEntry,
   tickerCurrencies,
+  tradeCashTotal,
   valuePositions,
   withCashPosition,
 } from "./positions";
@@ -726,5 +732,279 @@ describe("portfolio return contribution", () => {
   it("keeps unavailable results and zero invested cost explicit", () => {
     expect(portfolioReturnContribution(null, "100.00")).toBeNull();
     expect(portfolioReturnContribution("10.00", "0.00")).toBeNull();
+  });
+});
+
+describe("oversellAfterReplacement", () => {
+  let idSequence = 0;
+
+  function identified(
+    partial: Partial<IdentifiedEntry> & Pick<IdentifiedEntry, "side">,
+  ): IdentifiedEntry {
+    idSequence += 1;
+
+    return { ...tx(partial), id: `edit-${idSequence}` };
+  }
+
+  const buy = identified({
+    side: "buy",
+    quantity: "10",
+    tradedAt: "2026-01-01",
+  });
+  const sell = identified({
+    side: "sell",
+    quantity: "8",
+    tradedAt: "2026-02-01",
+  });
+
+  it("rejects shrinking a buy below what a later sale needs", () => {
+    expect(
+      oversellAfterReplacement([buy, sell], buy.id, { ...buy, quantity: "5" }),
+    ).toEqual({ ticker: "PETR4", available: "5.00000000" });
+  });
+
+  it("rejects moving a buy after the sale it covered", () => {
+    expect(
+      oversellAfterReplacement([buy, sell], buy.id, {
+        ...buy,
+        tradedAt: "2026-03-01",
+      }),
+    ).toEqual({ ticker: "PETR4", available: "0.00000000" });
+  });
+
+  it("replays the old ticker when a buy is renamed away", () => {
+    expect(
+      oversellAfterReplacement([buy, sell], buy.id, {
+        ...buy,
+        ticker: "VALE3",
+      }),
+    ).toEqual({ ticker: "PETR4", available: "0.00000000" });
+  });
+
+  it("rejects growing a sale beyond the holding", () => {
+    expect(
+      oversellAfterReplacement([buy, sell], sell.id, {
+        ...sell,
+        quantity: "11",
+      }),
+    ).toEqual({ ticker: "PETR4", available: "10.00000000" });
+  });
+
+  it("accepts an edit that keeps every sale covered", () => {
+    expect(
+      oversellAfterReplacement([buy, sell], buy.id, {
+        ...buy,
+        quantity: "8",
+        price: "12",
+      }),
+    ).toBeNull();
+  });
+});
+
+describe("trade-date FX", () => {
+  const usdBuy = (partial: Partial<ConsolidationInput> = {}) =>
+    tx({
+      ticker: "COST",
+      assetClass: "stock_us",
+      currency: "USD",
+      side: "buy",
+      quantity: "2",
+      price: "100",
+      ...partial,
+    });
+
+  it("keeps a USD asset's BRL cost at each purchase's own rate", () => {
+    const native = consolidatePositions([
+      usdBuy({ tradedAt: "2025-01-10", usdBrlRate: "5" }),
+      usdBuy({ tradedAt: "2025-06-10", usdBrlRate: "6", fees: "2" }),
+    ]);
+    const [position] = convertPositions(native, "BRL", "5.5");
+
+    // 200 × 5 + 202 × 6, independent of today's 5.5.
+    expect(position).toMatchObject({
+      investedCost: "402.00",
+      convertedInvestedCost: "2212.00",
+      convertedAveragePrice: "553.00",
+      tradesMissingFx: 0,
+    });
+  });
+
+  it("splits the BRL open result into asset move and FX move", () => {
+    const native = consolidatePositions([
+      usdBuy({ quantity: "10", price: "100", usdBrlRate: "5" }),
+    ]);
+    const [valued] = valuePositions(
+      convertPositions(native, "BRL", "5.5"),
+      new Map([["COST", { ticker: "COST", price: "110", asOf: "2026-09-25" }]]),
+      "BRL",
+      "5.5",
+    );
+
+    // Value 1100 × 5.5 = 6050 against cost 1000 × 5 = 5000.
+    expect(valued).toMatchObject({
+      convertedMarketValue: "6050.00",
+      convertedInvestedCost: "5000.00",
+      convertedUnrealizedPnl: "1050.00",
+      // Cost 1000 × (5.5 − 5) of the result is the dollar's move.
+      convertedFxPnl: "500.00",
+      unrealizedPnlPercent: "0.100000",
+      convertedUnrealizedPnlPercent: "0.210000",
+    });
+  });
+
+  it("releases trade-date cost on a sale and realizes at the sale's rate", () => {
+    const native = consolidatePositions([
+      usdBuy({ quantity: "10", price: "100", usdBrlRate: "5" }),
+      usdBuy({
+        side: "sell",
+        quantity: "4",
+        price: "120",
+        tradedAt: "2026-02-01",
+        usdBrlRate: "6",
+      }),
+    ]);
+    const [position] = convertPositions(native, "BRL", "5.5");
+
+    // Released 4 of 10 → 2000 BRL of 5000; proceeds 480 × 6 = 2880.
+    expect(position).toMatchObject({
+      realizedPnl: "80.00",
+      convertedInvestedCost: "3000.00",
+      convertedRealizedPnl: "880.00",
+    });
+  });
+
+  it("falls back to the consolidation rate only for unrated trades", () => {
+    const native = consolidatePositions([
+      usdBuy({ usdBrlRate: "5" }),
+      usdBuy({ tradedAt: "2026-02-01" }),
+    ]);
+    const [position] = convertPositions(native, "BRL", "5.5");
+
+    // 200 × 5 + 200 × 5.5 at the fallback.
+    expect(position).toMatchObject({
+      convertedInvestedCost: "2100.00",
+      tradesMissingFx: 1,
+    });
+  });
+
+  it("converts a BRL asset into USD at the purchase rate", () => {
+    const native = consolidatePositions([
+      tx({ side: "buy", quantity: "100", price: "10", usdBrlRate: "5" }),
+    ]);
+    const [inUsd] = convertPositions(native, "USD", "4");
+    const [inBrl] = convertPositions(native, "BRL", null);
+
+    expect(inUsd).toMatchObject({
+      convertedInvestedCost: "200.00",
+      tradesMissingFx: 0,
+    });
+    // The native display never needs, or reports, a trade rate.
+    expect(inBrl).toMatchObject({
+      convertedInvestedCost: "1000.00",
+      tradesMissingFx: 0,
+    });
+  });
+
+  it("clears the trade-date cost when the position closes", () => {
+    const native = consolidatePositions([
+      usdBuy({ quantity: "2", usdBrlRate: "5" }),
+      usdBuy({ side: "sell", quantity: "2", price: "150", usdBrlRate: "6" }),
+    ]);
+    const [position] = convertPositions(native, "BRL", "5.5");
+
+    // Cost 1000 released; proceeds 300 × 6 = 1800.
+    expect(position).toMatchObject({
+      convertedInvestedCost: "0.00",
+      convertedRealizedPnl: "800.00",
+    });
+  });
+});
+
+describe("splits", () => {
+  const split = (
+    effectiveAt: string,
+    fromQuantity: string,
+    toQuantity: string,
+  ): SplitEvent => ({ ticker: "PETR4", effectiveAt, fromQuantity, toQuantity });
+
+  it("restates earlier units without changing the cost basis", () => {
+    const ledger = adjustForSplits(
+      [tx({ side: "buy", quantity: "100", price: "40", fees: "2" })],
+      [split("2026-03-01", "1", "2")],
+    );
+    const [position] = consolidatePositions(ledger);
+
+    expect(position).toMatchObject({
+      quantity: "200.00000000",
+      investedCost: "4002.00",
+      averagePrice: "20.01",
+    });
+    // The cash of the trade is what was actually paid.
+    expect(tradeCashTotal(ledger[0] as ConsolidationInput)).toBe("4002.00");
+  });
+
+  it("covers a sale typed in the new units after the split", () => {
+    const ledger = [
+      tx({ side: "buy", quantity: "100", price: "40" }),
+      tx({
+        side: "sell",
+        quantity: "150",
+        price: "22",
+        tradedAt: "2026-04-01",
+      }),
+    ];
+
+    expect(availableBeforeOversell(ledger, "PETR4")).toBe("100.00000000");
+    expect(
+      availableBeforeOversell(
+        adjustForSplits(ledger, [split("2026-03-01", "1", "2")]),
+        "PETR4",
+      ),
+    ).toBeNull();
+
+    const [position] = consolidatePositions(
+      adjustForSplits(ledger, [split("2026-03-01", "1", "2")]),
+    );
+
+    // 150 of 200 units release 3/4 of the 4000 cost; proceeds 3300.
+    expect(position).toMatchObject({
+      quantity: "50.00000000",
+      investedCost: "1000.00",
+      realizedPnl: "300.00",
+    });
+  });
+
+  it("compounds splits and leaves trades on or after the date alone", () => {
+    const ledger = adjustForSplits(
+      [
+        tx({ side: "buy", quantity: "100", tradedAt: "2025-01-10" }),
+        tx({ side: "buy", quantity: "10", tradedAt: "2026-03-01" }),
+      ],
+      [split("2025-06-01", "1", "3"), split("2026-01-02", "10", "1")],
+    );
+
+    expect(ledger.map((entry) => effectiveQuantity(entry).toString())).toEqual([
+      // 100 × 3 / 10.
+      effectiveQuantity({ quantity: "30" }).toString(),
+      effectiveQuantity({ quantity: "10" }).toString(),
+    ]);
+    expect(ledger[1]?.unitScale).toBeUndefined();
+  });
+
+  it("offers only unrecorded splits after the first trade", () => {
+    const published = [
+      { effectiveAt: "2024-05-01", fromQuantity: "1", toQuantity: "2" },
+      { effectiveAt: "2025-05-01", fromQuantity: "1", toQuantity: "4" },
+      { effectiveAt: "2026-05-01", fromQuantity: "10", toQuantity: "1" },
+    ];
+
+    expect(
+      pendingSplitSuggestions(
+        published,
+        [{ effectiveAt: "2025-05-01" }],
+        "2025-01-10",
+      ),
+    ).toEqual([published[2]]);
+    expect(pendingSplitSuggestions(published, [], null)).toEqual([]);
   });
 });

@@ -23,6 +23,8 @@ export function SummaryStrip({
   const { i18n } = useLingui();
   const currency = summary.displayCurrency;
   const asOf = formatTradeDate(summary.asOf);
+  const cash = formatMoney(summary.cashValue, currency);
+  const fixedIncome = formatMoney(summary.fixedIncomeValue, currency);
 
   const meta = [
     i18n._(
@@ -53,6 +55,22 @@ export function SummaryStrip({
       : null,
     summary.usdBrlRate
       ? `1 USD = ${formatQuantity(summary.usdBrlRate)} BRL`
+      : null,
+    Number(summary.cashValue) !== 0
+      ? i18n._(
+          t({
+            id: "performance.cashIncluded",
+            message: `Today's totals include ${cash} of cash; monthly charts and returns do not, because only the current cash balance is stored`,
+          }),
+        )
+      : null,
+    Number(summary.fixedIncomeValue) !== 0
+      ? i18n._(
+          t({
+            id: "performance.fixedIncomeIncluded",
+            message: `Fixed income (${fixedIncome}) counts in today's value only: it is a balance you maintain, with no calculated return or monthly history`,
+          }),
+        )
       : null,
   ].filter((entry): entry is string => entry != null);
 

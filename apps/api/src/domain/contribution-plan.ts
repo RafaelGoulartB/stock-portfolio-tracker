@@ -27,10 +27,22 @@ const HALF = toDecimal("0.5");
 export type ContributionPlanRow = {
   ticker: string;
   currency: Currency;
-  /** Contribution score in weight units. Only positive values compete. */
+  /** Contribution score. Only positive values compete. */
   score: string;
+  /** Score priority (grade × cooldown ramp). Higher fills closer to target. */
+  priority: string;
+  /** Valuation-tilted target weight, `null` without a target. */
+  tiltedTarget: string | null;
+  /** Current share of the portfolio, `0`–`1`. */
+  currentWeight: string;
+  /** Highest weight a contribution may take the asset to, `null` for none. */
+  maxWeight: string | null;
+  /** False for a watch-only asset, whose first cheque is a starter slice. */
+  held: boolean;
   executionPrice: string | null;
   executionFxApplied: boolean;
+  /** True when the market only trades whole units (B3 shares, FIIs, BDRs). */
+  wholeUnits: boolean;
 };
 
 export type ContributionSlice = {
@@ -45,8 +57,10 @@ export type ContributionSlice = {
   executionFxApplied: boolean;
   /** True when the 70%-style share cap bound this slice. */
   cappedByShare: boolean;
-  /** True when the scored-need ceiling bound this slice. */
+  /** True when the slice reached the asset's tilted target. */
   cappedByNeed: boolean;
+  /** True when a weight ceiling or the starter size bound this slice. */
+  cappedByLimit: boolean;
 };
 
 export type ContributionSpreadMode = "auto" | "manual" | "all";
@@ -57,6 +71,8 @@ export type ContributionPlanResult = {
   allocated: string;
   /** `amount - allocated`, cents. Includes need-ceiling leftover. */
   remainder: string;
+  /** Part of {@link remainder} left because slices buy whole units only. */
+  unitRoundingRemainder: string;
   /** How the candidate count was chosen. */
   spreadMode: ContributionSpreadMode;
   /** Count the formula or override aimed for, before the need filter. */
@@ -86,57 +102,117 @@ export type ContributionPlanInput = {
   spread?: number | null;
 };
 
-type PlanItem = {
+/**
+ * One competing asset, in display-currency money against the book *after*
+ * the contribution (`V' = V + C`): contributing dilutes every weight, so the
+ * money an asset needs is `tiltedTarget × V' - held`, not `gap × V'`.
+ */
+type Candidate = {
   row: ContributionPlanRow;
-  score: Decimal;
-  ceiling: Decimal;
-  shareCap: Decimal;
-  hardCap: Decimal;
+  priority: Decimal;
+  /** `tiltedTarget × V'`. */
+  target: Decimal;
+  /** `target - held`: money that brings the asset exactly to target. */
+  need: Decimal;
+  /** Room under the weight ceiling and the starter size, capped by need. */
+  limit: Decimal;
+  /** Water-filling order: `priority × need / target`. */
+  index: Decimal;
+};
+
+type Solved = {
+  candidate: Candidate;
+  cap: Decimal;
   allocated: Decimal;
   cappedByShare: boolean;
   cappedByNeed: boolean;
+  cappedByLimit: boolean;
 };
 
 function wholeCount(value: Decimal): bigint {
   return value < ZERO ? 0n : value / UNIT;
 }
 
-function rankCandidates(
-  rows: readonly ContributionPlanRow[],
-): ContributionPlanRow[] {
-  return rows
-    .filter((row) => toDecimal(row.score) > ZERO)
-    .sort((a, b) => {
-      const delta = toDecimal(b.score) - toDecimal(a.score);
-      if (delta !== 0n) return delta > 0n ? 1 : -1;
-      return a.ticker.localeCompare(b.ticker);
-    });
+function minOf(a: Decimal, b: Decimal): Decimal {
+  return a < b ? a : b;
 }
 
+function toCandidates(
+  rows: readonly ContributionPlanRow[],
+  portfolioValue: Decimal,
+  postValue: Decimal,
+  config: ContributionPlanConfig,
+): Candidate[] {
+  const candidates: Candidate[] = [];
+
+  for (const row of rows) {
+    const priority = toDecimal(row.priority);
+
+    if (
+      toDecimal(row.score) <= ZERO ||
+      priority <= ZERO ||
+      row.tiltedTarget === null
+    ) {
+      continue;
+    }
+
+    const target = mul(toDecimal(row.tiltedTarget), postValue);
+    const held = mul(toDecimal(row.currentWeight), portfolioValue);
+    const need = sub(target, held);
+
+    if (target <= ZERO || need <= ZERO) continue;
+
+    let limit = need;
+
+    if (row.maxWeight !== null) {
+      limit = minOf(limit, sub(mul(toDecimal(row.maxWeight), postValue), held));
+    }
+
+    // A new position is built over several cheques. An empty book has no
+    // "existing" positions to protect, so its first cheque is not limited.
+    if (!row.held && portfolioValue > ZERO) {
+      limit = minOf(
+        limit,
+        sub(mul(toDecimal(config.starterFraction), target), held),
+      );
+    }
+
+    if (limit < ONE_CENT) continue;
+
+    candidates.push({
+      row,
+      priority,
+      target,
+      need,
+      limit,
+      index: div(mul(priority, need), target),
+    });
+  }
+
+  return candidates.sort((a, b) => {
+    if (a.index !== b.index) return a.index > b.index ? -1 : 1;
+    return a.row.ticker.localeCompare(b.row.ticker);
+  });
+}
+
+/** No slice at all: the whole (positive) amount stays unallocated. */
 function emptyResult(
   spreadMode: ContributionSpreadMode,
+  amount: Decimal,
   targetCount = 0,
   weightImpact: string | null = null,
 ): ContributionPlanResult {
   return {
     slices: [],
     allocated: formatDecimal(ZERO, MONEY_PLACES),
-    remainder: formatDecimal(ZERO, MONEY_PLACES),
+    remainder: formatDecimal(amount > ZERO ? amount : ZERO, MONEY_PLACES),
+    unitRoundingRemainder: formatDecimal(ZERO, MONEY_PLACES),
     spreadMode,
     targetCount,
     selectedCount: 0,
     relativeSize: null,
     weightImpact,
   };
-}
-
-function markCaps(item: PlanItem) {
-  if (item.hardCap === item.shareCap && item.shareCap <= item.ceiling) {
-    item.cappedByShare = true;
-  }
-  if (item.hardCap === item.ceiling && item.ceiling <= item.shareCap) {
-    item.cappedByNeed = true;
-  }
 }
 
 /**
@@ -247,149 +323,266 @@ export function targetContributionCount(
 }
 
 /**
- * Auto mode skips names whose scored need is smaller than a meaningful
- * slice of the current book, so a dominant score cannot sprinkle crumbs
- * onto almost-filled names. Manual and "all" keep the ranked list intact.
+ * Contribution-only rebalancing as a constrained least-squares problem:
+ *
+ * `minimize Σ priority × (held + x - target)² / target`
+ * subject to `Σ x = total` and `0 ≤ x ≤ cap`.
+ *
+ * The KKT conditions give `x = clamp(need - θ × target / priority, 0, cap)`
+ * for one water level `θ ≥ 0`: every funded asset ends at the same
+ * priority-weighted *relative* fill, so a small target that is empty is
+ * funded before a large target that is nearly full, and a higher priority
+ * ends closer to its target. `Σ x(θ)` is piecewise linear, so `θ` is solved
+ * exactly between breakpoints instead of by iteration.
+ */
+function waterFill(
+  candidates: readonly Candidate[],
+  total: Decimal,
+  shareCap: Decimal | null,
+): { solved: Solved[]; leftover: Decimal } {
+  const items = candidates.map((candidate) => {
+    const cap =
+      shareCap === null ? candidate.limit : minOf(candidate.limit, shareCap);
+
+    return {
+      candidate,
+      cap,
+      slope: div(candidate.target, candidate.priority),
+    };
+  });
+  const at = (theta: Decimal) =>
+    items.map(({ candidate, cap, slope }) => {
+      const raw = sub(candidate.need, mul(theta, slope));
+
+      return raw < ZERO ? ZERO : raw > cap ? cap : raw;
+    });
+  const sum = (values: readonly Decimal[]) =>
+    values.reduce((acc, value) => add(acc, value), ZERO);
+
+  let allocation = at(ZERO);
+  let used = sum(allocation);
+
+  if (used > total) {
+    const breakpoints = new Set<Decimal>();
+
+    for (const { candidate, cap, slope } of items) {
+      breakpoints.add(div(candidate.need, slope));
+      if (cap < candidate.need) {
+        breakpoints.add(div(sub(candidate.need, cap), slope));
+      }
+    }
+
+    let previous = ZERO;
+    let previousSum = used;
+
+    for (const point of [...breakpoints].sort((a, b) =>
+      a < b ? -1 : a > b ? 1 : 0,
+    )) {
+      if (point <= previous) continue;
+
+      const pointSum = sum(at(point));
+
+      if (pointSum <= total) {
+        const theta = add(
+          previous,
+          div(
+            mul(sub(previousSum, total), sub(point, previous)),
+            sub(previousSum, pointSum),
+          ),
+        );
+        allocation = at(theta);
+        break;
+      }
+
+      previous = point;
+      previousSum = pointSum;
+    }
+
+    // The level is exact up to 8-place rounding; settle the sub-cent drift
+    // on slices strictly between zero and their cap (the ones the level
+    // actually sets), so a capped slice keeps its exact cap.
+    let drift = sub(total, sum(allocation));
+
+    for (let index = 0; index < items.length && drift !== ZERO; index += 1) {
+      const item = items[index];
+      const current = allocation[index];
+
+      if (!item || current === undefined) continue;
+      if (current <= ZERO || current >= item.cap) continue;
+
+      const next = add(current, drift);
+      const bounded = next < ZERO ? ZERO : next > item.cap ? item.cap : next;
+      drift = sub(drift, sub(bounded, current));
+      allocation[index] = bounded;
+    }
+
+    used = sum(allocation);
+  }
+
+  const solved = items.map(({ candidate, cap }, index): Solved => {
+    const allocated = allocation[index] ?? ZERO;
+    const atCap = allocated > ZERO && allocated === cap;
+
+    return {
+      candidate,
+      cap,
+      allocated,
+      cappedByShare: atCap && shareCap !== null && shareCap < candidate.limit,
+      cappedByNeed: atCap && cap === candidate.need,
+      cappedByLimit:
+        atCap && cap === candidate.limit && candidate.limit < candidate.need,
+    };
+  });
+
+  return { solved, leftover: sub(total, used) };
+}
+
+function shareCapFor(
+  size: number,
+  amount: Decimal,
+  config: ContributionPlanConfig,
+): Decimal | null {
+  return size > 1 ? mul(amount, toDecimal(config.maxShare)) : null;
+}
+
+/**
+ * Auto mode first seats the best-ranked names whose room is at least a
+ * meaningful slice of the book, so a crumb-sized need never takes a seat.
+ * Manual and "all" keep the ranked list intact.
  */
 function inviteCandidates(
-  ranked: readonly ContributionPlanRow[],
+  ranked: readonly Candidate[],
   targetCount: number,
   mode: ContributionSpreadMode,
-  postValue: Decimal,
-  minNeed: Decimal,
-): ContributionPlanRow[] {
-  if (targetCount <= 0 || ranked.length === 0) {
-    return [];
-  }
+  minSlice: Decimal,
+): Candidate[] {
+  if (targetCount <= 0 || ranked.length === 0) return [];
+  if (mode !== "auto" || minSlice <= ZERO) return ranked.slice(0, targetCount);
 
-  if (mode !== "auto" || minNeed <= ZERO) {
-    return ranked.slice(0, targetCount);
-  }
-
-  const invited: ContributionPlanRow[] = [];
-
-  for (const row of ranked) {
-    if (invited.length >= targetCount) break;
-
-    const ceiling = mul(toDecimal(row.score), postValue);
-    if (ceiling < minNeed) continue;
-
-    invited.push(row);
-  }
+  const invited = ranked
+    .filter((candidate) => candidate.limit >= minSlice)
+    .slice(0, targetCount);
 
   return invited.length > 0 ? invited : ranked.slice(0, 1);
 }
 
-function toItem(
-  row: ContributionPlanRow,
-  postValue: Decimal,
-  shareCap: Decimal,
-): PlanItem {
-  const score = toDecimal(row.score);
-  const ceiling = mul(score, postValue);
-  const hardCap = ceiling < shareCap ? ceiling : shareCap;
+/**
+ * Solves the seated names, then:
+ *
+ * - in auto mode, gives up a seat whose slice is below the minimum impact
+ *   when the others can absorb its money (fewer, meaningful orders), down
+ *   to two seats;
+ * - while money is left because every seat is at its cap, seats the next
+ *   ranked name, up to `maxAssets`.
+ */
+function allocate(
+  ranked: readonly Candidate[],
+  invited: readonly Candidate[],
+  amount: Decimal,
+  mode: ContributionSpreadMode,
+  minSlice: Decimal,
+  config: ContributionPlanConfig,
+): { solved: Solved[]; leftover: Decimal } {
+  let seats = [...invited];
+  let result = waterFill(
+    seats,
+    amount,
+    shareCapFor(seats.length, amount, config),
+  );
 
-  return {
-    row,
-    score,
-    ceiling,
-    shareCap,
-    hardCap,
-    allocated: ZERO,
-    cappedByShare: false,
-    cappedByNeed: false,
-  };
-}
+  // Never prune below two seats: collapsing to one name would also lift the
+  // share cap that keeps a single asset from taking the whole cheque.
+  while (mode === "auto" && minSlice > ZERO && seats.length > 2) {
+    const crumbs = result.solved
+      .filter((item) => item.allocated > ZERO && item.allocated < minSlice)
+      .sort((a, b) => (a.candidate.index < b.candidate.index ? -1 : 1));
+    const drop = crumbs[0];
 
-function distributeCapped(items: PlanItem[], total: Decimal): Decimal {
-  let leftover = total;
-  let remaining = items.filter((item) => item.hardCap > ZERO);
+    if (!drop) break;
 
-  while (remaining.length > 0 && leftover > ZERO) {
-    const scoreSum = remaining.reduce(
-      (sum, item) => add(sum, item.score),
+    const rest = seats.filter((seat) => seat !== drop.candidate);
+    const restShare = shareCapFor(rest.length, amount, config);
+    const capacity = rest.reduce(
+      (sum, seat) =>
+        add(
+          sum,
+          restShare === null ? seat.limit : minOf(seat.limit, restShare),
+        ),
       ZERO,
     );
 
-    if (scoreSum <= ZERO) break;
+    if (capacity < sub(amount, result.leftover)) break;
 
-    const hits: PlanItem[] = [];
-    const fits: PlanItem[] = [];
-
-    for (const item of remaining) {
-      const room = sub(item.hardCap, item.allocated);
-      const proposed = mul(leftover, div(item.score, scoreSum));
-
-      if (proposed > room) hits.push(item);
-      else fits.push(item);
-    }
-
-    if (hits.length === 0) {
-      for (const item of remaining) {
-        item.allocated = add(
-          item.allocated,
-          mul(leftover, div(item.score, scoreSum)),
-        );
-      }
-      leftover = ZERO;
-      break;
-    }
-
-    for (const item of hits) {
-      const room = sub(item.hardCap, item.allocated);
-      item.allocated = item.hardCap;
-      leftover = sub(leftover, room);
-      markCaps(item);
-    }
-
-    remaining = fits;
+    seats = rest;
+    result = waterFill(seats, amount, restShare);
   }
 
-  return leftover;
+  for (const candidate of ranked) {
+    if (result.leftover < ONE_CENT || seats.length >= config.maxAssets) break;
+    if (seats.includes(candidate)) continue;
+
+    seats = [...seats, candidate];
+    result = waterFill(
+      seats,
+      amount,
+      shareCapFor(seats.length, amount, config),
+    );
+  }
+
+  return result;
+}
+
+function wholeUnitPrice(row: ContributionPlanRow): Decimal | null {
+  if (!row.wholeUnits || row.executionPrice === null) return null;
+  const price = toDecimal(row.executionPrice);
+
+  return price > ZERO ? price : null;
 }
 
 /**
- * Remaining money after the first club is full of scored need flows down
- * the ranked list, one name at a time, up to `maxAssets`.
+ * Whole-unit markets cannot buy a fraction of a share: each such slice is
+ * floored to whole units, then the freed money buys one more unit at a
+ * time, best-ranked first, only where the slice's cap still has room. The
+ * money that cannot buy another unit is returned, never spread elsewhere.
  */
-function waterfallRemainder(
-  ranked: readonly ContributionPlanRow[],
-  items: PlanItem[],
-  leftover: Decimal,
-  postValue: Decimal,
-  maxShareAmount: Decimal,
-  maxAssets: number,
-): Decimal {
-  const used = new Set(items.map((item) => item.row.ticker));
-  let remaining = leftover;
+function roundToWholeUnits(items: Solved[]): Decimal {
+  let freed = ZERO;
 
-  for (const row of ranked) {
-    if (remaining < ONE_CENT) break;
-    if (items.length >= maxAssets) break;
-    if (used.has(row.ticker)) continue;
+  for (const item of items) {
+    const price = wholeUnitPrice(item.candidate.row);
+    if (price === null) continue;
 
-    const shareCap = items.length >= 1 ? maxShareAmount : remaining;
-    const item = toItem(row, postValue, shareCap);
-    if (item.hardCap < ONE_CENT) continue;
-
-    const take = remaining < item.hardCap ? remaining : item.hardCap;
-    item.allocated = take;
-    remaining = sub(remaining, take);
-    if (take === item.hardCap) markCaps(item);
-    items.push(item);
-    used.add(row.ticker);
+    const rounded = wholeCount(div(item.allocated, price)) * price;
+    freed = add(freed, sub(item.allocated, rounded));
+    item.allocated = rounded;
   }
 
-  return remaining;
+  let bought = true;
+
+  while (bought) {
+    bought = false;
+
+    for (const item of items) {
+      const price = wholeUnitPrice(item.candidate.row);
+      if (price === null || price > freed) continue;
+      if (add(item.allocated, price) > item.cap) continue;
+
+      item.allocated = add(item.allocated, price);
+      freed = sub(freed, price);
+      bought = true;
+    }
+  }
+
+  return freed;
 }
 
 /**
- * Splits a contribution across the names the score has already ranked.
+ * Splits a contribution across the assets the score considers candidates.
  *
  * Amounts are a *suggestion*, never an accounting record: they are rounded
- * to cents at the end and any remainder — rounding dust or money the scored
- * need cannot absorb — is reported instead of silently disappearing. Money
- * that actually moves is entered as a transaction.
+ * to cents at the end and any remainder — rounding dust, money no candidate
+ * has room for, or whole-unit leftovers — is reported instead of silently
+ * disappearing. Money that actually moves is entered as a transaction.
  */
 export function planContribution(
   input: ContributionPlanInput,
@@ -397,7 +590,7 @@ export function planContribution(
   const config = input.config ?? DEFAULT_CONTRIBUTION_PLAN_CONFIG;
   const amount = toDecimal(input.amount);
   const portfolioValue = toDecimal(input.portfolioValue);
-  const ranked = rankCandidates(input.rows);
+  const postValue = add(portfolioValue, amount);
   const spreadModeGuess: ContributionSpreadMode =
     input.spread === 0
       ? "all"
@@ -405,8 +598,14 @@ export function planContribution(
         ? "manual"
         : "auto";
 
-  if (ranked.length === 0 || amount <= ZERO) {
-    return emptyResult(spreadModeGuess);
+  if (amount <= ZERO) {
+    return emptyResult(spreadModeGuess, ZERO);
+  }
+
+  const ranked = toCandidates(input.rows, portfolioValue, postValue, config);
+
+  if (ranked.length === 0) {
+    return emptyResult(spreadModeGuess, amount);
   }
 
   const {
@@ -421,25 +620,17 @@ export function planContribution(
     config,
     input.spread,
   );
-  const postValue = add(portfolioValue, amount);
-  const minNeed =
+  const minSlice =
     mode === "auto" && portfolioValue > ZERO && weightImpact !== null
       ? mul(portfolioValue, weightImpact)
       : ZERO;
-  const invited = inviteCandidates(
-    ranked,
-    targetCount,
-    mode,
-    postValue,
-    minNeed,
-  );
-
+  const invited = inviteCandidates(ranked, targetCount, mode, minSlice);
   const impactText =
     weightImpact === null ? null : formatDecimal(weightImpact, WEIGHT_PLACES);
 
   if (invited.length === 0) {
     return {
-      ...emptyResult(mode, targetCount, impactText),
+      ...emptyResult(mode, amount, targetCount, impactText),
       relativeSize:
         relativeSize === null
           ? null
@@ -447,46 +638,39 @@ export function planContribution(
     };
   }
 
-  const maxShareAmount = mul(amount, toDecimal(config.maxShare));
-  const items: PlanItem[] = invited.map((row) =>
-    toItem(row, postValue, invited.length > 1 ? maxShareAmount : amount),
-  );
-
-  let leftover = distributeCapped(items, amount);
-  leftover = waterfallRemainder(
-    ranked,
-    items,
-    leftover,
-    postValue,
-    maxShareAmount,
-    config.maxAssets,
-  );
+  const { solved } = allocate(ranked, invited, amount, mode, minSlice, config);
+  const unitRoundingRemainder = roundToWholeUnits(solved);
 
   let allocated = ZERO;
-  const slices: ContributionSlice[] = items
+  const slices: ContributionSlice[] = solved
     .filter((item) => item.allocated > ZERO)
+    .sort((a, b) => {
+      if (a.allocated !== b.allocated)
+        return a.allocated > b.allocated ? -1 : 1;
+      return a.candidate.row.ticker.localeCompare(b.candidate.row.ticker);
+    })
     .map((item) => {
+      const { row } = item.candidate;
       const sliceAmount = toDecimal(
         formatDecimal(item.allocated, MONEY_PLACES),
       );
       allocated = add(allocated, sliceAmount);
       const price =
-        item.row.executionPrice === null
-          ? null
-          : toDecimal(item.row.executionPrice);
+        row.executionPrice === null ? null : toDecimal(row.executionPrice);
 
       return {
-        ticker: item.row.ticker,
-        currency: item.row.currency,
+        ticker: row.ticker,
+        currency: row.currency,
         share: formatDecimal(div(sliceAmount, amount), WEIGHT_PLACES),
         amount: formatDecimal(sliceAmount, MONEY_PLACES),
         units:
           price !== null && price > ZERO
             ? formatDecimal(div(sliceAmount, price), UNIT_PLACES)
             : null,
-        executionFxApplied: item.row.executionFxApplied,
+        executionFxApplied: row.executionFxApplied,
         cappedByShare: item.cappedByShare,
         cappedByNeed: item.cappedByNeed,
+        cappedByLimit: item.cappedByLimit,
       };
     });
 
@@ -494,6 +678,7 @@ export function planContribution(
     slices,
     allocated: formatDecimal(allocated, MONEY_PLACES),
     remainder: formatDecimal(sub(amount, allocated), MONEY_PLACES),
+    unitRoundingRemainder: formatDecimal(unitRoundingRemainder, MONEY_PLACES),
     spreadMode: mode,
     targetCount,
     selectedCount: slices.length,

@@ -211,6 +211,13 @@ export function AssetMovements({
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatQuantity(trade.quantity)}
+                      {trade.splitAdjusted ? (
+                        <span className="block text-xs text-muted-foreground">
+                          <Trans id="allocation.detailSplitAdjusted">
+                            Split-adjusted
+                          </Trans>
+                        </span>
+                      ) : null}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatMoney(trade.price, trade.currency)}

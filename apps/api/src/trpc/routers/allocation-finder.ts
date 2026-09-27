@@ -122,7 +122,7 @@ export async function loadAllocationFinder(
     marketPrice: null,
     convertedMarketValue: null,
     convertedUnrealizedPnl: null,
-    unrealizedPnlPercent: null,
+    convertedUnrealizedPnlPercent: null,
   }));
 
   return buildFinderResult({

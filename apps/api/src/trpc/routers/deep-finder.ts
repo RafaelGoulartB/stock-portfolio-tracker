@@ -37,7 +37,7 @@ export type FinderPosition = {
   marketPrice: string | null;
   convertedMarketValue: string | null;
   convertedUnrealizedPnl: string | null;
-  unrealizedPnlPercent: string | null;
+  convertedUnrealizedPnlPercent: string | null;
 };
 
 const API_TIME_ZONE = "America/Sao_Paulo";
@@ -213,7 +213,8 @@ function costRows(
     quantity: position.quantity,
     marketValue: position.convertedMarketValue,
     change: position.convertedUnrealizedPnl,
-    changePercent: position.unrealizedPnlPercent,
+    // Display-currency percent, so it agrees with `change` (FX included).
+    changePercent: position.convertedUnrealizedPnlPercent,
     baselinePrice: null,
     baselineAsOf: null,
     marketPrice: position.marketPrice,

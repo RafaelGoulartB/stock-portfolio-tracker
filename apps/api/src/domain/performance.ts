@@ -12,8 +12,9 @@ import {
 } from "../lib/decimal";
 import {
   type ConsolidationInput,
-  type consolidatePositions,
+  consolidatePositions,
   consolidatePositionsAtEach,
+  convertedCostBasis,
   convertMoney,
 } from "./positions";
 
@@ -212,6 +213,13 @@ export type PerformanceSummary = {
   /** Open positions carried at cost at the last snapshot. */
   unquotedPositions: number;
   usdBrlRate: string | null;
+  /**
+   * Live cash included in today's totals, in the display currency. The
+   * monthly series never includes it: only the current balance is stored.
+   */
+  cashValue: string;
+  /** Current fixed-income balances included in today's value, same rule. */
+  fixedIncomeValue: string;
 };
 
 export type PerformanceHistory = {
@@ -304,14 +312,21 @@ function valueSnapshot(
   };
 
   for (const position of positions) {
-    const realized = convert(position.realizedPnl, position.currency);
+    // A fixed-income balance is user-maintained and only its current value
+    // is stored, so it has no month-end value; see `withLiveBalances`.
+    if (position.assetClass === "fixed_income") {
+      continue;
+    }
+
+    // Cost and realized results carry each trade's own USD/BRL; only trades
+    // without one fall back to the snapshot day's rate.
+    const basis = costBasisAt(position, input.displayCurrency, rate, date);
+    const realized = roundMoney(basis.realizedPnl);
     valuation.realizedPnl = add(valuation.realizedPnl, realized);
 
     const open = !isZero(toDecimal(position.quantity));
     const close = open ? input.priceAt(position.ticker, date.asOf) : null;
-    const investedCost = open
-      ? convert(position.investedCost, position.currency)
-      : ZERO;
+    const investedCost = open ? roundMoney(basis.investedCost) : ZERO;
     const marketValue = open
       ? close == null
         ? investedCost
@@ -367,6 +382,23 @@ function valueSnapshot(
   return valuation;
 }
 
+function roundMoney(value: Decimal): Decimal {
+  return toDecimal(formatDecimal(value, MONEY_PLACES));
+}
+
+function costBasisAt(
+  position: ConsolidatedSnapshotPosition,
+  displayCurrency: Currency,
+  rate: string | null,
+  date: PerformanceSnapshotDate,
+): { investedCost: Decimal; realizedPnl: Decimal } {
+  try {
+    return convertedCostBasis(position, displayCurrency, rate);
+  } catch {
+    throw new Error(`No USD/BRL rate available for ${date.asOf}`);
+  }
+}
+
 /** Cash moved by one trade: fees increase a buy and reduce a sell. */
 function tradeCash(entry: ConsolidationInput): Decimal {
   const gross = mul(toDecimal(entry.quantity), toDecimal(entry.price));
@@ -398,7 +430,9 @@ function accumulateFlow(
   if (entry.currency === input.displayCurrency) {
     amount = toDecimal(native);
   } else {
-    const rate = input.rateAt(entry.tradedAt) ?? input.rateAt(current);
+    // The stored trade-date rate is the one the cost basis used.
+    const rate =
+      entry.usdBrlRate ?? input.rateAt(entry.tradedAt) ?? input.rateAt(current);
 
     if (rate == null) {
       throw new Error(`No USD/BRL rate available for ${entry.tradedAt}`);
@@ -451,7 +485,11 @@ function monthFlowsByMonth(
     const current = boundaries[month];
 
     while (index < ordered.length && ordered[index].tradedAt <= current) {
-      accumulateFlow(input, flows[month], ordered[index], previous, current);
+      // Fixed income never enters a month's value, so its deposits must not
+      // enter a month's flows either.
+      if (ordered[index].assetClass !== "fixed_income") {
+        accumulateFlow(input, flows[month], ordered[index], previous, current);
+      }
       index += 1;
     }
 
@@ -750,9 +788,159 @@ export function buildPerformanceHistory(
         maxDrawdown == null ? null : formatDecimal(maxDrawdown, RATE_PLACES),
       unquotedPositions: last.unquotedPositions,
       usdBrlRate: last.usdBrlRate,
+      cashValue: formatDecimal(ZERO, MONEY_PLACES),
+      fixedIncomeValue: formatDecimal(ZERO, MONEY_PLACES),
     },
     byAssetClass,
     byAsset,
+  };
+}
+
+/**
+ * Today's fixed-income balances in the display currency: quantity times the
+ * stored manual value, or the remaining cost when no value was ever set.
+ */
+export function liveFixedIncome(
+  transactions: readonly ConsolidationInput[],
+  manualPrices: Readonly<Record<string, string>>,
+  displayCurrency: Currency,
+  usdBrlRate: string | null,
+): { value: string; positions: number } {
+  let value = ZERO;
+  let positions = 0;
+
+  for (const position of consolidatePositions(transactions)) {
+    if (
+      position.assetClass !== "fixed_income" ||
+      isZero(toDecimal(position.quantity))
+    ) {
+      continue;
+    }
+
+    const price = manualPrices[position.ticker];
+    const native =
+      price === undefined
+        ? position.investedCost
+        : formatDecimal(
+            mul(toDecimal(position.quantity), toDecimal(price)),
+            MONEY_PLACES,
+          );
+
+    if (position.currency !== displayCurrency && usdBrlRate === null) {
+      throw new Error("No USD/BRL rate available for fixed income");
+    }
+
+    value = add(
+      value,
+      toDecimal(
+        convertMoney(
+          native,
+          position.currency,
+          displayCurrency,
+          usdBrlRate ?? "1",
+        ),
+      ),
+    );
+    positions += 1;
+  }
+
+  return { value: formatDecimal(value, MONEY_PLACES), positions };
+}
+
+/** Current balances that only exist as today's value, in the display currency. */
+export type LiveBalances = {
+  /** The BRL cash balance, converted. */
+  cash: string;
+  /** Sum of the current fixed-income balances. */
+  fixedIncome: string;
+  fixedIncomePositions: number;
+};
+
+/**
+ * Adds balances that have no history to today's totals so they match the
+ * Positions screen. Cash joins the value, the cost basis and the
+ * open-result percent base with a zero result. Fixed income joins the
+ * value only: it is user-maintained, so it never enters a calculated return.
+ *
+ * The monthly series stays free of both: back-filling today's balance into
+ * past month ends, or letting it appear in the last one, would read as a
+ * return nobody earned.
+ */
+export function withLiveBalances(
+  history: PerformanceHistory,
+  live: LiveBalances,
+): PerformanceHistory {
+  const cash = toDecimal(live.cash);
+  const fixedIncome = toDecimal(live.fixedIncome);
+
+  if (isZero(cash) && isZero(fixedIncome)) {
+    return history;
+  }
+
+  const { summary } = history;
+  const value = add(toDecimal(summary.currentValue), add(cash, fixedIncome));
+  const cost = add(toDecimal(summary.investedCost), cash);
+  const unrealized = toDecimal(summary.unrealizedPnl);
+  const zeroMoney = formatDecimal(ZERO, MONEY_PLACES);
+  const extraClasses: PerformanceClassBreakdown[] = [];
+
+  if (!isZero(cash)) {
+    const money = formatDecimal(cash, MONEY_PLACES);
+    extraClasses.push({
+      assetClass: "cash",
+      marketValue: money,
+      investedCost: money,
+      unrealizedPnl: zeroMoney,
+      unrealizedPnlPercent: formatDecimal(ZERO, RATE_PLACES),
+      realizedPnl: zeroMoney,
+      weight: null,
+      contribution: formatDecimal(ZERO, RATE_PLACES),
+      positions: 1,
+      unquotedPositions: 0,
+    });
+  }
+
+  if (!isZero(fixedIncome)) {
+    const money = formatDecimal(fixedIncome, MONEY_PLACES);
+    // No return is calculated for a user-maintained balance.
+    extraClasses.push({
+      assetClass: "fixed_income",
+      marketValue: money,
+      investedCost: money,
+      unrealizedPnl: zeroMoney,
+      unrealizedPnlPercent: null,
+      realizedPnl: zeroMoney,
+      weight: null,
+      contribution: null,
+      positions: live.fixedIncomePositions,
+      unquotedPositions: 0,
+    });
+  }
+
+  return {
+    ...history,
+    summary: {
+      ...summary,
+      currentValue: formatDecimal(value, MONEY_PLACES),
+      investedCost: formatDecimal(cost, MONEY_PLACES),
+      unrealizedPnlPercent: ratio(unrealized, cost),
+      cashValue: formatDecimal(cash, MONEY_PLACES),
+      fixedIncomeValue: formatDecimal(fixedIncome, MONEY_PLACES),
+    },
+    byAssetClass: [...history.byAssetClass, ...extraClasses]
+      .map((entry) => ({
+        ...entry,
+        weight: ratio(toDecimal(entry.marketValue), value),
+        contribution:
+          entry.assetClass === "fixed_income"
+            ? null
+            : ratio(toDecimal(entry.unrealizedPnl), cost),
+      }))
+      .sort((a, b) => Number(b.marketValue) - Number(a.marketValue)),
+    byAsset: history.byAsset.map((entry) => ({
+      ...entry,
+      contribution: ratio(toDecimal(entry.unrealizedPnl), cost),
+    })),
   };
 }
 

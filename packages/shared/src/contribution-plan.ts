@@ -30,6 +30,15 @@ export const contributionPlanConfigSchema = z.object({
   ),
   /** Diversification ceiling for a relatively large contribution. */
   maxAssets: z.number().int().min(1).max(50),
+  /**
+   * Share of its tilted target a not-yet-held asset may reach in one
+   * contribution, so a new position is built over several cheques.
+   * `0.5` means half the target.
+   */
+  starterFraction: positiveDecimal.refine(
+    (value) => Number(value) <= 1,
+    "Must be at most 1",
+  ),
 });
 
 export type ContributionPlanConfig = z.infer<
@@ -74,12 +83,14 @@ export type ContributionPlanConfigUpdate = z.infer<
  * Small books need a larger relative move to justify another name; large
  * books can rebalance in finer weight steps because the same percentage is
  * already a real cheque. One name may not take more than 70% when others
- * sit at the table. Five names is the diversification ceiling.
+ * sit at the table. Five names is the diversification ceiling. A new
+ * position reaches at most half its target in its first contribution.
  */
 export const DEFAULT_CONTRIBUTION_PLAN_CONFIG: ContributionPlanConfig = {
-  version: "2026-09-07b",
+  version: "2026-09-26-v2",
   smallBookImpact: "0.02",
   largeBookImpact: "0.005",
   maxShare: "0.70",
   maxAssets: 5,
+  starterFraction: "0.5",
 };

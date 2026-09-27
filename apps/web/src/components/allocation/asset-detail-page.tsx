@@ -1,15 +1,19 @@
 import { t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
-import { positiveDecimal, tickerSchema } from "@portifolio-tracker/shared";
+import { tickerSchema } from "@portifolio-tracker/shared";
 import { useNavigate, useParams, useRouter } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { type ReactNode, useMemo } from "react";
 import { toast } from "sonner";
-import { scoreReason } from "@/components/allocation/allocation-table";
+import {
+  reviewNote,
+  scoreReason,
+} from "@/components/allocation/allocation-table";
 import { AssetDetailChart } from "@/components/allocation/asset-detail-chart";
 import { AssetMovements } from "@/components/allocation/asset-movements";
 import { AssetReviews } from "@/components/allocation/asset-reviews";
+import { AssetSplits } from "@/components/allocation/asset-splits";
 import { AssetClassLabel, CurrencyBadge } from "@/components/asset-labels";
 import { AssetLogo } from "@/components/asset-logo";
 import { ExternalAssetLinksMenu } from "@/components/external-asset-links-menu";
@@ -17,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAllocationListInput } from "@/lib/allocation-query";
 import {
   findReview,
   removeReviewFromList,
@@ -27,16 +32,16 @@ import {
 import { trpc } from "@/lib/api";
 import {
   formatMoney,
+  formatMultiplier,
   formatQuantity,
   formatSignedWeightPrecise,
   formatTradeDate,
   formatWeightPrecise,
   pnlClassName,
 } from "@/lib/format";
-import { useFxQuote, useFxRequest } from "@/lib/fx";
+import { useFxQuote } from "@/lib/fx";
 import { formatDecimalInput } from "@/lib/numeric-input";
 import { formatQuarterTitle, toQuarter } from "@/lib/quarters";
-import { useSettings } from "@/lib/settings";
 import { isFxRateRequired, queryErrorMessage } from "@/lib/trpcErrors";
 import { cn } from "@/lib/utils";
 
@@ -51,28 +56,9 @@ export function AssetDetailPage() {
   const ticker = parsedTicker.success
     ? parsedTicker.data
     : rawTicker.toUpperCase();
-  const { displayCurrency, quoteSource, manualPrices } = useSettings();
   const fx = useFxQuote();
-  const fxRequest = useFxRequest();
 
-  const sanitizedManualPrices = useMemo(
-    () =>
-      Object.fromEntries(
-        Object.entries(manualPrices).filter(
-          ([, price]) => positiveDecimal.safeParse(price).success,
-        ),
-      ),
-    [manualPrices],
-  );
-  const queryInput = {
-    displayCurrency,
-    ...fxRequest,
-    quoteSource,
-    manualPrices:
-      quoteSource === "manual" && Object.keys(sanitizedManualPrices).length > 0
-        ? sanitizedManualPrices
-        : undefined,
-  };
+  const queryInput = useAllocationListInput();
 
   const allocation = trpc.allocation.list.useQuery(queryInput);
   const history = trpc.allocation.history.useQuery(
@@ -242,6 +228,11 @@ export function AssetDetailPage() {
             <p className="max-w-3xl text-sm text-muted-foreground">
               {scoreReason(row, i18n)}
             </p>
+            {reviewNote(row, i18n) !== null ? (
+              <p className="max-w-3xl text-sm text-amber-600 dark:text-amber-400">
+                {reviewNote(row, i18n)}
+              </p>
+            ) : null}
           </header>
 
           <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -301,19 +292,82 @@ export function AssetDetailPage() {
             />
             <Stat
               label={i18n._(
+                t({
+                  id: "allocation.colAdjustedTarget",
+                  message: "Adjusted target",
+                }),
+              )}
+              value={
+                row.score.tiltedTarget === null
+                  ? "—"
+                  : formatWeightPrecise(row.score.tiltedTarget)
+              }
+              hint={
+                row.score.tiltedTarget === null
+                  ? undefined
+                  : row.score.momentumZ === null
+                    ? i18n._(
+                        t({
+                          id: "allocation.detailAdjustedHintNoTrend",
+                          message: `valuation ${formatMultiplier(row.score.valuationTilt ?? "1")} · book rebalance ${formatMultiplier(row.score.momentumTilt ?? "1")}`,
+                        }),
+                      )
+                    : i18n._(
+                        t({
+                          id: "allocation.detailAdjustedHint",
+                          message: `valuation ${formatMultiplier(row.score.valuationTilt ?? "1")} · trend ${formatMultiplier(row.score.momentumTilt ?? "1")}`,
+                        }),
+                      )
+              }
+            />
+            <Stat
+              label={i18n._(
+                t({ id: "allocation.detailTrend", message: "12-month trend" }),
+              )}
+              value={
+                row.score.momentumZ === null
+                  ? "—"
+                  : i18n._(
+                      t({
+                        id: "allocation.detailTrendValue",
+                        message: `${Number(row.score.momentumZ) >= 0 ? "+" : ""}${formatDecimalInput(Number(row.score.momentumZ).toFixed(2), i18n.locale)} σ`,
+                      }),
+                    )
+              }
+              hint={i18n._(
+                t({
+                  id: "allocation.detailTrendHint",
+                  message: "vs. the rest of the portfolio",
+                }),
+              )}
+            />
+            <Stat
+              label={i18n._(
                 t({ id: "allocation.colCurrent", message: "Current" }),
               )}
               value={formatWeightPrecise(row.currentWeight)}
             />
             <Stat
-              label={i18n._(t({ id: "allocation.colGap", message: "Gap" }))}
+              label={i18n._(
+                t({ id: "allocation.colGapAdjusted", message: "Adj. gap" }),
+              )}
               value={
-                row.gapWeight === null
+                row.score.gap === null
                   ? "—"
-                  : formatSignedWeightPrecise(row.gapWeight)
+                  : formatSignedWeightPrecise(row.score.gap)
+              }
+              hint={
+                row.gapWeight === null
+                  ? undefined
+                  : i18n._(
+                      t({
+                        id: "allocation.detailGapHint",
+                        message: `${formatSignedWeightPrecise(row.gapWeight)} to your original target`,
+                      }),
+                    )
               }
               className={
-                row.gapWeight ? pnlClassName(row.gapWeight) : undefined
+                row.score.gap ? pnlClassName(row.score.gap) : undefined
               }
             />
             <Stat
@@ -351,8 +405,8 @@ export function AssetDetailPage() {
                 row.score.cooldownUntil
                   ? i18n._(
                       t({
-                        id: "allocation.cooldownIcon",
-                        message: `In cooldown until ${row.score.cooldownUntil}`,
+                        id: "allocation.cooldownRampIcon",
+                        message: `Lower priority until ${row.score.cooldownUntil}`,
                       }),
                     )
                   : undefined
@@ -413,6 +467,9 @@ export function AssetDetailPage() {
           ) : null}
           {ledger.data ? (
             <AssetMovements row={row} ledger={ledger.data} />
+          ) : null}
+          {ledger.data && ledger.data.trades.length > 0 ? (
+            <AssetSplits ticker={ticker} />
           ) : null}
         </>
       ) : null}

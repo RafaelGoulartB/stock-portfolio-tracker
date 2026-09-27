@@ -7,6 +7,7 @@ import {
   assetReviews,
   cashBalances,
   categories,
+  corporateActions,
   transactions,
   userContributionPlanConfigs,
   userScoreConfigs,
@@ -16,6 +17,7 @@ import { protectedProcedure, router } from "../trpc";
 async function countForUser(
   table:
     | typeof transactions
+    | typeof corporateActions
     | typeof allocationAssets
     | typeof assetReviews
     | typeof categories
@@ -43,6 +45,7 @@ export const dataRouter = router({
       scoreConfigCount,
       contributionPlanConfigCount,
       cashBalanceCount,
+      corporateActionCount,
     ] = await Promise.all([
       countForUser(transactions, ctx.user.id),
       countForUser(allocationAssets, ctx.user.id),
@@ -52,6 +55,7 @@ export const dataRouter = router({
       countForUser(userScoreConfigs, ctx.user.id),
       countForUser(userContributionPlanConfigs, ctx.user.id),
       countForUser(cashBalances, ctx.user.id),
+      countForUser(corporateActions, ctx.user.id),
     ]);
 
     return {
@@ -63,6 +67,7 @@ export const dataRouter = router({
       scoreConfigs: scoreConfigCount,
       contributionPlanConfigs: contributionPlanConfigCount,
       cashBalances: cashBalanceCount,
+      corporateActions: corporateActionCount,
     };
   }),
 
@@ -85,6 +90,9 @@ export const dataRouter = router({
         await tx
           .delete(transactions)
           .where(eq(transactions.userId, ctx.user.id));
+        await tx
+          .delete(corporateActions)
+          .where(eq(corporateActions.userId, ctx.user.id));
         await tx.delete(categories).where(eq(categories.userId, ctx.user.id));
         await tx
           .delete(userScoreConfigs)

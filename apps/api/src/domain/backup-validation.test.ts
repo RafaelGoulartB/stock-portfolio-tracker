@@ -23,6 +23,7 @@ function tx(partial: Partial<TransactionData> = {}): TransactionData {
     price: "25",
     fees: "0",
     tradedAt: "2026-01-01",
+    usdBrlRate: null,
     notes: null,
     createdAt: new Date(Date.UTC(2026, 0, 1, 0, 0, sequence)),
     ...partial,
@@ -55,6 +56,25 @@ describe("assertBackupTransactionsValid", () => {
         tx({ side: "sell", quantity: "6", tradedAt: "2026-01-02" }),
       ]),
     ).toThrow(/oversells/i);
+  });
+
+  it("counts sales in the units the backup's own splits imply", () => {
+    const ledger = [
+      tx({ side: "buy", quantity: "10", tradedAt: "2026-01-01" }),
+      tx({ side: "sell", quantity: "15", tradedAt: "2026-03-01" }),
+    ];
+
+    expect(() => assertBackupTransactionsValid(ledger)).toThrow(/oversells/i);
+    expect(() =>
+      assertBackupTransactionsValid(ledger, [
+        {
+          ticker: "PETR4",
+          effectiveAt: "2026-02-01",
+          fromQuantity: "1",
+          toQuantity: "2",
+        },
+      ]),
+    ).not.toThrow();
   });
 
   it("rejects a sell backdated before its covering buy", () => {

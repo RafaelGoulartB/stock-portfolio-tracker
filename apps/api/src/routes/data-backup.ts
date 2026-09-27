@@ -9,6 +9,7 @@ import {
   assetReviews,
   cashBalances,
   categories,
+  corporateActions,
   transactions,
   userContributionPlanConfigs,
   userScoreConfigs,
@@ -126,13 +127,15 @@ async function* exportBackup(userId: string): AsyncGenerator<string> {
             ? "cash_balances"
             : entity === "assetReviews"
               ? "asset_reviews"
-              : entity === "assetCategories"
-                ? "asset_categories"
-                : entity === "scoreConfigs"
-                  ? "user_score_configs"
-                  : entity === "contributionPlanConfigs"
-                    ? "user_contribution_plan_configs"
-                    : entity;
+              : entity === "corporateActions"
+                ? "corporate_actions"
+                : entity === "assetCategories"
+                  ? "asset_categories"
+                  : entity === "scoreConfigs"
+                    ? "user_score_configs"
+                    : entity === "contributionPlanConfigs"
+                      ? "user_contribution_plan_configs"
+                      : entity;
       const [result] = await connection`
         select count(*)::text as value
         from ${connection(tableName)}
@@ -218,13 +221,29 @@ async function* exportBackup(userId: string): AsyncGenerator<string> {
 
     for await (const rows of connection`
       select ticker, asset_class as "assetClass", currency, side, quantity,
-        price, fees, traded_at as "tradedAt", notes, created_at as "createdAt"
+        price, fees, traded_at as "tradedAt", usd_brl_rate as "usdBrlRate",
+        notes, created_at as "createdAt"
       from transactions where user_id = ${userId} order by id
     `.cursor(BATCH_SIZE)) {
       for (const data of rows) {
         yield emit({
           type: "record",
           entity: "transactions",
+          data: serializeRow(data),
+        });
+      }
+    }
+
+    for await (const rows of connection`
+      select ticker, kind, effective_at as "effectiveAt",
+        from_quantity as "fromQuantity", to_quantity as "toQuantity", notes,
+        created_at as "createdAt"
+      from corporate_actions where user_id = ${userId} order by id
+    `.cursor(BATCH_SIZE)) {
+      for (const data of rows) {
+        yield emit({
+          type: "record",
+          entity: "corporateActions",
           data: serializeRow(data),
         });
       }
@@ -249,10 +268,23 @@ async function* exportBackup(userId: string): AsyncGenerator<string> {
     for await (const rows of connection`
       select version, absolute_weight_cap as "absoluteWeightCap",
         overweight_block_factor as "overweightBlockFactor",
-        trim_factor as "trimFactor", cooldown_days as "cooldownDays",
+        trim_absolute_band as "trimAbsoluteBand",
+        trim_relative_band as "trimRelativeBand",
+        cooldown_days as "cooldownDays", cooldown_floor as "cooldownFloor",
         grade_window_quarters as "gradeWindowQuarters",
+        grade_half_life_quarters as "gradeHalfLifeQuarters",
+        grade_prior_quarters as "gradePriorQuarters",
         grade_bands as "gradeBands",
         ungraded_multiplier as "ungradedMultiplier",
+        valuation_dead_zone as "valuationDeadZone",
+        valuation_sensitivity as "valuationSensitivity",
+        tilt_min as "tiltMin", tilt_max as "tiltMax",
+        fair_value_half_life_quarters as "fairValueHalfLifeQuarters",
+        ic_reference as "icReference", ic_prior as "icPrior",
+        ic_prior_pairs as "icPriorPairs",
+        momentum_weight as "momentumWeight",
+        momentum_z_cap as "momentumZCap", review_drift as "reviewDrift",
+        sell_band as "sellBand", sell_confidence as "sellConfidence",
         updated_at as "updatedAt"
       from user_score_configs where user_id = ${userId} order by user_id
     `.cursor(BATCH_SIZE)) {
@@ -269,6 +301,7 @@ async function* exportBackup(userId: string): AsyncGenerator<string> {
       select version, small_book_impact as "smallBookImpact",
         large_book_impact as "largeBookImpact",
         max_share as "maxShare", max_assets as "maxAssets",
+        starter_fraction as "starterFraction",
         updated_at as "updatedAt"
       from user_contribution_plan_configs where user_id = ${userId}
       order by user_id
@@ -310,6 +343,7 @@ type ParsedBackup = {
   cashBalances: RecordData<"cashBalances">[];
   assetReviews: RecordData<"assetReviews">[];
   transactions: RecordData<"transactions">[];
+  corporateActions: RecordData<"corporateActions">[];
   assetCategories: RecordData<"assetCategories">[];
   scoreConfigs: RecordData<"scoreConfigs">[];
   contributionPlanConfigs: RecordData<"contributionPlanConfigs">[];
@@ -353,6 +387,7 @@ async function parseBackup(
     cashBalances: [],
     assetReviews: [],
     transactions: [],
+    corporateActions: [],
     assetCategories: [],
     scoreConfigs: [],
     contributionPlanConfigs: [],
@@ -421,6 +456,9 @@ async function parseBackup(
       case "transactions":
         parsed.transactions.push(record.data);
         break;
+      case "corporateActions":
+        parsed.corporateActions.push(record.data);
+        break;
       case "assetCategories":
         parsed.assetCategories.push(record.data);
         break;
@@ -445,7 +483,7 @@ async function parseBackup(
   }
 
   // Replaying a backup must never smuggle in a state a live write would refuse.
-  assertBackupTransactionsValid(parsed.transactions);
+  assertBackupTransactionsValid(parsed.transactions, parsed.corporateActions);
 
   return parsed;
 }
@@ -464,6 +502,9 @@ async function replaceAccountData(parsed: ParsedBackup, userId: string) {
       .where(eq(allocationAssets.userId, userId));
     await tx.delete(cashBalances).where(eq(cashBalances.userId, userId));
     await tx.delete(transactions).where(eq(transactions.userId, userId));
+    await tx
+      .delete(corporateActions)
+      .where(eq(corporateActions.userId, userId));
     await tx.delete(categories).where(eq(categories.userId, userId));
     await tx
       .delete(userScoreConfigs)
@@ -527,6 +568,20 @@ async function replaceAccountData(parsed: ParsedBackup, userId: string) {
         .insert(transactions)
         .values(
           parsed.transactions
+            .slice(index, index + BATCH_SIZE)
+            .map((row) => ({ ...row, userId })),
+        );
+    }
+
+    for (
+      let index = 0;
+      index < parsed.corporateActions.length;
+      index += BATCH_SIZE
+    ) {
+      await tx
+        .insert(corporateActions)
+        .values(
+          parsed.corporateActions
             .slice(index, index + BATCH_SIZE)
             .map((row) => ({ ...row, userId })),
         );

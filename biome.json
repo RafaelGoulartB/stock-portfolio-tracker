@@ -14,7 +14,8 @@
       "!**/coverage",
       "!**/routeTree.gen.ts",
       "!**/pnpm-lock.yaml",
-      "!apps/api/drizzle/meta"
+      "!apps/api/drizzle/meta",
+      "!Docs"
     ]
   },
   "formatter": {

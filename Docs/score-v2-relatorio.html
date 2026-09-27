@@ -1,0 +1,492 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Score de aporte v2 — o que mudou e por quê</title>
+<style>
+.viz-root {
+  color-scheme: light;
+  --page: #f9f9f7;
+  --surface-1: #fcfcfb;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --muted: #898781;
+  --grid: #e1e0d9;
+  --axis: #c3c2b7;
+  --border: rgba(11,11,11,0.10);
+  --series-v2: #2a78d6;
+  --series-v1: #eb6834;
+  --good-text: #006300;
+  --bad-text: #b3261e;
+  --code-bg: #f0efec;
+}
+@media (prefers-color-scheme: dark) {
+  :root:where(:not([data-theme="light"])) .viz-root {
+    color-scheme: dark;
+    --page: #0d0d0d;
+    --surface-1: #1a1a19;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255,255,255,0.10);
+    --series-v2: #3987e5;
+    --series-v1: #d95926;
+    --good-text: #0ca30c;
+    --bad-text: #e66767;
+    --code-bg: #262624;
+  }
+}
+:root[data-theme="dark"] .viz-root {
+  color-scheme: dark;
+  --page: #0d0d0d; --surface-1: #1a1a19; --text-primary: #ffffff; --text-secondary: #c3c2b7;
+  --muted: #898781; --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+  --series-v2: #3987e5; --series-v1: #d95926; --good-text: #0ca30c; --bad-text: #e66767; --code-bg: #262624;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+.viz-root {
+  background: var(--page); color: var(--text-primary);
+  font: 15px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+  min-height: 100vh;
+}
+main { max-width: 980px; margin: 0 auto; padding: 40px 20px 80px; }
+h1 { font-size: 30px; line-height: 1.2; margin: 0 0 8px; letter-spacing: -0.01em; }
+h2 { font-size: 21px; margin: 56px 0 6px; letter-spacing: -0.01em; }
+h3 { font-size: 16px; margin: 0 0 4px; }
+p { margin: 0 0 12px; }
+.lead { color: var(--text-secondary); font-size: 17px; max-width: 760px; }
+.sub { color: var(--text-secondary); margin-bottom: 18px; max-width: 780px; }
+.muted { color: var(--muted); }
+code { font: 13px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; margin-top: 28px; }
+.tile .value { font-size: 30px; font-weight: 650; line-height: 1.1; margin: 6px 0 4px; }
+.tile .label { color: var(--text-secondary); font-size: 13px; }
+.tile .note { color: var(--muted); font-size: 12px; margin-top: 6px; }
+.flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+.step { position: relative; }
+.step .n { display: inline-flex; width: 22px; height: 22px; border-radius: 50%; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; background: var(--code-bg); margin-bottom: 8px; }
+.step p { color: var(--text-secondary); font-size: 14px; margin: 6px 0 0; }
+.formula { display: block; margin-top: 10px; font: 12.5px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--code-bg); padding: 8px 10px; border-radius: 6px; color: var(--text-primary); }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+th, td { text-align: left; padding: 10px 10px; border-bottom: 1px solid var(--grid); vertical-align: top; }
+th { color: var(--text-secondary); font-weight: 600; font-size: 12.5px; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.before { color: var(--bad-text); }
+.after { color: var(--good-text); }
+.chart-card { margin-top: 16px; }
+.chart-head { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.legend { display: flex; gap: 16px; font-size: 13px; color: var(--text-secondary); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { display: inline-block; width: 16px; height: 2px; border-radius: 1px; }
+.legend i.rect { width: 10px; height: 10px; border-radius: 2px; }
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.seg button { font: inherit; font-size: 13px; background: transparent; color: var(--text-secondary); border: 0; padding: 6px 12px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--code-bg); color: var(--text-primary); font-weight: 600; }
+.seg button:focus-visible { outline: 2px solid var(--series-v2); outline-offset: -2px; }
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+svg text { fill: var(--muted); font-size: 11px; font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+svg .direct { font-size: 12px; font-weight: 600; fill: var(--text-secondary); }
+.tooltip { position: fixed; pointer-events: none; background: var(--surface-1); border: 1px solid var(--border); box-shadow: 0 6px 20px rgba(0,0,0,0.14); border-radius: 8px; padding: 8px 10px; font-size: 12.5px; z-index: 10; min-width: 150px; display: none; }
+.tooltip .t { color: var(--text-secondary); margin-bottom: 4px; }
+.tooltip .row { display: flex; align-items: center; gap: 8px; justify-content: space-between; }
+.tooltip .row b { font-variant-numeric: tabular-nums; }
+.tooltip .key { display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary); }
+.tooltip .key i { width: 12px; height: 2px; display: inline-block; }
+details { margin-top: 10px; font-size: 13px; }
+details summary { cursor: pointer; color: var(--text-secondary); }
+details table { margin-top: 8px; font-size: 12.5px; }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.callout { border-left: 3px solid var(--series-v2); padding: 12px 16px; background: var(--surface-1); border-radius: 0 8px 8px 0; margin-top: 16px; color: var(--text-secondary); }
+.callout.warn { border-left-color: var(--series-v1); }
+ul.clean { padding-left: 18px; margin: 8px 0 0; color: var(--text-secondary); }
+ul.clean li { margin-bottom: 6px; }
+.table-wrap { overflow-x: auto; }
+.table-wrap > table { min-width: 620px; }
+@media (max-width: 600px) { main { padding: 28px 14px 60px; } h1 { font-size: 24px; } .card { padding: 14px; } }
+</style>
+</head>
+<body>
+<div class="viz-root">
+<main>
+  <p class="muted" style="margin-bottom:6px">Portfolio Tracker · política <code>2026-09-26-v2</code></p>
+  <h1>Score de aporte v2: o que mudou e por que é melhor</h1>
+  <p class="lead">O score antigo misturava três perguntas diferentes numa única conta. O v2 separa essas perguntas, corrige erros matemáticos que distorciam o valor sugerido para cada ativo e passa a dividir o aporte resolvendo um problema de otimização exato.</p>
+
+  <div class="tiles">
+    <div class="card tile">
+      <div class="label">Distância média até as metas</div>
+      <div class="value">−6%</div>
+      <div class="note">Menor em 173 de 200 cenários simulados, nos dois níveis de erro do fair value</div>
+    </div>
+    <div class="card tile">
+      <div class="label">Meses com dinheiro parado (em 5 anos)</div>
+      <div class="value">2,8 → 0</div>
+      <div class="note">No v1, o cooldown bloqueava e sobrava dinheiro sem destino</div>
+    </div>
+    <div class="card tile">
+      <div class="label">Necessidade calculada no exemplo</div>
+      <div class="value">R$ 15 mil → 35 mil</div>
+      <div class="note">Meta 50%, peso 40%, carteira R$ 100 mil, aporte R$ 50 mil. O valor certo é R$ 35 mil</div>
+    </div>
+    <div class="card tile">
+      <div class="label">Soma das metas ajustadas</div>
+      <div class="value">126% → 100%</div>
+      <div class="note">Com cinco ativos baratos, o v1 inflava todas as metas ao mesmo tempo</div>
+    </div>
+  </div>
+
+  <h2>A ideia central: três perguntas, cada uma com uma resposta</h2>
+  <p class="sub">No v1, o desconto, a nota e o gap eram multiplicados juntos, e a nota acabava encolhendo o <em>destino</em> do ativo. No v2, cada dado tem uma única função.</p>
+  <div class="flow">
+    <div class="card step">
+      <span class="n">1</span>
+      <h3>Para onde ir</h3>
+      <p>A sua meta, inclinada pelo valuation. Quanto mais confiável o fair value (recente, e com nota boa), maior a inclinação. Depois, as metas são reescaladas para manter o total que você definiu.</p>
+      <span class="formula">meta × exp(k · confiança · sinal)</span>
+    </div>
+    <div class="card step">
+      <span class="n">2</span>
+      <h3>Quanto falta</h3>
+      <p>A fração da meta ajustada que ainda falta. Uma meta de 2% vazia fica à frente de uma meta de 10% que já está em 8%.</p>
+      <span class="formula">1 − peso / meta ajustada</span>
+    </div>
+    <div class="card step">
+      <span class="n">3</span>
+      <h3>Com que urgência</h3>
+      <p>A prioridade, dada pela nota (curva contínua e média ponderada por quão recente é) vezes a rampa do cooldown. Ela muda a ordem e a velocidade, nunca a meta.</p>
+      <span class="formula">nota × rampa de cooldown</span>
+    </div>
+    <div class="card step">
+      <span class="n">4</span>
+      <h3>Como dividir o aporte</h3>
+      <p>O planejador calcula tudo contra a carteira <em>depois</em> do aporte e enche primeiro os recipientes mais vazios (water-filling). A solução é exata, obtida pelas condições KKT.</p>
+      <span class="formula">score = máx(lacuna relativa, 0) × prioridade</span>
+    </div>
+  </div>
+
+  <h2>Os 11 problemas do v1, antes e depois</h2>
+  <p class="sub">Números calculados com as próprias funções do domínio, na versão antiga (git HEAD) e na nova.</p>
+  <div class="card table-wrap">
+    <table>
+      <thead><tr><th>#</th><th>Problema</th><th class="num">v1</th><th class="num">v2</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Necessidade medida com o peso de antes do aporte, ignorando a diluição (meta 50%, peso 40%, V = R$ 100 mil, C = R$ 50 mil)</td><td class="num before">R$ 15.000</td><td class="num after">R$ 35.000</td></tr>
+        <tr><td>2</td><td>A nota encolhia o destino: meta 10%, peso 5%, nota 3, aporte R$ 20 mil</td><td class="num before">R$ 3.000 (R$ 17 mil parados)</td><td class="num after">R$ 7.000 (chega à meta)</td></tr>
+        <tr><td>3</td><td>Degrau na nota: de 7,99 para 8,00</td><td class="num before">+25% no score</td><td class="num after">+0,2%</td></tr>
+        <tr><td>4</td><td>Soma das metas ajustadas com cinco ativos descontados</td><td class="num before">126%</td><td class="num after">100%</td></tr>
+        <tr><td>5</td><td>Assimetria: preço à metade vs. o dobro do fair value</td><td class="num before">×1,5 vs ×0</td><td class="num after">×1,5 vs ×0,53</td></tr>
+        <tr><td>6</td><td>Um desconto de 3% (ruído de valuation) mexia no ranking</td><td class="num before">+15% no score</td><td class="num after">0%</td></tr>
+        <tr><td>7</td><td>“10% → 8%” vs “2% → 0%”</td><td class="num before">empate (0,02 e 0,02)</td><td class="num after">20% vs 100% faltando</td></tr>
+        <tr><td>8</td><td>Fair value e notas antigos valiam como novos</td><td class="num before">sem decaimento</td><td class="num after">meia-vida de 2 e 4 trimestres</td></tr>
+        <tr><td>9</td><td>Cooldown bloqueava por 45 dias, mesmo após uma compra pequena</td><td class="num before">score 0</td><td class="num after">prioridade ×0,35 (6 dias depois)</td></tr>
+        <tr><td>10</td><td>Spread e IOF de ativos em USD não entravam no score</td><td class="num before">ignorados</td><td class="num after">o desconto precisa superá-los</td></tr>
+        <tr><td>11</td><td>Uma posição nova podia levar a meta inteira de uma vez</td><td class="num before">até 70% do aporte</td><td class="num after">no máx. 50% da meta por aporte</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2>1 · Como o preço move a meta</h2>
+  <p class="sub">Multiplicador aplicado à meta em função de <strong>preço ÷ fair value</strong>, com confiança máxima e antes da reescala. O v1 não tinha zona de ruído, tinha um teto implícito de ×2 e desabava para zero quando o preço chegava ao dobro do fair value. O v2 é simétrico em log, ignora ±5% como ruído e fica limitado a ×0,5–×1,5.</p>
+  <div class="card chart-card">
+    <div class="chart-head">
+      <strong>Multiplicador da meta</strong>
+      <div class="legend" aria-hidden="true"><span><i style="background:var(--series-v2)"></i>v2</span><span><i style="background:var(--series-v1)"></i>v1</span></div>
+    </div>
+    <div id="chart-tilt" role="img" aria-label="Gráfico de linha: multiplicador da meta em função de preço sobre fair value, v1 e v2"></div>
+    <details><summary>Ver tabela</summary><div id="table-tilt"></div></details>
+  </div>
+
+  <h2>2 · Como a nota vira prioridade</h2>
+  <p class="sub">O v1 usava degraus (um “PROCV aproximado”); o v2 interpola entre os mesmos pontos. Além disso, com poucas notas o multiplicador é puxado para o neutro: uma única nota 3 dá ×0,83, e quatro notas 3 consistentes dão ×0,73.</p>
+  <div class="card chart-card">
+    <div class="chart-head">
+      <strong>Multiplicador de prioridade por nota média</strong>
+      <div class="legend" aria-hidden="true"><span><i style="background:var(--series-v2)"></i>v2 (evidência plena)</span><span><i style="background:var(--series-v1)"></i>v1</span></div>
+    </div>
+    <div id="chart-grade" role="img" aria-label="Gráfico de linha: multiplicador por nota, degraus do v1 contra curva contínua do v2"></div>
+    <details><summary>Ver tabela</summary><div id="table-grade"></div></details>
+  </div>
+
+  <h2>3 · Mesma lacuna, metas diferentes</h2>
+  <p class="sub">R$ 10 mil numa carteira de R$ 1 milhão. O ativo A está em 8% de uma meta de 10%, e o B em 0,2% de uma meta de 2%. Os dois estão 2 pontos abaixo, então o v1 dividia meio a meio. O v2 vê que B está 90% vazio e o enche primeiro (até o teto de 70%). O gráfico mostra quanto de cada meta fica preenchido depois do aporte.</p>
+  <div class="card chart-card">
+    <div class="chart-head">
+      <strong>Preenchimento da meta após o aporte</strong>
+      <div class="legend" aria-hidden="true"><span><i class="rect" style="background:var(--series-v2)"></i>v2</span><span><i class="rect" style="background:var(--series-v1)"></i>v1</span></div>
+    </div>
+    <div id="chart-fill" role="img" aria-label="Barras: preenchimento da meta de A e B após o aporte, v1 e v2"></div>
+    <details><summary>Ver tabela</summary><div id="table-fill"></div></details>
+  </div>
+
+  <h2>4 · Simulação: v1 vs v2 em 200 cenários</h2>
+  <p class="sub">11 ativos com metas de 4% a 15%, carteira inicial de R$ 50 mil fora das metas, aportes de R$ 2 mil por mês durante 5 anos. Os preços revertem ao valor intrínseco, e o seu fair value é esse valor com erro de 10% (valuation bom) ou 25% (valuation ruidoso). Os mesmos cenários passam pelas duas versões do motor.</p>
+  <div class="card chart-card">
+    <div class="chart-head">
+      <strong>Distância média até as metas, mês a mês (RMS, p.p.)</strong>
+      <div class="seg" role="group" aria-label="Erro do fair value">
+        <button type="button" data-noise="0.1" aria-pressed="true">Erro do FV 10%</button>
+        <button type="button" data-noise="0.25" aria-pressed="false">Erro do FV 25%</button>
+      </div>
+    </div>
+    <div class="legend" aria-hidden="true" style="margin-bottom:6px"><span><i style="background:var(--series-v2)"></i>v2</span><span><i style="background:var(--series-v1)"></i>v1</span></div>
+    <div id="chart-sim" role="img" aria-label="Gráfico de linha: distância até as metas ao longo de 60 meses, v1 e v2"></div>
+    <div class="table-wrap" style="margin-top:14px"><table id="table-sim"></table></div>
+  </div>
+  <div class="callout warn">
+    <strong style="color:var(--text-primary)">Leitura honesta:</strong> o ganho claro do v2 é <em>disciplina</em>: fica mais perto das metas e não deixa dinheiro parado. Em retorno, as duas versões ficam praticamente empatadas (diferença de ~0,1–0,2%). Com um valuation ruidoso, o v2 ganha em 112 de 200 cenários; com um valuation muito preciso, o v1 compra um pouco mais barato. A primeira versão do v2 usava uma zona de ruído de 10% e perdia sinal demais nesse caso. A simulação mostrou isso, e o padrão foi ajustado para <strong>5%</strong>. Se você confia muito nos seus valuations, reduza a zona ou aumente a sensibilidade em Documentação → Score de aporte.
+  </div>
+
+  <h2>O que ficou igual, o que é configurável e o que ficou de fora</h2>
+  <div class="two">
+    <div class="card">
+      <h3>Preservado</h3>
+      <ul class="clean">
+        <li>Decimais exatos; exponencial e logaritmo só em razões adimensionais</li>
+        <li>Escada de regras com o motivo exibido na tabela (sem meta, sem cotação, redução, tetos, cooldown)</li>
+        <li>Rebalanceamento só com aportes: nunca sugere venda para comprar</li>
+        <li>Lotes inteiros na B3 e sobra sempre informada</li>
+        <li>Política personalizada existente migrada: o <code>trimFactor</code> 1,2 vira banda relativa de 20%</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Novos ajustes (todos editáveis)</h3>
+      <ul class="clean">
+        <li>Banda de ruído (5%), sensibilidade (1) e inclinação mínima/máxima (×0,5–×1,5)</li>
+        <li>Meia-vida do fair value (2 trimestres) e da nota (4)</li>
+        <li>Nota a priori (1 trimestre) e prioridade logo após uma compra (×0,25)</li>
+        <li>Bandas de redução 5/25: 5 p.p. ou 25% da meta, o que for mais apertado</li>
+        <li>Posição inicial: no máximo 50% da meta por aporte</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Ficou de fora, de propósito</h3>
+      <ul class="clean">
+        <li>Projeção do fair value pelo custo de capital (exige Ke por ativo); o decaimento cobre o risco</li>
+        <li>Metas por moeda ou categoria e filtro de momentum: cada um pede um plano próprio</li>
+        <li>Backtest com preços históricos no repositório (a simulação acima foi descartável)</li>
+      </ul>
+    </div>
+  </div>
+  <p class="muted" style="margin-top:28px;font-size:13px">Referências: Black & Litterman (1992), para combinar metas estratégicas com visões de preço; Graham, para a margem de segurança (zona de ruído); Swedroe, para as bandas de tolerância 5/25; e rebalanceamento por fluxo de caixa como mínimos quadrados com restrições (water-filling, condições KKT).</p>
+</main>
+<div class="tooltip" id="tooltip" role="status" aria-live="polite"></div>
+</div>
+
+<script>
+const SIM = {"0.1": {"v1": {"series": [3.931, 3.643, 3.333, 3.132, 2.886, 2.711, 2.558, 2.436, 2.37, 2.234, 2.203, 2.164, 2.108, 2.027, 1.983, 1.947, 1.903, 1.849, 1.849, 1.791, 1.787, 1.774, 1.809, 1.8, 1.785, 1.779, 1.768, 1.767, 1.771, 1.773, 1.782, 1.765, 1.748, 1.701, 1.674, 1.671, 1.666, 1.645, 1.645, 1.647, 1.643, 1.663, 1.655, 1.658, 1.661, 1.66, 1.68, 1.675, 1.689, 1.714, 1.694, 1.687, 1.684, 1.707, 1.733, 1.766, 1.78, 1.785, 1.816, 1.821], "te": 0.019664844428502862, "capture": 0.119434675764239, "finalRatio": 1.4674269166549652, "monthsIdle": 2.795, "orders": 1.3016666666666663}, "v2": {"series": [3.927, 3.536, 3.248, 2.994, 2.755, 2.565, 2.423, 2.297, 2.218, 2.082, 2.043, 1.985, 1.926, 1.865, 1.802, 1.774, 1.749, 1.702, 1.692, 1.653, 1.656, 1.659, 1.694, 1.682, 1.67, 1.647, 1.637, 1.644, 1.639, 1.636, 1.639, 1.634, 1.609, 1.571, 1.54, 1.543, 1.543, 1.527, 1.53, 1.539, 1.534, 1.542, 1.545, 1.553, 1.559, 1.56, 1.586, 1.581, 1.597, 1.626, 1.599, 1.587, 1.577, 1.599, 1.628, 1.653, 1.667, 1.656, 1.706, 1.727], "te": 0.018426580790567394, "capture": 0.1147478640721554, "finalRatio": 1.4655149478570215, "monthsIdle": 0.005, "orders": 1.1955833333333326}, "teWins": 173, "valueWins": 79}, "0.25": {"v1": {"series": [3.965, 3.698, 3.446, 3.212, 3.004, 2.847, 2.677, 2.578, 2.537, 2.378, 2.36, 2.328, 2.264, 2.173, 2.134, 2.099, 2.053, 2.035, 2, 1.946, 1.952, 1.957, 1.987, 1.973, 1.955, 1.944, 1.932, 1.9, 1.904, 1.908, 1.887, 1.89, 1.866, 1.811, 1.792, 1.789, 1.763, 1.733, 1.733, 1.738, 1.739, 1.771, 1.76, 1.771, 1.77, 1.769, 1.78, 1.78, 1.781, 1.802, 1.779, 1.765, 1.758, 1.782, 1.802, 1.824, 1.834, 1.823, 1.858, 1.859], "te": 0.020825993875357135, "capture": 0.10127077579936891, "finalRatio": 1.45060209654702, "monthsIdle": 2.36, "orders": 1.2131666666666667}, "v2": {"series": [3.941, 3.571, 3.316, 3.067, 2.847, 2.684, 2.527, 2.408, 2.37, 2.225, 2.184, 2.148, 2.083, 2.008, 1.972, 1.931, 1.884, 1.867, 1.835, 1.776, 1.773, 1.783, 1.808, 1.791, 1.773, 1.751, 1.742, 1.731, 1.738, 1.727, 1.726, 1.719, 1.708, 1.657, 1.638, 1.637, 1.632, 1.621, 1.618, 1.616, 1.618, 1.638, 1.619, 1.632, 1.627, 1.647, 1.662, 1.667, 1.674, 1.712, 1.678, 1.665, 1.665, 1.697, 1.72, 1.731, 1.734, 1.725, 1.766, 1.784], "te": 0.019415503338904298, "capture": 0.10162331687155503, "finalRatio": 1.4528017436000042, "monthsIdle": 0.005, "orders": 1.1661666666666664}, "teWins": 173, "valueWins": 112}};
+const fmtPct = (x, d = 1) => (x * 100).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d }) + "%";
+const fmtNum = (x, d = 2) => x.toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
+const tooltip = document.getElementById("tooltip");
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs = {}, parent) {
+  const node = document.createElementNS(NS, tag);
+  for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, v);
+  if (parent) parent.appendChild(node);
+  return node;
+}
+function showTip(evt, title, rows) {
+  tooltip.replaceChildren();
+  const t = document.createElement("div"); t.className = "t"; t.textContent = title; tooltip.appendChild(t);
+  for (const r of rows) {
+    const row = document.createElement("div"); row.className = "row";
+    const key = document.createElement("span"); key.className = "key";
+    const i = document.createElement("i"); i.style.background = r.color; key.appendChild(i);
+    key.appendChild(document.createTextNode(r.name));
+    const b = document.createElement("b"); b.textContent = r.value;
+    row.append(key, b); tooltip.appendChild(row);
+  }
+  tooltip.style.display = "block";
+  const w = tooltip.offsetWidth, h = tooltip.offsetHeight;
+  let x = evt.clientX + 14, y = evt.clientY + 14;
+  if (x + w > innerWidth - 8) x = evt.clientX - w - 14;
+  if (y + h > innerHeight - 8) y = evt.clientY - h - 14;
+  tooltip.style.left = x + "px"; tooltip.style.top = y + "px";
+}
+function hideTip() { tooltip.style.display = "none"; }
+const css = (name) => getComputedStyle(document.querySelector(".viz-root")).getPropertyValue(name).trim();
+
+function table(container, head, rows) {
+  const t = document.createElement("table");
+  const tr = document.createElement("tr");
+  head.forEach((h, i) => { const th = document.createElement("th"); th.textContent = h; if (i) th.className = "num"; tr.appendChild(th); });
+  const thead = document.createElement("thead"); thead.appendChild(tr); t.appendChild(thead);
+  const tb = document.createElement("tbody");
+  rows.forEach((r) => { const row = document.createElement("tr"); r.forEach((c, i) => { const td = document.createElement("td"); td.textContent = c; if (i) td.className = "num"; row.appendChild(td); }); tb.appendChild(row); });
+  t.appendChild(tb); container.replaceChildren(t);
+}
+
+/** Line chart with crosshair tooltip; one y-axis; direct labels at line ends. */
+function lineChart(container, { xs, series, xFmt, yFmt, yMin, yMax, yTicks, xTicks, xLabel, step = false }) {
+  container.replaceChildren();
+  const W = Math.max(300, container.clientWidth || 900), H = W < 600 ? 240 : 320, m = { t: 12, r: 36, b: 40, l: 46 };
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}` }, container);
+  const x = (v) => m.l + ((v - xs[0]) / (xs[xs.length - 1] - xs[0])) * (W - m.l - m.r);
+  const y = (v) => m.t + (1 - (v - yMin) / (yMax - yMin)) * (H - m.t - m.b);
+  for (const t of yTicks) {
+    el("line", { x1: m.l, x2: W - m.r, y1: y(t), y2: y(t), stroke: css("--grid"), "stroke-width": 1 }, svg);
+    const tx = el("text", { x: m.l - 8, y: y(t) + 4, "text-anchor": "end" }, svg); tx.textContent = yFmt(t);
+  }
+  el("line", { x1: m.l, x2: W - m.r, y1: H - m.b, y2: H - m.b, stroke: css("--axis"), "stroke-width": 1 }, svg);
+  const shown = W < 600 ? xTicks.filter((_, i) => i % 2 === 0 || i === xTicks.length - 1) : xTicks;
+  for (const t of shown) {
+    const tx = el("text", { x: x(t), y: H - m.b + 18, "text-anchor": "middle" }, svg); tx.textContent = xFmt(t);
+  }
+  if (xLabel) { const tx = el("text", { x: (m.l + W - m.r) / 2, y: H - 4, "text-anchor": "middle" }, svg); tx.textContent = xLabel; }
+  for (const s of series) {
+    let d = "";
+    s.values.forEach((v, i) => {
+      const px = x(xs[i]), py = y(v);
+      if (i === 0) d += `M${px},${py}`;
+      else if (step) d += `H${px}V${py}`;
+      else d += `L${px},${py}`;
+    });
+    el("path", { d, fill: "none", stroke: s.color, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }, svg);
+    const last = s.values[s.values.length - 1];
+    const lab = el("text", { x: W - m.r + 6, y: y(last) + 4 + (s.labelDy || 0), class: "direct" }, svg); lab.textContent = s.name;
+  }
+  const cross = el("line", { y1: m.t, y2: H - m.b, stroke: css("--axis"), "stroke-width": 1, visibility: "hidden" }, svg);
+  const dots = series.map((s) => el("circle", { r: 4, fill: s.color, stroke: css("--surface-1"), "stroke-width": 2, visibility: "hidden" }, svg));
+  const hit = el("rect", { x: m.l, y: m.t, width: W - m.l - m.r, height: H - m.t - m.b, fill: "transparent", tabindex: 0 }, svg);
+  let focusIndex = 0;
+  function at(i, evt) {
+    const px = x(xs[i]);
+    cross.setAttribute("x1", px); cross.setAttribute("x2", px); cross.setAttribute("visibility", "visible");
+    series.forEach((s, k) => { dots[k].setAttribute("cx", px); dots[k].setAttribute("cy", y(s.values[i])); dots[k].setAttribute("visibility", "visible"); });
+    const rect = svg.getBoundingClientRect();
+    const e = evt || { clientX: rect.left + (px / W) * rect.width, clientY: rect.top + rect.height * 0.3 };
+    showTip(e, xFmt(xs[i], true), series.map((s) => ({ name: s.name, value: yFmt(s.values[i], true), color: s.color })));
+  }
+  function nearest(evt) {
+    const rect = svg.getBoundingClientRect();
+    const vx = ((evt.clientX - rect.left) / rect.width) * W;
+    let best = 0; xs.forEach((v, i) => { if (Math.abs(x(v) - vx) < Math.abs(x(xs[best]) - vx)) best = i; });
+    return best;
+  }
+  hit.addEventListener("pointermove", (e) => at(nearest(e), e));
+  hit.addEventListener("pointerleave", () => { cross.setAttribute("visibility", "hidden"); dots.forEach((d) => d.setAttribute("visibility", "hidden")); hideTip(); });
+  hit.addEventListener("focus", () => at(focusIndex));
+  hit.addEventListener("blur", () => { cross.setAttribute("visibility", "hidden"); dots.forEach((d) => d.setAttribute("visibility", "hidden")); hideTip(); });
+  hit.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight") focusIndex = Math.min(xs.length - 1, focusIndex + 1);
+    else if (e.key === "ArrowLeft") focusIndex = Math.max(0, focusIndex - 1);
+    else return;
+    e.preventDefault(); at(focusIndex);
+  });
+}
+
+// 1 · Tilt curve
+function renderTilt() {
+  const xs = []; for (let r = 0.4; r <= 2.0001; r += 0.01) xs.push(Math.round(r * 100) / 100);
+  const v1 = xs.map((r) => Math.max(0, 2 - r));
+  const v2 = xs.map((r) => { const u = Math.log(1 / r); const s = Math.sign(u) * Math.max(0, Math.abs(u) - 0.05); return Math.min(1.5, Math.max(0.5, Math.exp(s))); });
+  lineChart(document.getElementById("chart-tilt"), {
+    xs, xFmt: (v, long) => (long ? "Preço = " : "") + fmtNum(v, long ? 2 : 1) + "× FV",
+    yFmt: (v, long) => "×" + fmtNum(v, long ? 2 : 1), yMin: 0, yMax: 1.7, yTicks: [0, 0.5, 1, 1.5],
+    xTicks: [0.4, 0.6, 0.8, 1, 1.2, 1.4, 1.6, 1.8, 2], xLabel: "preço ÷ fair value",
+    series: [{ name: "v2", values: v2, color: css("--series-v2"), labelDy: -4 }, { name: "v1", values: v1, color: css("--series-v1"), labelDy: -10 }],
+  });
+  const pick = [0.5, 0.7, 0.8, 0.9, 0.97, 1, 1.03, 1.1, 1.25, 1.5, 2];
+  table(document.getElementById("table-tilt"), ["Preço ÷ FV", "v1", "v2"], pick.map((r) => {
+    const i = xs.findIndex((x) => Math.abs(x - r) < 0.001);
+    return [fmtNum(r, 2), "×" + fmtNum(v1[i]), "×" + fmtNum(v2[i])];
+  }));
+}
+
+// 2 · Grade curve
+function renderGrade() {
+  const knots = [[0, 0.5], [4, 0.7], [7, 0.8], [8, 1]];
+  const xs = []; for (let g = 0; g <= 10.0001; g += 0.05) xs.push(Math.round(g * 100) / 100);
+  const v1 = xs.map((g) => { let m = 0.5; for (const [k, v] of knots) if (g >= k - 1e-9) m = v; return m; });
+  const v2 = xs.map((g) => { if (g >= 8) return 1; for (let i = 1; i < knots.length; i += 1) { const [a, ma] = knots[i - 1], [b, mb] = knots[i]; if (g <= b) return ma + ((g - a) / (b - a)) * (mb - ma); } return 1; });
+  lineChart(document.getElementById("chart-grade"), {
+    xs, step: false, xFmt: (v, long) => (long ? "Nota " : "") + fmtNum(v, long ? 2 : 0),
+    yFmt: (v, long) => "×" + fmtNum(v, long ? 3 : 1), yMin: 0.4, yMax: 1.05, yTicks: [0.4, 0.6, 0.8, 1],
+    xTicks: [0, 2, 4, 6, 8, 10], xLabel: "nota média",
+    series: [{ name: "v2", values: v2, color: css("--series-v2"), labelDy: -6 }, { name: "v1", values: v1, color: css("--series-v1"), labelDy: 8 }],
+  });
+  table(document.getElementById("table-grade"), ["Nota", "v1", "v2"], [0, 2, 3.99, 4, 5.5, 6.99, 7, 7.5, 7.99, 8, 10].map((g) => {
+    const i = xs.findIndex((x) => Math.abs(x - Math.round(g * 20) / 20) < 0.001);
+    return [fmtNum(g, 2), "×" + fmtNum(g === 3.99 || g === 6.99 || g === 7.99 ? (g < 4 ? 0.5 : g < 7 ? 0.7 : 0.8) : v1[i], 3), "×" + fmtNum(g === 7.99 ? 0.998 : g === 3.99 ? 0.6995 : g === 6.99 ? 0.7997 : v2[i], 3)];
+  }));
+}
+
+// 3 · Fill bars
+function renderFill() {
+  const data = [
+    { name: "A · meta 10%, em 8%", before: 80000 / 101000, v1: 85000 / 101000, v2: 83000 / 101000, v1m: 5000, v2m: 3000 },
+    { name: "B · meta 2%, em 0,2%", before: 2000 / 20200, v1: 7000 / 20200, v2: 9000 / 20200, v1m: 5000, v2m: 7000 },
+  ];
+  const c = document.getElementById("chart-fill"); c.replaceChildren();
+  const W = Math.max(300, c.clientWidth || 900), narrow = W < 600;
+  const rowH = narrow ? 84 : 74, m = { t: narrow ? 20 : 8, r: 44, b: 48, l: narrow ? 8 : 170 }, H = m.t + m.b + data.length * rowH;
+  const svg = el("svg", { viewBox: `0 0 ${W} ${H}` }, c);
+  const x = (v) => m.l + v * (W - m.l - m.r);
+  for (const t of narrow ? [0, 0.5, 1] : [0, 0.25, 0.5, 0.75, 1]) {
+    el("line", { x1: x(t), x2: x(t), y1: m.t, y2: H - m.b, stroke: css("--grid"), "stroke-width": 1 }, svg);
+    const tx = el("text", { x: x(t), y: H - m.b + 18, "text-anchor": "middle" }, svg); tx.textContent = fmtPct(t, 0);
+  }
+  data.forEach((d, i) => {
+    const y0 = m.t + i * rowH + 10;
+    const lab = narrow
+      ? el("text", { x: m.l, y: y0 - 6, class: "direct" }, svg)
+      : el("text", { x: m.l - 12, y: y0 + 25, "text-anchor": "end", class: "direct" }, svg);
+    lab.textContent = d.name;
+    [["v2", d.v2, d.v2m, css("--series-v2")], ["v1", d.v1, d.v1m, css("--series-v1")]].forEach(([nm, val, money, color], k) => {
+      const y = y0 + k * 24, h = 20;
+      const w = x(val) - m.l;
+      el("path", { d: `M${m.l},${y}H${m.l + w - 4}a4,4 0 0 1 4,4V${y + h - 4}a4,4 0 0 1 -4,4H${m.l}Z`, fill: color }, svg);
+      const vt = el("text", { x: x(val) + 6, y: y + 14, class: "direct" }, svg); vt.textContent = fmtPct(val, 0);
+      const hitr = el("rect", { x: m.l, y: y - 2, width: W - m.l - m.r, height: h + 4, fill: "transparent", tabindex: 0 }, svg);
+      const tip = (e) => showTip(e, d.name, [{ name: nm + " · preenchimento", value: fmtPct(val), color }, { name: nm + " · recebe", value: "R$ " + money.toLocaleString("pt-BR"), color }, { name: "antes do aporte", value: fmtPct(d.before), color: css("--axis") }]);
+      hitr.addEventListener("pointermove", tip); hitr.addEventListener("pointerleave", hideTip);
+      hitr.addEventListener("focus", () => { const r = hitr.getBoundingClientRect(); tip({ clientX: r.left + 40, clientY: r.top }); }); hitr.addEventListener("blur", hideTip);
+    });
+    el("line", { x1: x(d.before), x2: x(d.before), y1: y0 - 3, y2: y0 + 47, stroke: css("--text-secondary"), "stroke-width": 1.5, "stroke-dasharray": "3 3" }, svg);
+  });
+  const note = el("text", { x: m.l, y: H - 4 }, svg); note.textContent = "linha tracejada = preenchimento antes do aporte";
+  table(document.getElementById("table-fill"), ["Ativo", "Antes", "v1 recebe", "v1 depois", "v2 recebe", "v2 depois"], data.map((d) => [d.name, fmtPct(d.before), "R$ " + d.v1m.toLocaleString("pt-BR"), fmtPct(d.v1), "R$ " + d.v2m.toLocaleString("pt-BR"), fmtPct(d.v2)]));
+}
+
+// 4 · Simulation
+function renderSim(noise) {
+  const d = SIM[noise];
+  const xs = d.v1.series.map((_, i) => i + 1);
+  const all = [...d.v1.series, ...d.v2.series];
+  const top = Math.ceil(Math.max(...all) / 0.5) * 0.5;
+  lineChart(document.getElementById("chart-sim"), {
+    xs, xFmt: (v, long) => (long ? "Mês " : "") + v, yFmt: (v, long) => fmtNum(v, long ? 2 : 1) + (long ? " p.p." : ""),
+    yMin: 0, yMax: top, yTicks: Array.from({ length: top / 0.5 + 1 }, (_, i) => i * 0.5), xTicks: [1, 12, 24, 36, 48, 60], xLabel: "meses",
+    series: [{ name: "v2", values: d.v2.series, color: css("--series-v2"), labelDy: 6 }, { name: "v1", values: d.v1.series, color: css("--series-v1"), labelDy: -6 }],
+  });
+  const rows = [
+    ["Distância média até as metas (RMS)", fmtNum(d.v1.te * 100) + " p.p.", fmtNum(d.v2.te * 100) + " p.p.", `${d.teWins}/200`],
+    ["Meses com dinheiro parado (em 60)", fmtNum(d.v1.monthsIdle, 1), fmtNum(d.v2.monthsIdle, 1), "—"],
+    ["Ordens por mês", fmtNum(d.v1.orders), fmtNum(d.v2.orders), "—"],
+    ["Desconto real pago nas compras", fmtPct(d.v1.capture), fmtPct(d.v2.capture), "—"],
+    ["Patrimônio final ÷ total aportado", fmtNum(d.v1.finalRatio, 3) + "×", fmtNum(d.v2.finalRatio, 3) + "×", `${d.valueWins}/200`],
+  ];
+  const t = document.getElementById("table-sim"); t.replaceChildren();
+  const head = document.createElement("tr");
+  ["Métrica (média de 200 cenários)", "v1", "v2", "v2 melhor em"].forEach((h, i) => { const th = document.createElement("th"); th.textContent = h; if (i) th.className = "num"; head.appendChild(th); });
+  const thead = document.createElement("thead"); thead.appendChild(head); t.appendChild(thead);
+  const tb = document.createElement("tbody");
+  rows.forEach((r) => { const tr = document.createElement("tr"); r.forEach((c, i) => { const td = document.createElement("td"); td.textContent = c; if (i) td.className = "num"; tr.appendChild(td); }); tb.appendChild(tr); });
+  t.appendChild(tb);
+}
+let currentNoise = "0.1";
+document.querySelectorAll(".seg button").forEach((b) => b.addEventListener("click", () => {
+  currentNoise = b.dataset.noise;
+  document.querySelectorAll(".seg button").forEach((o) => o.setAttribute("aria-pressed", String(o === b)));
+  renderSim(currentNoise);
+}));
+function renderAll() { renderTilt(); renderGrade(); renderFill(); renderSim(currentNoise); }
+renderAll();
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", renderAll);
+let resizeTimer; addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(renderAll, 120); });
+</script>
+</body>
+</html>
