@@ -1,7 +1,32 @@
 import type { I18n } from "@lingui/core";
 import { t } from "@lingui/core/macro";
 import type { AllocationRow, NextResult } from "@portifolio-tracker/shared";
-import { formatMultiplier, formatWeightPrecise } from "@/lib/format";
+import {
+  formatMultiplier,
+  formatSignedWeightPrecise,
+  formatWeightPrecise,
+} from "@/lib/format";
+import { formatQuarterTitle, toQuarter } from "@/lib/quarters";
+
+/**
+ * Warning that the price drifted far enough from the fair value's reference
+ * close to warrant a fresh valuation, or `null` when no review is suggested.
+ */
+export function reviewNote(row: AllocationRow, i18n: I18n): string | null {
+  const drift = row.score.priceSinceFairValue;
+  if (!row.score.reviewSuggested || drift === null) return null;
+
+  const period = row.fairValuePeriod
+    ? formatQuarterTitle(toQuarter(row.fairValuePeriod))
+    : "";
+
+  return i18n._(
+    t({
+      id: "allocation.reviewSuggested",
+      message: `Price moved ${formatSignedWeightPrecise(drift)} since the ${period} fair value: redo the valuation from scratch`,
+    }),
+  );
+}
 
 /** Plain-language reason behind a score, shown on hover. */
 export function scoreReason(row: AllocationRow, i18n: I18n): string {
@@ -63,8 +88,8 @@ export function scoreReason(row: AllocationRow, i18n: I18n): string {
 
       return i18n._(
         t({
-          id: "allocation.reasonGapV2",
-          message: `Target ${weight(row.targetWeight)} ${formatMultiplier(score.tilt ?? "1")} for valuation is ${weight(score.tiltedTarget)}; ${formatWeightPrecise(row.currentWeight)} held leaves ${weight(score.relativeGap)} of it missing, at priority ${formatMultiplier(score.priority)}.`,
+          id: "allocation.reasonGapV3",
+          message: `Target ${weight(row.targetWeight)} adjusted to ${weight(score.tiltedTarget)} (valuation ${formatMultiplier(score.valuationTilt ?? "1")}, trend ${formatMultiplier(score.momentumTilt ?? "1")}); ${formatWeightPrecise(row.currentWeight)} held leaves ${weight(score.relativeGap)} of it missing, at priority ${formatMultiplier(score.priority)}.`,
         }),
       );
   }

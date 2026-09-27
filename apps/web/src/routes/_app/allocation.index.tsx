@@ -43,10 +43,12 @@ import {
   QUARTER_COUNTS,
 } from "@/components/allocation/allocation-toolbar";
 import { ContributionPlannerButton } from "@/components/allocation/contribution-planner";
+import { SellPlannerButton } from "@/components/allocation/sell-planner";
 import { PageContent } from "@/components/page-content";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAllocationListInput } from "@/lib/allocation-query";
 import {
   findReview,
   removeReviewFromList,
@@ -60,7 +62,7 @@ import {
   CATEGORY_NONE,
   matchesCategory,
 } from "@/lib/category-filter";
-import { useFxQuote, useFxRequest } from "@/lib/fx";
+import { useFxQuote } from "@/lib/fx";
 import { parseDecimalInput, parsePercentInput } from "@/lib/numeric-input";
 import {
   currentQuarter,
@@ -154,9 +156,8 @@ function defaultQuarterEnd(rows: readonly AllocationRow[]): Quarter {
 function AllocationPage() {
   const { i18n } = useLingui();
   const utils = trpc.useUtils();
-  const { displayCurrency, quoteSource, manualPrices } = useSettings();
+  const { displayCurrency, quoteSource } = useSettings();
   const fx = useFxQuote();
-  const fxRequest = useFxRequest();
   const [isRefreshingQuotes, setIsRefreshingQuotes] = useState(false);
 
   const [search, setSearch] = useState("");
@@ -182,29 +183,7 @@ function AllocationPage() {
     readStoredFilters(),
   );
 
-  const sanitizedManualPrices = useMemo(
-    () =>
-      Object.fromEntries(
-        Object.entries(manualPrices).filter(
-          ([, price]) => positiveDecimal.safeParse(price).success,
-        ),
-      ),
-    [manualPrices],
-  );
-
-  const allocationListInput = useMemo(
-    () => ({
-      displayCurrency,
-      ...fxRequest,
-      quoteSource,
-      manualPrices:
-        quoteSource === "manual" &&
-        Object.keys(sanitizedManualPrices).length > 0
-          ? sanitizedManualPrices
-          : undefined,
-    }),
-    [displayCurrency, fxRequest, quoteSource, sanitizedManualPrices],
-  );
+  const allocationListInput = useAllocationListInput();
 
   const allocation = trpc.allocation.list.useQuery(allocationListInput);
   const categories = trpc.categories.list.useQuery();
@@ -641,6 +620,20 @@ function AllocationPage() {
             fx={allocation.data?.fx}
             disabled={!allocation.data}
           />
+          <SellPlannerButton
+            rows={allocation.data?.rows ?? []}
+            displayCurrency={
+              allocation.data?.summary.displayCurrency ?? displayCurrency
+            }
+            portfolioValue={allocation.data?.summary.totalMarketValue ?? "0"}
+            usdBrlRate={allocation.data?.fx.usdBrlRate ?? null}
+            soldThisMonthBrl={
+              allocation.data?.sales.exemptSoldThisMonthBrl ?? "0"
+            }
+            skill={allocation.data?.valuationSkill}
+            config={allocation.data?.scoreConfig}
+            disabled={!allocation.data}
+          />
           <AllocationDeepFinderButton
             rows={allocation.data?.rows ?? []}
             categories={categoryOptions}
@@ -650,12 +643,7 @@ function AllocationPage() {
             }
             usdBrlRate={fx.effectiveRate}
             quoteSource={quoteSource}
-            manualPrices={
-              quoteSource === "manual" &&
-              Object.keys(sanitizedManualPrices).length > 0
-                ? sanitizedManualPrices
-                : undefined
-            }
+            manualPrices={allocationListInput.manualPrices}
             disabled={!allocation.data || categories.isPending}
             onSetMarkColor={(ticker, markColor) =>
               setMarkColor.mutate({ ticker, markColor })

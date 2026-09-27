@@ -25,6 +25,7 @@ import {
   useWatch,
 } from "react-hook-form";
 import { toast } from "sonner";
+import { ValuationSkillCard } from "@/components/allocation/valuation-skill-card";
 import {
   Callout,
   DocumentBody,
@@ -44,6 +45,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAllocationListInput } from "@/lib/allocation-query";
 import { trpc } from "@/lib/api";
 import {
   formatDecimalInput,
@@ -60,6 +62,27 @@ function withoutVersion(config: ScoreConfig): ScoreConfigUpdate {
 function percentLabel(ratio: string): string {
   const value = Number(ratio) * 100;
   return Number.isInteger(value) ? `${value}%` : `${value}%`;
+}
+
+/**
+ * Live confidence in the user's fair values. Shares the allocation screen's
+ * cached query; opened elsewhere it loads the allocation once.
+ */
+function ValuationTrackRecord() {
+  const allocation = trpc.allocation.list.useQuery(useAllocationListInput());
+
+  if (allocation.data) {
+    return (
+      <ValuationSkillCard
+        skill={allocation.data.valuationSkill}
+        config={allocation.data.scoreConfig}
+      />
+    );
+  }
+
+  return allocation.isPending ? (
+    <Skeleton className="h-40 w-full rounded-xl" />
+  ) : null;
 }
 
 /** Contribution-score methodology with live, editable policy knobs. */
@@ -201,6 +224,7 @@ export function ScoreDocumentation() {
         onSubmit={form.handleSubmit((values) => update.mutate(values))}
       >
         <DocumentBody>
+          <ValuationTrackRecord />
           <Callout
             icon={Target}
             title={
@@ -280,12 +304,12 @@ export function ScoreDocumentation() {
                   </Trans>
                 }
               >
-                <Trans id="documentation.score.valuationSignalDescription">
+                <Trans id="documentation.score.valuationSignalDescriptionV3">
                   The log distance between fair value and price, so half and
-                  double the fair value weigh the same. Mispricing inside ±
-                  {deadZone} is treated as valuation noise, and a cheap USD
-                  asset must also clear the FX spread and IOF. A missing fair
-                  value or price means no signal.
+                  double the fair value weigh the same. A cheap USD asset must
+                  also clear the FX spread and IOF, and an optional noise band
+                  (now ±{deadZone}) can ignore small gaps. A missing fair value
+                  or price means no signal.
                 </Trans>
                 <Formula>
                   <Trans id="documentation.formula.valuationSignal">
@@ -301,17 +325,19 @@ export function ScoreDocumentation() {
                   </Trans>
                 }
               >
-                <Trans id="documentation.score.tiltedTargetDescription">
+                <Trans id="documentation.score.tiltedTargetDescriptionV3">
                   The signal tilts the target between ×{preview.tiltMin} and ×
-                  {preview.tiltMax}, weighted by confidence: a fair value loses
-                  half its weight every {preview.fairValueHalfLifeQuarters}{" "}
-                  quarters, and a weak grade trusts it less. Tilted targets are
-                  then rescaled to keep your total, so a cheap asset takes
-                  weight from the others instead of inflating every target.
+                  {preview.tiltMax}. Its strength is learned: up to{" "}
+                  {preview.valuationSensitivity} once your fair values prove
+                  they anticipate returns (IC ≥ {preview.icReference}), half of
+                  it before there is a track record, zero if they do not. A
+                  stale fair value or a weak grade also counts less. Valuation
+                  is rescaled only among assets with a fair value; a light
+                  12-month trend then adjusts every target and keeps the total.
                 </Trans>
                 <Formula>
-                  <Trans id="documentation.formula.tiltedTarget">
-                    target × exp(sensitivity × confidence × signal), rescaled
+                  <Trans id="documentation.formula.tiltedTargetV3">
+                    target × (FV ÷ price)^(k × confidence) × e^(w × trend z)
                   </Trans>
                 </Formula>
               </PipelineStep>
@@ -447,6 +473,52 @@ export function ScoreDocumentation() {
                 </Trans>
               }
             >
+              <DecimalField
+                name="icReference"
+                label={
+                  <Trans id="documentation.score.field.icReference">
+                    IC for full strength
+                  </Trans>
+                }
+                description={
+                  <Trans id="documentation.score.field.icReferenceHint">
+                    Correlation between your discounts and the next 12 months of
+                    returns at which valuation reaches full strength.
+                  </Trans>
+                }
+              />
+              <DecimalField
+                name="icPrior"
+                label={
+                  <Trans id="documentation.score.field.icPrior">
+                    Starting IC
+                  </Trans>
+                }
+                description={
+                  <Trans id="documentation.score.field.icPriorHint">
+                    Assumed before any fair value has a 12-month outcome. Half
+                    of the reference means half strength.
+                  </Trans>
+                }
+              />
+              <IntegerField
+                name="icPriorPairs"
+                min={0}
+                unit={
+                  <Trans id="documentation.score.unit.pairs">reviews</Trans>
+                }
+                label={
+                  <Trans id="documentation.score.field.icPriorPairs">
+                    Weight of the starting IC
+                  </Trans>
+                }
+                description={
+                  <Trans id="documentation.score.field.icPriorPairsHint">
+                    How many reviews with an outcome it takes for your own track
+                    record to outweigh the starting IC.
+                  </Trans>
+                }
+              />
               <PercentField
                 name="valuationDeadZone"
                 label={
@@ -464,14 +536,14 @@ export function ScoreDocumentation() {
               <DecimalField
                 name="valuationSensitivity"
                 label={
-                  <Trans id="documentation.score.field.sensitivity">
-                    Valuation sensitivity
+                  <Trans id="documentation.score.field.sensitivityV3">
+                    Maximum valuation strength
                   </Trans>
                 }
                 description={
-                  <Trans id="documentation.score.field.sensitivityHint">
-                    How strongly the signal tilts the target. 0 ignores
-                    valuation; 1 is neutral.
+                  <Trans id="documentation.score.field.sensitivityHintV3">
+                    Exponent k reached with a proven track record. 0 ignores
+                    valuation.
                   </Trans>
                 }
               />
@@ -518,6 +590,84 @@ export function ScoreDocumentation() {
                   <Trans id="documentation.score.field.fairValueHalfLifeHint">
                     Quarters after which a fair value that was not refreshed
                     counts half as much.
+                  </Trans>
+                }
+              />
+            </FieldGroup>
+
+            <FieldGroup
+              title={
+                <Trans id="documentation.score.group.trendSales">
+                  Trend, review and sales
+                </Trans>
+              }
+            >
+              <DecimalField
+                name="momentumWeight"
+                label={
+                  <Trans id="documentation.score.field.momentumWeight">
+                    Trend weight
+                  </Trans>
+                }
+                description={
+                  <Trans id="documentation.score.field.momentumWeightHint">
+                    Exponent on the 12-month trend z-score. 0.10 moves a target
+                    at most ×0.82–×1.22; 0 turns the trend off.
+                  </Trans>
+                }
+              />
+              <DecimalField
+                name="momentumZCap"
+                label={
+                  <Trans id="documentation.score.field.momentumZCap">
+                    Trend cap
+                  </Trans>
+                }
+                description={
+                  <Trans id="documentation.score.field.momentumZCapHint">
+                    Largest trend z-score counted, so one huge rally cannot
+                    dominate.
+                  </Trans>
+                }
+              />
+              <PercentField
+                name="reviewDrift"
+                label={
+                  <Trans id="documentation.score.field.reviewDrift">
+                    Review warning
+                  </Trans>
+                }
+                description={
+                  <Trans id="documentation.score.field.reviewDriftHint">
+                    Price move since the fair value's quarter end that asks you
+                    to redo the valuation from scratch.
+                  </Trans>
+                }
+              />
+              <PercentField
+                name="sellBand"
+                label={
+                  <Trans id="documentation.score.field.sellBand">
+                    Sale band
+                  </Trans>
+                }
+                description={
+                  <Trans id="documentation.score.field.sellBandHint">
+                    An expensive position is a sale candidate once it runs this
+                    far past its adjusted target.
+                  </Trans>
+                }
+              />
+              <PercentField
+                name="sellConfidence"
+                label={
+                  <Trans id="documentation.score.field.sellConfidence">
+                    Confidence to recommend sales
+                  </Trans>
+                }
+                description={
+                  <Trans id="documentation.score.field.sellConfidenceHint">
+                    Below it, sale suggestions are shown for information only.
                   </Trans>
                 }
               />
@@ -950,7 +1100,10 @@ function PercentField({
     | "overweightBlockFactor"
     | "trimAbsoluteBand"
     | "trimRelativeBand"
-    | "valuationDeadZone";
+    | "valuationDeadZone"
+    | "reviewDrift"
+    | "sellBand"
+    | "sellConfidence";
   label: ReactNode;
   description: ReactNode;
 }) {
@@ -996,7 +1149,11 @@ function DecimalField({
     | "tiltMin"
     | "tiltMax"
     | "cooldownFloor"
-    | "gradePriorQuarters";
+    | "gradePriorQuarters"
+    | "icReference"
+    | "icPrior"
+    | "momentumWeight"
+    | "momentumZCap";
   label: ReactNode;
   description: ReactNode;
 }) {
@@ -1039,7 +1196,8 @@ function IntegerField({
     | "cooldownDays"
     | "gradeWindowQuarters"
     | "gradeHalfLifeQuarters"
-    | "fairValueHalfLifeQuarters";
+    | "fairValueHalfLifeQuarters"
+    | "icPriorPairs";
   min: number;
   unit: ReactNode;
   label: ReactNode;

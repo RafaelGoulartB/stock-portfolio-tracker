@@ -19,6 +19,7 @@ import {
   ArrowUpDown,
   ExternalLink,
   GripVertical,
+  RefreshCcw,
   Timer,
   TriangleAlert,
 } from "lucide-react";
@@ -50,6 +51,10 @@ import { cn } from "@/lib/utils";
 import { InlineEditCell } from "./inline-edit-cell";
 import { QuarterReviewCell } from "./quarter-review-cell";
 import {
+  AdjustedTargetCell,
+  adjustedTargetExplanation,
+} from "./table/adjusted-target-cell";
+import {
   ALLOCATION_COLUMNS,
   type AllocationColumn,
   type AllocationSort,
@@ -58,7 +63,7 @@ import {
 import { FOCUS_QUARTER_COL, MARK_ROW, MARK_STICKY } from "./table/marks";
 import { RowMenu } from "./table/row-menu";
 import { ScoreCell } from "./table/score-cell";
-import { resultDateTitle, scoreReason } from "./table/score-reason";
+import { resultDateTitle, reviewNote, scoreReason } from "./table/score-reason";
 import { useAllocationTableState } from "./table/use-allocation-table-state";
 
 export {
@@ -69,7 +74,7 @@ export {
   defaultSortDirection,
   type SortDirection,
 } from "./table/columns";
-export { scoreReason } from "./table/score-reason";
+export { reviewNote, scoreReason } from "./table/score-reason";
 export { compareRows, sortableValue } from "./table/sorting";
 export { summarizeVisibleRows } from "./table/summary";
 
@@ -471,6 +476,15 @@ export function AllocationTable({
                     </TableCell>
                   ) : null}
 
+                  {visibleColumns.has("adjustedTarget") ? (
+                    <TableCell
+                      className="px-2.5 py-2 text-right"
+                      title={adjustedTargetExplanation(row, i18n)}
+                    >
+                      <AdjustedTargetCell row={row} i18n={i18n} />
+                    </TableCell>
+                  ) : null}
+
                   {visibleColumns.has("currentWeight") ? (
                     <TableCell className="px-2.5 py-2.5 text-right tabular-nums">
                       {formatWeightPrecise(row.currentWeight)}
@@ -478,12 +492,24 @@ export function AllocationTable({
                   ) : null}
 
                   {visibleColumns.has("gapWeight") ? (
-                    <TableCell className="px-2.5 py-2.5 text-right tabular-nums">
-                      {row.gapWeight === null ? (
+                    <TableCell
+                      className="px-2.5 py-2.5 text-right tabular-nums"
+                      title={
+                        row.score.gap === null || row.gapWeight === null
+                          ? undefined
+                          : i18n._(
+                              t({
+                                id: "allocation.gapTooltip",
+                                message: `${formatSignedWeightPrecise(row.score.gap)} to the adjusted target the score aims for; ${formatSignedWeightPrecise(row.gapWeight)} to your original target.`,
+                              }),
+                            )
+                      }
+                    >
+                      {row.score.gap === null ? (
                         <span className="text-muted-foreground">—</span>
                       ) : (
-                        <span className={pnlClassName(row.gapWeight)}>
-                          {formatSignedWeightPrecise(row.gapWeight)}
+                        <span className={pnlClassName(row.score.gap)}>
+                          {formatSignedWeightPrecise(row.score.gap)}
                         </span>
                       )}
                     </TableCell>
@@ -527,6 +553,15 @@ export function AllocationTable({
                           : row.fairValue !== null
                             ? formatMoney(row.fairValue, row.currency)
                             : "—"}
+                        {reviewNote(row, i18n) !== null ? (
+                          <RefreshCcw
+                            className="size-3 text-amber-600 dark:text-amber-400"
+                            role="img"
+                            aria-label={reviewNote(row, i18n) ?? undefined}
+                          >
+                            <title>{reviewNote(row, i18n)}</title>
+                          </RefreshCcw>
+                        ) : null}
                         {row.fairValueRef ? (
                           <a
                             href={row.fairValueRef}
