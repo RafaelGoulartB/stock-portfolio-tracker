@@ -20,8 +20,12 @@ input:
    - *Momentum*: `mTilt = exp(momentumWeight × z)`, where `z` is the
      cross-sectional z-score of the 12-1 month log return, capped at
      `±momentumZCap`, renormalized across the book. With `0.10` and `±2` the
-     tilt stays within ×0.82–×1.22: a tie-breaker between buying dips and
-     following trends, not a strategy.
+     raw factor stays within ×0.82–×1.22: a tie-breaker between buying dips
+     and following trends, not a strategy. Renormalization divides by the
+     target-weighted mean factor, so a small target can land slightly outside
+     that range, and an asset without a year of prices (`z = null`) still
+     moves by the rebalance alone; the UI labels that "book rebalance", not
+     trend.
    The residual `CASH` target is never tilted. Tilted targets keep the sum of
    the original targets.
 2. **How much is missing.** `relativeGap = 1 - weight / tiltedTarget`.
@@ -30,18 +34,31 @@ input:
    ungraded multiplier, cooldown ramp).
 
 `score = max(relativeGap, 0) × priority`. Trims require an expensive tilt and
-a weight past the 5/25 tolerance band of the tilted target.
+a weight past the 5/25 tolerance band of the **trim target**:
+`max(tiltedTarget, target × own valuation tilt)`. Renormalization shrinks a
+fairly priced asset's target whenever another valued asset is cheap; that
+alone must never make it a trim or sale candidate.
 
 ### Learned valuation strength
 
 `strength = valuationSensitivity × confidence`, where confidence comes from
 the investor's own track record (`apps/api/src/domain/valuation-skill.ts`):
 
-- each fair value is paired with `ln(price 12 months after the quarter end /
-  price at the quarter end)`; reviews whose outcome is still in the future
-  are counted as pending, never guessed;
+- each fair value is anchored on the day it was known: the later of its
+  quarter end and the review's last edit (America/Sao_Paulo). Reviews are
+  written after the quarter's results, so the quarter-end close would credit
+  price moves the investor had already seen. Any edit re-anchors the review,
+  which delays evidence but never inflates it;
+- fair values are rescaled by every recorded split after that day, because
+  provider histories are split adjusted;
+- each fair value is paired with `ln(price 12 months after the anchor /
+  price on the anchor)`; reviews whose outcome is still in the future are
+  pending, never guessed, and due reviews whose prices could not be loaded
+  are counted as `missing`;
+- the series starts ten days before the oldest anchor, so an anchor on a
+  weekend or holiday still finds its prior close;
 - the information coefficient is the pooled correlation of
-  `ln(fairValue / quarter-end price)` and that outcome, demeaned within each
+  `ln(fairValue / anchor price)` and that outcome, demeaned within each
   review quarter (market-wide moves never count as skill) and using only
   quarters with at least three assets;
 - `shrunkIC = (pairs × IC + icPriorPairs × icPrior) / (pairs + icPriorPairs)`
@@ -51,28 +68,30 @@ With no history the prior gives confidence `0.5`, so strength is `1.5` of a
 possible `3`. A track record with no skill drives strength to `0`, which
 turns the score into plain gap filling.
 
-Only fair values registered in the quarter they were computed are valid
-evidence. Back-filling old quarters with today's knowledge inflates the IC.
+Back-filling old quarters with today's knowledge would inflate the IC; the
+edit-day anchor treats such a review as written today.
 
 ### Review nudge
 
 `reviewSuggested` when `|price / reference − 1| ≥ reviewDrift` (25%), where
-the reference is the close at the end of the fair value's quarter. The UI
-asks for a fresh valuation; the score itself is unchanged.
+the reference is the close on the fair value's anchor day. The UI asks for a
+fresh valuation; the score itself is unchanged.
 
 ### Sales
 
 `apps/api/src/domain/sell-plan.ts` lists, separately from contributions,
 positions priced above their fair value whose weight exceeds
-`tiltedTarget × (1 + sellBand)`, trimmed toward the tilted target:
+`trimTarget × (1 + sellBand)`, trimmed toward the trim target:
 
 - Brazilian stocks (`stock_br`, BRL) are fitted inside what is left of the
   R$ 20,000 monthly exemption after this month's gross sales, scaled by one
-  common share and rounded to whole units;
+  common share and rounded to whole units; once the exemption is used up
+  they are listed as taxable like every other class;
 - every other class is listed as taxable information only;
 - sales are *recommended* only once confidence reaches `sellConfidence`
-  (0.8). Before that they are informational: in the study, selling on
-  biased fair values lost money, while simply not contributing did not.
+  (0.8) over a complete track record (`missing = 0`). Before that they are
+  informational: in the study, selling on biased fair values lost money,
+  while simply not contributing did not.
 
 Nothing is saved until the user registers a sale.
 
@@ -89,8 +108,11 @@ at the cap.
 
 Momentum and reference prices come from the quote provider's daily series in
 the same request as quotes. They are not persisted. When a series is missing
-the asset simply gets no momentum tilt and no review nudge, and the response
-lists it under `marketSignals.unavailable`.
+the asset gets no momentum tilt and no review nudge, the response lists it
+under `marketSignals.unavailable`, and the Allocation screen says so. Manual
+quotes have no real history (the manual provider returns a flat line), so
+with them the signals are off (`marketSignals.available = false`) instead of
+computed from it.
 
 ## Evidence
 
@@ -114,7 +136,14 @@ The harness is not part of the repository.
   policies keep their saved `valuationSensitivity`, so strength remains
   `sensitivity × confidence` for them.
 - Backup format v10 exports the v3 fields. v1 and v2 score records import
-  with the v3 defaults for fields they lack.
+  with the v3 defaults for fields they lack; migrations 0010/0012 instead
+  kept the v2 values of policies already stored. Every imported policy must
+  pass `scoreConfigUpdateSchema`, so a restore can never leave the account
+  with a policy the engine rejects.
+- The update schema bounds the new knobs (`momentumWeight ≤ 1`,
+  `momentumZCap ≤ 5`, `icReference ≤ 1`, `|icPrior| ≤ 1`, integer knobs
+  within their columns); the engine also bounds the momentum exponent so a
+  stored extreme value cannot overflow decimals.
 
 ## Not implemented
 
@@ -130,8 +159,10 @@ The harness is not part of the repository.
   target exactly.
 - A cheaper price never lowers a score; grades one hundredth apart never move
   a multiplier by more than the curve slope.
-- No fair value outcome is used before its 12 months have passed.
-- Momentum tilts stay within `exp(±momentumWeight × momentumZCap)`.
+- No fair value outcome is used before 12 months after the day it was known.
+- Raw momentum factors stay within `exp(±momentumWeight × momentumZCap)`.
+- A trim or sale never takes an asset below `target × own valuation tilt`.
 - Exempt sale suggestions never exceed what is left of the monthly
-  exemption, and are not marked recommended below `sellConfidence`.
+  exemption, and are not marked recommended below `sellConfidence` or with a
+  partial track record.
 - The planner conserves money and never exceeds a need or a weight ceiling.

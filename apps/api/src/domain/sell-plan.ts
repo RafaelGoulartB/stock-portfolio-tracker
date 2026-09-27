@@ -58,7 +58,8 @@ export type SellPlanRow = {
   /** Display-currency market value, `null` without a price. */
   marketValue: string | null;
   currentWeight: string;
-  tiltedTarget: string | null;
+  /** Weight a sale brings the asset back to (`ScoreBreakdown.trimTarget`). */
+  trimTarget: string | null;
   fairValue: string | null;
   marketPrice: string | null;
   /** True when the market only trades whole units. */
@@ -75,13 +76,16 @@ export type SellSuggestion = {
   units: string;
   weightNow: string;
   weightAfter: string;
-  tiltedTarget: string;
+  trimTarget: string;
   /** `(fairValue - price) / fairValue`, negative when priced above it. */
   discount: string | null;
 };
 
 export type SellPlan = {
-  /** Track-record confidence reached the configured bar. */
+  /**
+   * Track-record confidence reached the configured bar over a complete
+   * track record.
+   */
   recommended: boolean;
   confidence: string;
   requiredConfidence: string;
@@ -112,6 +116,11 @@ export type SellPlanInput = {
   /** Gross BRL sales of exempt equities already made this month. */
   soldThisMonthBrl: string;
   confidence: string;
+  /**
+   * True when part of the track record could not be priced: its confidence
+   * is not trusted enough to recommend a sale.
+   */
+  partialTrackRecord?: boolean;
   config?: ScoreConfig;
 };
 
@@ -126,17 +135,16 @@ function inDisplay(
 }
 
 /**
- * Suggests selling part of expensive positions that ran past their
- * valuation-adjusted target.
+ * Suggests selling part of expensive positions that ran past their target.
  *
  * A row qualifies when its price sits above its fair value and its weight
- * exceeds `tiltedTarget × (1 + sellBand)`. The
- * suggestion brings it back to the tilted target. Only Brazilian stocks can
- * use the monthly R$ 20 mil exemption, so they are scaled to fit what is
- * still exempt this month; everything else is listed as taxable information.
- * Suggestions are marked `recommended` only once the valuation track record
- * reaches `sellConfidence`, the bar the simulation needed to make selling
- * pay off.
+ * exceeds `trimTarget × (1 + sellBand)`; the suggestion brings it back to
+ * the trim target, which never sits below the asset's own valuation tilt.
+ * Only Brazilian stocks can use the monthly R$ 20 mil exemption, so they are
+ * scaled to fit what is still exempt this month; once it is used up they
+ * join everything else as taxable information. Suggestions are marked
+ * `recommended` only once a complete valuation track record reaches
+ * `sellConfidence`, the bar the simulation needed to make selling pay off.
  */
 export function planSales(input: SellPlanInput): SellPlan {
   const config = input.config ?? DEFAULT_SCORE_CONFIG;
@@ -165,7 +173,7 @@ export function planSales(input: SellPlanInput): SellPlan {
   for (const row of input.rows) {
     if (
       row.marketValue === null ||
-      row.tiltedTarget === null ||
+      row.trimTarget === null ||
       row.fairValue === null ||
       row.marketPrice === null ||
       // Only assets priced above your own fair value are sale candidates.
@@ -176,7 +184,7 @@ export function planSales(input: SellPlanInput): SellPlan {
     }
 
     const weight = toDecimal(row.currentWeight);
-    const target = toDecimal(row.tiltedTarget);
+    const target = toDecimal(row.trimTarget);
     if (weight <= mul(target, band)) continue;
 
     const value = toDecimal(row.marketValue);
@@ -190,8 +198,11 @@ export function planSales(input: SellPlanInput): SellPlan {
     });
   }
 
-  const exemptCandidates = candidates.filter((item) =>
-    isExemptEquity(item.row.assetClass, item.row.currency),
+  // With nothing left of the exemption, any further sale is taxed.
+  const exemptionLeft = remaining !== null && remaining > ZERO;
+  const exemptCandidates = candidates.filter(
+    (item) =>
+      exemptionLeft && isExemptEquity(item.row.assetClass, item.row.currency),
   );
   const exemptExcess = exemptCandidates.reduce(
     (sum, item) => add(sum, item.excess),
@@ -236,7 +247,7 @@ export function planSales(input: SellPlanInput): SellPlan {
       units: formatDecimal(units, 4),
       weightNow: item.row.currentWeight,
       weightAfter: formatDecimal(weightAfter, WEIGHT_PLACES),
-      tiltedTarget: item.row.tiltedTarget ?? "0",
+      trimTarget: item.row.trimTarget ?? "0",
       discount:
         fair !== null && price !== null && fair > ZERO
           ? formatDecimal(div(sub(fair, price), fair), WEIGHT_PLACES)
@@ -251,7 +262,7 @@ export function planSales(input: SellPlanInput): SellPlan {
     .filter((item) => toDecimal(item.amount) > ZERO)
     .sort(byExcess);
   const taxable = candidates
-    .filter((item) => !isExemptEquity(item.row.assetClass, item.row.currency))
+    .filter((item) => !exemptCandidates.includes(item))
     .map((item) => suggestion(item, ONE))
     .sort(byExcess);
   const total = exempt.reduce(
@@ -264,7 +275,7 @@ export function planSales(input: SellPlanInput): SellPlan {
     value === null ? null : formatDecimal(value, MONEY_PLACES);
 
   return {
-    recommended: confidence >= required,
+    recommended: confidence >= required && input.partialTrackRecord !== true,
     confidence: formatDecimal(confidence, WEIGHT_PLACES),
     requiredConfidence: formatDecimal(required, WEIGHT_PLACES),
     exemptLimit: money(limit),

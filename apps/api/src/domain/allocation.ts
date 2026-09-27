@@ -45,7 +45,11 @@ export type AllocationAssetMeta = {
   sortOrder: number;
 };
 
-export type StoredReview = AssetReview & { ticker: string };
+export type StoredReview = AssetReview & {
+  ticker: string;
+  /** Local day of the review's last edit, `YYYY-MM-DD`. */
+  editedOn?: string | null;
+};
 
 /** A quote resolved for a ticker with no open position (watch-only). */
 export type WatchQuote = { price: string; currency: Currency };
@@ -281,8 +285,13 @@ export type AllocationInput = {
   config?: ScoreConfig;
   /** 12-1 month log return per ticker; missing tickers get no momentum. */
   momentumByTicker?: ReadonlyMap<string, string>;
-  /** Quarter-end close per `ticker|period` fair value review. */
+  /** Close on the day each `ticker|period` fair value was known. */
   referencePrices?: ReadonlyMap<string, string>;
+  /**
+   * Fair value per `ticker|period` in today's share units (see
+   * `fairValueReviews`). Missing keys use the stored value unchanged.
+   */
+  fairValuesInTodayUnits?: ReadonlyMap<string, string>;
   /** Learned valuation exponent (see `valuation-skill.ts`); omitted = prior. */
   valuationStrength?: string;
 };
@@ -353,7 +362,12 @@ export function buildAllocationRows(input: AllocationInput): AllocationRow[] {
       a.period.localeCompare(b.period),
     );
     const latest = latestFairValue(reviews);
-    const fairValue = latest?.fairValue ?? null;
+    // Compared with today's price, so a split after the review rescales it.
+    const fairValue =
+      latest === null
+        ? null
+        : (input.fairValuesInTodayUnits?.get(`${ticker}|${latest.period}`) ??
+          latest.fairValue);
     const discount = discountFromFairValue(fairValue, marketPrice);
     const grades = gradeSignal(reviews, input.today, config);
     const currentWeight = formatDecimal(

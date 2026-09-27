@@ -447,6 +447,88 @@ msgstr ""
 #~ msgid "allocation.skill.meterLabel"
 #~ msgstr "Confidence in your fair values"
 
+#. placeholder {0}: formatWeightPrecise(item.weightNow)
+#. placeholder {1}: formatWeightPrecise(item.weightAfter)
+#. placeholder {2}: formatWeightPrecise(item.tiltedTarget)
+#. js-lingui-explicit-id
+#: src/components/allocation/sell-planner.tsx:280
+#~ msgid "allocation.sales.weights"
+#~ msgstr "{0} → {1} (adjusted target {2})"
+
+#. js-lingui-explicit-id
+#: src/components/allocation/valuation-skill-card.tsx:109
+#~ msgid "allocation.skill.ruleTrend"
+#~ msgstr "<0>12-month trend:</0> a light tie-breaker from {trendRange}; falling assets remain candidates."
+
+#. js-lingui-explicit-id
+#: src/components/allocation/valuation-skill-card.tsx:116
+#~ msgid "allocation.skill.ruleReview"
+#~ msgstr "<0>Review:</0> ↻ marks prices that moved more than {drift} since their fair value."
+
+#. js-lingui-explicit-id
+#: src/components/allocation/valuation-skill-card.tsx:122
+#~ msgid "allocation.skill.ruleSales"
+#~ msgstr "<0>Sales:</0> recommended only from {sellBar} confidence; before that they are shown for information."
+
+#. js-lingui-explicit-id
+#: src/components/allocation/valuation-skill-card.tsx:102
+#~ msgid "allocation.skill.ruleValuation"
+#~ msgstr "<0>Valuation:</0> target × (fair value ÷ price)^{strength}, shared only among assets with a fair value."
+
+#. js-lingui-explicit-id
+#: src/components/score-documentation.tsx:655
+#~ msgid "documentation.score.field.sellBandHint"
+#~ msgstr "An expensive position is a sale candidate once it runs this far past its adjusted target."
+
+#. js-lingui-explicit-id
+#: src/components/allocation/sell-planner.tsx:249
+#~ msgid "allocation.sales.footnote"
+#~ msgstr "Exemption: gross sales of Brazilian stocks up to R$ 20,000 per month (Lei 11.033/2004). Sales already registered this month are deducted. Confirm your case with an accountant."
+
+#. placeholder {0}: weight(score.tiltedTarget)
+#. js-lingui-explicit-id
+#: src/components/allocation/table/score-reason.ts:53
+#~ msgid "allocation.reasonTrimV2"
+#~ msgstr "Expensive and past the tolerance band around its valuation-adjusted target of {0}: consider trimming instead of buying."
+
+#. js-lingui-explicit-id
+#: src/components/score-documentation.tsx:613
+#~ msgid "documentation.score.field.momentumWeightHint"
+#~ msgstr "Exponent on the 12-month trend z-score. 0.10 moves a target at most ×0.82–×1.22; 0 turns the trend off."
+
+#. js-lingui-explicit-id
+#: src/components/allocation/sell-planner.tsx:235
+#~ msgid "allocation.sales.taxableText"
+#~ msgstr "FIIs, ETFs, BDRs and foreign assets pay tax on any gain. Letting contributions go elsewhere usually beats selling them."
+
+#. js-lingui-explicit-id
+#: src/components/allocation/asset-detail-page.tsx:344
+#: src/components/allocation/table/columns.ts:45
+#~ msgid "allocation.colGap"
+#~ msgstr "Gap"
+
+#. js-lingui-explicit-id
+#: src/components/score-documentation.tsx:946
+#~ msgid "documentation.score.trimDescriptionV2"
+#~ msgstr "If valuation tilts the target down and current weight runs more than {trimAbsolute} points or {trimRelative} of the adjusted target past it (whichever is tighter, the 5/25 tolerance-band rule), return the negative relative gap. This rule precedes the blocking caps so it can produce a trim signal."
+
+#. placeholder {0}: formatWeight(config?.sellBand ?? "0.25")
+#. js-lingui-explicit-id
+#: src/components/allocation/sell-planner.tsx:121
+#~ msgid "allocation.sales.description"
+#~ msgstr "Positions priced above your fair value that ran more than {0} past their adjusted target, trimmed toward it. Suggestion only — nothing is saved until you register the sale."
+
+#. js-lingui-explicit-id
+#: src/components/score-documentation.tsx:641
+#~ msgid "documentation.score.field.reviewDriftHint"
+#~ msgstr "Price move since the fair value's quarter end that asks you to redo the valuation from scratch."
+
+#. placeholder {0}: money(plan.exemptExcess)
+#. js-lingui-explicit-id
+#: src/components/allocation/sell-planner.tsx:226
+#~ msgid "allocation.sales.scaled"
+#~ msgstr "Bringing every position back to its adjusted target would sell {0}, more than is still exempt, so each sale was reduced by the same share."
+
 #. js-lingui-explicit-id
 #. placeholder {0}: formatMonthLabel(month, locale)
 #: src/components/detailed-positions/toolbar.tsx:333
@@ -457,10 +539,10 @@ msgstr "{0} · Live"
 #. js-lingui-explicit-id
 #. placeholder {0}: formatWeightPrecise(item.weightNow)
 #. placeholder {1}: formatWeightPrecise(item.weightAfter)
-#. placeholder {2}: formatWeightPrecise(item.tiltedTarget)
-#: src/components/allocation/sell-planner.tsx:280
-msgid "allocation.sales.weights"
-msgstr "{0} → {1} (adjusted target {2})"
+#. placeholder {2}: formatWeightPrecise(item.trimTarget)
+#: src/components/allocation/sell-planner.tsx:294
+msgid "allocation.sales.weightsV2"
+msgstr "{0} → {1} (sale target {2})"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: ledger.buyCount
@@ -484,6 +566,12 @@ msgid "dividends.unconverted"
 msgstr "{0} events could not be converted."
 
 #. js-lingui-explicit-id
+#. placeholder {0}: skill.missing
+#: src/components/allocation/valuation-skill-card.tsx:115
+msgid "allocation.skill.missingText"
+msgstr "{0} fair values already have their 12-month outcome but their prices could not be loaded. They are left out, and sales are not recommended until the history is complete."
+
+#. js-lingui-explicit-id
 #. placeholder {0}: preview.length
 #: src/components/transactions/book-holdings-panel.tsx:469
 msgid "transactions.importMerged"
@@ -495,7 +583,7 @@ msgstr "{0} holdings added to the list"
 #. placeholder {2}: visibleSummary.candidates
 #. placeholder {3}: visibleSummary.blocked
 #. placeholder {4}: visibleSummary.scoreVersion
-#: src/routes/_app/allocation.index.tsx:743
+#: src/routes/_app/allocation.index.tsx:750
 msgid "allocation.footnote"
 msgstr "{0} invested · {1} watch-only · {2} taking contributions · {3} blocked · score rules {4}"
 
@@ -533,13 +621,13 @@ msgstr "{0} realized."
 #. js-lingui-explicit-id
 #. placeholder {0}: formatSignedWeightPrecise(row.score.gap)
 #. placeholder {1}: formatSignedWeightPrecise(row.gapWeight)
-#: src/components/allocation/allocation-table.tsx:501
+#: src/components/allocation/allocation-table.tsx:520
 msgid "allocation.gapTooltip"
 msgstr "{0} to the adjusted target the score aims for; {1} to your original target."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: formatSignedWeightPrecise(row.gapWeight)
-#: src/components/allocation/asset-detail-page.tsx:354
+#: src/components/allocation/asset-detail-page.tsx:363
 msgid "allocation.detailGapHint"
 msgstr "{0} to your original target"
 
@@ -559,7 +647,7 @@ msgstr "{0} un."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: formatQuantity(item.units)
-#: src/components/allocation/sell-planner.tsx:303
+#: src/components/allocation/sell-planner.tsx:313
 msgid "allocation.sales.units"
 msgstr "{0} un."
 
@@ -574,7 +662,7 @@ msgstr "{0}–{1} of {2}"
 #. js-lingui-explicit-id
 #. placeholder {0}: Number(row.score.momentumZ) >= 0 ? "+" : ""
 #. placeholder {1}: formatDecimalInput(Number(row.score.momentumZ).toFixed(2), i18n.locale)
-#: src/components/allocation/asset-detail-page.tsx:324
+#: src/components/allocation/asset-detail-page.tsx:331
 msgid "allocation.detailTrendValue"
 msgstr "{0}{1} σ"
 
@@ -654,7 +742,7 @@ msgid "transactions.booked"
 msgstr "{count} holdings booked as buys"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:980
+#: src/components/score-documentation.tsx:1024
 msgid "documentation.score.overweightBadge"
 msgstr "{overweightLimit} of target"
 
@@ -686,7 +774,7 @@ msgid "settings.data.rowCount"
 msgstr "{totalRows} rows"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:940
+#: src/components/score-documentation.tsx:982
 msgid "documentation.score.trimBadgeV2"
 msgstr "{trimAbsolute} or {trimRelative}"
 
@@ -697,32 +785,32 @@ msgstr "%"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: preview.ungradedMultiplier
-#: src/components/score-documentation.tsx:1022
+#: src/components/score-documentation.tsx:1066
 msgid "documentation.score.ungradedBadge"
 msgstr "×{0} ungraded"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/valuation-skill-card.tsx:109
-msgid "allocation.skill.ruleTrend"
-msgstr "<0>12-month trend:</0> a light tie-breaker from {trendRange}; falling assets remain candidates."
+#: src/components/allocation/valuation-skill-card.tsx:133
+msgid "allocation.skill.ruleTrendV2"
+msgstr "<0>12-month trend:</0> a light tie-breaker, raw factor {trendRange} before the book is rebalanced; falling assets remain candidates."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/valuation-skill-card.tsx:116
-msgid "allocation.skill.ruleReview"
-msgstr "<0>Review:</0> ↻ marks prices that moved more than {drift} since their fair value."
+#: src/components/allocation/valuation-skill-card.tsx:140
+msgid "allocation.skill.ruleReviewV2"
+msgstr "<0>Review:</0> ↻ marks prices that moved more than {drift} since the fair value was written."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/valuation-skill-card.tsx:122
-msgid "allocation.skill.ruleSales"
-msgstr "<0>Sales:</0> recommended only from {sellBar} confidence; before that they are shown for information."
+#: src/components/allocation/valuation-skill-card.tsx:147
+msgid "allocation.skill.ruleSalesV2"
+msgstr "<0>Sales:</0> recommended only from {sellBar} confidence over a complete price history; before that they are shown for information."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/valuation-skill-card.tsx:102
-msgid "allocation.skill.ruleValuation"
-msgstr "<0>Valuation:</0> target × (fair value ÷ price)^{strength}, shared only among assets with a fair value."
+#: src/components/allocation/valuation-skill-card.tsx:125
+msgid "allocation.skill.ruleValuationV2"
+msgstr "<0>Valuation:</0> target × (fair value ÷ price)^({strength} × each fair value's own confidence, from its age and grade), shared only among assets with a fair value."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:358
+#: src/components/score-documentation.tsx:398
 msgid "documentation.formula.relativeGap"
 msgstr "1 - current weight / adjusted target"
 
@@ -751,7 +839,7 @@ msgid "deepFinder.window1y"
 msgstr "1 year"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/asset-detail-page.tsx:318
+#: src/components/allocation/asset-detail-page.tsx:325
 msgid "allocation.detailTrend"
 msgstr "12-month trend"
 
@@ -793,9 +881,14 @@ msgid "allocation.plannerFxUnavailable"
 msgstr "A currency total is unavailable until the required FX rate is available."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:924
+#: src/components/score-documentation.tsx:966
 msgid "documentation.score.noQuoteDescription"
 msgstr "A held asset that no live or manual price can value has an unknown weight, not a zero one. It is blocked instead of looking like the largest gap in the portfolio; set a manual value to score it again."
+
+#. js-lingui-explicit-id
+#: src/components/score-documentation.tsx:697
+msgid "documentation.score.field.sellBandHintV2"
+msgstr "A position priced above your fair value is a sale candidate once it runs this far past its trim target."
 
 #. js-lingui-explicit-id
 #: src/components/documentation-dialog.tsx:363
@@ -833,12 +926,12 @@ msgid "documentation.contribution.exampleStarterDescription"
 msgstr "A watch-only asset with a 5% target on a R$ 1,000,000 book receiving R$ 100,000 gets at most {starterShare} of 5% of R$ 1,100,000 in this cheque; the rest of its target waits for later contributions."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:413
+#: src/components/score-documentation.tsx:453
 msgid "documentation.score.field.absoluteCap"
 msgstr "Absolute weight cap"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:958
+#: src/components/score-documentation.tsx:1002
 msgid "documentation.score.absoluteCap"
 msgstr "Absolute weight cap"
 
@@ -895,7 +988,7 @@ msgid "settings.devSeed.action"
 msgstr "Add demo test data"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:889
+#: src/components/score-documentation.tsx:931
 msgid "documentation.score.addPoint"
 msgstr "Add grade point"
 
@@ -920,6 +1013,12 @@ msgid "settings.devSeed.description"
 msgstr "Adds a 25+ asset demo book: mixed BRL/USD trades, targets, quarterly grades, notes and fair values. Existing tickers are skipped, so a second click only fills what is still missing. Local testing only."
 
 #. js-lingui-explicit-id
+#: src/components/allocation/asset-detail-page.tsx:352
+#: src/components/allocation/table/columns.ts:46
+msgid "allocation.colGapAdjusted"
+msgstr "Adj. gap"
+
+#. js-lingui-explicit-id
 #: src/components/allocation/asset-detail-page.tsx:295
 #: src/components/allocation/table/columns.ts:40
 msgid "allocation.colAdjustedTarget"
@@ -928,7 +1027,7 @@ msgstr "Adjusted target"
 #. js-lingui-explicit-id
 #. placeholder {0}: preview.cooldownFloor
 #. placeholder {1}: preview.cooldownDays
-#: src/components/score-documentation.tsx:1006
+#: src/components/score-documentation.tsx:1050
 msgid "documentation.score.cooldownDescriptionV2"
 msgstr "After a buy, priority starts at ×{0} and rises linearly to ×1 over {1} days. The asset stays a candidate, so a small buy does not freeze it and a large gap can still win. Sells do not reset the clock."
 
@@ -996,7 +1095,7 @@ msgid "documentation.positions.missingQuote"
 msgstr "Allocation weights use quoted market value in the display currency. An open position without a live or manual quote is flagged and left out of the quoted-value denominator rather than valued at zero. Its current-weight input to the score consequently falls back to zero, while its suggested unit count remains unavailable until it has a price."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/table/score-reason.ts:113
+#: src/components/allocation/table/score-reason.ts:122
 msgid "allocation.resultSourceAlpha"
 msgstr "Alpha Vantage"
 
@@ -1024,11 +1123,6 @@ msgstr "Already past its own target by more than the block factor."
 #: src/components/documentation-dialog.tsx:673
 msgid "documentation.comparisons.dividendStatus"
 msgstr "Amounts are gross estimates: withholding, broker adjustments, and confirmed settlement are not modeled. Future ex-dates are announced; a past ex-date with a future payment date is scheduled; otherwise the event is labeled estimated paid. That last status is an inference, not payment confirmation."
-
-#. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:655
-msgid "documentation.score.field.sellBandHint"
-msgstr "An expensive position is a sale candidate once it runs this far past its adjusted target."
 
 #. js-lingui-explicit-id
 #: src/components/transactions/book-holdings-panel.tsx:348
@@ -1061,7 +1155,7 @@ msgid "settings.section.appearance"
 msgstr "Appearance"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:741
+#: src/components/score-documentation.tsx:783
 msgid "documentation.score.field.ungradedHint"
 msgstr "Applied when the asset has no graded quarter yet. Neutral is 1."
 
@@ -1102,7 +1196,7 @@ msgid "performance.contributorsHint"
 msgstr "Assets with the largest open result, and what each one adds to the portfolio return."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:498
+#: src/components/score-documentation.tsx:538
 msgid "documentation.score.field.icPriorHint"
 msgstr "Assumed before any fair value has a 12-month outcome. Half of the reference means half strength."
 
@@ -1139,12 +1233,12 @@ msgid "dividends.alphaHint"
 msgstr "Automatic mode is currently using Yahoo only. Set ALPHA_VANTAGE_API_KEY on the API to enrich US events with payment dates and future declarations."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:447
+#: src/components/allocation/allocation-table.tsx:466
 msgid "allocation.cashTargetHint"
 msgstr "Automatically fills the part not assigned to other assets."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/asset-detail-page.tsx:408
+#: src/components/allocation/asset-detail-page.tsx:417
 msgid "allocation.detailAvgPrice"
 msgstr "Average cost"
 
@@ -1155,7 +1249,7 @@ msgstr "Average cost and prices stay in the native currency of each asset; marke
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.gradedQuarters
-#: src/components/allocation/allocation-table.tsx:751
+#: src/components/allocation/allocation-table.tsx:761
 msgid "allocation.gradeTooltip"
 msgstr "Average of {0} graded quarters"
 
@@ -1235,7 +1329,7 @@ msgid "assetClass.bdr"
 msgstr "BDR"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:669
+#: src/components/score-documentation.tsx:711
 msgid "documentation.score.field.sellConfidenceHint"
 msgstr "Below it, sale suggestions are shown for information only."
 
@@ -1245,17 +1339,17 @@ msgid "positions.teaserHint"
 msgstr "Biggest percent moves over the last month. Open Deep Finder for every ticker and lookback window."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:986
+#: src/components/score-documentation.tsx:1030
 msgid "documentation.score.targetCapDescriptionV2"
 msgstr "Block new contributions when current weight is greater than {overweightLimit} of its own target; the planner never takes an asset past it either."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:964
+#: src/components/score-documentation.tsx:1008
 msgid "documentation.score.absoluteCapDescriptionV2"
 msgstr "Block new contributions when current weight is greater than {scoreCap} of the portfolio, unless the asset has an explicit target above that ceiling. The planner also never takes such an asset past {scoreCap}."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:919
+#: src/components/score-documentation.tsx:961
 msgid "documentation.score.noQuoteTitle"
 msgstr "Blocked without a price"
 
@@ -1294,7 +1388,7 @@ msgid "assetClass.stockBr"
 msgstr "Brazilian stock"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/sell-planner.tsx:197
+#: src/components/allocation/sell-planner.tsx:212
 msgid "allocation.sales.exemptTitle"
 msgstr "Brazilian stocks, inside the exemption"
 
@@ -1305,9 +1399,9 @@ msgstr "Breadth"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: money(plan.exemptExcess)
-#: src/components/allocation/sell-planner.tsx:211
-msgid "allocation.sales.scaled"
-msgstr "Bringing every position back to its adjusted target would sell {0}, more than is still exempt, so each sale was reduced by the same share."
+#: src/components/allocation/sell-planner.tsx:226
+msgid "allocation.sales.scaledV2"
+msgstr "Bringing every position back to its sale target would sell {0}, more than is still exempt, so each sale was reduced by the same share."
 
 #. js-lingui-explicit-id
 #: src/lib/display-labels.ts:55
@@ -1368,7 +1462,7 @@ msgid "positions.allocGroupsCurrency"
 msgstr "By currency"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:287
+#: src/components/score-documentation.tsx:327
 msgid "documentation.score.pipelineTitle"
 msgstr "Calculation pipeline"
 
@@ -1439,7 +1533,7 @@ msgid "documentation.performance.cashFlowsTitle"
 msgstr "Cash flows and timing"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:706
+#: src/components/allocation/allocation-table.tsx:716
 msgid "allocation.cashValueHint"
 msgstr "Cash is entered manually and included in total net worth."
 
@@ -1532,7 +1626,7 @@ msgid "transactions.colCurrency"
 msgstr "Ccy"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:405
+#: src/components/score-documentation.tsx:445
 msgid "documentation.score.group.limits"
 msgstr "Ceilings and trims"
 
@@ -1578,7 +1672,7 @@ msgid "transactions.importFile"
 msgstr "Choose file"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:1028
+#: src/components/score-documentation.tsx:1072
 msgid "documentation.score.normalCandidateDescriptionV2"
 msgstr "Clamp a negative relative gap to zero, then apply the priority."
 
@@ -1731,27 +1825,26 @@ msgstr "Compounding, annualization, and drawdown"
 #. placeholder {0}: formatWeight(skill.confidence)
 #. placeholder {1}: skill.pairs
 #. placeholder {2}: skill.periods
-#. placeholder {3}: skill.ic ?? "—"
-#: src/components/allocation/valuation-skill-card.tsx:91
+#: src/components/allocation/valuation-skill-card.tsx:98
 msgid "allocation.skill.trackText"
 msgstr "Confidence {0} from {1} reviews with a 12-month outcome across {2} quarters (IC {3}). Valuation strength is {strength} of {maxLabel}."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: formatWeight(skill.confidence)
 #. placeholder {1}: skill.pending
-#: src/components/allocation/valuation-skill-card.tsx:84
+#: src/components/allocation/valuation-skill-card.tsx:91
 msgid "allocation.skill.learningText"
 msgstr "Confidence {0}: no fair value has a 12-month outcome yet ({1} waiting). Until then the valuation weighs at strength {strength} of {maxLabel}, and sales stay informational."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: formatWeight(plan.confidence)
 #. placeholder {1}: formatWeight(plan.requiredConfidence)
-#: src/components/allocation/sell-planner.tsx:156
+#: src/components/allocation/sell-planner.tsx:171
 msgid "allocation.sales.infoText"
 msgstr "Confidence in your fair values is {0}; sales are recommended from {1}. Without a proven track record, selling on valuation alone lost money in the simulation when fair values were biased. Consider simply not contributing to these assets."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:664
+#: src/components/score-documentation.tsx:706
 msgid "documentation.score.field.sellConfidence"
 msgstr "Confidence to recommend sales"
 
@@ -1761,7 +1854,7 @@ msgid "documentation.contribution.thresholdsTitle"
 msgstr "Configurable thresholds"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:392
+#: src/components/score-documentation.tsx:432
 msgid "documentation.score.thresholdsTitle"
 msgstr "Configurable thresholds"
 
@@ -1776,12 +1869,12 @@ msgid "allocation.plannerAmount"
 msgstr "Contribution"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:752
+#: src/components/score-documentation.tsx:794
 msgid "documentation.score.field.cooldownDays"
 msgstr "Contribution cooldown"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:995
+#: src/components/score-documentation.tsx:1039
 msgid "documentation.score.cooldown"
 msgstr "Contribution cooldown"
 
@@ -1824,12 +1917,12 @@ msgid "documentation.section.score"
 msgstr "Contribution score"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:162
+#: src/components/score-documentation.tsx:197
 msgid "documentation.score.resetSuccess"
 msgstr "Contribution score settings restored to defaults."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:133
+#: src/components/score-documentation.tsx:168
 msgid "documentation.score.saveSuccess"
 msgstr "Contribution score settings saved."
 
@@ -1861,7 +1954,7 @@ msgid "performance.netFlow"
 msgstr "Contributions"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:484
+#: src/components/score-documentation.tsx:524
 msgid "documentation.score.field.icReferenceHint"
 msgstr "Correlation between your discounts and the next 12 months of returns at which valuation reaches full strength."
 
@@ -1923,7 +2016,7 @@ msgid "settings.data.deleteError"
 msgstr "Could not delete the application data."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:687
+#: src/routes/_app/allocation.index.tsx:694
 #: src/routes/_app/detailed-positions.tsx:227
 #: src/routes/_app/positions.tsx:174
 msgid "positions.fxFailed"
@@ -1950,7 +2043,7 @@ msgid "documentation.contribution.loadErrorTitle"
 msgstr "Could not load planner settings"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:198
+#: src/components/score-documentation.tsx:233
 msgid "documentation.score.loadErrorTitle"
 msgstr "Could not load score settings"
 
@@ -1958,6 +2051,11 @@ msgstr "Could not load score settings"
 #: src/lib/trpcErrors.ts:87
 msgid "error.loadFailed"
 msgstr "Could not load this data. Try again."
+
+#. js-lingui-explicit-id
+#: src/components/score-documentation.tsx:96
+msgid "documentation.score.trackRecordError"
+msgstr "Could not load your valuation track record."
 
 #. js-lingui-explicit-id
 #: src/lib/trpcErrors.ts:82
@@ -1970,7 +2068,7 @@ msgid "documentation.contribution.resetError"
 msgstr "Could not restore planner defaults."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:173
+#: src/components/score-documentation.tsx:208
 msgid "documentation.score.resetError"
 msgstr "Could not restore score defaults."
 
@@ -1980,7 +2078,7 @@ msgid "documentation.contribution.saveError"
 msgstr "Could not save planner settings."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:144
+#: src/components/score-documentation.tsx:179
 msgid "documentation.score.saveError"
 msgstr "Could not save score settings."
 
@@ -2069,7 +2167,7 @@ msgid "documentation.positions.currencyTitle"
 msgstr "Currency consolidation"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/asset-detail-page.tsx:339
+#: src/components/allocation/asset-detail-page.tsx:346
 #: src/components/allocation/table/columns.ts:43
 msgid "allocation.colCurrent"
 msgstr "Current"
@@ -2085,7 +2183,7 @@ msgid "transactions.currentValue"
 msgstr "Current value"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:232
+#: src/components/score-documentation.tsx:272
 msgid "documentation.score.customPolicy"
 msgstr "Custom contribution policy"
 
@@ -2100,7 +2198,7 @@ msgid "detailedPositions.customize"
 msgstr "Customize columns"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/table/score-reason.ts:110
+#: src/components/allocation/table/score-reason.ts:119
 msgid "allocation.resultSourceCvm"
 msgstr "CVM/B3"
 
@@ -2186,13 +2284,13 @@ msgid "daily.colDayChange"
 msgstr "Day change"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:750
-#: src/components/score-documentation.tsx:1002
+#: src/components/score-documentation.tsx:792
+#: src/components/score-documentation.tsx:1046
 msgid "documentation.score.unit.days"
 msgstr "days"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:757
+#: src/components/score-documentation.tsx:799
 msgid "documentation.score.field.cooldownDaysHintV2"
 msgstr "Days after a buy during which the asset's priority ramps back to full."
 
@@ -2321,13 +2419,13 @@ msgstr "Development only"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/asset-detail-page.tsx:274
-#: src/components/allocation/table/columns.ts:51
+#: src/components/allocation/table/columns.ts:53
 msgid "allocation.colDiscount"
 msgstr "Discount"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: formatSignedWeightPrecise(item.discount)
-#: src/components/allocation/sell-planner.tsx:287
+#: src/components/allocation/sell-planner.tsx:301
 msgid "allocation.sales.discount"
 msgstr "Discount to fair value: {0}"
 
@@ -2373,7 +2471,7 @@ msgid "documentation.topics"
 msgstr "Documentation topics"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/valuation-skill-card.tsx:55
+#: src/components/allocation/valuation-skill-card.tsx:62
 msgid "allocation.skill.title"
 msgstr "Does your valuation work?"
 
@@ -2393,7 +2491,7 @@ msgid "documentation.performance.drawdown"
 msgstr "Drawdown"
 
 #. js-lingui-explicit-id
-#: src/lib/validation-messages.ts:184
+#: src/lib/validation-messages.ts:188
 msgid "validation.importDuplicate"
 msgstr "Duplicate ticker {0}"
 
@@ -2410,7 +2508,7 @@ msgstr "Each money slice is rounded independently to cents. Any rounding differe
 #. js-lingui-explicit-id
 #. placeholder {0}: preview.ungradedMultiplier
 #. placeholder {1}: preview.gradePriorQuarters
-#: src/components/score-documentation.tsx:785
+#: src/components/score-documentation.tsx:827
 msgid "documentation.score.gradeCurveDescription"
 msgstr "Each row is a point of the curve; grades between two points are interpolated, so a tenth of a point never jumps the score. The average leans on recent quarters and is blended with ×{0} by {1} quarter(s) of prior evidence. Notes-only reviews are ignored. Points must be ascending by grade."
 
@@ -2489,7 +2587,7 @@ msgid "allocation.invalidPercent"
 msgstr "Enter a percentage, e.g. 1,5 or -20"
 
 #. js-lingui-explicit-id
-#: src/lib/validation-messages.ts:226
+#: src/lib/validation-messages.ts:248
 msgid "positions.manualPriceInvalid"
 msgstr "Enter a price above zero using digits and up to 8 decimals."
 
@@ -2535,7 +2633,7 @@ msgid "dividends.estimated"
 msgstr "Estimated"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/table/score-reason.ts:126
+#: src/components/allocation/table/score-reason.ts:135
 msgid "allocation.resultEstimated"
 msgstr "Estimated date"
 
@@ -2624,9 +2722,10 @@ msgid "documentation.formula.executionRate"
 msgstr "execution USD/BRL = spot × (1 + {fxSpread} spread) × (1 + {fxIof} IOF)"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/sell-planner.tsx:249
-msgid "allocation.sales.footnote"
-msgstr "Exemption: gross sales of Brazilian stocks up to R$ 20,000 per month (Lei 11.033/2004). Sales already registered this month are deducted. Confirm your case with an accountant."
+#. placeholder {0}: formatMoney(BR_STOCK_SALE_EXEMPTION_BRL, "BRL")
+#: src/components/allocation/sell-planner.tsx:263
+msgid "allocation.sales.footnoteV2"
+msgstr "Exemption: gross sales of Brazilian stocks up to {0} per month (Lei 11.033/2004). Sales already registered this month are deducted; once it is used up, further sales are listed as taxed. Confirm your case with an accountant."
 
 #. js-lingui-explicit-id
 #: src/components/allocation/quarter-review-cell.tsx:166
@@ -2634,25 +2733,19 @@ msgid "allocation.reviewExpand"
 msgstr "Expand editor"
 
 #. js-lingui-explicit-id
-#: src/lib/validation-messages.ts:162
+#: src/lib/validation-messages.ts:166
 msgid "validation.importColumns"
 msgstr "Expected ticker, quantity and average price"
 
 #. js-lingui-explicit-id
-#. placeholder {0}: weight(score.tiltedTarget)
-#: src/components/allocation/table/score-reason.ts:53
-msgid "allocation.reasonTrimV2"
-msgstr "Expensive and past the tolerance band around its valuation-adjusted target of {0}: consider trimming instead of buying."
-
-#. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:544
+#: src/components/score-documentation.tsx:584
 msgid "documentation.score.field.sensitivityHintV3"
 msgstr "Exponent k reached with a proven track record. 0 ignores valuation."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:613
-msgid "documentation.score.field.momentumWeightHint"
-msgstr "Exponent on the 12-month trend z-score. 0.10 moves a target at most ×0.82–×1.22; 0 turns the trend off."
+#: src/components/score-documentation.tsx:653
+msgid "documentation.score.field.momentumWeightHintV2"
+msgstr "Exponent on the 12-month trend z-score. Now a raw factor of {trendRange} before the book is rebalanced; 0 turns the trend off."
 
 #. js-lingui-explicit-id
 #: src/components/settings-data.tsx:159
@@ -2689,12 +2782,12 @@ msgstr "Fair value"
 #. js-lingui-explicit-id
 #. placeholder {0}: formatMoney(row.fairValue, row.currency)
 #. placeholder {1}: row.fairValuePeriod ?? ""
-#: src/components/allocation/allocation-table.tsx:537
+#: src/components/allocation/allocation-table.tsx:556
 msgid "allocation.discountTooltipFairOnly"
 msgstr "Fair value {0} ({1})"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:585
+#: src/components/score-documentation.tsx:625
 msgid "documentation.score.field.fairValueHalfLife"
 msgstr "Fair value half-life"
 
@@ -2731,9 +2824,9 @@ msgid "transactions.feesHint"
 msgstr "Fees are added to a buy and subtracted from a sell."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/sell-planner.tsx:235
-msgid "allocation.sales.taxableText"
-msgstr "FIIs, ETFs, BDRs and foreign assets pay tax on any gain. Letting contributions go elsewhere usually beats selling them."
+#: src/components/allocation/sell-planner.tsx:249
+msgid "allocation.sales.taxableTextV2"
+msgstr "FIIs, ETFs, BDRs, foreign assets, and Brazilian stocks once the month's exemption is used up pay tax on any gain. Letting contributions go elsewhere usually beats selling them."
 
 #. js-lingui-explicit-id
 #: src/routes/_app/transactions.tsx:345
@@ -2834,7 +2927,7 @@ msgid "daily.subtitle"
 msgstr "Follow the portfolio's latest daily movement in the display currency, including the USD/BRL move on foreign-currency assets and cash."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/sell-planner.tsx:151
+#: src/components/allocation/sell-planner.tsx:166
 msgid "allocation.sales.infoTitle"
 msgstr "For information only"
 
@@ -2870,12 +2963,6 @@ msgid "detailedPositions.colFxResult"
 msgstr "FX result"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/asset-detail-page.tsx:344
-#: src/components/allocation/table/columns.ts:45
-msgid "allocation.colGap"
-msgstr "Gap"
-
-#. js-lingui-explicit-id
 #: src/components/settings-dialog.tsx:219
 msgid "settings.section.general"
 msgstr "General"
@@ -2887,9 +2974,9 @@ msgid "categories.nameRequired"
 msgstr "Give the category a name."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/asset-detail-page.tsx:373
+#: src/components/allocation/asset-detail-page.tsx:382
 #: src/components/allocation/asset-reviews.tsx:307
-#: src/components/allocation/table/columns.ts:50
+#: src/components/allocation/table/columns.ts:52
 msgid "allocation.colGrade"
 msgstr "Grade"
 
@@ -2900,7 +2987,7 @@ msgstr "Grade (0–10)"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: field.value
-#: src/components/score-documentation.tsx:807
+#: src/components/score-documentation.tsx:849
 msgid "documentation.score.gradePoint"
 msgstr "Grade {0}"
 
@@ -2910,22 +2997,22 @@ msgid "validation.gradeBandsAscending"
 msgstr "Grade bands must be strictly ascending by minimum grade"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:782
+#: src/components/score-documentation.tsx:824
 msgid "documentation.score.gradeCurve"
 msgstr "Grade curve"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:708
+#: src/components/score-documentation.tsx:750
 msgid "documentation.score.field.gradeHalfLife"
 msgstr "Grade half-life"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:375
+#: src/components/score-documentation.tsx:415
 msgid "documentation.formula.priority"
 msgstr "grade multiplier × cooldown ramp"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:722
+#: src/components/score-documentation.tsx:764
 msgid "documentation.score.field.gradePrior"
 msgstr "Grade prior"
 
@@ -2936,12 +3023,12 @@ msgid "allocation.reviewEdit"
 msgstr "Grade this quarter"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:690
+#: src/components/score-documentation.tsx:732
 msgid "documentation.score.field.gradeWindow"
 msgstr "Grade window"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:678
+#: src/components/score-documentation.tsx:720
 msgid "documentation.score.group.priority"
 msgstr "Grades and cooldown"
 
@@ -2961,17 +3048,17 @@ msgid "allocation.statusInvested"
 msgstr "Held"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:567
+#: src/components/score-documentation.tsx:607
 msgid "documentation.score.field.tiltMax"
 msgstr "Highest tilt"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:432
+#: src/components/score-documentation.tsx:472
 msgid "documentation.score.field.overweightBlockHintV2"
 msgstr "Highest weight a contribution may reach, as a percent of the asset's own target. Also bounds a generous valuation tilt."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:418
+#: src/components/score-documentation.tsx:458
 msgid "documentation.score.field.absoluteCapHintV2"
 msgstr "Highest weight a contribution may take an asset whose target is at or below this ceiling."
 
@@ -3022,7 +3109,7 @@ msgid "allocation.plannerFxAria"
 msgstr "How FX is used for contribution amounts and units"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:695
+#: src/components/score-documentation.tsx:737
 msgid "documentation.score.field.gradeWindowHint"
 msgstr "How many of the newest graded quarters the average grade uses."
 
@@ -3033,12 +3120,12 @@ msgid "allocation.quarterWindowHelp"
 msgstr "How many quarters the review grid shows, ending at {0}."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:516
+#: src/components/score-documentation.tsx:556
 msgid "documentation.score.field.icPriorPairsHint"
 msgstr "How many reviews with an outcome it takes for your own track record to outweigh the starting IC."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:352
+#: src/components/score-documentation.tsx:392
 msgid "documentation.score.relativeGapDescription"
 msgstr "How much of the adjusted target is missing. An empty 2% target outranks a 10% target that is already at 8%, even though both miss 2 percentage points."
 
@@ -3058,7 +3145,7 @@ msgid "documentation.section.scoreDescription"
 msgstr "How the next-contribution priority is calculated, and the thresholds you can tune."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:479
+#: src/components/score-documentation.tsx:519
 msgid "documentation.score.field.icReference"
 msgstr "IC for full strength"
 
@@ -3068,9 +3155,9 @@ msgid "documentation.performance.fallbackDescription"
 msgstr "If a position has no historical price, it is carried at its remaining cost basis to keep the portfolio curve continuous. The page counts and discloses these cost-fallback positions. A month with a non-positive return base has no calculated return."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:946
-msgid "documentation.score.trimDescriptionV2"
-msgstr "If valuation tilts the target down and current weight runs more than {trimAbsolute} points or {trimRelative} of the adjusted target past it (whichever is tighter, the 5/25 tolerance-band rule), return the negative relative gap. This rule precedes the blocking caps so it can produce a trim signal."
+#: src/components/score-documentation.tsx:988
+msgid "documentation.score.trimDescriptionV3"
+msgstr "If the price is above your fair value and current weight runs more than {trimAbsolute} points or {trimRelative} past the trim target (whichever is tighter, the 5/25 tolerance-band rule), return the negative relative gap. The trim target is the adjusted target, but never below the target times the asset's own valuation tilt: another asset being cheap cannot make a fairly priced one look overweight. This rule precedes the blocking caps so it can produce a trim signal."
 
 #. js-lingui-explicit-id
 #: src/components/allocation/contribution-planner.tsx:545
@@ -3138,7 +3225,7 @@ msgid "dividends.historyTitle"
 msgstr "Income history"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/valuation-skill-card.tsx:69
+#: src/components/allocation/valuation-skill-card.tsx:76
 msgid "allocation.skill.neutral"
 msgstr "Inconclusive"
 
@@ -3153,7 +3240,7 @@ msgid "detailedPositions.subtitle"
 msgstr "Inspect your holdings in a dense, customizable view. Choose a preset or select exactly which columns to display."
 
 #. js-lingui-explicit-id
-#: src/lib/validation-messages.ts:174
+#: src/lib/validation-messages.ts:178
 msgid "validation.importPrice"
 msgstr "Invalid average price"
 
@@ -3163,12 +3250,12 @@ msgid "auth.invalidCredentials"
 msgstr "Invalid email or password."
 
 #. js-lingui-explicit-id
-#: src/lib/validation-messages.ts:170
+#: src/lib/validation-messages.ts:174
 msgid "validation.importQuantity"
 msgstr "Invalid quantity"
 
 #. js-lingui-explicit-id
-#: src/lib/validation-messages.ts:166
+#: src/lib/validation-messages.ts:170
 msgid "validation.importTicker"
 msgstr "Invalid ticker"
 
@@ -3211,18 +3298,18 @@ msgid "documentation.contribution.field.largeImpact"
 msgstr "Large-book weight impact"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:572
+#: src/components/score-documentation.tsx:612
 msgid "documentation.score.field.tiltMaxHint"
 msgstr "Largest multiplier a cheap price may apply to a target (at least 1)."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:627
+#: src/components/score-documentation.tsx:668
 msgid "documentation.score.field.momentumZCapHint"
 msgstr "Largest trend z-score counted, so one huge rally cannot dominate."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/asset-detail-page.tsx:388
-#: src/components/allocation/table/columns.ts:53
+#: src/components/allocation/asset-detail-page.tsx:397
+#: src/components/allocation/table/columns.ts:55
 msgid "allocation.colLastBuy"
 msgstr "Last buy"
 
@@ -3247,7 +3334,7 @@ msgid "daily.quotedAt"
 msgstr "Latest quotes from {asOf}."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/valuation-skill-card.tsx:61
+#: src/components/allocation/valuation-skill-card.tsx:68
 msgid "allocation.skill.learning"
 msgstr "Learning"
 
@@ -3281,13 +3368,13 @@ msgstr "Looking up the BCB PTAX…"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.score.cooldownUntil
-#: src/components/allocation/allocation-table.tsx:643
-#: src/components/allocation/asset-detail-page.tsx:398
+#: src/components/allocation/allocation-table.tsx:653
+#: src/components/allocation/asset-detail-page.tsx:407
 msgid "allocation.cooldownRampIcon"
 msgstr "Lower priority until {0}"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:553
+#: src/components/score-documentation.tsx:593
 msgid "documentation.score.field.tiltMin"
 msgstr "Lowest tilt"
 
@@ -3310,6 +3397,16 @@ msgstr "Manual prices"
 #: src/components/settings-dialog.tsx:382
 msgid "positions.quoteSourceManualHint"
 msgstr "Manual prices are entered per ticker on the Positions page."
+
+#. js-lingui-explicit-id
+#: src/components/allocation/valuation-skill-card.tsx:107
+msgid "allocation.skill.manualQuotes"
+msgstr "Manual quotes carry no price history, so the track record, the 12-month trend and review warnings are off. The valuation keeps its starting strength."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/allocation.index.tsx:783
+msgid "allocation.signalsManual"
+msgstr "Manual quotes carry no price history: the 12-month trend, review warnings and the valuation track record are off."
 
 #. js-lingui-explicit-id
 #: src/lib/display-labels.ts:32
@@ -3340,7 +3437,7 @@ msgstr "Market"
 #. placeholder {0}: formatMoney(row.marketPrice, row.currency)
 #. placeholder {1}: formatMoney(row.fairValue, row.currency)
 #. placeholder {2}: row.fairValuePeriod ?? ""
-#: src/components/allocation/allocation-table.tsx:543
+#: src/components/allocation/allocation-table.tsx:562
 msgid "allocation.discountTooltip"
 msgstr "Market {0} vs fair value {1} ({2})"
 
@@ -3396,7 +3493,7 @@ msgstr "Market value at {snapshotLabel} and share of quoted equity."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.ticker
-#: src/components/allocation/allocation-table.tsx:698
+#: src/components/allocation/allocation-table.tsx:708
 msgid "allocation.editValue"
 msgstr "Market value of {0}"
 
@@ -3421,7 +3518,7 @@ msgid "performance.maxDrawdown"
 msgstr "Max drawdown"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:1033
+#: src/components/score-documentation.tsx:1077
 msgid "documentation.formula.priorityGap"
 msgstr "max(relative gap, 0) × priority"
 
@@ -3436,7 +3533,7 @@ msgid "documentation.contribution.field.maxShare"
 msgstr "Maximum share per asset"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:539
+#: src/components/score-documentation.tsx:579
 msgid "documentation.score.field.sensitivityV3"
 msgstr "Maximum valuation strength"
 
@@ -3461,7 +3558,7 @@ msgid "documentation.contribution.field.smallImpactHint"
 msgstr "Minimum portfolio-weight move on a book of {smallBook} or less. A second name needs about 1.5× this slice."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:530
+#: src/components/score-documentation.tsx:570
 msgid "documentation.score.field.deadZoneHint"
 msgstr "Mispricing this close to fair value does not tilt the target."
 
@@ -3491,7 +3588,7 @@ msgid "performance.subtitle"
 msgstr "Month-end history of what the portfolio was worth, how much of it is result, and where that result comes from."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/sell-planner.tsx:171
+#: src/components/allocation/sell-planner.tsx:186
 msgid "allocation.sales.limit"
 msgstr "Monthly exemption"
 
@@ -3561,6 +3658,21 @@ msgstr "Moving-average cost. Realized P&L locks in on sells; the open result is 
 #: src/components/documentation-dialog.tsx:475
 msgid "documentation.performance.cumulativeReturnDescription"
 msgstr "Multiply one plus each valid monthly return, then subtract one."
+
+#. js-lingui-explicit-id
+#: src/lib/validation-messages.ts:198
+msgid "validation.atLeast"
+msgstr "Must be at least {0}"
+
+#. js-lingui-explicit-id
+#: src/lib/validation-messages.ts:194
+msgid "validation.atMost"
+msgstr "Must be at most {0}"
+
+#. js-lingui-explicit-id
+#: src/lib/validation-messages.ts:160
+msgid "validation.betweenMinusOneAndOne"
+msgstr "Must be between -1 and 1"
 
 #. js-lingui-explicit-id
 #: src/lib/validation-messages.ts:46
@@ -3674,7 +3786,7 @@ msgid "dividends.nextDate"
 msgstr "Next relevant date"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/table/columns.ts:48
+#: src/components/allocation/table/columns.ts:50
 msgid "allocation.colNextResult"
 msgstr "Next result"
 
@@ -3684,7 +3796,7 @@ msgid "allocation.plannerNoCandidatesV2"
 msgstr "No asset is below its target right now. Set or raise a target, or review a fair value."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/sell-planner.tsx:203
+#: src/components/allocation/sell-planner.tsx:218
 msgid "allocation.sales.exemptEmpty"
 msgstr "No Brazilian stock is above its fair value and past the band."
 
@@ -3699,7 +3811,7 @@ msgid "categories.empty"
 msgstr "No categories yet. Add one to start grouping tickers."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/table/adjusted-target-cell.tsx:97
+#: src/components/allocation/table/adjusted-target-cell.tsx:109
 msgid "allocation.adjustedTargetUnchanged"
 msgstr "no change"
 
@@ -3719,7 +3831,7 @@ msgid "positions.teaserEmptyDown"
 msgstr "No falling holdings this month."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/asset-detail-page.tsx:437
+#: src/components/allocation/asset-detail-page.tsx:446
 msgid "allocation.detailReviewsEmpty"
 msgstr "No grades, notes or fair values have been added yet."
 
@@ -3750,7 +3862,7 @@ msgid "daily.noQuoteDate"
 msgstr "No live quotes available."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:420
+#: src/components/allocation/allocation-table.tsx:439
 msgid "allocation.quoteMissing"
 msgstr "No market quote for this ticker"
 
@@ -3776,6 +3888,12 @@ msgid "performance.missingQuotes"
 msgstr "No price history for {0}. These assets are carried at cost, so they add value without adding return."
 
 #. js-lingui-explicit-id
+#. placeholder {0}: count > 5 ? "…" : ""
+#: src/routes/_app/allocation.index.tsx:788
+msgid "allocation.signalsUnavailable"
+msgstr "No price history for {count} assets ({shown}{0}): they get no trend or review warning, and fair values due for their 12-month outcome are left out of the track record."
+
+#. js-lingui-explicit-id
 #: src/components/allocation/asset-detail-chart.tsx:77
 msgid "allocation.detailChartEmpty"
 msgstr "No price history for this ticker yet."
@@ -3786,12 +3904,12 @@ msgid "transactions.tradeFxPending"
 msgstr "No PTAX published for this date yet. Leave blank to fill it later, or type a rate."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:721
+#: src/components/allocation/allocation-table.tsx:731
 msgid "allocation.valueMissingTooltip"
 msgstr "No public quote. Enter the position's market value."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:714
+#: src/components/allocation/allocation-table.tsx:724
 msgid "allocation.valueManualTooltip"
 msgstr "No public quote. This value is set by you. Clear the cell to remove it."
 
@@ -3817,7 +3935,7 @@ msgid "splits.empty"
 msgstr "No split recorded for this ticker."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:909
+#: src/components/score-documentation.tsx:951
 msgid "documentation.score.noTarget"
 msgstr "No target"
 
@@ -3827,7 +3945,7 @@ msgid "allocation.reasonNoTarget"
 msgstr "No target weight set, so there is no gap to close."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/table/adjusted-target-cell.tsx:27
+#: src/components/allocation/table/adjusted-target-cell.tsx:29
 msgid "allocation.adjustedTargetNone"
 msgstr "No target, so nothing to adjust."
 
@@ -3862,7 +3980,7 @@ msgid "performance.noneYet"
 msgstr "None yet."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:1016
+#: src/components/score-documentation.tsx:1060
 msgid "documentation.score.normalCandidate"
 msgstr "Normal candidate"
 
@@ -3872,7 +3990,7 @@ msgid "validation.dateInvalid"
 msgstr "Not a valid calendar date"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/valuation-skill-card.tsx:65
+#: src/components/allocation/valuation-skill-card.tsx:72
 msgid "allocation.skill.wrong"
 msgstr "Not anticipating returns"
 
@@ -3902,7 +4020,7 @@ msgid "transactions.empty"
 msgstr "Nothing registered yet."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:820
+#: src/components/allocation/allocation-table.tsx:830
 msgid "allocation.empty"
 msgstr "Nothing to allocate yet. Register a trade or add an asset to follow."
 
@@ -3923,7 +4041,7 @@ msgstr "Open Deep Finder"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.ticker
-#: src/components/allocation/allocation-table.tsx:572
+#: src/components/allocation/allocation-table.tsx:582
 msgid "allocation.openFairValueRef"
 msgstr "Open fair value reference for {0}"
 
@@ -4002,7 +4120,7 @@ msgid "assetClass.other"
 msgstr "Other"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/sell-planner.tsx:230
+#: src/components/allocation/sell-planner.tsx:244
 msgid "allocation.sales.taxableTitle"
 msgstr "Outside the exemption (taxed if sold)"
 
@@ -4086,7 +4204,7 @@ msgid "deepFinder.chartPeriodHint"
 msgstr "Percent move of the current book over the selected window."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:447
+#: src/components/score-documentation.tsx:487
 msgid "documentation.score.field.trimAbsoluteHint"
 msgstr "Percentage points past the adjusted target that make an expensive holding a trim candidate."
 
@@ -4149,7 +4267,7 @@ msgstr "Policy version {0}"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: policy.data.config.version
-#: src/components/score-documentation.tsx:236
+#: src/components/score-documentation.tsx:276
 msgid "documentation.score.policyVersion"
 msgstr "Policy version {0}"
 
@@ -4231,10 +4349,10 @@ msgid "document.positions"
 msgstr "Positions"
 
 #. js-lingui-explicit-id
-#. placeholder {0}: formatWeight(config?.sellBand ?? "0.25")
-#: src/components/allocation/sell-planner.tsx:121
-msgid "allocation.sales.description"
-msgstr "Positions priced above your fair value that ran more than {0} past their adjusted target, trimmed toward it. Suggestion only — nothing is saved until you register the sale."
+#. placeholder {0}: formatWeight(config?.sellBand ?? DEFAULT_SCORE_CONFIG.sellBand)
+#: src/components/allocation/sell-planner.tsx:135
+msgid "allocation.sales.descriptionV2"
+msgstr "Positions priced above your fair value that ran more than {0} past their sale target, trimmed toward it. The sale target never sits below what the asset's own valuation justifies. Suggestion only — nothing is saved until you register the sale."
 
 #. js-lingui-explicit-id
 #: src/components/transactions/transaction-history.tsx:163
@@ -4268,9 +4386,9 @@ msgid "positions.colPrice"
 msgstr "Price"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:641
-msgid "documentation.score.field.reviewDriftHint"
-msgstr "Price move since the fair value's quarter end that asks you to redo the valuation from scratch."
+#: src/components/score-documentation.tsx:682
+msgid "documentation.score.field.reviewDriftHintV2"
+msgstr "Price move since the fair value was written (its quarter end or its last edit, whichever is later) that asks you to redo the valuation from scratch."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: formatSignedWeightPrecise(drift)
@@ -4279,33 +4397,39 @@ msgid "allocation.reviewSuggested"
 msgstr "Price moved {0} since the {period} fair value: redo the valuation from scratch"
 
 #. js-lingui-explicit-id
+#. placeholder {0}: weight(score.trimTarget)
+#: src/components/allocation/table/score-reason.ts:53
+msgid "allocation.reasonTrimV3"
+msgstr "Priced above your fair value and past the tolerance band around {0}, the lowest weight its own valuation justifies: consider trimming instead of buying."
+
+#. js-lingui-explicit-id
 #: src/components/theme-editor.tsx:44
 msgid "theme.editor.primary"
 msgstr "Primary"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:366
+#: src/components/score-documentation.tsx:406
 msgid "documentation.score.priority"
 msgstr "Priority"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: field.value
-#: src/components/score-documentation.tsx:833
+#: src/components/score-documentation.tsx:875
 msgid "documentation.score.priorityMultiplier"
 msgstr "Priority ×{0}"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:771
+#: src/components/score-documentation.tsx:813
 msgid "documentation.score.field.cooldownFloorHint"
 msgstr "Priority multiplier on the day of a buy, rising linearly to 1. Use 0 for the strictest ramp."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:766
+#: src/components/score-documentation.tsx:808
 msgid "documentation.score.field.cooldownFloor"
 msgstr "Priority right after a buy"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/valuation-skill-card.tsx:63
+#: src/components/allocation/valuation-skill-card.tsx:70
 msgid "allocation.skill.right"
 msgstr "Proven"
 
@@ -4344,7 +4468,7 @@ msgid "detailedPositions.colQuantity"
 msgstr "Quantity"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:675
+#: src/components/allocation/allocation-table.tsx:685
 msgid "allocation.valueQuotedTooltip"
 msgstr "Quantity × market price"
 
@@ -4370,30 +4494,30 @@ msgid "allocation.quarterWindowAria"
 msgstr "Quarter window: {range}"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/asset-detail-page.tsx:434
+#: src/components/allocation/asset-detail-page.tsx:443
 #: src/components/allocation/asset-reviews.tsx:140
 msgid "allocation.detailReviews"
 msgstr "Quarterly reviews"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:582
-#: src/components/score-documentation.tsx:687
-#: src/components/score-documentation.tsx:705
+#: src/components/score-documentation.tsx:622
+#: src/components/score-documentation.tsx:729
+#: src/components/score-documentation.tsx:747
 msgid "documentation.score.unit.quarters"
 msgstr "quarters"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:590
+#: src/components/score-documentation.tsx:630
 msgid "documentation.score.field.fairValueHalfLifeHint"
 msgstr "Quarters after which a fair value that was not refreshed counts half as much."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:713
+#: src/components/score-documentation.tsx:755
 msgid "documentation.score.field.gradeHalfLifeHint"
 msgstr "Quarters after which a grade counts half as much as a fresh one."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:727
+#: src/components/score-documentation.tsx:769
 msgid "documentation.score.field.gradePriorHint"
 msgstr "Quarters of neutral evidence mixed in, so one grade moves the multiplier less than several consistent ones."
 
@@ -4459,7 +4583,7 @@ msgid "allocation.reviewHintV2"
 msgstr "Recent grades set the asset's priority and how much its fair value is trusted. The newest fair value tilts the target, and it loses weight as quarters pass without a new one."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/sell-planner.tsx:134
+#: src/components/allocation/sell-planner.tsx:149
 msgid "allocation.sales.recommendedTitle"
 msgstr "Recommended by your track record"
 
@@ -4513,7 +4637,7 @@ msgid "settings.fxRefresh"
 msgstr "Refresh rate"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:203
+#: src/components/score-documentation.tsx:238
 msgid "documentation.score.loadErrorDescription"
 msgstr "Refresh the page and try again. Allocation continues to use the last known policy on the server."
 
@@ -4582,7 +4706,7 @@ msgid "assetClass.reit"
 msgstr "REIT"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:347
+#: src/components/score-documentation.tsx:387
 msgid "documentation.score.relativeGap"
 msgstr "Relative gap"
 
@@ -4607,7 +4731,7 @@ msgid "allocation.removeFilter"
 msgstr "Remove filter: {label}"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:860
+#: src/components/score-documentation.tsx:902
 msgid "documentation.score.removePoint"
 msgstr "Remove grade point"
 
@@ -4669,7 +4793,7 @@ msgid "documentation.contribution.resetDefaults"
 msgstr "Reset defaults"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:255
+#: src/components/score-documentation.tsx:295
 msgid "documentation.score.resetDefaults"
 msgstr "Reset defaults"
 
@@ -4700,7 +4824,7 @@ msgid "documentation.performance.contributionTitle"
 msgstr "Result contribution"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:614
+#: src/components/allocation/allocation-table.tsx:624
 msgid "allocation.resultUnavailable"
 msgstr "Result date temporarily unavailable"
 
@@ -4745,12 +4869,12 @@ msgid "transactions.remove"
 msgstr "Review deletion of {ticker} trade from {date}"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:636
+#: src/components/score-documentation.tsx:677
 msgid "documentation.score.field.reviewDrift"
 msgstr "Review warning"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:508
+#: src/components/score-documentation.tsx:548
 msgid "documentation.score.unit.pairs"
 msgstr "reviews"
 
@@ -4777,27 +4901,27 @@ msgid "dividends.rowsPerPage"
 msgstr "Rows per page"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:895
+#: src/components/score-documentation.tsx:937
 msgid "documentation.score.ruleLadder"
 msgstr "Rule ladder"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:898
+#: src/components/score-documentation.tsx:940
 msgid "documentation.score.ruleLadderDescription"
 msgstr "Rules run in this exact order and the first match wins. This priority is part of the method; only the thresholds above are editable."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:650
+#: src/components/score-documentation.tsx:692
 msgid "documentation.score.field.sellBand"
 msgstr "Sale band"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/sell-planner.tsx:104
+#: src/components/allocation/sell-planner.tsx:110
 msgid "allocation.sales.open"
 msgstr "Sale suggestions"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/sell-planner.tsx:118
+#: src/components/allocation/sell-planner.tsx:132
 msgid "allocation.sales.title"
 msgstr "Sale suggestions"
 
@@ -4822,7 +4946,7 @@ msgid "documentation.contribution.save"
 msgstr "Save"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:269
+#: src/components/score-documentation.tsx:309
 msgid "documentation.score.save"
 msgstr "Save"
 
@@ -4852,13 +4976,13 @@ msgid "dividends.scheduled"
 msgstr "Scheduled"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/asset-detail-page.tsx:365
-#: src/components/allocation/table/columns.ts:46
+#: src/components/allocation/asset-detail-page.tsx:374
+#: src/components/allocation/table/columns.ts:48
 msgid "allocation.colScore"
 msgstr "Score"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:912
+#: src/components/score-documentation.tsx:954
 msgid "documentation.score.noTargetDescription"
 msgstr "Score is zero because there is no allocation target to close."
 
@@ -4927,7 +5051,7 @@ msgid "side.sell"
 msgstr "Sell"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:529
+#: src/components/allocation/allocation-table.tsx:548
 msgid "allocation.discountEmptyTooltip"
 msgstr "Set a fair value on a quarterly review"
 
@@ -4942,7 +5066,7 @@ msgid "register.description"
 msgstr "Set up an account to start tracking your trades."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:729
+#: src/components/allocation/allocation-table.tsx:739
 msgid "allocation.valuePlaceholder"
 msgstr "Set value"
 
@@ -4984,8 +5108,8 @@ msgid "dividends.shares"
 msgstr "Shares"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/asset-detail-page.tsx:382
-#: src/components/allocation/table/columns.ts:55
+#: src/components/allocation/asset-detail-page.tsx:391
+#: src/components/allocation/table/columns.ts:57
 msgid "allocation.colQuantity"
 msgstr "Shares"
 
@@ -5014,6 +5138,11 @@ msgstr "Show fewer"
 #: src/components/allocation/allocation-toolbar.tsx:292
 msgid "allocation.quartersForward"
 msgstr "Show later quarters"
+
+#. js-lingui-explicit-id
+#: src/components/score-documentation.tsx:114
+msgid "documentation.score.trackRecordLoad"
+msgstr "Show track record"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: firstRow + 1
@@ -5066,7 +5195,7 @@ msgid "shell.signOut"
 msgstr "Sign out"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:315
+#: src/components/score-documentation.tsx:355
 msgid "documentation.formula.valuationSignal"
 msgstr "signal = ln(fair value / price) minus the noise band"
 
@@ -5112,7 +5241,7 @@ msgid "documentation.contribution.field.smallImpact"
 msgstr "Small-book weight impact"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:558
+#: src/components/score-documentation.tsx:598
 msgid "documentation.score.field.tiltMinHint"
 msgstr "Smallest multiplier an expensive price may apply to a target (at most 1)."
 
@@ -5123,7 +5252,7 @@ msgid "positions.month"
 msgstr "Snapshot month"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/sell-planner.tsx:179
+#: src/components/allocation/sell-planner.tsx:194
 msgid "allocation.sales.sold"
 msgstr "Sold this month"
 
@@ -5223,7 +5352,7 @@ msgid "documentation.contribution.field.starterFraction"
 msgstr "Starter position size"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:493
+#: src/components/score-documentation.tsx:533
 msgid "documentation.score.field.icPrior"
 msgstr "Starting IC"
 
@@ -5239,7 +5368,7 @@ msgid "dividends.status"
 msgstr "Status"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/sell-planner.tsx:187
+#: src/components/allocation/sell-planner.tsx:202
 msgid "allocation.sales.remaining"
 msgstr "Still exempt"
 
@@ -5292,9 +5421,18 @@ msgstr "Target (%)"
 #. placeholder {1}: formatMultiplier(score.valuationTilt ?? "1")
 #. placeholder {2}: formatMultiplier(score.momentumTilt ?? "1")
 #. placeholder {3}: formatWeightPrecise(score.tiltedTarget)
-#: src/components/allocation/table/adjusted-target-cell.tsx:35
+#: src/components/allocation/table/adjusted-target-cell.tsx:46
 msgid "allocation.adjustedTargetExplain"
 msgstr "Target {0} × valuation {1} × 12-month trend {2} = {3}. Valuation shares weight only among assets with a fair value; the trend is a light tie-breaker across the book."
+
+#. js-lingui-explicit-id
+#. placeholder {0}: formatWeightPrecise(row.targetWeight)
+#. placeholder {1}: formatMultiplier(score.valuationTilt ?? "1")
+#. placeholder {2}: formatMultiplier(score.momentumTilt ?? "1")
+#. placeholder {3}: formatWeightPrecise(score.tiltedTarget)
+#: src/components/allocation/table/adjusted-target-cell.tsx:40
+msgid "allocation.adjustedTargetExplainNoTrend"
+msgstr "Target {0} × valuation {1} × book rebalance {2} = {3}. This asset has no 12-month trend; the rebalance only keeps the targets summing up while other assets follow theirs."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: weight(row.targetWeight)
@@ -5304,28 +5442,40 @@ msgstr "Target {0} × valuation {1} × 12-month trend {2} = {3}. Valuation share
 #. placeholder {4}: formatWeightPrecise(row.currentWeight)
 #. placeholder {5}: weight(score.relativeGap)
 #. placeholder {6}: formatMultiplier(score.priority)
-#: src/components/allocation/table/score-reason.ts:90
+#: src/components/allocation/table/score-reason.ts:91
+msgid "allocation.reasonGapV3NoTrend"
+msgstr "Target {0} adjusted to {1} (valuation {2}, book rebalance {3}); {4} held leaves {5} of it missing, at priority {6}."
+
+#. js-lingui-explicit-id
+#. placeholder {0}: weight(row.targetWeight)
+#. placeholder {1}: weight(score.tiltedTarget)
+#. placeholder {2}: formatMultiplier(score.valuationTilt ?? "1")
+#. placeholder {3}: formatMultiplier(score.momentumTilt ?? "1")
+#. placeholder {4}: formatWeightPrecise(row.currentWeight)
+#. placeholder {5}: weight(score.relativeGap)
+#. placeholder {6}: formatMultiplier(score.priority)
+#: src/components/allocation/table/score-reason.ts:99
 msgid "allocation.reasonGapV3"
 msgstr "Target {0} adjusted to {1} (valuation {2}, trend {3}); {4} held leaves {5} of it missing, at priority {6}."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:339
+#: src/components/score-documentation.tsx:379
 msgid "documentation.formula.tiltedTargetV3"
 msgstr "target × (FV ÷ price)^(k × confidence) × e^(w × trend z)"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:427
+#: src/components/score-documentation.tsx:467
 msgid "documentation.score.field.overweightBlock"
 msgstr "Target overweight block"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.ticker
-#: src/components/allocation/allocation-table.tsx:468
+#: src/components/allocation/allocation-table.tsx:487
 msgid "allocation.editTarget"
 msgstr "Target weight of {0}, in percent"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:974
+#: src/components/score-documentation.tsx:1018
 msgid "documentation.score.targetCap"
 msgstr "Target-relative cap"
 
@@ -5370,7 +5520,7 @@ msgid "performance.valueHint"
 msgstr "The gap between the two lines is the open result: value above cost is gain, below is loss. In {currency}."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:369
+#: src/components/score-documentation.tsx:409
 msgid "documentation.score.priorityDescription"
 msgstr "The grade multiplier times the cooldown ramp. Priority decides who is filled first and how close to target a cheque takes them; it never lowers the target itself."
 
@@ -5380,7 +5530,7 @@ msgid "documentation.contribution.exampleLargeDescription"
 msgstr "The large-book impact is {largeImpact}, so a minimum slice is R$ 5,000. Two thousand reais stays in one name; N = 2 only from about R$ 7,500."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:307
+#: src/components/score-documentation.tsx:347
 msgid "documentation.score.valuationSignalDescriptionV3"
 msgstr "The log distance between fair value and price, so half and double the fair value weigh the same. A cheap USD asset must also clear the FX spread and IOF, and an optional noise band (now ±{deadZone}) can ignore small gaps. A missing fair value or price means no signal."
 
@@ -5410,17 +5560,17 @@ msgid "documentation.comparisons.dailyPercent"
 msgstr "The portfolio percentage is that change divided by yesterday's comparable value, including cash. It is not the same as each ticker's native-currency return, and it is not the open result against moving-average cost."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:383
+#: src/components/score-documentation.tsx:423
 msgid "documentation.score.pipelineNextV2"
 msgstr "The rule ladder then blocks, trims, or scores the relative gap times the priority."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:461
+#: src/components/score-documentation.tsx:501
 msgid "documentation.score.field.trimRelativeHint"
 msgstr "The same band as a share of the adjusted target. The tighter of the two applies."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:274
+#: src/components/score-documentation.tsx:314
 msgid "documentation.score.introV2"
 msgstr "The score answers how strongly an asset should compete for the next contribution. It is the share of the asset's valuation-adjusted target that is still missing, times its priority: 40% means 40% of the target is missing at full priority. Positive values are buy candidates, zero means skip, and a negative value is a trim signal. Thresholds below are yours to tune and persist with the account."
 
@@ -5429,7 +5579,7 @@ msgstr "The score answers how strongly an asset should compete for the next cont
 #. placeholder {1}: preview.tiltMax
 #. placeholder {2}: preview.valuationSensitivity
 #. placeholder {3}: preview.icReference
-#: src/components/score-documentation.tsx:328
+#: src/components/score-documentation.tsx:368
 msgid "documentation.score.tiltedTargetDescriptionV3"
 msgstr "The signal tilts the target between ×{0} and ×{1}. Its strength is learned: up to {2} once your fair values prove they anticipate returns (IC ≥ {3}), half of it before there is a track record, zero if they do not. A stale fair value or a weak grade also counts less. Valuation is rescaled only among assets with a fair value; a light 12-month trend then adjusts every target and keeps the total."
 
@@ -5466,7 +5616,7 @@ msgid "splits.noHolding"
 msgstr "There is no trade of this ticker before that date."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:397
+#: src/components/score-documentation.tsx:437
 msgid "documentation.score.thresholdsDescription"
 msgstr "These knobs feed every rule below. Values are saved to the database for this account."
 
@@ -5670,7 +5820,7 @@ msgid "positions.total"
 msgstr "Total"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/allocation-table.tsx:840
+#: src/components/allocation/allocation-table.tsx:850
 msgid "allocation.total"
 msgstr "Total"
 
@@ -5721,39 +5871,44 @@ msgstr "Transactions"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: formatMultiplier(score.momentumTilt)
-#: src/components/allocation/table/adjusted-target-cell.tsx:75
+#: src/components/allocation/table/adjusted-target-cell.tsx:87
 msgid "allocation.adjustedTargetTrend"
 msgstr "trend {0}"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:622
+#: src/components/score-documentation.tsx:663
 msgid "documentation.score.field.momentumZCap"
 msgstr "Trend cap"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:608
+#: src/components/score-documentation.tsx:648
 msgid "documentation.score.field.momentumWeight"
 msgstr "Trend weight"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:600
+#: src/components/score-documentation.tsx:640
 msgid "documentation.score.group.trendSales"
 msgstr "Trend, review and sales"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:934
+#: src/components/score-documentation.tsx:976
 msgid "documentation.score.trimTitle"
 msgstr "Trim an expensive overweight position"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:442
+#: src/components/score-documentation.tsx:482
 msgid "documentation.score.field.trimAbsolute"
 msgstr "Trim band (points)"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:456
+#: src/components/score-documentation.tsx:496
 msgid "documentation.score.field.trimRelative"
 msgstr "Trim band (relative)"
+
+#. js-lingui-explicit-id
+#: src/components/score-documentation.tsx:112
+msgid "documentation.score.trackRecordRetry"
+msgstr "Try again"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/allocation-filters.tsx:254
@@ -5800,7 +5955,7 @@ msgid "allocation.categoryNone"
 msgstr "Uncategorized"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:736
+#: src/components/score-documentation.tsx:778
 msgid "documentation.score.field.ungraded"
 msgstr "Ungraded multiplier"
 
@@ -5985,34 +6140,41 @@ msgstr "Use your email and password to open your portfolio."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: formatMultiplier(score.valuationTilt)
-#: src/components/allocation/table/adjusted-target-cell.tsx:65
+#: src/components/allocation/table/adjusted-target-cell.tsx:77
 msgid "allocation.adjustedTargetValuation"
 msgstr "val {0}"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:471
+#: src/components/score-documentation.tsx:511
 msgid "documentation.score.group.valuation"
 msgstr "Valuation"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: formatMultiplier(row.score.valuationTilt ?? "1")
 #. placeholder {1}: formatMultiplier(row.score.momentumTilt ?? "1")
-#: src/components/allocation/asset-detail-page.tsx:309
+#: src/components/allocation/asset-detail-page.tsx:310
+msgid "allocation.detailAdjustedHintNoTrend"
+msgstr "valuation {0} · book rebalance {1}"
+
+#. js-lingui-explicit-id
+#. placeholder {0}: formatMultiplier(row.score.valuationTilt ?? "1")
+#. placeholder {1}: formatMultiplier(row.score.momentumTilt ?? "1")
+#: src/components/allocation/asset-detail-page.tsx:316
 msgid "allocation.detailAdjustedHint"
 msgstr "valuation {0} · trend {1}"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:525
+#: src/components/score-documentation.tsx:565
 msgid "documentation.score.field.deadZone"
 msgstr "Valuation noise band"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:302
+#: src/components/score-documentation.tsx:342
 msgid "documentation.score.valuationSignal"
 msgstr "Valuation signal"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:323
+#: src/components/score-documentation.tsx:363
 msgid "documentation.score.tiltedTarget"
 msgstr "Valuation-adjusted target"
 
@@ -6028,7 +6190,7 @@ msgstr "Value"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/asset-detail-page.tsx:240
-#: src/components/allocation/table/columns.ts:56
+#: src/components/allocation/table/columns.ts:58
 msgid "allocation.colValue"
 msgstr "Value"
 
@@ -6090,13 +6252,13 @@ msgid "deepFinder.windowCost"
 msgstr "Vs cost"
 
 #. js-lingui-explicit-id
-#: src/components/allocation/asset-detail-page.tsx:331
+#: src/components/allocation/asset-detail-page.tsx:338
 msgid "allocation.detailTrendHint"
 msgstr "vs. the rest of the portfolio"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/allocation-deep-finder.tsx:514
-#: src/components/allocation/allocation-table.tsx:432
+#: src/components/allocation/allocation-table.tsx:451
 #: src/components/allocation/asset-detail-page.tsx:220
 msgid "allocation.watchBadge"
 msgstr "Watch"
@@ -6133,7 +6295,7 @@ msgid "performance.colWeight"
 msgstr "Weight"
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:511
+#: src/components/score-documentation.tsx:551
 msgid "documentation.score.field.icPriorPairs"
 msgstr "Weight of the starting IC"
 
@@ -6169,7 +6331,7 @@ msgid "documentation.contribution.field.maxShareHint"
 msgstr "When two or more names sit at the table, no single asset receives more than this fraction of the contribution."
 
 #. js-lingui-explicit-id
-#: src/components/score-documentation.tsx:292
+#: src/components/score-documentation.tsx:332
 msgid "documentation.score.pipelineDescriptionV2"
 msgstr "Where to go, how much is missing, and how urgently are computed separately, so each input has one job."
 
@@ -6200,7 +6362,7 @@ msgid "performance.worstMonth"
 msgstr "Worst month {0}."
 
 #. js-lingui-explicit-id
-#: src/components/allocation/table/score-reason.ts:119
+#: src/components/allocation/table/score-reason.ts:128
 msgid "allocation.resultSourceYahoo"
 msgstr "Yahoo Finance"
 
@@ -6237,7 +6399,7 @@ msgstr "You do not hold enough of this ticker to sell."
 #. js-lingui-explicit-id
 #. placeholder {0}: formatWeight(plan.confidence)
 #. placeholder {1}: formatWeight(plan.requiredConfidence)
-#: src/components/allocation/sell-planner.tsx:139
+#: src/components/allocation/sell-planner.tsx:154
 msgid "allocation.sales.recommendedText"
 msgstr "Your fair values reached {0} confidence (bar: {1}), the level at which selling expensive positions paid off in the simulation."
 
@@ -6245,6 +6407,11 @@ msgstr "Your fair values reached {0} confidence (bar: {1}), the level at which s
 #: src/lib/trpcErrors.ts:29
 msgid "error.sessionExpired"
 msgstr "Your session expired. Sign in again."
+
+#. js-lingui-explicit-id
+#: src/components/score-documentation.tsx:100
+msgid "documentation.score.trackRecordIdle"
+msgstr "Your valuation track record is computed from the allocation."
 
 #. js-lingui-explicit-id
 #: src/components/allocation/allocation-deep-finder.tsx:134

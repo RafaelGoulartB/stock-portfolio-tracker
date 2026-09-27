@@ -5,6 +5,7 @@ import {
   CURRENCIES,
   DEFAULT_CONTRIBUTION_PLAN_CONFIG,
   DEFAULT_SCORE_CONFIG,
+  scoreConfigUpdateSchema,
   TRANSACTION_SIDES,
 } from "@portifolio-tracker/shared";
 import { z } from "zod";
@@ -260,59 +261,75 @@ const scoreV2Fields = {
 const scoreConfigRecord = z.strictObject({
   type: z.literal("record"),
   entity: z.literal("scoreConfigs"),
-  data: z.union([
-    z.strictObject({
-      ...scoreV2Fields,
-      icReference: decimal,
-      icPrior: signedDecimal,
-      icPriorPairs: z.number().int().nonnegative(),
-      momentumWeight: decimal,
-      momentumZCap: decimal,
-      reviewDrift: decimal,
-      sellBand: decimal,
-      sellConfidence: decimal,
+  data: z
+    .union([
+      z.strictObject({
+        ...scoreV2Fields,
+        icReference: decimal,
+        icPrior: signedDecimal,
+        icPriorPairs: z.number().int().nonnegative(),
+        momentumWeight: decimal,
+        momentumZCap: decimal,
+        reviewDrift: decimal,
+        sellBand: decimal,
+        sellConfidence: decimal,
+      }),
+      // Score v2 exports: every v3 knob takes its default, as in migration 0012.
+      z
+        .strictObject(scoreV2Fields)
+        .transform((row) => ({ ...row, ...V3_SCORE_DEFAULTS })),
+      // Score v1 exports: the trim factor becomes the relative trim band, as
+      // in migration 0010. Every later knob takes the current default, whereas
+      // migrations 0010/0012 kept the v2 values for policies already stored.
+      z
+        .strictObject({
+          version: z.string().min(1),
+          absoluteWeightCap: decimal,
+          overweightBlockFactor: decimal,
+          trimFactor: decimal,
+          cooldownDays: z.number().int().nonnegative(),
+          gradeWindowQuarters: z.number().int().positive(),
+          gradeBands: gradeBandsRecord,
+          ungradedMultiplier: decimal,
+          updatedAt: databaseTimestamp,
+        })
+        .transform((row) => ({
+          version: row.version,
+          absoluteWeightCap: row.absoluteWeightCap,
+          overweightBlockFactor: row.overweightBlockFactor,
+          trimAbsoluteBand: DEFAULT_SCORE_CONFIG.trimAbsoluteBand,
+          trimRelativeBand: v1TrimBand(row.trimFactor),
+          cooldownDays: row.cooldownDays,
+          cooldownFloor: DEFAULT_SCORE_CONFIG.cooldownFloor,
+          gradeWindowQuarters: row.gradeWindowQuarters,
+          gradeHalfLifeQuarters: DEFAULT_SCORE_CONFIG.gradeHalfLifeQuarters,
+          gradePriorQuarters: DEFAULT_SCORE_CONFIG.gradePriorQuarters,
+          gradeBands: row.gradeBands,
+          ungradedMultiplier: row.ungradedMultiplier,
+          valuationDeadZone: DEFAULT_SCORE_CONFIG.valuationDeadZone,
+          valuationSensitivity: DEFAULT_SCORE_CONFIG.valuationSensitivity,
+          tiltMin: DEFAULT_SCORE_CONFIG.tiltMin,
+          tiltMax: DEFAULT_SCORE_CONFIG.tiltMax,
+          fairValueHalfLifeQuarters:
+            DEFAULT_SCORE_CONFIG.fairValueHalfLifeQuarters,
+          ...V3_SCORE_DEFAULTS,
+          updatedAt: row.updatedAt,
+        })),
+    ])
+    .superRefine((row, ctx) => {
+      // A policy the engine would reject must not be restored: every later
+      // allocation read would fail for the account.
+      const { version: _version, updatedAt: _updatedAt, ...policy } = row;
+      const result = scoreConfigUpdateSchema.safeParse(policy);
+
+      for (const issue of result.error?.issues ?? []) {
+        ctx.addIssue({
+          code: "custom",
+          path: issue.path,
+          message: issue.message,
+        });
+      }
     }),
-    // Score v2 exports: every v3 knob takes its default, as in migration 0012.
-    z
-      .strictObject(scoreV2Fields)
-      .transform((row) => ({ ...row, ...V3_SCORE_DEFAULTS })),
-    // Score v1 exports: the trim factor becomes the relative trim band, as
-    // in migration 0010, and every later knob takes its default.
-    z
-      .strictObject({
-        version: z.string().min(1),
-        absoluteWeightCap: decimal,
-        overweightBlockFactor: decimal,
-        trimFactor: decimal,
-        cooldownDays: z.number().int().nonnegative(),
-        gradeWindowQuarters: z.number().int().positive(),
-        gradeBands: gradeBandsRecord,
-        ungradedMultiplier: decimal,
-        updatedAt: databaseTimestamp,
-      })
-      .transform((row) => ({
-        version: row.version,
-        absoluteWeightCap: row.absoluteWeightCap,
-        overweightBlockFactor: row.overweightBlockFactor,
-        trimAbsoluteBand: DEFAULT_SCORE_CONFIG.trimAbsoluteBand,
-        trimRelativeBand: v1TrimBand(row.trimFactor),
-        cooldownDays: row.cooldownDays,
-        cooldownFloor: DEFAULT_SCORE_CONFIG.cooldownFloor,
-        gradeWindowQuarters: row.gradeWindowQuarters,
-        gradeHalfLifeQuarters: DEFAULT_SCORE_CONFIG.gradeHalfLifeQuarters,
-        gradePriorQuarters: DEFAULT_SCORE_CONFIG.gradePriorQuarters,
-        gradeBands: row.gradeBands,
-        ungradedMultiplier: row.ungradedMultiplier,
-        valuationDeadZone: DEFAULT_SCORE_CONFIG.valuationDeadZone,
-        valuationSensitivity: DEFAULT_SCORE_CONFIG.valuationSensitivity,
-        tiltMin: DEFAULT_SCORE_CONFIG.tiltMin,
-        tiltMax: DEFAULT_SCORE_CONFIG.tiltMax,
-        fairValueHalfLifeQuarters:
-          DEFAULT_SCORE_CONFIG.fairValueHalfLifeQuarters,
-        ...V3_SCORE_DEFAULTS,
-        updatedAt: row.updatedAt,
-      })),
-  ]),
 });
 
 const contributionPlanConfigRecord = z.strictObject({

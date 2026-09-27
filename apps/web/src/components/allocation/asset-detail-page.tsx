@@ -305,12 +305,19 @@ export function AssetDetailPage() {
               hint={
                 row.score.tiltedTarget === null
                   ? undefined
-                  : i18n._(
-                      t({
-                        id: "allocation.detailAdjustedHint",
-                        message: `valuation ${formatMultiplier(row.score.valuationTilt ?? "1")} · trend ${formatMultiplier(row.score.momentumTilt ?? "1")}`,
-                      }),
-                    )
+                  : row.score.momentumZ === null
+                    ? i18n._(
+                        t({
+                          id: "allocation.detailAdjustedHintNoTrend",
+                          message: `valuation ${formatMultiplier(row.score.valuationTilt ?? "1")} · book rebalance ${formatMultiplier(row.score.momentumTilt ?? "1")}`,
+                        }),
+                      )
+                    : i18n._(
+                        t({
+                          id: "allocation.detailAdjustedHint",
+                          message: `valuation ${formatMultiplier(row.score.valuationTilt ?? "1")} · trend ${formatMultiplier(row.score.momentumTilt ?? "1")}`,
+                        }),
+                      )
               }
             />
             <Stat
@@ -341,7 +348,9 @@ export function AssetDetailPage() {
               value={formatWeightPrecise(row.currentWeight)}
             />
             <Stat
-              label={i18n._(t({ id: "allocation.colGap", message: "Gap" }))}
+              label={i18n._(
+                t({ id: "allocation.colGapAdjusted", message: "Adj. gap" }),
+              )}
               value={
                 row.score.gap === null
                   ? "—"

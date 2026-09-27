@@ -5,7 +5,11 @@ import type {
   ScoreConfig,
   ValuationSkill,
 } from "@portifolio-tracker/shared";
-import { tradesInWholeUnits } from "@portifolio-tracker/shared";
+import {
+  BR_STOCK_SALE_EXEMPTION_BRL,
+  DEFAULT_SCORE_CONFIG,
+  tradesInWholeUnits,
+} from "@portifolio-tracker/shared";
 import { HandCoins, Info, ShieldCheck } from "lucide-react";
 import { useMemo, useState } from "react";
 import { AssetLink } from "@/components/asset-link";
@@ -28,6 +32,7 @@ import {
   formatWeight,
   formatWeightPrecise,
 } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import {
   planSales,
   type SellSuggestion,
@@ -70,7 +75,7 @@ export function SellPlannerButton({
             quantity: row.quantity,
             marketValue: row.marketValue,
             currentWeight: row.currentWeight,
-            tiltedTarget: row.score.tiltedTarget,
+            trimTarget: row.score.trimTarget,
             fairValue: row.fairValue,
             marketPrice: row.marketPrice,
             wholeUnits: tradesInWholeUnits(row.assetClass, row.currency),
@@ -80,6 +85,7 @@ export function SellPlannerButton({
         usdBrlRate,
         soldThisMonthBrl,
         confidence: skill?.confidence ?? "0",
+        partialTrackRecord: (skill?.missing ?? 0) > 0,
         config,
       }),
     [
@@ -103,7 +109,15 @@ export function SellPlannerButton({
           <HandCoins aria-hidden="true" />
           <Trans id="allocation.sales.open">Sale suggestions</Trans>
           {count > 0 ? (
-            <Badge variant="secondary" className="ml-0.5 px-1.5">
+            // Muted while sales are only informational, so the count does not
+            // read as a call to sell.
+            <Badge
+              variant={plan.recommended ? "secondary" : "outline"}
+              className={cn(
+                "ml-0.5 px-1.5",
+                !plan.recommended && "text-muted-foreground",
+              )}
+            >
               {count}
             </Badge>
           ) : null}
@@ -118,11 +132,12 @@ export function SellPlannerButton({
             <Trans id="allocation.sales.title">Sale suggestions</Trans>
           </DialogTitle>
           <DialogDescription>
-            <Trans id="allocation.sales.description">
+            <Trans id="allocation.sales.descriptionV2">
               Positions priced above your fair value that ran more than{" "}
-              {formatWeight(config?.sellBand ?? "0.25")} past their adjusted
-              target, trimmed toward it. Suggestion only — nothing is saved
-              until you register the sale.
+              {formatWeight(config?.sellBand ?? DEFAULT_SCORE_CONFIG.sellBand)}{" "}
+              past their sale target, trimmed toward it. The sale target never
+              sits below what the asset&apos;s own valuation justifies.
+              Suggestion only — nothing is saved until you register the sale.
             </Trans>
           </DialogDescription>
         </DialogHeader>
@@ -208,17 +223,16 @@ export function SellPlannerButton({
             <>
               {plan.scaled ? (
                 <p className="text-xs text-muted-foreground">
-                  <Trans id="allocation.sales.scaled">
-                    Bringing every position back to its adjusted target would
-                    sell {money(plan.exemptExcess)}, more than is still exempt,
-                    so each sale was reduced by the same share.
+                  <Trans id="allocation.sales.scaledV2">
+                    Bringing every position back to its sale target would sell{" "}
+                    {money(plan.exemptExcess)}, more than is still exempt, so
+                    each sale was reduced by the same share.
                   </Trans>
                 </p>
               ) : null}
               <SuggestionList
                 items={plan.exempt}
                 displayCurrency={displayCurrency}
-                showUnits
               />
             </>
           )}
@@ -232,24 +246,26 @@ export function SellPlannerButton({
               </Trans>
             </h3>
             <p className="text-xs text-muted-foreground">
-              <Trans id="allocation.sales.taxableText">
-                FIIs, ETFs, BDRs and foreign assets pay tax on any gain. Letting
+              <Trans id="allocation.sales.taxableTextV2">
+                FIIs, ETFs, BDRs, foreign assets, and Brazilian stocks once the
+                month&apos;s exemption is used up pay tax on any gain. Letting
                 contributions go elsewhere usually beats selling them.
               </Trans>
             </p>
             <SuggestionList
               items={plan.taxable}
               displayCurrency={displayCurrency}
-              showUnits={false}
             />
           </section>
         ) : null}
 
         <p className="text-xs text-muted-foreground">
-          <Trans id="allocation.sales.footnote">
-            Exemption: gross sales of Brazilian stocks up to R$ 20,000 per month
-            (Lei 11.033/2004). Sales already registered this month are deducted.
-            Confirm your case with an accountant.
+          <Trans id="allocation.sales.footnoteV2">
+            Exemption: gross sales of Brazilian stocks up to{" "}
+            {formatMoney(BR_STOCK_SALE_EXEMPTION_BRL, "BRL")} per month (Lei
+            11.033/2004). Sales already registered this month are deducted; once
+            it is used up, further sales are listed as taxed. Confirm your case
+            with an accountant.
           </Trans>
         </p>
       </DialogContent>
@@ -260,11 +276,9 @@ export function SellPlannerButton({
 function SuggestionList({
   items,
   displayCurrency,
-  showUnits,
 }: {
   items: readonly SellSuggestion[];
   displayCurrency: Currency;
-  showUnits: boolean;
 }) {
   return (
     <ul className="space-y-2">
@@ -277,10 +291,10 @@ function SuggestionList({
             {item.ticker}
           </AssetLink>
           <span className="text-xs text-muted-foreground tabular-nums">
-            <Trans id="allocation.sales.weights">
+            <Trans id="allocation.sales.weightsV2">
               {formatWeightPrecise(item.weightNow)} →{" "}
-              {formatWeightPrecise(item.weightAfter)} (adjusted target{" "}
-              {formatWeightPrecise(item.tiltedTarget)})
+              {formatWeightPrecise(item.weightAfter)} (sale target{" "}
+              {formatWeightPrecise(item.trimTarget)})
             </Trans>
             {item.discount !== null ? (
               <span className="block">
@@ -293,18 +307,13 @@ function SuggestionList({
           </span>
           <span className="text-right tabular-nums">
             <span className="block font-medium">
-              {formatMoney(
-                showUnits ? item.amount : item.excess,
-                displayCurrency,
-              )}
+              {formatMoney(item.amount, displayCurrency)}
             </span>
-            {showUnits ? (
-              <span className="block text-xs text-muted-foreground">
-                <Trans id="allocation.sales.units">
-                  {formatQuantity(item.units)} un.
-                </Trans>
-              </span>
-            ) : null}
+            <span className="block text-xs text-muted-foreground">
+              <Trans id="allocation.sales.units">
+                {formatQuantity(item.units)} un.
+              </Trans>
+            </span>
           </span>
         </li>
       ))}

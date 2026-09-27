@@ -69,20 +69,55 @@ function percentLabel(ratio: string): string {
  * cached query; opened elsewhere it loads the allocation once.
  */
 function ValuationTrackRecord() {
-  const allocation = trpc.allocation.list.useQuery(useAllocationListInput());
+  const allocation = trpc.allocation.list.useQuery(useAllocationListInput(), {
+    // Reuse what the allocation screen already loaded; elsewhere, load only
+    // on request instead of pricing the whole book to open the docs.
+    enabled: false,
+  });
 
   if (allocation.data) {
     return (
       <ValuationSkillCard
         skill={allocation.data.valuationSkill}
         config={allocation.data.scoreConfig}
+        historyAvailable={allocation.data.marketSignals.available}
       />
     );
   }
 
-  return allocation.isPending ? (
-    <Skeleton className="h-40 w-full rounded-xl" />
-  ) : null;
+  if (allocation.isFetching) {
+    return <Skeleton className="h-40 w-full rounded-xl" />;
+  }
+
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border px-5 py-4 text-sm">
+      <span className="text-muted-foreground">
+        {allocation.isError ? (
+          <Trans id="documentation.score.trackRecordError">
+            Could not load your valuation track record.
+          </Trans>
+        ) : (
+          <Trans id="documentation.score.trackRecordIdle">
+            Your valuation track record is computed from the allocation.
+          </Trans>
+        )}
+      </span>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        onClick={() => void allocation.refetch()}
+      >
+        {allocation.isError ? (
+          <Trans id="documentation.score.trackRecordRetry">Try again</Trans>
+        ) : (
+          <Trans id="documentation.score.trackRecordLoad">
+            Show track record
+          </Trans>
+        )}
+      </Button>
+    </div>
+  );
 }
 
 /** Contribution-score methodology with live, editable policy knobs. */
@@ -215,6 +250,11 @@ export function ScoreDocumentation() {
   const overweightLimit = percentLabel(preview.overweightBlockFactor);
   const trimAbsolute = percentLabel(preview.trimAbsoluteBand);
   const trimRelative = percentLabel(preview.trimRelativeBand);
+  const trendSpan =
+    Number(preview.momentumWeight) * Number(preview.momentumZCap);
+  const trendRange = Number.isFinite(trendSpan)
+    ? `×${formatDecimalInput(Math.exp(-trendSpan).toFixed(2), i18n.locale)}–×${formatDecimalInput(Math.exp(trendSpan).toFixed(2), i18n.locale)}`
+    : "—";
   const deadZone = percentLabel(preview.valuationDeadZone);
 
   return (
@@ -610,9 +650,10 @@ export function ScoreDocumentation() {
                   </Trans>
                 }
                 description={
-                  <Trans id="documentation.score.field.momentumWeightHint">
-                    Exponent on the 12-month trend z-score. 0.10 moves a target
-                    at most ×0.82–×1.22; 0 turns the trend off.
+                  <Trans id="documentation.score.field.momentumWeightHintV2">
+                    Exponent on the 12-month trend z-score. Now a raw factor of{" "}
+                    {trendRange} before the book is rebalanced; 0 turns the
+                    trend off.
                   </Trans>
                 }
               />
@@ -638,9 +679,10 @@ export function ScoreDocumentation() {
                   </Trans>
                 }
                 description={
-                  <Trans id="documentation.score.field.reviewDriftHint">
-                    Price move since the fair value's quarter end that asks you
-                    to redo the valuation from scratch.
+                  <Trans id="documentation.score.field.reviewDriftHintV2">
+                    Price move since the fair value was written (its quarter end
+                    or its last edit, whichever is later) that asks you to redo
+                    the valuation from scratch.
                   </Trans>
                 }
               />
@@ -652,9 +694,9 @@ export function ScoreDocumentation() {
                   </Trans>
                 }
                 description={
-                  <Trans id="documentation.score.field.sellBandHint">
-                    An expensive position is a sale candidate once it runs this
-                    far past its adjusted target.
+                  <Trans id="documentation.score.field.sellBandHintV2">
+                    A position priced above your fair value is a sale candidate
+                    once it runs this far past its trim target.
                   </Trans>
                 }
               />
@@ -943,13 +985,15 @@ export function ScoreDocumentation() {
                   </ThresholdChip>
                 }
               >
-                <Trans id="documentation.score.trimDescriptionV2">
-                  If valuation tilts the target down and current weight runs
-                  more than {trimAbsolute} points or {trimRelative} of the
-                  adjusted target past it (whichever is tighter, the 5/25
-                  tolerance-band rule), return the negative relative gap. This
-                  rule precedes the blocking caps so it can produce a trim
-                  signal.
+                <Trans id="documentation.score.trimDescriptionV3">
+                  If the price is above your fair value and current weight runs
+                  more than {trimAbsolute} points or {trimRelative} past the
+                  trim target (whichever is tighter, the 5/25 tolerance-band
+                  rule), return the negative relative gap. The trim target is
+                  the adjusted target, but never below the target times the
+                  asset&apos;s own valuation tilt: another asset being cheap
+                  cannot make a fairly priced one look overweight. This rule
+                  precedes the blocking caps so it can produce a trim signal.
                 </Trans>
               </Rule>
               <Rule

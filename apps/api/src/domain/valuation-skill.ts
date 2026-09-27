@@ -4,6 +4,8 @@ import {
   type ScoreConfig,
   type ValuationSkill,
 } from "@portifolio-tracker/shared";
+import { div, formatDecimal, mul, toDecimal } from "../lib/decimal";
+import type { SplitEvent } from "./positions";
 
 /**
  * Evidence the score uses to decide how much to trust fair values, and the
@@ -24,8 +26,80 @@ export type ClosePoint = { asOf: string; close: string };
 export type FairValueReview = {
   ticker: string;
   period: string;
+  /** Per-share fair value in today's share units (see {@link splitAdjustedFairValue}). */
   fairValue: string;
+  /** Day the fair value was known, from {@link fairValueAsOf}. */
+  asOf: string;
 };
+
+/**
+ * Day a fair value was known: the later of its quarter end and the review's
+ * last edit (`YYYY-MM-DD`, America/Sao_Paulo). Reviews are usually written
+ * after the quarter's results, so anchoring on the quarter end alone would
+ * credit the investor with price moves they had already seen. Any later
+ * edit re-anchors the review: conservative, but never optimistic.
+ */
+export function fairValueAsOf(period: string, editedOn: string | null): string {
+  const quarterEnd = quarterEndDate(period);
+
+  return editedOn !== null && editedOn > quarterEnd ? editedOn : quarterEnd;
+}
+
+/**
+ * Every stored fair value as the track record and the score read it:
+ * anchored on the day it was known and expressed in today's share units.
+ */
+export function fairValueReviews(
+  reviews: readonly {
+    ticker: string;
+    period: string;
+    fairValue: string | null;
+    editedOn?: string | null;
+  }[],
+  splits: readonly SplitEvent[],
+): FairValueReview[] {
+  return reviews.flatMap((review) => {
+    if (review.fairValue === null) return [];
+
+    const asOf = fairValueAsOf(review.period, review.editedOn ?? null);
+
+    return [
+      {
+        ticker: review.ticker,
+        period: review.period,
+        fairValue: splitAdjustedFairValue(
+          review.fairValue,
+          asOf,
+          splits.filter((split) => split.ticker === review.ticker),
+        ),
+        asOf,
+      },
+    ];
+  });
+}
+
+/**
+ * A per-share fair value in today's share units. Price histories are split
+ * adjusted, so a fair value written before a split must be scaled by every
+ * split effective after it (`2:1` halves it) to stay comparable.
+ */
+export function splitAdjustedFairValue(
+  fairValue: string,
+  asOf: string,
+  splits: readonly SplitEvent[],
+): string {
+  let value = toDecimal(fairValue);
+
+  for (const split of splits) {
+    if (split.effectiveAt <= asOf) continue;
+    value = div(
+      mul(value, toDecimal(split.fromQuantity)),
+      toDecimal(split.toQuantity),
+    );
+  }
+
+  return formatDecimal(value, RATIO_PLACES);
+}
 
 function ratio(value: number): string {
   return value.toFixed(RATIO_PLACES);
@@ -80,12 +154,12 @@ export function momentum12to1(
   return ratio(Math.log(recent / yearAgo));
 }
 
-/** Close at the end of a review's quarter, the fair value's reference price. */
+/** Close on the day a fair value was known, its reference price. */
 export function referencePrice(
   points: readonly ClosePoint[],
-  period: string,
+  asOf: string,
 ): string | null {
-  const close = closeOnOrBefore(points, quarterEndDate(period));
+  const close = closeOnOrBefore(points, asOf);
 
   return close === null ? null : ratio(close);
 }
@@ -93,26 +167,29 @@ export function referencePrice(
 export type SkillObservation = {
   period: string;
   ticker: string;
-  /** `ln(fairValue / price)` at the quarter end. */
+  /** `ln(fairValue / price)` on the day the fair value was known. */
   discount: number;
-  /** `ln(price 12 months later / price at the quarter end)`. */
+  /** `ln(price 12 months later / price on that day)`. */
   outcome: number;
 };
 
 /**
- * Pairs every fair value with its 12-month outcome. Reviews whose outcome is
- * still in the future are counted as pending, never guessed.
+ * Pairs every fair value with its 12-month outcome, starting on the day the
+ * fair value was known. Reviews whose outcome is still in the future are
+ * pending, never guessed; due reviews without prices are counted as missing
+ * so a partial track record is visible instead of silently smaller.
  */
 export function skillObservations(
   reviews: readonly FairValueReview[],
   seriesByTicker: ReadonlyMap<string, readonly ClosePoint[]>,
   today: string,
-): { observations: SkillObservation[]; pending: number } {
+): { observations: SkillObservation[]; pending: number; missing: number } {
   const observations: SkillObservation[] = [];
   let pending = 0;
+  let missing = 0;
 
   for (const review of reviews) {
-    const start = quarterEndDate(review.period);
+    const start = review.asOf;
     const end = shiftMonths(start, -OUTCOME_MONTHS);
 
     if (end > today) {
@@ -122,11 +199,14 @@ export function skillObservations(
 
     const points = seriesByTicker.get(review.ticker);
     const fair = Number(review.fairValue);
-    if (!points || !(fair > 0)) continue;
+    if (!(fair > 0)) continue;
 
-    const before = closeOnOrBefore(points, start);
-    const after = closeOnOrBefore(points, end);
-    if (before === null || after === null) continue;
+    const before = points ? closeOnOrBefore(points, start) : null;
+    const after = points ? closeOnOrBefore(points, end) : null;
+    if (before === null || after === null) {
+      missing += 1;
+      continue;
+    }
 
     observations.push({
       period: review.period,
@@ -136,7 +216,7 @@ export function skillObservations(
     });
   }
 
-  return { observations, pending };
+  return { observations, pending, missing };
 }
 
 /**
@@ -155,7 +235,7 @@ export function skillObservations(
  */
 export function valuationSkill(
   observations: readonly SkillObservation[],
-  pending: number,
+  counts: { pending: number; missing?: number },
   config: ScoreConfig = DEFAULT_SCORE_CONFIG,
 ): ValuationSkill {
   const byPeriod = new Map<string, SkillObservation[]>();
@@ -212,6 +292,7 @@ export function valuationSkill(
     strength: ratio(Number(config.valuationSensitivity) * confidence),
     pairs: ic === null ? 0 : pairs,
     periods: ic === null ? 0 : periods,
-    pending,
+    pending: counts.pending,
+    missing: counts.missing ?? 0,
   };
 }

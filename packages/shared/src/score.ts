@@ -82,8 +82,9 @@ export const scoreConfigSchema = z.object({
   /** Weight of {@link icPrior}, in asset-review pairs. */
   icPriorPairs: z.number().int().min(0),
   /**
-   * Exponent on the capped 12-1 month momentum z-score. `0.10` moves a
-   * target between ×0.82 and ×1.22; `0` disables momentum.
+   * Exponent on the capped 12-1 month momentum z-score. `0.10` gives raw
+   * factors between ×0.82 and ×1.22 before renormalization across the book;
+   * `0` disables momentum.
    */
   momentumWeight: nonNegativeDecimal,
   /** Cap on the momentum z-score, in standard deviations. */
@@ -161,7 +162,38 @@ export const scoreConfigUpdateSchema = scoreConfigSchema
         message: "Must be at least 1",
       });
     }
+
+    // Upper bounds keep every knob inside what the engine and the integer
+    // columns can represent; a momentum exponent of 30 overflows decimals.
+    const atMost = (path: keyof ScoreConfigFields, max: number) => {
+      if (Number(config[path]) > max) {
+        ctx.addIssue({
+          code: "custom",
+          path: [path],
+          message: `Must be at most ${max}`,
+        });
+      }
+    };
+
+    atMost("momentumWeight", 1);
+    atMost("momentumZCap", 5);
+    atMost("icReference", 1);
+    atMost("icPriorPairs", 100_000);
+    atMost("cooldownDays", 3650);
+    atMost("gradeWindowQuarters", 40);
+    atMost("gradeHalfLifeQuarters", 40);
+    atMost("fairValueHalfLifeQuarters", 40);
+
+    if (Math.abs(Number(config.icPrior)) > 1) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["icPrior"],
+        message: "Must be between -1 and 1",
+      });
+    }
   });
+
+type ScoreConfigFields = Omit<ScoreConfig, "version" | "gradeBands">;
 
 export type ScoreConfigUpdate = z.infer<typeof scoreConfigUpdateSchema>;
 
@@ -259,7 +291,11 @@ export const scoreBreakdownSchema = z.object({
   valuationTilt: nonNegativeDecimal.nullable(),
   /** Part of {@link tilt} from momentum, renormalized across the book. */
   momentumTilt: nonNegativeDecimal.nullable(),
-  /** Capped cross-sectional z-score of the 12-1 month return. */
+  /**
+   * Capped cross-sectional z-score of the 12-1 month return, `null` when the
+   * asset has no year of prices. Without it, {@link momentumTilt} is only the
+   * book's renormalization, not a trend of this asset.
+   */
   momentumZ: signedDecimal.nullable(),
   /**
    * Confident log mispricing after the noise band and buy costs, before
@@ -268,6 +304,13 @@ export const scoreBreakdownSchema = z.object({
   valuationSignal: signedDecimal.nullable(),
   /** `0`–`1` trust in the fair value, from its age and the grade. */
   valuationConfidence: nonNegativeDecimal.nullable(),
+  /**
+   * Weight a trim or a sale brings the asset back to: the tilted target, but
+   * never below `target × own valuation tilt`. Renormalization shrinks a
+   * fairly priced asset's target when another one is cheap; that alone must
+   * not make it look overweight. `null` without a target.
+   */
+  trimTarget: signedDecimal.nullable(),
   /** `tiltedTarget - currentWeight`, in weight units. */
   gap: signedDecimal.nullable(),
   /** `gap / tiltedTarget`: how much of the target is still missing. */
@@ -290,8 +333,8 @@ export const scoreBreakdownSchema = z.object({
   /** `YYYY-MM-DD` the cooldown ramp ends, `null` when not in cooldown. */
   cooldownUntil: z.string().nullable(),
   /**
-   * Price change since the fair value's reference date (quarter end), `null`
-   * without a fair value or a reference price.
+   * Price change since the fair value was written (the later of its quarter
+   * end and its last edit), `null` without a fair value or a reference price.
    */
   priceSinceFairValue: signedDecimal.nullable(),
   /** True when {@link priceSinceFairValue} crossed `reviewDrift`. */
@@ -321,6 +364,11 @@ export const valuationSkillSchema = z.object({
   periods: z.number().int().min(0),
   /** Fair-value reviews still waiting for their 12-month outcome. */
   pending: z.number().int().min(0),
+  /**
+   * Reviews whose outcome is due but whose prices could not be loaded. Above
+   * zero the track record is partial, so sales are never recommended.
+   */
+  missing: z.number().int().min(0),
 });
 
 export type ValuationSkill = z.infer<typeof valuationSkillSchema>;

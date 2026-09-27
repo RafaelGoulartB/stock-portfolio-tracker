@@ -25,9 +25,12 @@ function skillState(skill: ValuationSkill, config: ScoreConfig): SkillState {
 export function ValuationSkillCard({
   skill,
   config,
+  historyAvailable = true,
 }: {
   skill: ValuationSkill;
   config: ScoreConfig;
+  /** False with manual quotes, which carry no price history. */
+  historyAvailable?: boolean;
 }) {
   const { i18n } = useLingui();
   const state = skillState(skill, config);
@@ -40,6 +43,10 @@ export function ValuationSkillCard({
   const maxLabel = formatDecimalInput(maxStrength.toFixed(2), i18n.locale);
   const trendRange = `${formatMultiplier(String(Math.exp(-Number(config.momentumWeight) * Number(config.momentumZCap))))}–${formatMultiplier(String(Math.exp(Number(config.momentumWeight) * Number(config.momentumZCap))))}`;
   const drift = formatWeight(config.reviewDrift);
+  const ic =
+    skill.ic === null
+      ? "—"
+      : formatDecimalInput(Number(skill.ic).toFixed(2), i18n.locale);
   const sellBar = formatWeight(config.sellConfidence);
 
   return (
@@ -91,38 +98,56 @@ export function ValuationSkillCard({
               <Trans id="allocation.skill.trackText">
                 Confidence {formatWeight(skill.confidence)} from {skill.pairs}{" "}
                 reviews with a 12-month outcome across {skill.periods} quarters
-                (IC {skill.ic ?? "—"}). Valuation strength is {strength} of{" "}
-                {maxLabel}.
+                (IC {ic}). Valuation strength is {strength} of {maxLabel}.
               </Trans>
             )}
           </p>
+          {!historyAvailable ? (
+            <p className="text-sm text-amber-600 dark:text-amber-400">
+              <Trans id="allocation.skill.manualQuotes">
+                Manual quotes carry no price history, so the track record, the
+                12-month trend and review warnings are off. The valuation keeps
+                its starting strength.
+              </Trans>
+            </p>
+          ) : skill.missing > 0 ? (
+            <p className="text-sm text-amber-600 dark:text-amber-400">
+              <Trans id="allocation.skill.missingText">
+                {skill.missing} fair values already have their 12-month outcome
+                but their prices could not be loaded. They are left out, and
+                sales are not recommended until the history is complete.
+              </Trans>
+            </p>
+          ) : null}
         </div>
         <ul className="grid gap-1.5 text-xs text-muted-foreground">
           <li>
-            <Trans id="allocation.skill.ruleValuation">
+            <Trans id="allocation.skill.ruleValuationV2">
               <strong className="text-foreground">Valuation:</strong> target ×
-              (fair value ÷ price)^{strength}, shared only among assets with a
-              fair value.
+              (fair value ÷ price)^({strength} × each fair value&apos;s own
+              confidence, from its age and grade), shared only among assets with
+              a fair value.
             </Trans>
           </li>
           <li>
-            <Trans id="allocation.skill.ruleTrend">
+            <Trans id="allocation.skill.ruleTrendV2">
               <strong className="text-foreground">12-month trend:</strong> a
-              light tie-breaker from {trendRange}; falling assets remain
-              candidates.
+              light tie-breaker, raw factor {trendRange} before the book is
+              rebalanced; falling assets remain candidates.
             </Trans>
           </li>
           <li>
-            <Trans id="allocation.skill.ruleReview">
+            <Trans id="allocation.skill.ruleReviewV2">
               <strong className="text-foreground">Review:</strong> ↻ marks
-              prices that moved more than {drift} since their fair value.
+              prices that moved more than {drift} since the fair value was
+              written.
             </Trans>
           </li>
           <li>
-            <Trans id="allocation.skill.ruleSales">
+            <Trans id="allocation.skill.ruleSalesV2">
               <strong className="text-foreground">Sales:</strong> recommended
-              only from {sellBar} confidence; before that they are shown for
-              information.
+              only from {sellBar} confidence over a complete price history;
+              before that they are shown for information.
             </Trans>
           </li>
         </ul>

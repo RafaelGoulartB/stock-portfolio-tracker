@@ -437,6 +437,35 @@ describe("scoreAssets", () => {
     ).toBeCloseTo(1, 7);
   });
 
+  it("never trims a barely expensive asset because another one is cheap", () => {
+    const [cheap, barely] = scoreAssets([
+      priced("50", { targetWeight: "0.4", currentWeight: "0.4" }),
+      priced("101", { targetWeight: "0.4", currentWeight: "0.4" }),
+    ]);
+
+    // Renormalization shrinks the barely expensive target to ~21%…
+    expect(Number(barely?.tiltedTarget)).toBeLessThan(0.22);
+    // …but a trim may only take it down to its own tilt: 40% × (100/101)^1.5.
+    expect(Number(barely?.trimTarget)).toBeCloseTo(0.4 * (100 / 101) ** 1.5, 6);
+    expect(barely?.ruleId).not.toBe("trim-overweight");
+    expect(cheap?.trimTarget).toBe(cheap?.tiltedTarget);
+  });
+
+  it("keeps an extreme stored momentum weight from overflowing", () => {
+    const book = scoreAssets(
+      [
+        input({ targetWeight: "0.5", currentWeight: "0.5", momentum: "-0.5" }),
+        input({ targetWeight: "0.5", currentWeight: "0.5", momentum: "0.5" }),
+      ],
+      { ...DEFAULT_SCORE_CONFIG, momentumWeight: "30" },
+    );
+
+    expect(book).toHaveLength(2);
+    expect(
+      Number(book[0]?.tiltedTarget) + Number(book[1]?.tiltedTarget),
+    ).toBeCloseTo(1, 7);
+  });
+
   it("returns a single valued asset's target exactly", () => {
     const [only] = scoreAssets([
       priced("50", { targetWeight: "0.3", currentWeight: "0.1" }),

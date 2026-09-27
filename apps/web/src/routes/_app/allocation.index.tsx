@@ -13,7 +13,7 @@ import {
   weightRatio,
 } from "@portifolio-tracker/shared";
 import { createFileRoute } from "@tanstack/react-router";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, TriangleAlert } from "lucide-react";
 import { type ReactNode, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -681,6 +681,13 @@ function AllocationPage() {
         }}
       />
 
+      {allocation.data ? (
+        <MarketSignalsNotice
+          available={allocation.data.marketSignals.available}
+          unavailable={allocation.data.marketSignals.unavailable}
+        />
+      ) : null}
+
       {allocation.isPending || waitingForRate ? <TableSkeleton /> : null}
       {fxFailed ? (
         <ErrorCard>
@@ -750,6 +757,42 @@ function AllocationPage() {
         </p>
       ) : null}
     </PageContent>
+  );
+}
+
+/**
+ * Says when price history is missing, because trend, review warnings and the
+ * valuation track record then change without anything else on screen.
+ */
+function MarketSignalsNotice({
+  available,
+  unavailable,
+}: {
+  available: boolean;
+  unavailable: readonly string[];
+}) {
+  if (available && unavailable.length === 0) return null;
+
+  const shown = unavailable.slice(0, 5).join(", ");
+  const count = unavailable.length;
+
+  return (
+    <p className="flex items-start gap-2 text-xs text-amber-600 dark:text-amber-400">
+      <TriangleAlert className="mt-px size-3.5 shrink-0" aria-hidden="true" />
+      {!available ? (
+        <Trans id="allocation.signalsManual">
+          Manual quotes carry no price history: the 12-month trend, review
+          warnings and the valuation track record are off.
+        </Trans>
+      ) : (
+        <Trans id="allocation.signalsUnavailable">
+          No price history for {count} assets ({shown}
+          {count > 5 ? "…" : ""}): they get no trend or review warning, and fair
+          values due for their 12-month outcome are left out of the track
+          record.
+        </Trans>
+      )}
+    </p>
   );
 }
 

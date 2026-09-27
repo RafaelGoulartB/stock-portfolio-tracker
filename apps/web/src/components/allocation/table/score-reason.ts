@@ -51,8 +51,8 @@ export function scoreReason(row: AllocationRow, i18n: I18n): string {
     case "trim-overweight":
       return i18n._(
         t({
-          id: "allocation.reasonTrimV2",
-          message: `Expensive and past the tolerance band around its valuation-adjusted target of ${weight(score.tiltedTarget)}: consider trimming instead of buying.`,
+          id: "allocation.reasonTrimV3",
+          message: `Priced above your fair value and past the tolerance band around ${weight(score.trimTarget)}, the lowest weight its own valuation justifies: consider trimming instead of buying.`,
         }),
       );
     case "weight-cap":
@@ -82,6 +82,15 @@ export function scoreReason(row: AllocationRow, i18n: I18n): string {
           t({
             id: "allocation.reasonAtTarget",
             message: `At or above its valuation-adjusted target of ${weight(score.tiltedTarget)}.`,
+          }),
+        );
+      }
+
+      if (score.momentumZ === null) {
+        return i18n._(
+          t({
+            id: "allocation.reasonGapV3NoTrend",
+            message: `Target ${weight(row.targetWeight)} adjusted to ${weight(score.tiltedTarget)} (valuation ${formatMultiplier(score.valuationTilt ?? "1")}, book rebalance ${formatMultiplier(score.momentumTilt ?? "1")}); ${formatWeightPrecise(row.currentWeight)} held leaves ${weight(score.relativeGap)} of it missing, at priority ${formatMultiplier(score.priority)}.`,
           }),
         );
       }

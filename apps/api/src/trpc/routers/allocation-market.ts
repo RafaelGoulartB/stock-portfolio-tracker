@@ -4,7 +4,6 @@ import {
   type Currency,
   DEFAULT_SCORE_CONFIG,
   type QuoteSource,
-  quarterEndDate,
   type ScoreConfig,
   type ValuationSkill,
 } from "@portifolio-tracker/shared";
@@ -24,6 +23,19 @@ import { monthsAgo } from "./allocation-helpers";
 const SERIES_CONCURRENCY = 6;
 /** 12-1 momentum needs a year back; one extra month absorbs holidays. */
 const MOMENTUM_LOOKBACK_MONTHS = 13;
+/**
+ * Days fetched before the oldest fair value, so a reference day that fell on
+ * a weekend or holiday (every 31 December on B3) still finds a prior close.
+ */
+const REFERENCE_LEAD_DAYS = 10;
+
+function daysBefore(day: string, days: number): string {
+  const [year = 1970, month = 1, date = 1] = day.split("-").map(Number);
+
+  return new Date(Date.UTC(year, month - 1, date - days))
+    .toISOString()
+    .slice(0, 10);
+}
 
 export type MarketSignalAsset = {
   ticker: string;
@@ -35,19 +47,27 @@ export type MarketSignalAsset = {
 export type MarketSignals = {
   /** 12-1 month log return per ticker, only where a year of prices exists. */
   momentumByTicker: Map<string, string>;
-  /** Quarter-end close per `ticker|period` fair value review. */
+  /** Close on the day each `ticker|period` fair value was known. */
   referencePrices: Map<string, string>;
   skill: ValuationSkill;
   /** Tickers whose price history could not be loaded. */
   unavailable: string[];
+  /**
+   * False with manual quotes: a manual price has no real history, so trend,
+   * review nudges and the track record are off rather than computed from a
+   * flat line.
+   */
+  available: boolean;
 };
 
 /**
  * Loads the price history behind the score's market signals: momentum for
- * targeted assets, and quarter-end plus 12-month-later closes for every fair
- * value review (the valuation track record). History is never stored; the
- * quote provider's series cache keeps repeat loads cheap. A ticker whose
- * history fails simply has no signal, which the score treats as neutral.
+ * targeted assets, and the closes on the day each fair value was known and
+ * 12 months later (the valuation track record). History is never stored;
+ * the quote provider's series cache keeps repeat loads cheap. A ticker whose
+ * history fails has no signal, which the score treats as neutral, and is
+ * reported in `unavailable` (and as `missing` in the skill) so the screen
+ * can say so.
  */
 export async function loadMarketSignals(input: {
   assets: readonly MarketSignalAsset[];
@@ -72,20 +92,35 @@ export async function loadMarketSignals(input: {
     .map((asset) => asset.ticker);
 
   const earliestReview = input.reviews.reduce<string | null>(
-    (earliest, review) => {
-      const end = quarterEndDate(review.period);
-      return earliest === null || end < earliest ? end : earliest;
-    },
+    (earliest, review) =>
+      earliest === null || review.asOf < earliest ? review.asOf : earliest,
     null,
   );
   const momentumStart = monthsAgo(input.today, MOMENTUM_LOOKBACK_MONTHS);
   const start =
-    earliestReview !== null && earliestReview < momentumStart
-      ? earliestReview
+    earliestReview !== null &&
+    daysBefore(earliestReview, REFERENCE_LEAD_DAYS) < momentumStart
+      ? daysBefore(earliestReview, REFERENCE_LEAD_DAYS)
       : momentumStart;
   const limit = createConcurrencyLimiter(SERIES_CONCURRENCY);
   const seriesByTicker = new Map<string, ClosePoint[]>();
   const unavailable: string[] = [];
+
+  if (input.quoteSource === "manual") {
+    const { pending, missing } = skillObservations(
+      input.reviews,
+      new Map(),
+      input.today,
+    );
+
+    return {
+      momentumByTicker: new Map(),
+      referencePrices: new Map(),
+      skill: valuationSkill([], { pending, missing }, config),
+      unavailable: [],
+      available: false,
+    };
+  }
 
   await Promise.all(
     tickers.map((ticker) =>
@@ -123,13 +158,13 @@ export async function loadMarketSignals(input: {
   for (const review of input.reviews) {
     const points = seriesByTicker.get(review.ticker);
     if (!points) continue;
-    const price = referencePrice(points, review.period);
+    const price = referencePrice(points, review.asOf);
     if (price !== null) {
       referencePrices.set(`${review.ticker}|${review.period}`, price);
     }
   }
 
-  const { observations, pending } = skillObservations(
+  const { observations, pending, missing } = skillObservations(
     input.reviews,
     seriesByTicker,
     input.today,
@@ -138,7 +173,8 @@ export async function loadMarketSignals(input: {
   return {
     momentumByTicker,
     referencePrices,
-    skill: valuationSkill(observations, pending, config),
+    skill: valuationSkill(observations, { pending, missing }, config),
     unavailable: unavailable.sort(),
+    available: true,
   };
 }

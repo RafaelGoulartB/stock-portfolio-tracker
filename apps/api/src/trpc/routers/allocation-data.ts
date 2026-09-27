@@ -1,5 +1,5 @@
 import type { AssetClass, Currency } from "@portifolio-tracker/shared";
-import { and, asc, desc, eq, max } from "drizzle-orm";
+import { and, asc, desc, eq, max, sql } from "drizzle-orm";
 import { db } from "../../db";
 import { allocationAssets, assetReviews, transactions } from "../../db/schema";
 import type {
@@ -72,6 +72,8 @@ export async function loadReviews(userId: string): Promise<StoredReview[]> {
       fairValue: assetReviews.fairValue,
       fairValueRef: assetReviews.fairValueRef,
       watchNext: assetReviews.watchNext,
+      // Local day of the last edit: when the fair value was known.
+      editedOn: sql<string>`to_char(${assetReviews.updatedAt} at time zone 'America/Sao_Paulo', 'YYYY-MM-DD')`,
     })
     .from(assetReviews)
     .where(eq(assetReviews.userId, userId))

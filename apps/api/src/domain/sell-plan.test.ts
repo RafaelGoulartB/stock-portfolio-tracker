@@ -25,7 +25,7 @@ function row(overrides: Partial<SellPlanRow>): SellPlanRow {
     quantity: "1000",
     marketValue: "60000",
     currentWeight: "0.06",
-    tiltedTarget: "0.04",
+    trimTarget: "0.04",
     fairValue: "40",
     marketPrice: "60",
     wholeUnits: true,
@@ -140,6 +140,33 @@ describe("planSales", () => {
 
     expect(early.recommended).toBe(false);
     expect(proven.recommended).toBe(true);
+  });
+
+  it("never recommends from a track record that could not be fully priced", () => {
+    const plan = planSales({
+      ...base,
+      confidence: "0.9",
+      partialTrackRecord: true,
+      rows: [row({})],
+    });
+
+    expect(plan.recommended).toBe(false);
+  });
+
+  it("lists Brazilian stocks as taxable once the exemption is used up", () => {
+    const plan = planSales({
+      ...base,
+      soldThisMonthBrl: "25000",
+      rows: [row({})],
+    });
+
+    expect(plan.remaining).toBe("0.00");
+    expect(plan.exempt).toEqual([]);
+    expect(plan.taxable[0]).toMatchObject({
+      ticker: "ITUB3",
+      excess: "20000.00",
+    });
+    expect(plan.total).toBe("0.00");
   });
 
   it("expresses the BRL exemption in USD when the book is shown in dollars", () => {

@@ -37,6 +37,7 @@ import { usdBrlExecutionRate } from "../../domain/fx-execution";
 import { consolidatePositions, isOpenQuantity } from "../../domain/positions";
 import { loadScoreConfig } from "../../domain/score-config";
 import { exemptSalesInMonth } from "../../domain/sell-plan";
+import { fairValueReviews } from "../../domain/valuation-skill";
 import {
   add,
   formatDecimal,
@@ -65,7 +66,11 @@ import {
   today,
 } from "./allocation-helpers";
 import { loadMarketSignals } from "./allocation-market";
-import { loadTransactions, loadTransactionsForTickers } from "./transactions";
+import {
+  loadTransactions,
+  loadTransactionsForTickers,
+  readSplits,
+} from "./transactions";
 
 export const allocationRouter = router({
   /**
@@ -99,12 +104,16 @@ export const allocationRouter = router({
   list: protectedProcedure
     .input(allocationListInput)
     .query(async ({ ctx, input }) => {
-      const [assets, reviews, scorePolicy, history] = await Promise.all([
-        loadAssets(ctx.user.id),
-        loadReviews(ctx.user.id),
-        loadScoreConfig(ctx.user.id),
-        loadTransactions(ctx.user.id),
-      ]);
+      const [assets, reviews, scorePolicy, history, splits] = await Promise.all(
+        [
+          loadAssets(ctx.user.id),
+          loadReviews(ctx.user.id),
+          loadScoreConfig(ctx.user.id),
+          loadTransactions(ctx.user.id),
+          readSplits(db, ctx.user.id),
+        ],
+      );
+      const fairValues = fairValueReviews(reviews, splits);
       const stored = storedManualPrices(assets);
       const requestManuals = {
         ...stored,
@@ -149,17 +158,7 @@ export const allocationRouter = router({
         // only depends on metadata and reviews, so it joins the same wave.
         loadMarketSignals({
           assets,
-          reviews: reviews.flatMap((review) =>
-            review.fairValue === null
-              ? []
-              : [
-                  {
-                    ticker: review.ticker,
-                    period: review.period,
-                    fairValue: review.fairValue,
-                  },
-                ],
-          ),
+          reviews: fairValues,
           today: day,
           quoteSource: input.quoteSource,
           forceRefresh: input.forceRefresh,
@@ -185,6 +184,12 @@ export const allocationRouter = router({
         config: scorePolicy.config,
         momentumByTicker: signals.momentumByTicker,
         referencePrices: signals.referencePrices,
+        fairValuesInTodayUnits: new Map(
+          fairValues.map((review) => [
+            `${review.ticker}|${review.period}`,
+            review.fairValue,
+          ]),
+        ),
         valuationStrength: signals.skill.strength,
       });
 
@@ -201,7 +206,10 @@ export const allocationRouter = router({
           /** Gross BRL sales of exempt Brazilian stocks this month. */
           exemptSoldThisMonthBrl: exemptSalesInMonth(history, day),
         },
-        marketSignals: { unavailable: signals.unavailable },
+        marketSignals: {
+          unavailable: signals.unavailable,
+          available: signals.available,
+        },
         fx: {
           displayCurrency: input.displayCurrency,
           usdBrlRate,

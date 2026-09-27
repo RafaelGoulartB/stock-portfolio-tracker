@@ -235,6 +235,69 @@ describe("portable data backups", () => {
     });
   });
 
+  const v3Policy = {
+    version: "custom",
+    absoluteWeightCap: "0.05000000",
+    overweightBlockFactor: "2.00000000",
+    trimAbsoluteBand: "0.05000000",
+    trimRelativeBand: "0.25000000",
+    cooldownDays: 45,
+    cooldownFloor: "0.25000000",
+    gradeWindowQuarters: 4,
+    gradeHalfLifeQuarters: 4,
+    gradePriorQuarters: "1.00000000",
+    gradeBands: [{ minGrade: "0", multiplier: "1" }],
+    ungradedMultiplier: "1.00000000",
+    valuationDeadZone: "0.00000000",
+    valuationSensitivity: "3.00000000",
+    tiltMin: "0.20000000",
+    tiltMax: "3.00000000",
+    fairValueHalfLifeQuarters: 2,
+    icReference: "0.10000000",
+    icPrior: "0.05000000",
+    icPriorPairs: 240,
+    momentumWeight: "0.10000000",
+    momentumZCap: "2.00000000",
+    reviewDrift: "0.25000000",
+    sellBand: "0.25000000",
+    sellConfidence: "0.80000000",
+    updatedAt: "2026-09-27T12:00:00.000Z",
+  };
+
+  it("keeps every knob of a v3 score config", () => {
+    const record = backupRecordSchema.parse({
+      type: "record",
+      entity: "scoreConfigs",
+      data: v3Policy,
+    });
+
+    if (record.entity !== "scoreConfigs") {
+      throw new Error("expected score config record");
+    }
+    expect(record.data).toMatchObject({
+      icReference: "0.10000000",
+      icPriorPairs: 240,
+      momentumZCap: "2.00000000",
+      sellConfidence: "0.80000000",
+    });
+  });
+
+  it("rejects a score config the engine could not load", () => {
+    for (const broken of [
+      { icReference: "0" },
+      { momentumWeight: "30" },
+      { sellConfidence: "1.5" },
+    ]) {
+      expect(() =>
+        backupRecordSchema.parse({
+          type: "record",
+          entity: "scoreConfigs",
+          data: { ...v3Policy, ...broken },
+        }),
+      ).toThrow();
+    }
+  });
+
   it("maps a v1 score config onto the v2 policy", () => {
     const record = backupRecordSchema.parse({
       type: "record",

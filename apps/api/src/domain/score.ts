@@ -118,6 +118,8 @@ export type ScoreContext = {
   /** Pre-normalization tilt, `1` without a valuation. `< 1` means expensive. */
   rawTilt: Decimal;
   tiltedTarget: Decimal | null;
+  /** Floor for trims and sales; see `ScoreBreakdown.trimTarget`. */
+  trimTarget: Decimal | null;
   tilt: Decimal | null;
   valuationTilt: Decimal | null;
   momentumTilt: Decimal | null;
@@ -448,20 +450,20 @@ export const SCORE_RULES: readonly ScoreRule[] = [
     score: () => ZERO,
   },
   {
-    // Expensive and past the 5/25-style tolerance band around the tilted
+    // Expensive and past the 5/25-style tolerance band around the trim
     // target: suggest giving weight back.
     id: "trim-overweight",
     matches: (context, config) => {
-      if (context.tiltedTarget === null || context.rawTilt >= ONE) {
+      if (context.trimTarget === null || context.rawTilt >= ONE) {
         return false;
       }
 
       const band = min(
         toDecimal(config.trimAbsoluteBand),
-        mul(context.tiltedTarget, toDecimal(config.trimRelativeBand)),
+        mul(context.trimTarget, toDecimal(config.trimRelativeBand)),
       );
 
-      return sub(context.weight, context.tiltedTarget) > band;
+      return sub(context.weight, context.trimTarget) > band;
     },
     score: (context) => context.relativeGap ?? ZERO,
   },
@@ -635,8 +637,11 @@ function bookScaling(
 
   const zScores = momentumScores(prepared, config);
   const weight = toRatio(toDecimal(config.momentumWeight));
+  // Bounded in float space so a stored policy can never overflow decimals.
   const factors = zScores.map((z) =>
-    z === null ? ONE : fromRatio(Math.exp(weight * toRatio(z))),
+    z === null
+      ? ONE
+      : fromRatio(Math.exp(Math.min(20, Math.max(-20, weight * toRatio(z))))),
   );
 
   let bookTargets = ZERO;
@@ -728,6 +733,15 @@ function contextFor(
   const weight = toDecimal(input.currentWeight);
   const rawTilt = valuation?.tilt ?? ONE;
   const { tiltedTarget } = scaling;
+  // An expensive asset gives back weight down to its own valuation tilt,
+  // never further because some other asset happens to be cheap.
+  const ownTarget = target === null ? null : mul(target, min(rawTilt, ONE));
+  const trimTarget =
+    tiltedTarget === null || ownTarget === null
+      ? tiltedTarget
+      : tiltedTarget > ownTarget
+        ? tiltedTarget
+        : ownTarget;
   const gap = tiltedTarget === null ? null : sub(tiltedTarget, weight);
   const relativeGap =
     tiltedTarget === null || gap === null
@@ -764,6 +778,7 @@ function contextFor(
     quoteMissing: input.quoteMissing === true,
     rawTilt,
     tiltedTarget,
+    trimTarget,
     tilt: scaling.tilt,
     valuationTilt: scaling.valuationTilt,
     momentumTilt: scaling.momentumTilt,
@@ -804,6 +819,7 @@ function breakdown(context: ScoreContext, config: ScoreConfig): ScoreBreakdown {
     value: formatDecimal(rule.score(context, config), WEIGHT_PLACES),
     ruleId: rule.id,
     tiltedTarget: ratio(context.tiltedTarget),
+    trimTarget: ratio(context.trimTarget),
     tilt: ratio(context.tilt),
     valuationTilt: ratio(context.valuationTilt),
     momentumTilt: ratio(context.momentumTilt),

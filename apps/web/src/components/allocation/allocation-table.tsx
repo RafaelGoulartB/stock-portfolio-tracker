@@ -411,8 +411,27 @@ export function AllocationTable({
                             className="shrink-0 opacity-60 transition-opacity focus:opacity-100 data-[state=open]:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
                           />
                         )}
-                        {missing.includes(row.ticker) || !row.hasPosition ? (
+                        {missing.includes(row.ticker) ||
+                        !row.hasPosition ||
+                        reviewNote(row, i18n) !== null ? (
                           <div className="ml-auto flex shrink-0 items-center gap-1">
+                            {reviewNote(row, i18n) !== null ? (
+                              // A link, so keyboard and touch users reach the
+                              // full warning on the asset page, not only the
+                              // hover title.
+                              <Link
+                                to="/assets/$ticker"
+                                params={{ ticker: row.ticker }}
+                                aria-label={reviewNote(row, i18n) ?? undefined}
+                                title={reviewNote(row, i18n) ?? undefined}
+                                className="rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              >
+                                <RefreshCcw
+                                  className="size-3 text-amber-600 dark:text-amber-400"
+                                  aria-hidden="true"
+                                />
+                              </Link>
+                            ) : null}
                             {missing.includes(row.ticker) ? (
                               <TriangleAlert
                                 className="size-3 text-amber-600 dark:text-amber-400"
@@ -553,15 +572,6 @@ export function AllocationTable({
                           : row.fairValue !== null
                             ? formatMoney(row.fairValue, row.currency)
                             : "—"}
-                        {reviewNote(row, i18n) !== null ? (
-                          <RefreshCcw
-                            className="size-3 text-amber-600 dark:text-amber-400"
-                            role="img"
-                            aria-label={reviewNote(row, i18n) ?? undefined}
-                          >
-                            <title>{reviewNote(row, i18n)}</title>
-                          </RefreshCcw>
-                        ) : null}
                         {row.fairValueRef ? (
                           <a
                             href={row.fairValueRef}
