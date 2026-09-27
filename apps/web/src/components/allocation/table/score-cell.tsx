@@ -23,7 +23,7 @@ export function ScoreCell({
       </span>
       <span
         className={cn(
-          "w-14 text-right",
+          "w-16 text-right",
           numeric > 0 && "font-medium",
           numeric < 0 && "text-loss",
           numeric === 0 && "text-muted-foreground",

@@ -251,9 +251,10 @@ export function ReviewEditorForm({
     <div className="space-y-3">
       {showHint ? (
         <p className="text-xs text-muted-foreground">
-          <Trans id="allocation.reviewHint">
-            The average of the newest graded quarters scales the score. Fair
-            value feeds the discount from the newest quarter that has one.
+          <Trans id="allocation.reviewHintV2">
+            Recent grades set the asset&apos;s priority and how much its fair
+            value is trusted. The newest fair value tilts the target, and it
+            loses weight as quarters pass without a new one.
           </Trans>
         </p>
       ) : null}

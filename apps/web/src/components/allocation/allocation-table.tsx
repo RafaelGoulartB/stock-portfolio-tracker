@@ -606,8 +606,8 @@ export function AllocationTable({
                               className="size-3 text-muted-foreground"
                               aria-label={i18n._(
                                 t({
-                                  id: "allocation.cooldownIcon",
-                                  message: `In cooldown until ${row.score.cooldownUntil}`,
+                                  id: "allocation.cooldownRampIcon",
+                                  message: `Lower priority until ${row.score.cooldownUntil}`,
                                 }),
                               )}
                             />

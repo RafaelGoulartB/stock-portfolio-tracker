@@ -202,6 +202,17 @@ export function formatSignedWeightPrecise(
   }).format(Number(value));
 }
 
+/** Dimensionless factor (`1.13` decimal string) rendered as `×1.13`. */
+export function formatMultiplier(
+  value: string,
+  locale: string = activeLocale(),
+): string {
+  return `×${numberFormatter(locale, "multiplier", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(value))}`;
+}
+
 /** Return ratio (`0.1` decimal string) rendered as a signed percent. */
 export function formatSignedPercent(
   value: string,

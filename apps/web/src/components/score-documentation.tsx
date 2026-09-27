@@ -80,23 +80,16 @@ export function ScoreDocumentation() {
 
   const watched = useWatch({ control: form.control });
   const preview: ScoreConfigUpdate = {
-    absoluteWeightCap:
-      watched.absoluteWeightCap ?? DEFAULT_SCORE_CONFIG.absoluteWeightCap,
-    overweightBlockFactor:
-      watched.overweightBlockFactor ??
-      DEFAULT_SCORE_CONFIG.overweightBlockFactor,
-    trimFactor: watched.trimFactor ?? DEFAULT_SCORE_CONFIG.trimFactor,
-    cooldownDays: watched.cooldownDays ?? DEFAULT_SCORE_CONFIG.cooldownDays,
-    gradeWindowQuarters:
-      watched.gradeWindowQuarters ?? DEFAULT_SCORE_CONFIG.gradeWindowQuarters,
+    ...withoutVersion(DEFAULT_SCORE_CONFIG),
+    ...Object.fromEntries(
+      Object.entries(watched).filter(([, value]) => value !== undefined),
+    ),
     gradeBands: (watched.gradeBands ?? DEFAULT_SCORE_CONFIG.gradeBands).map(
       (band) => ({
         minGrade: band.minGrade ?? "0",
         multiplier: band.multiplier ?? "1",
       }),
     ),
-    ungradedMultiplier:
-      watched.ungradedMultiplier ?? DEFAULT_SCORE_CONFIG.ungradedMultiplier,
   };
 
   useEffect(() => {
@@ -197,7 +190,9 @@ export function ScoreDocumentation() {
   const isBusy = update.isPending || reset.isPending;
   const scoreCap = percentLabel(preview.absoluteWeightCap);
   const overweightLimit = percentLabel(preview.overweightBlockFactor);
-  const trimLimit = percentLabel(preview.trimFactor);
+  const trimAbsolute = percentLabel(preview.trimAbsoluteBand);
+  const trimRelative = percentLabel(preview.trimRelativeBand);
+  const deadZone = percentLabel(preview.valuationDeadZone);
 
   return (
     <Form {...form}>
@@ -252,13 +247,14 @@ export function ScoreDocumentation() {
               </>
             }
           >
-            <Trans id="documentation.score.intro">
+            <Trans id="documentation.score.introV2">
               The score answers how strongly an asset should compete for the
-              next contribution. It is expressed in portfolio-weight units: a
-              score of 0.0075 means 0.75 percentage points. Positive values are
-              buy candidates, zero means skip, and a negative value is a trim
-              signal. Thresholds below are yours to tune and persist with the
-              account.
+              next contribution. It is the share of the asset&apos;s
+              valuation-adjusted target that is still missing, times its
+              priority: 40% means 40% of the target is missing at full priority.
+              Positive values are buy candidates, zero means skip, and a
+              negative value is a trim signal. Thresholds below are yours to
+              tune and persist with the account.
             </Trans>
           </Callout>
 
@@ -269,70 +265,98 @@ export function ScoreDocumentation() {
               </Trans>
             }
             description={
-              <Trans id="documentation.score.pipelineDescription">
-                Every asset walks the same path before the rule ladder decides
-                the final score.
+              <Trans id="documentation.score.pipelineDescriptionV2">
+                Where to go, how much is missing, and how urgently are computed
+                separately, so each input has one job.
               </Trans>
             }
           >
-            <ol className="grid gap-2 sm:grid-cols-3">
+            <ol className="grid gap-2 sm:grid-cols-2">
               <PipelineStep
                 step="1"
                 title={
-                  <Trans id="documentation.score.fairValueDiscount">
-                    Fair-value discount
+                  <Trans id="documentation.score.valuationSignal">
+                    Valuation signal
                   </Trans>
                 }
               >
-                <Trans id="documentation.score.fairValueDiscountDescription">
-                  Positive when the market price is below the newest quarterly
-                  Fair value; negative when it is above it. A missing Fair value
-                  or price is treated as a zero discount by the score.
+                <Trans id="documentation.score.valuationSignalDescription">
+                  The log distance between fair value and price, so half and
+                  double the fair value weigh the same. Mispricing inside ±
+                  {deadZone} is treated as valuation noise, and a cheap USD
+                  asset must also clear the FX spread and IOF. A missing fair
+                  value or price means no signal.
                 </Trans>
                 <Formula>
-                  <Trans id="documentation.formula.fairValueDiscount">
-                    (fair value - market price) / fair value
+                  <Trans id="documentation.formula.valuationSignal">
+                    signal = ln(fair value / price) minus the noise band
                   </Trans>
                 </Formula>
               </PipelineStep>
               <PipelineStep
                 step="2"
                 title={
-                  <Trans id="documentation.score.adjustedTarget">
-                    Adjusted target
+                  <Trans id="documentation.score.tiltedTarget">
+                    Valuation-adjusted target
                   </Trans>
                 }
               >
-                <Trans id="documentation.score.adjustedTargetDescription">
-                  A discount raises the target used for this decision; a premium
-                  lowers it.
+                <Trans id="documentation.score.tiltedTargetDescription">
+                  The signal tilts the target between ×{preview.tiltMin} and ×
+                  {preview.tiltMax}, weighted by confidence: a fair value loses
+                  half its weight every {preview.fairValueHalfLifeQuarters}{" "}
+                  quarters, and a weak grade trusts it less. Tilted targets are
+                  then rescaled to keep your total, so a cheap asset takes
+                  weight from the others instead of inflating every target.
                 </Trans>
                 <Formula>
-                  <Trans id="documentation.formula.adjustedTarget">
-                    target weight × (1 + discount)
+                  <Trans id="documentation.formula.tiltedTarget">
+                    target × exp(sensitivity × confidence × signal), rescaled
                   </Trans>
                 </Formula>
               </PipelineStep>
               <PipelineStep
                 step="3"
-                title={<Trans id="documentation.score.rawGap">Raw gap</Trans>}
+                title={
+                  <Trans id="documentation.score.relativeGap">
+                    Relative gap
+                  </Trans>
+                }
               >
-                <Trans id="documentation.score.rawGapDescription">
-                  The distance between the adjusted target and the asset&apos;s
-                  current portfolio weight.
+                <Trans id="documentation.score.relativeGapDescription">
+                  How much of the adjusted target is missing. An empty 2% target
+                  outranks a 10% target that is already at 8%, even though both
+                  miss 2 percentage points.
                 </Trans>
                 <Formula>
-                  <Trans id="documentation.formula.rawGap">
-                    adjusted target - current weight
+                  <Trans id="documentation.formula.relativeGap">
+                    1 - current weight / adjusted target
+                  </Trans>
+                </Formula>
+              </PipelineStep>
+              <PipelineStep
+                step="4"
+                title={
+                  <Trans id="documentation.score.priority">Priority</Trans>
+                }
+              >
+                <Trans id="documentation.score.priorityDescription">
+                  The grade multiplier times the cooldown ramp. Priority decides
+                  who is filled first and how close to target a cheque takes
+                  them; it never lowers the target itself.
+                </Trans>
+                <Formula>
+                  <Trans id="documentation.formula.priority">
+                    grade multiplier × cooldown ramp
                   </Trans>
                 </Formula>
               </PipelineStep>
             </ol>
             <p className="flex items-center gap-2 text-xs text-muted-foreground">
               <ArrowRight className="size-3.5 shrink-0" aria-hidden="true" />
-              <Trans id="documentation.score.pipelineNext">
-                The rule ladder then either blocks, trims, or scales that gap by
-                the grade multiplier.
+              <Trans id="documentation.score.pipelineNextV2">
+                The rule ladder then blocks, trims, or scores the relative gap
+                times the priority.
               </Trans>
             </p>
           </Topic>
@@ -350,7 +374,13 @@ export function ScoreDocumentation() {
               </Trans>
             }
           >
-            <div className="grid gap-3 sm:grid-cols-2">
+            <FieldGroup
+              title={
+                <Trans id="documentation.score.group.limits">
+                  Ceilings and trims
+                </Trans>
+              }
+            >
               <PercentField
                 name="absoluteWeightCap"
                 label={
@@ -359,9 +389,9 @@ export function ScoreDocumentation() {
                   </Trans>
                 }
                 description={
-                  <Trans id="documentation.score.field.absoluteCapHint">
-                    Block new buys once weight exceeds this share of the whole
-                    portfolio.
+                  <Trans id="documentation.score.field.absoluteCapHintV2">
+                    Highest weight a contribution may take an asset whose target
+                    is at or below this ceiling.
                   </Trans>
                 }
               />
@@ -373,101 +403,182 @@ export function ScoreDocumentation() {
                   </Trans>
                 }
                 description={
-                  <Trans id="documentation.score.field.overweightBlockHint">
-                    Block when current weight exceeds this percent of the
-                    asset&apos;s own target.
+                  <Trans id="documentation.score.field.overweightBlockHintV2">
+                    Highest weight a contribution may reach, as a percent of the
+                    asset&apos;s own target. Also bounds a generous valuation
+                    tilt.
                   </Trans>
                 }
               />
               <PercentField
-                name="trimFactor"
+                name="trimAbsoluteBand"
                 label={
-                  <Trans id="documentation.score.field.trimFactor">
-                    Trim threshold
+                  <Trans id="documentation.score.field.trimAbsolute">
+                    Trim band (points)
                   </Trans>
                 }
                 description={
-                  <Trans id="documentation.score.field.trimFactorHint">
-                    Expensive holdings above this percent of target become trim
-                    candidates.
+                  <Trans id="documentation.score.field.trimAbsoluteHint">
+                    Percentage points past the adjusted target that make an
+                    expensive holding a trim candidate.
                   </Trans>
                 }
               />
-              <FormField
-                control={form.control}
-                name="cooldownDays"
-                render={({ field }) => (
-                  <FormItem className="rounded-lg border px-3.5 py-3">
-                    <FormLabel>
-                      <Trans id="documentation.score.field.cooldownDays">
-                        Contribution cooldown
-                      </Trans>
-                    </FormLabel>
-                    <FormControl>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="number"
-                          min={0}
-                          step={1}
-                          className="max-w-28"
-                          value={field.value}
-                          onChange={(event) =>
-                            field.onChange(Number(event.target.value))
-                          }
-                        />
-                        <span className="text-xs text-muted-foreground">
-                          <Trans id="documentation.score.unit.days">days</Trans>
-                        </span>
-                      </div>
-                    </FormControl>
-                    <FormDescription>
-                      <Trans id="documentation.score.field.cooldownDaysHint">
-                        Days after a buy during which the asset takes no new
-                        contribution.
-                      </Trans>
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
+              <PercentField
+                name="trimRelativeBand"
+                label={
+                  <Trans id="documentation.score.field.trimRelative">
+                    Trim band (relative)
+                  </Trans>
+                }
+                description={
+                  <Trans id="documentation.score.field.trimRelativeHint">
+                    The same band as a share of the adjusted target. The tighter
+                    of the two applies.
+                  </Trans>
+                }
               />
-              <FormField
-                control={form.control}
+            </FieldGroup>
+
+            <FieldGroup
+              title={
+                <Trans id="documentation.score.group.valuation">
+                  Valuation
+                </Trans>
+              }
+            >
+              <PercentField
+                name="valuationDeadZone"
+                label={
+                  <Trans id="documentation.score.field.deadZone">
+                    Valuation noise band
+                  </Trans>
+                }
+                description={
+                  <Trans id="documentation.score.field.deadZoneHint">
+                    Mispricing this close to fair value does not tilt the
+                    target.
+                  </Trans>
+                }
+              />
+              <DecimalField
+                name="valuationSensitivity"
+                label={
+                  <Trans id="documentation.score.field.sensitivity">
+                    Valuation sensitivity
+                  </Trans>
+                }
+                description={
+                  <Trans id="documentation.score.field.sensitivityHint">
+                    How strongly the signal tilts the target. 0 ignores
+                    valuation; 1 is neutral.
+                  </Trans>
+                }
+              />
+              <DecimalField
+                name="tiltMin"
+                label={
+                  <Trans id="documentation.score.field.tiltMin">
+                    Lowest tilt
+                  </Trans>
+                }
+                description={
+                  <Trans id="documentation.score.field.tiltMinHint">
+                    Smallest multiplier an expensive price may apply to a target
+                    (at most 1).
+                  </Trans>
+                }
+              />
+              <DecimalField
+                name="tiltMax"
+                label={
+                  <Trans id="documentation.score.field.tiltMax">
+                    Highest tilt
+                  </Trans>
+                }
+                description={
+                  <Trans id="documentation.score.field.tiltMaxHint">
+                    Largest multiplier a cheap price may apply to a target (at
+                    least 1).
+                  </Trans>
+                }
+              />
+              <IntegerField
+                name="fairValueHalfLifeQuarters"
+                min={1}
+                unit={
+                  <Trans id="documentation.score.unit.quarters">quarters</Trans>
+                }
+                label={
+                  <Trans id="documentation.score.field.fairValueHalfLife">
+                    Fair value half-life
+                  </Trans>
+                }
+                description={
+                  <Trans id="documentation.score.field.fairValueHalfLifeHint">
+                    Quarters after which a fair value that was not refreshed
+                    counts half as much.
+                  </Trans>
+                }
+              />
+            </FieldGroup>
+
+            <FieldGroup
+              title={
+                <Trans id="documentation.score.group.priority">
+                  Grades and cooldown
+                </Trans>
+              }
+            >
+              <IntegerField
                 name="gradeWindowQuarters"
-                render={({ field }) => (
-                  <FormItem className="rounded-lg border px-3.5 py-3">
-                    <FormLabel>
-                      <Trans id="documentation.score.field.gradeWindow">
-                        Grade window
-                      </Trans>
-                    </FormLabel>
-                    <FormControl>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="number"
-                          min={1}
-                          step={1}
-                          className="max-w-28"
-                          value={field.value}
-                          onChange={(event) =>
-                            field.onChange(Number(event.target.value))
-                          }
-                        />
-                        <span className="text-xs text-muted-foreground">
-                          <Trans id="documentation.score.unit.quarters">
-                            quarters
-                          </Trans>
-                        </span>
-                      </div>
-                    </FormControl>
-                    <FormDescription>
-                      <Trans id="documentation.score.field.gradeWindowHint">
-                        How many of the newest graded quarters the average grade
-                        uses.
-                      </Trans>
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                min={1}
+                unit={
+                  <Trans id="documentation.score.unit.quarters">quarters</Trans>
+                }
+                label={
+                  <Trans id="documentation.score.field.gradeWindow">
+                    Grade window
+                  </Trans>
+                }
+                description={
+                  <Trans id="documentation.score.field.gradeWindowHint">
+                    How many of the newest graded quarters the average grade
+                    uses.
+                  </Trans>
+                }
+              />
+              <IntegerField
+                name="gradeHalfLifeQuarters"
+                min={1}
+                unit={
+                  <Trans id="documentation.score.unit.quarters">quarters</Trans>
+                }
+                label={
+                  <Trans id="documentation.score.field.gradeHalfLife">
+                    Grade half-life
+                  </Trans>
+                }
+                description={
+                  <Trans id="documentation.score.field.gradeHalfLifeHint">
+                    Quarters after which a grade counts half as much as a fresh
+                    one.
+                  </Trans>
+                }
+              />
+              <DecimalField
+                name="gradePriorQuarters"
+                label={
+                  <Trans id="documentation.score.field.gradePrior">
+                    Grade prior
+                  </Trans>
+                }
+                description={
+                  <Trans id="documentation.score.field.gradePriorHint">
+                    Quarters of neutral evidence mixed in, so one grade moves
+                    the multiplier less than several consistent ones.
+                  </Trans>
+                }
               />
               <DecimalField
                 name="ungradedMultiplier"
@@ -483,112 +594,131 @@ export function ScoreDocumentation() {
                   </Trans>
                 }
               />
-            </div>
+              <IntegerField
+                name="cooldownDays"
+                min={0}
+                unit={<Trans id="documentation.score.unit.days">days</Trans>}
+                label={
+                  <Trans id="documentation.score.field.cooldownDays">
+                    Contribution cooldown
+                  </Trans>
+                }
+                description={
+                  <Trans id="documentation.score.field.cooldownDaysHintV2">
+                    Days after a buy during which the asset&apos;s priority
+                    ramps back to full.
+                  </Trans>
+                }
+              />
+              <DecimalField
+                name="cooldownFloor"
+                label={
+                  <Trans id="documentation.score.field.cooldownFloor">
+                    Priority right after a buy
+                  </Trans>
+                }
+                description={
+                  <Trans id="documentation.score.field.cooldownFloorHint">
+                    Priority multiplier on the day of a buy, rising linearly to
+                    1. Use 0 for the strictest ramp.
+                  </Trans>
+                }
+              />
+            </FieldGroup>
           </Topic>
 
           <Topic
             title={
-              <Trans id="documentation.score.gradeMultiplier">
-                Quarterly grade multiplier
-              </Trans>
+              <Trans id="documentation.score.gradeCurve">Grade curve</Trans>
             }
             description={
-              <Trans id="documentation.score.gradeDescription">
-                The grade is the average of the newest{" "}
-                {preview.gradeWindowQuarters} quarters that actually contain a
-                grade. Notes-only reviews are ignored. An asset with no grades
-                uses a ×{preview.ungradedMultiplier} multiplier. Bands must be
-                ascending by minimum grade.
+              <Trans id="documentation.score.gradeCurveDescription">
+                Each row is a point of the curve; grades between two points are
+                interpolated, so a tenth of a point never jumps the score. The
+                average leans on recent quarters and is blended with ×
+                {preview.ungradedMultiplier} by {preview.gradePriorQuarters}{" "}
+                quarter(s) of prior evidence. Notes-only reviews are ignored.
+                Points must be ascending by grade.
               </Trans>
             }
           >
             <div className="grid gap-2">
-              {bands.fields.map((band, index) => {
-                const next = preview.gradeBands[index + 1];
-
-                return (
-                  <div
-                    key={band.id}
-                    className="grid gap-3 rounded-lg border px-3.5 py-3 sm:grid-cols-[1fr_1fr_auto]"
-                  >
-                    <FormField
-                      control={form.control}
-                      name={`gradeBands.${index}.minGrade`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>
-                            {next ? (
-                              <Trans id="documentation.score.gradeRange">
-                                Grade ≥ {field.value} and &lt; {next.minGrade}
-                              </Trans>
-                            ) : (
-                              <Trans id="documentation.score.gradeMinimum">
-                                Grade ≥ {field.value}
-                              </Trans>
-                            )}
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              inputMode="decimal"
-                              value={formatDecimalInput(field.value)}
-                              onChange={(event) => {
-                                const parsed = parseDecimalInput(
-                                  event.target.value,
-                                );
-                                if (parsed !== null) field.onChange(parsed);
-                              }}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
+              {bands.fields.map((band, index) => (
+                <div
+                  key={band.id}
+                  className="grid gap-3 rounded-lg border px-3.5 py-3 sm:grid-cols-[1fr_1fr_auto]"
+                >
+                  <FormField
+                    control={form.control}
+                    name={`gradeBands.${index}.minGrade`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          <Trans id="documentation.score.gradePoint">
+                            Grade {field.value}
+                          </Trans>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            inputMode="decimal"
+                            value={formatDecimalInput(field.value)}
+                            onChange={(event) => {
+                              const parsed = parseDecimalInput(
+                                event.target.value,
+                              );
+                              if (parsed !== null) field.onChange(parsed);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name={`gradeBands.${index}.multiplier`}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>
+                          <Trans id="documentation.score.priorityMultiplier">
+                            Priority ×{field.value}
+                          </Trans>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            inputMode="decimal"
+                            value={formatDecimalInput(field.value)}
+                            onChange={(event) => {
+                              const parsed = parseDecimalInput(
+                                event.target.value,
+                              );
+                              if (parsed !== null) field.onChange(parsed);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="flex items-end">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-sm"
+                      disabled={bands.fields.length <= 1 || isBusy}
+                      aria-label={i18n._(
+                        msg({
+                          id: "documentation.score.removePoint",
+                          message: "Remove grade point",
+                        }),
                       )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name={`gradeBands.${index}.multiplier`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>
-                            <Trans id="documentation.score.gapMultiplier">
-                              Gap multiplier ×{field.value}
-                            </Trans>
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              inputMode="decimal"
-                              value={formatDecimalInput(field.value)}
-                              onChange={(event) => {
-                                const parsed = parseDecimalInput(
-                                  event.target.value,
-                                );
-                                if (parsed !== null) field.onChange(parsed);
-                              }}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <div className="flex items-end">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon-sm"
-                        disabled={bands.fields.length <= 1 || isBusy}
-                        aria-label={i18n._(
-                          msg({
-                            id: "documentation.score.removeBand",
-                            message: "Remove grade band",
-                          }),
-                        )}
-                        onClick={() => bands.remove(index)}
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </div>
+                      onClick={() => bands.remove(index)}
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
             <Button
               type="button"
@@ -606,7 +736,7 @@ export function ScoreDocumentation() {
               }}
             >
               <Plus className="size-4" />
-              <Trans id="documentation.score.addBand">Add grade band</Trans>
+              <Trans id="documentation.score.addPoint">Add grade point</Trans>
             </Button>
           </Topic>
 
@@ -657,16 +787,18 @@ export function ScoreDocumentation() {
                 }
                 badge={
                   <ThresholdChip>
-                    <Trans id="documentation.score.trimBadge">
-                      {trimLimit} of target
+                    <Trans id="documentation.score.trimBadgeV2">
+                      {trimAbsolute} or {trimRelative}
                     </Trans>
                   </ThresholdChip>
                 }
               >
-                <Trans id="documentation.score.trimDescription">
-                  If the discount is negative and current weight is above{" "}
-                  {trimLimit} of target, return the signed raw gap. This rule
-                  precedes the blocking caps so it can produce a negative trim
+                <Trans id="documentation.score.trimDescriptionV2">
+                  If valuation tilts the target down and current weight runs
+                  more than {trimAbsolute} points or {trimRelative} of the
+                  adjusted target past it (whichever is tighter, the 5/25
+                  tolerance-band rule), return the negative relative gap. This
+                  rule precedes the blocking caps so it can produce a trim
                   signal.
                 </Trans>
               </Rule>
@@ -679,10 +811,11 @@ export function ScoreDocumentation() {
                 }
                 badge={<ThresholdChip>{scoreCap}</ThresholdChip>}
               >
-                <Trans id="documentation.score.absoluteCapDescription">
+                <Trans id="documentation.score.absoluteCapDescriptionV2">
                   Block new contributions when current weight is greater than{" "}
                   {scoreCap} of the portfolio, unless the asset has an explicit
-                  target above that ceiling.
+                  target above that ceiling. The planner also never takes such
+                  an asset past {scoreCap}.
                 </Trans>
               </Rule>
               <Rule
@@ -700,9 +833,10 @@ export function ScoreDocumentation() {
                   </ThresholdChip>
                 }
               >
-                <Trans id="documentation.score.targetCapDescription">
+                <Trans id="documentation.score.targetCapDescriptionV2">
                   Block new contributions when current weight is greater than{" "}
-                  {overweightLimit} of its own target.
+                  {overweightLimit} of its own target; the planner never takes
+                  an asset past it either.
                 </Trans>
               </Rule>
               <Rule
@@ -719,10 +853,11 @@ export function ScoreDocumentation() {
                   </ThresholdChip>
                 }
               >
-                <Trans id="documentation.score.cooldownDescription">
-                  Block the asset for {preview.cooldownDays} days after its
-                  latest buy. Sells do not reset the clock; the asset is
-                  eligible again on day {preview.cooldownDays}.
+                <Trans id="documentation.score.cooldownDescriptionV2">
+                  After a buy, priority starts at ×{preview.cooldownFloor} and
+                  rises linearly to ×1 over {preview.cooldownDays} days. The
+                  asset stays a candidate, so a small buy does not freeze it and
+                  a large gap can still win. Sells do not reset the clock.
                 </Trans>
               </Rule>
               <Rule
@@ -740,12 +875,13 @@ export function ScoreDocumentation() {
                   </ThresholdChip>
                 }
               >
-                <Trans id="documentation.score.normalCandidateDescription">
-                  Clamp a negative gap to zero, then apply the grade multiplier.
+                <Trans id="documentation.score.normalCandidateDescriptionV2">
+                  Clamp a negative relative gap to zero, then apply the
+                  priority.
                 </Trans>
                 <Formula>
-                  <Trans id="documentation.formula.weightedGap">
-                    max(raw gap, 0) × grade multiplier
+                  <Trans id="documentation.formula.priorityGap">
+                    max(relative gap, 0) × priority
                   </Trans>
                 </Formula>
               </Rule>
@@ -787,12 +923,34 @@ function ThresholdChip({ children }: { children: ReactNode }) {
   );
 }
 
+function FieldGroup({
+  title,
+  children,
+}: {
+  title: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <div className="grid gap-2">
+      <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+        {title}
+      </p>
+      <div className="grid gap-3 sm:grid-cols-2">{children}</div>
+    </div>
+  );
+}
+
 function PercentField({
   name,
   label,
   description,
 }: {
-  name: "absoluteWeightCap" | "overweightBlockFactor" | "trimFactor";
+  name:
+    | "absoluteWeightCap"
+    | "overweightBlockFactor"
+    | "trimAbsoluteBand"
+    | "trimRelativeBand"
+    | "valuationDeadZone";
   label: ReactNode;
   description: ReactNode;
 }) {
@@ -832,7 +990,13 @@ function DecimalField({
   label,
   description,
 }: {
-  name: "ungradedMultiplier";
+  name:
+    | "ungradedMultiplier"
+    | "valuationSensitivity"
+    | "tiltMin"
+    | "tiltMax"
+    | "cooldownFloor"
+    | "gradePriorQuarters";
   label: ReactNode;
   description: ReactNode;
 }) {
@@ -855,6 +1019,53 @@ function DecimalField({
                 if (parsed !== null) field.onChange(parsed);
               }}
             />
+          </FormControl>
+          <FormDescription>{description}</FormDescription>
+          <FormMessage />
+        </FormItem>
+      )}
+    />
+  );
+}
+
+function IntegerField({
+  name,
+  min,
+  unit,
+  label,
+  description,
+}: {
+  name:
+    | "cooldownDays"
+    | "gradeWindowQuarters"
+    | "gradeHalfLifeQuarters"
+    | "fairValueHalfLifeQuarters";
+  min: number;
+  unit: ReactNode;
+  label: ReactNode;
+  description: ReactNode;
+}) {
+  const form = useFormContext<ScoreConfigUpdate>();
+
+  return (
+    <FormField
+      control={form.control}
+      name={name}
+      render={({ field }) => (
+        <FormItem className="rounded-lg border px-3.5 py-3">
+          <FormLabel>{label}</FormLabel>
+          <FormControl>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min={min}
+                step={1}
+                className="max-w-28"
+                value={field.value}
+                onChange={(event) => field.onChange(Number(event.target.value))}
+              />
+              <span className="text-xs text-muted-foreground">{unit}</span>
+            </div>
           </FormControl>
           <FormDescription>{description}</FormDescription>
           <FormMessage />

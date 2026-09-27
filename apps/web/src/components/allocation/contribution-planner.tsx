@@ -155,6 +155,11 @@ export function ContributionPlannerButton({
           ticker: row.ticker,
           currency: row.currency,
           score: row.score.value,
+          priority: row.score.priority,
+          tiltedTarget: row.score.tiltedTarget,
+          currentWeight: row.currentWeight,
+          maxWeight: row.score.maxWeight,
+          held: row.hasPosition,
           executionPrice: row.executionPrice,
           executionFxApplied: row.executionFxApplied,
           wholeUnits: tradesInWholeUnits(row.assetClass, row.currency),
@@ -190,8 +195,11 @@ export function ContributionPlannerButton({
     Number(fx?.executionSpread ?? FX_EXECUTION_SPREAD) * 100;
   const iofPercent = Number(fx?.executionIof ?? FX_EXECUTION_IOF) * 100;
   const remainderValue = Math.abs(Number(plan.remainder));
+  // Blame targets and size limits only for money whole-unit rounding did not
+  // already account for.
   const needRemainder =
-    remainderValue >= 0.01 && plan.slices.some((slice) => slice.cappedByNeed);
+    Number(plan.remainder) - Number(plan.unitRoundingRemainder) >= 0.01 &&
+    plan.slices.some((slice) => slice.cappedByNeed || slice.cappedByLimit);
   const unitRemainder = Number(plan.unitRoundingRemainder) >= 0.01;
 
   return (
@@ -291,9 +299,9 @@ export function ContributionPlannerButton({
           {plan.slices.length === 0 ? (
             <p className="rounded-lg border bg-muted/40 px-4 py-6 text-center text-sm text-muted-foreground">
               {candidates === 0 ? (
-                <Trans id="allocation.plannerNoCandidates">
-                  No asset is taking contributions right now. Set a target,
-                  review a fair value, or wait for a cooldown to expire.
+                <Trans id="allocation.plannerNoCandidatesV2">
+                  No asset is below its target right now. Set or raise a target,
+                  or review a fair value.
                 </Trans>
               ) : unitRemainder ? (
                 <Trans id="allocation.plannerBelowOneShare">
@@ -349,15 +357,21 @@ export function ContributionPlannerButton({
                         >
                           {slice.ticker}
                         </AssetLink>
-                        {slice.cappedByShare || slice.cappedByNeed ? (
+                        {slice.cappedByShare ||
+                        slice.cappedByNeed ||
+                        slice.cappedByLimit ? (
                           <span className="block text-[10px] text-muted-foreground">
                             {slice.cappedByShare ? (
                               <Trans id="allocation.plannerCappedShare">
                                 Share cap
                               </Trans>
+                            ) : slice.cappedByNeed ? (
+                              <Trans id="allocation.plannerCappedTarget">
+                                At target
+                              </Trans>
                             ) : (
-                              <Trans id="allocation.plannerCappedNeed">
-                                Need cap
+                              <Trans id="allocation.plannerCappedLimit">
+                                Size limit
                               </Trans>
                             )}
                           </span>
@@ -410,8 +424,8 @@ export function ContributionPlannerButton({
           {plan.slices.length > 0 && remainderValue >= 0.01 ? (
             <p className="text-xs text-muted-foreground">
               {needRemainder ? (
-                <Trans id="allocation.plannerNeedRemainder">
-                  Scored need is smaller than this contribution.{" "}
+                <Trans id="allocation.plannerLimitRemainder">
+                  Candidates reach their targets or size limits first.{" "}
                   {formatMoney(plan.remainder, displayCurrency)} stays
                   unallocated.
                 </Trans>

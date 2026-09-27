@@ -352,8 +352,8 @@ export function AssetDetailPage() {
                 row.score.cooldownUntil
                   ? i18n._(
                       t({
-                        id: "allocation.cooldownIcon",
-                        message: `In cooldown until ${row.score.cooldownUntil}`,
+                        id: "allocation.cooldownRampIcon",
+                        message: `Lower priority until ${row.score.cooldownUntil}`,
                       }),
                     )
                   : undefined
