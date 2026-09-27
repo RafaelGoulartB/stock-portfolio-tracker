@@ -314,6 +314,14 @@ export const userScoreConfigs = pgTable("user_score_configs", {
   tiltMin: numeric("tilt_min", DECIMAL).notNull(),
   tiltMax: numeric("tilt_max", DECIMAL).notNull(),
   fairValueHalfLifeQuarters: integer("fair_value_half_life_quarters").notNull(),
+  icReference: numeric("ic_reference", DECIMAL).notNull(),
+  icPrior: numeric("ic_prior", DECIMAL).notNull(),
+  icPriorPairs: integer("ic_prior_pairs").notNull(),
+  momentumWeight: numeric("momentum_weight", DECIMAL).notNull(),
+  momentumZCap: numeric("momentum_z_cap", DECIMAL).notNull(),
+  reviewDrift: numeric("review_drift", DECIMAL).notNull(),
+  sellBand: numeric("sell_band", DECIMAL).notNull(),
+  sellConfidence: numeric("sell_confidence", DECIMAL).notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
     .defaultNow(),

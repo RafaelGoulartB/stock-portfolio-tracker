@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { nonNegativeDecimal, signedDecimal } from "./decimal";
+import { nonNegativeDecimal, positiveDecimal, signedDecimal } from "./decimal";
 
 /** Quarterly review grades run `0`–`10`, two decimals in practice. */
 export const GRADE_MIN = 0;
@@ -60,7 +60,11 @@ export const scoreConfigSchema = z.object({
    * roughly ±5% of fair value do not tilt the target.
    */
   valuationDeadZone: nonNegativeDecimal,
-  /** Exponent applied to the confident mispricing; `0` ignores valuation. */
+  /**
+   * Largest exponent applied to the confident mispricing, reached once the
+   * investor's own track record proves the valuations informative (see
+   * {@link valuationSkillSchema}). `0` ignores valuation.
+   */
   valuationSensitivity: nonNegativeDecimal,
   /** Lowest multiplier valuation may apply to a target. */
   tiltMin: nonNegativeDecimal,
@@ -68,6 +72,37 @@ export const scoreConfigSchema = z.object({
   tiltMax: nonNegativeDecimal,
   /** A fair value loses half its confidence after this many quarters. */
   fairValueHalfLifeQuarters: z.number().int().min(1),
+  /**
+   * Information coefficient at which the valuation reaches full strength.
+   * `0.10` is a strong cross-sectional IC for 12-month returns.
+   */
+  icReference: positiveDecimal,
+  /** IC assumed before there is any track record. */
+  icPrior: signedDecimal,
+  /** Weight of {@link icPrior}, in asset-review pairs. */
+  icPriorPairs: z.number().int().min(0),
+  /**
+   * Exponent on the capped 12-1 month momentum z-score. `0.10` moves a
+   * target between ×0.82 and ×1.22; `0` disables momentum.
+   */
+  momentumWeight: nonNegativeDecimal,
+  /** Cap on the momentum z-score, in standard deviations. */
+  momentumZCap: positiveDecimal,
+  /**
+   * Price move since the fair value's reference date that asks for a fresh
+   * valuation. `0.25` means ±25%.
+   */
+  reviewDrift: positiveDecimal,
+  /**
+   * A sale is suggested once weight exceeds the tilted target by this share
+   * of it (`0.25` = 125% of the target), and only for expensive assets.
+   */
+  sellBand: nonNegativeDecimal,
+  /**
+   * Valuation confidence (`0`–`1`) the track record must reach before a sale
+   * is recommended rather than shown for information only.
+   */
+  sellConfidence: nonNegativeDecimal,
 });
 
 export type ScoreConfig = z.infer<typeof scoreConfigSchema>;
@@ -103,6 +138,14 @@ export const scoreConfigUpdateSchema = scoreConfigSchema
       });
     }
 
+    if (Number(config.sellConfidence) > 1) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["sellConfidence"],
+        message: "Must be at most 1",
+      });
+    }
+
     if (Number(config.tiltMin) > 1) {
       ctx.addIssue({
         code: "custom",
@@ -123,21 +166,24 @@ export const scoreConfigUpdateSchema = scoreConfigSchema
 export type ScoreConfigUpdate = z.infer<typeof scoreConfigUpdateSchema>;
 
 /**
- * Score v2 defaults.
+ * Score v3 defaults, chosen by Monte Carlo study (see
+ * `tasks/plan-contribution-score.md`).
  *
  * - The grade knots keep the spreadsheet's values (`0` → ×0.5, `4` → ×0.7,
- *   `7` → ×0.8, `8` → ×1) but are now interpolated instead of stepped.
- * - Trims follow the 5/25 tolerance-band rule: act when weight runs more
- *   than 5 p.p. or 25% past the tilted target, whichever is tighter.
- * - Valuation ignores ±5% as noise and can move a target between ×0.5 and
- *   ×1.5. In a 200-scenario simulation against v1, a 5% band kept most of
- *   the tracking-error gain while matching v1's value capture; 10% gave up
- *   too much signal when fair values are accurate.
+ *   `7` → ×0.8, `8` → ×1), interpolated instead of stepped.
+ * - Trims follow the 5/25 tolerance-band rule.
+ * - Valuation strength is learned: `valuationSensitivity × min(1, IC ÷
+ *   icReference)`, starting from `icPrior` (half strength) until reviews
+ *   have a 12-month track record. No dead zone: noisy valuations are shrunk
+ *   by the learned strength instead of cut.
+ * - Light momentum (`0.10` on a z-score capped at ±2) breaks ties between
+ *   buying dips and following trends; stronger momentum lost when prices
+ *   revert fast.
  */
 export const DEFAULT_SCORE_CONFIG: ScoreConfig = {
-  version: "2026-09-26-v2",
+  version: "2026-09-27-v3",
   absoluteWeightCap: "0.05",
-  overweightBlockFactor: "1.3",
+  overweightBlockFactor: "2",
   trimAbsoluteBand: "0.05",
   trimRelativeBand: "0.25",
   cooldownDays: 45,
@@ -152,11 +198,19 @@ export const DEFAULT_SCORE_CONFIG: ScoreConfig = {
     { minGrade: "8", multiplier: "1" },
   ],
   ungradedMultiplier: "1",
-  valuationDeadZone: "0.05",
-  valuationSensitivity: "1",
-  tiltMin: "0.5",
-  tiltMax: "1.5",
+  valuationDeadZone: "0",
+  valuationSensitivity: "3",
+  tiltMin: "0.2",
+  tiltMax: "3",
   fairValueHalfLifeQuarters: 2,
+  icReference: "0.10",
+  icPrior: "0.05",
+  icPriorPairs: 240,
+  momentumWeight: "0.10",
+  momentumZCap: "2",
+  reviewDrift: "0.25",
+  sellBand: "0.25",
+  sellConfidence: "0.8",
 };
 
 /**
@@ -201,6 +255,12 @@ export const scoreBreakdownSchema = z.object({
   tiltedTarget: signedDecimal.nullable(),
   /** `tiltedTarget / targetWeight`, including renormalization. */
   tilt: nonNegativeDecimal.nullable(),
+  /** Part of {@link tilt} from valuation, renormalized among valued assets. */
+  valuationTilt: nonNegativeDecimal.nullable(),
+  /** Part of {@link tilt} from momentum, renormalized across the book. */
+  momentumTilt: nonNegativeDecimal.nullable(),
+  /** Capped cross-sectional z-score of the 12-1 month return. */
+  momentumZ: signedDecimal.nullable(),
   /**
    * Confident log mispricing after the noise band and buy costs, before
    * the sensitivity exponent. `null` without a fair value or a price.
@@ -229,6 +289,38 @@ export const scoreBreakdownSchema = z.object({
   daysSinceContribution: z.number().int().nullable(),
   /** `YYYY-MM-DD` the cooldown ramp ends, `null` when not in cooldown. */
   cooldownUntil: z.string().nullable(),
+  /**
+   * Price change since the fair value's reference date (quarter end), `null`
+   * without a fair value or a reference price.
+   */
+  priceSinceFairValue: signedDecimal.nullable(),
+  /** True when {@link priceSinceFairValue} crossed `reviewDrift`. */
+  reviewSuggested: z.boolean(),
 });
 
 export type ScoreBreakdown = z.infer<typeof scoreBreakdownSchema>;
+
+/**
+ * How well the investor's fair values have anticipated returns: the pooled
+ * cross-sectional correlation between each review's log discount and the
+ * next 12 months of log return (information coefficient), shrunk toward
+ * `icPrior`. It sets how strongly valuation may tilt targets.
+ */
+export const valuationSkillSchema = z.object({
+  /** Raw pooled IC, `null` until any review has a 12-month outcome. */
+  ic: signedDecimal.nullable(),
+  /** IC after shrinkage toward the prior. */
+  shrunkIc: signedDecimal,
+  /** `min(1, max(0, shrunkIc ÷ icReference))`. */
+  confidence: nonNegativeDecimal,
+  /** Effective valuation exponent: `valuationSensitivity × confidence`. */
+  strength: nonNegativeDecimal,
+  /** Asset-review pairs with a 12-month outcome. */
+  pairs: z.number().int().min(0),
+  /** Review quarters that contributed pairs. */
+  periods: z.number().int().min(0),
+  /** Fair-value reviews still waiting for their 12-month outcome. */
+  pending: z.number().int().min(0),
+});
+
+export type ValuationSkill = z.infer<typeof valuationSkillSchema>;

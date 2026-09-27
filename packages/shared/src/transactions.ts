@@ -18,6 +18,13 @@ export const ASSET_CLASSES = [
   "other",
 ] as const;
 export const assetClassSchema = z.enum(ASSET_CLASSES);
+
+/**
+ * Monthly gross sales of Brazilian stocks below which capital gains are
+ * exempt from income tax (Lei 11.033/2004, art. 3º, I). FIIs, ETFs and
+ * BDRs do not qualify.
+ */
+export const BR_STOCK_SALE_EXEMPTION_BRL = "20000";
 export type AssetClass = z.infer<typeof assetClassSchema>;
 
 export const ASSET_CLASS_LABELS: Record<AssetClass, string> = {

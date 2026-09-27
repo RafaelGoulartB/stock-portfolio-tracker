@@ -18,13 +18,16 @@ import {
 } from "../lib/decimal";
 
 /**
- * Contribution score engine, v2.
+ * Contribution score engine, v3.
  *
  * The score answers one question: *how much does this asset deserve the next
  * contribution?* It is built in three independent steps:
  *
- * 1. **Where to go** — the user's target, tilted by a confident valuation
- *    signal and renormalized across the book so tilts move weight between
+ * 1. **Where to go** — the user's target, tilted by valuation and then by a
+ *    light momentum tie-breaker. The valuation tilt's strength is learned
+ *    from the investor's own track record (see `valuation-skill.ts`) and is
+ *    renormalized only among assets that have a fair value; momentum is
+ *    renormalized across the book. Tilts therefore move weight between
  *    assets instead of inflating every target at once.
  * 2. **How much is missing** — the relative gap `1 - weight / tiltedTarget`,
  *    so 2% → 0% (all of the target missing) outranks 10% → 8%.
@@ -92,6 +95,19 @@ export type ScoreInput = {
    * leave, so it is never tilted and never renormalizes the rest.
    */
   tiltable?: boolean;
+  /** 12-1 month log return, `null` when no year of prices is available. */
+  momentum?: string | null;
+  /** Close at the fair value's quarter end, for the review suggestion. */
+  referencePrice?: string | null;
+};
+
+/** Book-level inputs that are not a property of any single asset. */
+export type ScoreOptions = {
+  /**
+   * Effective valuation exponent from the investor's track record. Omitted
+   * means the prior: `valuationSensitivity × min(1, icPrior ÷ icReference)`.
+   */
+  valuationStrength?: string;
 };
 
 /** Everything a rule can read, computed once per asset. */
@@ -103,6 +119,11 @@ export type ScoreContext = {
   rawTilt: Decimal;
   tiltedTarget: Decimal | null;
   tilt: Decimal | null;
+  valuationTilt: Decimal | null;
+  momentumTilt: Decimal | null;
+  momentumZ: Decimal | null;
+  priceSinceFairValue: Decimal | null;
+  reviewSuggested: boolean;
   valuationSignal: Decimal | null;
   valuationConfidence: Decimal | null;
   gap: Decimal | null;
@@ -295,12 +316,13 @@ export function gradeSignal(
  *
  * 1. `u = ln(fairValue / price)` — symmetric: half and double the fair value
  *    are equally far from it, unlike the bounded `(FV - P) / FV` discount.
- * 2. Soft-threshold by `valuationDeadZone`: mispricing inside the typical
- *    error of a valuation is noise, not signal (margin of safety).
+ * 2. Soft-threshold by `valuationDeadZone` (`0` by default: shrinking the
+ *    whole signal beats cutting a band out of it).
  * 3. A positive signal must also clear the buy cost (FX spread and IOF).
  * 4. Confidence `c = min(grade multiplier, 1) × 0.5 ^ (age / half-life)`:
  *    a stale fair value or a weak thesis pulls the tilt back toward `1`.
- * 5. `tilt = clamp(exp(sensitivity × c × signal), tiltMin, tiltMax)`.
+ * 5. `tilt = clamp(exp(strength × c × signal), tiltMin, tiltMax)`, where
+ *    `strength` is learned from the track record (see `valuation-skill.ts`).
  *
  * This is a simplified Black–Litterman blend: the target is the prior, the
  * fair value is the view, and confidence decides how far the view moves it.
@@ -312,6 +334,7 @@ export function valuationTilt(
   >,
   gradeMultiplier: Decimal,
   config: ScoreConfig = DEFAULT_SCORE_CONFIG,
+  strength: Decimal = defaultValuationStrength(config),
 ): { signal: Decimal; confidence: Decimal; tilt: Decimal } | null {
   if (input.fairValue === null || input.marketPrice === null) {
     return null;
@@ -342,10 +365,7 @@ export function valuationTilt(
     min(gradeMultiplier, ONE),
     halfLifeWeight(age, config.fairValueHalfLifeQuarters),
   );
-  const exponent =
-    toRatio(toDecimal(config.valuationSensitivity)) *
-    toRatio(confidence) *
-    signal;
+  const exponent = toRatio(strength) * toRatio(confidence) * signal;
   const tiltMin = toDecimal(config.tiltMin);
   const tiltMax = toDecimal(config.tiltMax);
   // Clamp in float space first so an extreme exponent cannot overflow.
@@ -361,6 +381,22 @@ export function valuationTilt(
   );
 
   return { signal: fromRatio(signal), confidence, tilt };
+}
+
+/**
+ * Valuation exponent before any track record exists: the configured
+ * sensitivity scaled by how the prior IC compares with the reference IC.
+ */
+export function defaultValuationStrength(
+  config: ScoreConfig = DEFAULT_SCORE_CONFIG,
+): Decimal {
+  const confidence = clamp(
+    div(toDecimal(config.icPrior), toDecimal(config.icReference)),
+    ZERO,
+    ONE,
+  );
+
+  return mul(toDecimal(config.valuationSensitivity), confidence);
 }
 
 function recencyMultiplier(
@@ -477,40 +513,22 @@ type Prepared = {
   gradeMultiplier: Decimal;
 };
 
-function prepare(input: ScoreInput, config: ScoreConfig): Prepared {
+function prepare(
+  input: ScoreInput,
+  config: ScoreConfig,
+  strength: Decimal,
+): Prepared {
   const gradeMultiplier = toDecimal(input.grade.multiplier);
   const tiltable = input.tiltable !== false;
 
   return {
     input,
     target: input.targetWeight === null ? null : toDecimal(input.targetWeight),
-    valuation: tiltable ? valuationTilt(input, gradeMultiplier, config) : null,
+    valuation: tiltable
+      ? valuationTilt(input, gradeMultiplier, config, strength)
+      : null,
     gradeMultiplier,
   };
-}
-
-/**
- * `Σ target / Σ (target × tilt)` over tiltable targeted assets, so the
- * tilted targets keep the sum the user assigned. Both sums keep the full
- * `bigint` product (16 places) and the division happens last, so a book
- * whose tilts cancel returns its targets exactly.
- */
-type Normalizer = { targets: Decimal; tiltedProducts: bigint };
-
-const IDENTITY: Normalizer = { targets: ONE, tiltedProducts: ONE * ONE };
-
-function tiltNormalizer(prepared: readonly Prepared[]): Normalizer {
-  let targets = ZERO;
-  let tiltedProducts = 0n;
-
-  for (const entry of prepared) {
-    if (entry.target === null || entry.input.tiltable === false) continue;
-
-    targets = add(targets, entry.target);
-    tiltedProducts += entry.target * (entry.valuation?.tilt ?? ONE);
-  }
-
-  return tiltedProducts > 0n ? { targets, tiltedProducts } : IDENTITY;
 }
 
 /** `numerator / denominator` rounded half away from zero, raw bigints. */
@@ -524,25 +542,192 @@ function roundedQuotient(numerator: bigint, denominator: bigint): bigint {
   return negative ? -rounded : rounded;
 }
 
+/** How one asset's target is scaled; `null` fields mean "not applicable". */
+type Scaling = {
+  tiltedTarget: Decimal | null;
+  tilt: Decimal | null;
+  valuationTilt: Decimal | null;
+  momentumTilt: Decimal | null;
+  momentumZ: Decimal | null;
+};
+
+/**
+ * Capped cross-sectional z-scores of the 12-1 month momentum, over the
+ * tiltable, targeted, priced assets that have one. Fewer than two such
+ * assets, or no dispersion, means no momentum signal at all.
+ */
+function momentumScores(
+  prepared: readonly Prepared[],
+  config: ScoreConfig,
+): (Decimal | null)[] {
+  const eligible = prepared.map((entry) =>
+    entry.target !== null &&
+    entry.input.tiltable !== false &&
+    entry.input.quoteMissing !== true &&
+    entry.input.momentum != null
+      ? toRatio(toDecimal(entry.input.momentum))
+      : null,
+  );
+  const values = eligible.filter((value): value is number => value !== null);
+
+  if (values.length < 2) return eligible.map(() => null);
+
+  const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+  const spread = Math.sqrt(
+    values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / values.length,
+  );
+
+  if (!(spread > 0)) return eligible.map(() => null);
+
+  const cap = toRatio(toDecimal(config.momentumZCap));
+
+  return eligible.map((value) =>
+    value === null
+      ? null
+      : fromRatio(Math.min(cap, Math.max(-cap, (value - mean) / spread))),
+  );
+}
+
+/**
+ * Two renormalizations, each keeping the sum of the targets it touches.
+ * Sums keep the full `bigint` product (16 places) and divide last, so a
+ * book whose tilts cancel returns its targets exactly.
+ *
+ * 1. Valuation: `t1 = t × vTilt × Σt / Σ(t × vTilt)` only among assets with
+ *    a fair value; the weight a costly asset gives up goes to other valued
+ *    assets, never away from ETFs or anything without a valuation.
+ * 2. Momentum: `t2 = t1 × m × Σt1 / Σ(t1 × m)` across the whole tiltable
+ *    book, with `m = exp(momentumWeight × z)`.
+ */
+function bookScaling(
+  prepared: readonly Prepared[],
+  config: ScoreConfig,
+): Scaling[] {
+  const inBook = (entry: Prepared) =>
+    entry.target !== null && entry.input.tiltable !== false;
+  const valued = (entry: Prepared) => inBook(entry) && entry.valuation !== null;
+
+  let valuedTargets = ZERO;
+  let valuedProducts = 0n;
+  for (const entry of prepared) {
+    if (!valued(entry) || entry.target === null || !entry.valuation) continue;
+    valuedTargets = add(valuedTargets, entry.target);
+    valuedProducts += entry.target * entry.valuation.tilt;
+  }
+
+  const valuationRatio = (entry: Prepared): Decimal =>
+    valued(entry) && entry.valuation && valuedProducts > 0n
+      ? roundedQuotient(
+          ONE * entry.valuation.tilt * valuedTargets,
+          valuedProducts,
+        )
+      : ONE;
+  const firstStep = prepared.map((entry) =>
+    entry.target === null
+      ? null
+      : valued(entry) && entry.valuation && valuedProducts > 0n
+        ? roundedQuotient(
+            entry.target * entry.valuation.tilt * valuedTargets,
+            valuedProducts,
+          )
+        : entry.target,
+  );
+
+  const zScores = momentumScores(prepared, config);
+  const weight = toRatio(toDecimal(config.momentumWeight));
+  const factors = zScores.map((z) =>
+    z === null ? ONE : fromRatio(Math.exp(weight * toRatio(z))),
+  );
+
+  let bookTargets = ZERO;
+  let bookProducts = 0n;
+  prepared.forEach((entry, index) => {
+    const step = firstStep[index];
+    if (!inBook(entry) || step == null) return;
+    bookTargets = add(bookTargets, step);
+    bookProducts += step * (factors[index] ?? ONE);
+  });
+
+  return prepared.map((entry, index): Scaling => {
+    const step = firstStep[index] ?? null;
+
+    if (entry.target === null || step === null) {
+      return {
+        tiltedTarget: null,
+        tilt: null,
+        valuationTilt: null,
+        momentumTilt: null,
+        momentumZ: null,
+      };
+    }
+
+    if (!inBook(entry)) {
+      return {
+        tiltedTarget: entry.target,
+        tilt: ONE,
+        valuationTilt: ONE,
+        momentumTilt: ONE,
+        momentumZ: null,
+      };
+    }
+
+    const factor = factors[index] ?? ONE;
+    const momentumTilt =
+      bookProducts > 0n
+        ? roundedQuotient(ONE * factor * bookTargets, bookProducts)
+        : ONE;
+    const tiltedTarget =
+      bookProducts > 0n
+        ? roundedQuotient(step * factor * bookTargets, bookProducts)
+        : step;
+    const valuation = valuationRatio(entry);
+
+    return {
+      tiltedTarget,
+      tilt:
+        entry.target > ZERO
+          ? div(tiltedTarget, entry.target)
+          : mul(valuation, momentumTilt),
+      valuationTilt: valuation,
+      momentumTilt,
+      momentumZ: zScores[index] ?? null,
+    };
+  });
+}
+
+/** A single asset, with its raw valuation tilt and no book to share weight with. */
+function soloScaling(entry: Prepared): Scaling {
+  if (entry.target === null) {
+    return {
+      tiltedTarget: null,
+      tilt: null,
+      valuationTilt: null,
+      momentumTilt: null,
+      momentumZ: null,
+    };
+  }
+
+  const valuation =
+    entry.input.tiltable !== false ? (entry.valuation?.tilt ?? ONE) : ONE;
+
+  return {
+    tiltedTarget: mul(entry.target, valuation),
+    tilt: valuation,
+    valuationTilt: valuation,
+    momentumTilt: ONE,
+    momentumZ: null,
+  };
+}
+
 function contextFor(
   entry: Prepared,
-  normalizer: Normalizer,
+  scaling: Scaling,
   config: ScoreConfig,
 ): ScoreContext {
   const { input, target, valuation, gradeMultiplier } = entry;
   const weight = toDecimal(input.currentWeight);
-  const tiltable = input.tiltable !== false;
   const rawTilt = valuation?.tilt ?? ONE;
-  // value × tilt × Σt / Σ(t × tilt): scale 8+8+8 over scale 16 is scale 8.
-  const scale = (value: Decimal) =>
-    tiltable
-      ? roundedQuotient(
-          value * rawTilt * normalizer.targets,
-          normalizer.tiltedProducts,
-        )
-      : value;
-  const tilt = scale(ONE);
-  const tiltedTarget = target === null ? null : scale(target);
+  const { tiltedTarget } = scaling;
   const gap = tiltedTarget === null ? null : sub(tiltedTarget, weight);
   const relativeGap =
     tiltedTarget === null || gap === null
@@ -561,6 +746,17 @@ function contextFor(
     daysSinceContribution !== null &&
     daysSinceContribution < config.cooldownDays;
   const recency = recencyMultiplier(daysSinceContribution, config);
+  const priceSinceFairValue =
+    input.fairValue !== null &&
+    input.marketPrice !== null &&
+    input.referencePrice != null &&
+    toDecimal(input.referencePrice) > ZERO
+      ? sub(
+          div(toDecimal(input.marketPrice), toDecimal(input.referencePrice)),
+          ONE,
+        )
+      : null;
+  const drift = toDecimal(config.reviewDrift);
 
   return {
     target,
@@ -568,7 +764,14 @@ function contextFor(
     quoteMissing: input.quoteMissing === true,
     rawTilt,
     tiltedTarget,
-    tilt: target === null ? null : tilt,
+    tilt: scaling.tilt,
+    valuationTilt: scaling.valuationTilt,
+    momentumTilt: scaling.momentumTilt,
+    momentumZ: scaling.momentumZ,
+    priceSinceFairValue,
+    reviewSuggested:
+      priceSinceFairValue !== null &&
+      (priceSinceFairValue >= drift || priceSinceFairValue <= -drift),
     valuationSignal: valuation?.signal ?? null,
     valuationConfidence: valuation?.confidence ?? null,
     gap,
@@ -602,6 +805,9 @@ function breakdown(context: ScoreContext, config: ScoreConfig): ScoreBreakdown {
     ruleId: rule.id,
     tiltedTarget: ratio(context.tiltedTarget),
     tilt: ratio(context.tilt),
+    valuationTilt: ratio(context.valuationTilt),
+    momentumTilt: ratio(context.momentumTilt),
+    momentumZ: ratio(context.momentumZ),
     valuationSignal: ratio(context.valuationSignal),
     valuationConfidence: ratio(context.valuationConfidence),
     gap: ratio(context.gap),
@@ -613,6 +819,8 @@ function breakdown(context: ScoreContext, config: ScoreConfig): ScoreBreakdown {
     blocked: rule.blocking === true,
     daysSinceContribution: context.daysSinceContribution,
     cooldownUntil: context.cooldownUntil,
+    priceSinceFairValue: ratio(context.priceSinceFairValue),
+    reviewSuggested: context.reviewSuggested,
   };
 }
 
@@ -624,22 +832,37 @@ function breakdown(context: ScoreContext, config: ScoreConfig): ScoreBreakdown {
 export function scoreAssets(
   inputs: readonly ScoreInput[],
   config: ScoreConfig = DEFAULT_SCORE_CONFIG,
+  options: ScoreOptions = {},
 ): ScoreBreakdown[] {
-  const prepared = inputs.map((input) => prepare(input, config));
-  const normalizer = tiltNormalizer(prepared);
+  const strength =
+    options.valuationStrength === undefined
+      ? defaultValuationStrength(config)
+      : toDecimal(options.valuationStrength);
+  const prepared = inputs.map((input) => prepare(input, config, strength));
+  const scalings = bookScaling(prepared, config);
 
-  return prepared.map((entry) =>
-    breakdown(contextFor(entry, normalizer, config), config),
-  );
+  return prepared.map((entry, index) => {
+    const scaling = scalings[index];
+
+    if (!scaling) {
+      throw new Error("Missing target scaling");
+    }
+
+    return breakdown(contextFor(entry, scaling, config), config);
+  });
 }
 
 /** One asset scored without renormalization against a book. */
 export function scoreAsset(
   input: ScoreInput,
   config: ScoreConfig = DEFAULT_SCORE_CONFIG,
+  options: ScoreOptions = {},
 ): ScoreBreakdown {
-  return breakdown(
-    contextFor(prepare(input, config), IDENTITY, config),
-    config,
-  );
+  const strength =
+    options.valuationStrength === undefined
+      ? defaultValuationStrength(config)
+      : toDecimal(options.valuationStrength);
+  const entry = prepare(input, config, strength);
+
+  return breakdown(contextFor(entry, soloScaling(entry), config), config);
 }

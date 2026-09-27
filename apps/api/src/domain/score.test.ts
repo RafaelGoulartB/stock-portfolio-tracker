@@ -3,7 +3,7 @@ import {
   type ScoreConfig,
 } from "@portifolio-tracker/shared";
 import { describe, expect, it } from "vitest";
-import { formatDecimal, toDecimal } from "../lib/decimal";
+import { formatDecimal, toDecimal, ZERO } from "../lib/decimal";
 import {
   type GradeSignal,
   gradeSignal,
@@ -172,19 +172,19 @@ describe("valuationTilt", () => {
     expect(valuationTilt(input({ fairValue: "100" }), ONE)).toBeNull();
   });
 
-  it("ignores mispricing inside the valuation noise band", () => {
+  it("is neutral at fair value and has no dead zone around it", () => {
     expect(tiltAt("100")?.tilt).toBe("1.00000000");
-    expect(tiltAt("97")?.tilt).toBe("1.00000000");
-    expect(tiltAt("105")?.tilt).toBe("1.00000000");
+    // A 3% discount already tilts a little: exp(1.5 × ln(100/97)).
+    expect(Number(tiltAt("97")?.tilt)).toBeCloseTo(1.04674862, 7);
   });
 
-  it("tilts by the log mispricing beyond the band", () => {
-    // ln(100 / 80) - 0.05 = 0.17314355; exp of it = 1.18903678.
-    expect(tiltAt("80")).toEqual({
-      signal: "0.17314355",
-      tilt: "1.18903678",
-      confidence: "1.00000000",
-    });
+  it("tilts by the log mispricing at the prior strength", () => {
+    // Prior strength 3 × 0.05 / 0.10 = 1.5; exp(1.5 × ln(1.25)).
+    const result = tiltAt("80");
+
+    expect(result?.signal).toBe("0.22314355");
+    expect(result?.confidence).toBe("1.00000000");
+    expect(Number(result?.tilt)).toBeCloseTo(1.39754249, 7);
   });
 
   it("treats half and double the fair value symmetrically", () => {
@@ -192,23 +192,47 @@ describe("valuationTilt", () => {
     const expensive = tiltAt("200");
 
     expect(Number(cheap?.signal)).toBeCloseTo(-Number(expensive?.signal), 8);
-    // exp(0.643) is clamped at the ×1.5 ceiling; exp(-0.643) is not floored.
-    expect(cheap?.tilt).toBe("1.50000000");
-    expect(expensive?.tilt).toBe("0.52563555");
+    expect(Number(cheap?.tilt)).toBeCloseTo(2.82842712, 7);
+    expect(Number(expensive?.tilt)).toBeCloseTo(0.35355339, 7);
+  });
+
+  it("clamps the tilt to the configured range", () => {
+    expect(tiltAt("20")?.tilt).toBe("3.00000000");
+    expect(tiltAt("500")?.tilt).toBe("0.20000000");
   });
 
   it("loses confidence with a stale fair value or a weak grade", () => {
     // Two quarters old at a two-quarter half-life: confidence 0.5.
-    expect(tiltAt("80", { fairValuePeriod: "2025Q4" })).toMatchObject({
-      confidence: "0.50000000",
-      tilt: "1.09042963",
-    });
-    expect(tiltAt("80", {}, toDecimal("0.5"))?.tilt).toBe("1.09042963");
+    const stale = tiltAt("80", { fairValuePeriod: "2025Q4" });
+
+    expect(stale?.confidence).toBe("0.50000000");
+    expect(Number(stale?.tilt)).toBeCloseTo(1.18217701, 7);
+    expect(Number(tiltAt("80", {}, toDecimal("0.5"))?.tilt)).toBeCloseTo(
+      1.18217701,
+      7,
+    );
+  });
+
+  it("scales with the learned valuation strength", () => {
+    const off = valuationTilt(priced("80"), ONE, DEFAULT_SCORE_CONFIG, ZERO);
+    const full = valuationTilt(
+      priced("80"),
+      ONE,
+      DEFAULT_SCORE_CONFIG,
+      toDecimal("3"),
+    );
+
+    expect(off && formatDecimal(off.tilt, 8)).toBe("1.00000000");
+    // exp(3 × ln(1.25)) = 1.25³.
+    expect(full && Number(formatDecimal(full.tilt, 8))).toBeCloseTo(
+      1.953125,
+      6,
+    );
   });
 
   it("makes a cheap asset clear the buy cost, but not an expensive one", () => {
-    expect(tiltAt("80", { buyCost: "0.03" })?.signal).toBe("0.14358475");
-    expect(tiltAt("125", { buyCost: "0.03" })?.signal).toBe("-0.17314355");
+    expect(tiltAt("80", { buyCost: "0.03" })?.signal).toBe("0.19358475");
+    expect(tiltAt("125", { buyCost: "0.03" })?.signal).toBe("-0.22314355");
   });
 });
 
@@ -242,8 +266,8 @@ describe("scoreAsset", () => {
   it("moves the target by the valuation tilt", () => {
     const result = scoreAsset(priced("80"));
 
-    expect(result.tilt).toBe("1.18903678");
-    expect(result.tiltedTarget).toBe("0.02378074");
+    expect(Number(result.tilt)).toBeCloseTo(1.39754249, 7);
+    expect(Number(result.tiltedTarget)).toBeCloseTo(0.02795085, 7);
     expect(result.valuationConfidence).toBe("1.00000000");
   });
 
@@ -256,12 +280,13 @@ describe("scoreAsset", () => {
   });
 
   it("reports the post-contribution weight ceiling", () => {
-    expect(scoreAsset(input()).maxWeight).toBe("0.02600000");
+    // Twice the target, and never past 5% for a target at or below 5%.
+    expect(scoreAsset(input()).maxWeight).toBe("0.04000000");
     expect(scoreAsset(input({ targetWeight: "0.045" })).maxWeight).toBe(
       "0.05000000",
     );
     expect(scoreAsset(input({ targetWeight: "0.10" })).maxWeight).toBe(
-      "0.13000000",
+      "0.20000000",
     );
   });
 
@@ -285,20 +310,20 @@ describe("scoreAsset", () => {
   });
 
   it("turns expensive and past the trim band into a trim signal", () => {
-    // Tilted target 5% × 0.52563555; weight 9% is far past it.
+    // Tilted target 5% × 0.35355339; weight 9% is far past it.
     const result = scoreAsset(
       priced("200", { targetWeight: "0.05", currentWeight: "0.09" }),
     );
 
     expect(result.ruleId).toBe("trim-overweight");
-    expect(result.tiltedTarget).toBe("0.02628178");
-    expect(Number(result.value)).toBeCloseTo(-2.4244, 3);
+    expect(Number(result.tiltedTarget)).toBeCloseTo(0.01767767, 7);
+    expect(Number(result.value)).toBeCloseTo(-4.0912, 3);
   });
 
   it("stays inside the tolerance band without a trim", () => {
-    // Tilted target 8.41%; 10% is 1.59 p.p. past it, inside 25% of target.
+    // Tilted target 8.67%; 10% is 1.33 p.p. past it, inside 25% of target.
     const result = scoreAsset(
-      priced("125", { targetWeight: "0.10", currentWeight: "0.10" }),
+      priced("110", { targetWeight: "0.10", currentWeight: "0.10" }),
     );
 
     expect(result.ruleId).toBe("gap-weighted");
@@ -324,7 +349,7 @@ describe("scoreAsset", () => {
 
   it("blocks past the target overweight factor", () => {
     const result = scoreAsset(
-      input({ targetWeight: "0.10", currentWeight: "0.14" }),
+      input({ targetWeight: "0.10", currentWeight: "0.21" }),
     );
 
     expect(result).toMatchObject({
@@ -393,16 +418,117 @@ describe("scoreAsset", () => {
 });
 
 describe("scoreAssets", () => {
-  it("renormalizes tilts so targets keep their assigned sum", () => {
-    const [cheap, plain] = scoreAssets([
-      priced("50", { targetWeight: "0.5", currentWeight: "0.5" }),
-      input({ targetWeight: "0.5", currentWeight: "0.5" }),
+  it("renormalizes valuation only among assets with a fair value", () => {
+    const [cheap, fair, unvalued] = scoreAssets([
+      priced("50", { targetWeight: "0.4", currentWeight: "0.4" }),
+      priced("100", { targetWeight: "0.4", currentWeight: "0.4" }),
+      input({ targetWeight: "0.2", currentWeight: "0.2" }),
     ]);
 
-    // Raw tilts 1.5 and 1: normalizer 1 / 1.25.
-    expect(cheap?.tiltedTarget).toBe("0.60000000");
-    expect(plain?.tiltedTarget).toBe("0.40000000");
-    expect(plain?.tilt).toBe("0.80000000");
+    // Raw tilts 2.83 and 1 share the 80% the valued assets were assigned.
+    expect(Number(cheap?.tiltedTarget)).toBeCloseTo(0.5910369, 6);
+    expect(Number(fair?.tiltedTarget)).toBeCloseTo(0.2089631, 6);
+    // No fair value, no valuation tilt: the ETF-like asset keeps its 20%.
+    expect(unvalued?.tiltedTarget).toBe("0.20000000");
+    expect(
+      Number(cheap?.tiltedTarget) +
+        Number(fair?.tiltedTarget) +
+        Number(unvalued?.tiltedTarget),
+    ).toBeCloseTo(1, 7);
+  });
+
+  it("returns a single valued asset's target exactly", () => {
+    const [only] = scoreAssets([
+      priced("50", { targetWeight: "0.3", currentWeight: "0.1" }),
+    ]);
+
+    expect(only?.tiltedTarget).toBe("0.30000000");
+    expect(only?.valuationTilt).toBe("1.00000000");
+  });
+
+  it("tilts gently by momentum and keeps the sum", () => {
+    const [falling, flat, rising] = scoreAssets([
+      input({ targetWeight: "0.3", currentWeight: "0.3", momentum: "-0.2" }),
+      input({ targetWeight: "0.3", currentWeight: "0.3", momentum: "0" }),
+      input({ targetWeight: "0.4", currentWeight: "0.4", momentum: "0.2" }),
+    ]);
+
+    expect(Number(falling?.momentumZ)).toBeCloseTo(-1.2247449, 6);
+    expect(flat?.momentumZ).toBe("0.00000000");
+    expect(Number(rising?.momentumTilt)).toBeGreaterThan(1);
+    expect(Number(falling?.momentumTilt)).toBeLessThan(1);
+    // exp(0.10 × ±1.22): a tie-breaker, not a bet.
+    expect(Number(rising?.momentumTilt)).toBeLessThan(1.14);
+    expect(
+      Number(falling?.tiltedTarget) +
+        Number(flat?.tiltedTarget) +
+        Number(rising?.tiltedTarget),
+    ).toBeCloseTo(1, 7);
+  });
+
+  it("caps the momentum z-score so one outlier cannot dominate", () => {
+    const book = scoreAssets(
+      Array.from({ length: 10 }, (_, index) =>
+        input({
+          targetWeight: "0.1",
+          currentWeight: "0.1",
+          momentum: index === 9 ? "10" : "0",
+        }),
+      ),
+    );
+
+    // Uncapped the outlier would sit 3 deviations out.
+    expect(book[9]?.momentumZ).toBe("2.00000000");
+  });
+
+  it("gives no momentum signal to cash or unpriced holdings", () => {
+    const [cash, unpriced, a, b] = scoreAssets([
+      input({
+        targetWeight: "0.1",
+        currentWeight: "0.1",
+        tiltable: false,
+        momentum: "0.5",
+      }),
+      input({
+        targetWeight: "0.2",
+        currentWeight: "0",
+        quoteMissing: true,
+        momentum: "0.9",
+      }),
+      input({ targetWeight: "0.35", currentWeight: "0.3", momentum: "0.1" }),
+      input({ targetWeight: "0.35", currentWeight: "0.3", momentum: "-0.1" }),
+    ]);
+
+    expect(cash?.momentumZ).toBeNull();
+    expect(cash?.tiltedTarget).toBe("0.10000000");
+    expect(unpriced?.momentumZ).toBeNull();
+    expect(Number(a?.momentumZ)).toBeCloseTo(1, 7);
+    expect(Number(b?.momentumZ)).toBeCloseTo(-1, 7);
+  });
+
+  it("asks for a fresh valuation when the price drifted past the band", () => {
+    const [moved, calm] = scoreAssets([
+      priced("130", { referencePrice: "100" }),
+      priced("110", { referencePrice: "100" }),
+    ]);
+
+    expect(moved?.priceSinceFairValue).toBe("0.30000000");
+    expect(moved?.reviewSuggested).toBe(true);
+    expect(calm?.reviewSuggested).toBe(false);
+    expect(scoreAsset(priced("50")).reviewSuggested).toBe(false);
+  });
+
+  it("uses the learned valuation strength for the whole book", () => {
+    const [muted] = scoreAssets(
+      [
+        priced("50", { targetWeight: "0.5" }),
+        priced("100", { targetWeight: "0.5" }),
+      ],
+      DEFAULT_SCORE_CONFIG,
+      { valuationStrength: "0" },
+    );
+
+    expect(muted?.tiltedTarget).toBe("0.50000000");
   });
 
   it("keeps the residual cash target out of the tilt", () => {

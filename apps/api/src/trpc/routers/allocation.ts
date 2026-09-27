@@ -36,6 +36,7 @@ import {
 import { usdBrlExecutionRate } from "../../domain/fx-execution";
 import { consolidatePositions, isOpenQuantity } from "../../domain/positions";
 import { loadScoreConfig } from "../../domain/score-config";
+import { exemptSalesInMonth } from "../../domain/sell-plan";
 import {
   add,
   formatDecimal,
@@ -63,6 +64,7 @@ import {
   storedManualPrices,
   today,
 } from "./allocation-helpers";
+import { loadMarketSignals } from "./allocation-market";
 import { loadTransactions, loadTransactionsForTickers } from "./transactions";
 
 export const allocationRouter = router({
@@ -123,7 +125,8 @@ export const allocationRouter = router({
           .filter((position) => isOpenQuantity(position.quantity))
           .map((position) => position.ticker),
       );
-      const [portfolio, watch] = await Promise.all([
+      const day = today();
+      const [portfolio, watch, signals] = await Promise.all([
         loadValuedPortfolio({
           userId: ctx.user.id,
           displayCurrency: input.displayCurrency,
@@ -142,6 +145,26 @@ export const allocationRouter = router({
           requestManuals,
           input.forceRefresh,
         ),
+        // Price history for momentum and the valuation track record; it
+        // only depends on metadata and reviews, so it joins the same wave.
+        loadMarketSignals({
+          assets,
+          reviews: reviews.flatMap((review) =>
+            review.fairValue === null
+              ? []
+              : [
+                  {
+                    ticker: review.ticker,
+                    period: review.period,
+                    fairValue: review.fairValue,
+                  },
+                ],
+          ),
+          today: day,
+          quoteSource: input.quoteSource,
+          forceRefresh: input.forceRefresh,
+          config: scorePolicy.config,
+        }),
       ]);
       const usdBrlRate = portfolio.usdBrlRate;
       const manualValuedTickers = new Set([
@@ -158,8 +181,11 @@ export const allocationRouter = router({
         displayCurrency: input.displayCurrency,
         usdBrlRate,
         manualValuedTickers,
-        today: today(),
+        today: day,
         config: scorePolicy.config,
+        momentumByTicker: signals.momentumByTicker,
+        referencePrices: signals.referencePrices,
+        valuationStrength: signals.skill.strength,
       });
 
       return {
@@ -170,6 +196,12 @@ export const allocationRouter = router({
           scorePolicy.config,
         ),
         scoreConfig: scorePolicy.config,
+        valuationSkill: signals.skill,
+        sales: {
+          /** Gross BRL sales of exempt Brazilian stocks this month. */
+          exemptSoldThisMonthBrl: exemptSalesInMonth(history, day),
+        },
+        marketSignals: { unavailable: signals.unavailable },
         fx: {
           displayCurrency: input.displayCurrency,
           usdBrlRate,

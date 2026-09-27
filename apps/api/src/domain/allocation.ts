@@ -279,6 +279,12 @@ export type AllocationInput = {
   /** Reference day for the cooldown rule, `YYYY-MM-DD`. */
   today: string;
   config?: ScoreConfig;
+  /** 12-1 month log return per ticker; missing tickers get no momentum. */
+  momentumByTicker?: ReadonlyMap<string, string>;
+  /** Quarter-end close per `ticker|period` fair value review. */
+  referencePrices?: ReadonlyMap<string, string>;
+  /** Learned valuation exponent (see `valuation-skill.ts`); omitted = prior. */
+  valuationStrength?: string;
 };
 
 /**
@@ -391,6 +397,11 @@ export function buildAllocationRows(input: AllocationInput): AllocationRow[] {
       lastContributionAt,
       today: input.today,
       tiltable: !isCash,
+      momentum: isCash ? null : (input.momentumByTicker?.get(ticker) ?? null),
+      referencePrice:
+        latest === null
+          ? null
+          : (input.referencePrices?.get(`${ticker}|${latest.period}`) ?? null),
     });
     const valueSource =
       marketValue === null
@@ -446,7 +457,9 @@ export function buildAllocationRows(input: AllocationInput): AllocationRow[] {
       reviews,
     };
   });
-  const scores = scoreAssets(scoreInputs, config);
+  const scores = scoreAssets(scoreInputs, config, {
+    valuationStrength: input.valuationStrength,
+  });
   const rows = unscored.map((row, index): AllocationRow => {
     const score = scores[index];
 
