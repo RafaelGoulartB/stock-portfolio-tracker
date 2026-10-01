@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import {
   ASSET_CLASSES,
+  BROKER_NOTE_FORMATS,
+  brokerNoteDetailsSchema,
   CORPORATE_ACTION_KINDS,
   CURRENCIES,
   DEFAULT_CONTRIBUTION_PLAN_CONFIG,
@@ -12,7 +14,7 @@ import { z } from "zod";
 import { formatDecimal, sub, toDecimal, ZERO } from "./decimal";
 
 export const BACKUP_FORMAT = "portifolio-tracker-backup";
-export const BACKUP_VERSION = 10;
+export const BACKUP_VERSION = 11;
 export const BACKUP_MEDIA_TYPE = "application/x-portifolio-backup+gzip";
 
 /**
@@ -38,11 +40,13 @@ export const BACKUP_ENTITIES = [
   "allocationAssets",
   "cashBalances",
   "assetReviews",
+  "brokerNotes",
   "transactions",
   "corporateActions",
   "assetCategories",
   "scoreConfigs",
   "contributionPlanConfigs",
+  "brokerSecurityAliases",
 ] as const;
 
 export type BackupEntity = (typeof BACKUP_ENTITIES)[number];
@@ -77,11 +81,13 @@ const backupCountsSchema = z.strictObject({
   allocationAssets: z.number().int().nonnegative(),
   cashBalances: z.number().int().nonnegative().default(0),
   assetReviews: z.number().int().nonnegative(),
+  brokerNotes: z.number().int().nonnegative().default(0),
   transactions: z.number().int().nonnegative(),
   corporateActions: z.number().int().nonnegative().default(0),
   assetCategories: z.number().int().nonnegative(),
   scoreConfigs: z.number().int().nonnegative().default(0),
   contributionPlanConfigs: z.number().int().nonnegative().default(0),
+  brokerSecurityAliases: z.number().int().nonnegative().default(0),
 });
 
 export const manifestSchema = z.object({
@@ -98,6 +104,7 @@ export const manifestSchema = z.object({
     z.literal(8),
     z.literal(9),
     z.literal(10),
+    z.literal(11),
   ]),
   exportedAt: timestamp,
   counts: backupCountsSchema,
@@ -160,6 +167,32 @@ const assetReviewRecord = z.strictObject({
   }),
 });
 
+/** Added in v11; older backups carry no imported notes. */
+const brokerNoteRecord = z.strictObject({
+  type: z.literal("record"),
+  entity: z.literal("brokerNotes"),
+  data: z.strictObject({
+    /** Export-only key that transactions use to point at their note. */
+    ref: z.uuid(),
+    format: z.enum(BROKER_NOTE_FORMATS),
+    fingerprint: z.string().regex(/^[a-f0-9]{64}$/),
+    fileName: z.string().min(1),
+    fileSha256: z.string().regex(/^[a-f0-9]{64}$/),
+    noteNumber: z.string().nullable(),
+    account: z.string().nullable(),
+    tradeDate: z.iso.date(),
+    settlementDate: z.iso.date().nullable(),
+    currency: z.enum(CURRENCIES),
+    purchasesTotal: decimal,
+    salesTotal: decimal,
+    feesTotal: signedDecimal,
+    withheldTax: decimal,
+    netAmount: signedDecimal,
+    details: brokerNoteDetailsSchema,
+    createdAt: databaseTimestamp,
+  }),
+});
+
 const transactionRecord = z.strictObject({
   type: z.literal("record"),
   entity: z.literal("transactions"),
@@ -175,6 +208,8 @@ const transactionRecord = z.strictObject({
     /** Added in v7; older backups restore with the rate unresolved. */
     usdBrlRate: positiveDecimal.nullable().default(null),
     notes: z.string().nullable(),
+    /** Added in v11: the imported note this trade belongs to. */
+    brokerNoteRef: z.uuid().nullable().default(null),
     createdAt: databaseTimestamp,
   }),
 });
@@ -379,16 +414,30 @@ const contributionPlanConfigRecord = z.strictObject({
   ]),
 });
 
+/** Added in v11; older backups carry no security mappings. */
+const brokerSecurityAliasRecord = z.strictObject({
+  type: z.literal("record"),
+  entity: z.literal("brokerSecurityAliases"),
+  data: z.strictObject({
+    sourceKey: z.string().min(1),
+    ticker: z.string().min(1),
+    createdAt: databaseTimestamp,
+    updatedAt: databaseTimestamp,
+  }),
+});
+
 export const backupRecordSchema = z.discriminatedUnion("entity", [
   categoryRecord,
   allocationAssetRecord,
   cashBalanceRecord,
   assetReviewRecord,
+  brokerNoteRecord,
   transactionRecord,
   corporateActionRecord,
   assetCategoryRecord,
   scoreConfigRecord,
   contributionPlanConfigRecord,
+  brokerSecurityAliasRecord,
 ]);
 
 export type BackupRecord = z.infer<typeof backupRecordSchema>;
@@ -413,11 +462,13 @@ export function emptyBackupCounts(): BackupCounts {
     allocationAssets: 0,
     cashBalances: 0,
     assetReviews: 0,
+    brokerNotes: 0,
     transactions: 0,
     corporateActions: 0,
     assetCategories: 0,
     scoreConfigs: 0,
     contributionPlanConfigs: 0,
+    brokerSecurityAliases: 0,
   };
 }
 

@@ -138,6 +138,23 @@ export function formatMoney(
   return moneyFormatter(locale, currency).format(Number(value));
 }
 
+/**
+ * A unit price or per-trade cost with every digit the document printed
+ * (up to the ledger's 8 places), e.g. a US execution price of 205.8585.
+ */
+export function formatPreciseMoney(
+  value: string,
+  currency: CurrencyCode = DEFAULT_CURRENCY,
+  locale: string = activeLocale(),
+): string {
+  return numberFormatter(locale, `precise-money-${currency}`, {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 8,
+  }).format(Number(value));
+}
+
 export function formatSignedMoney(
   value: string,
   currency: CurrencyCode = DEFAULT_CURRENCY,

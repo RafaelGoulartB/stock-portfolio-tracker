@@ -54,13 +54,58 @@ describe("portable data backups", () => {
       },
     });
 
-    expect(manifest.version).toBe(10);
+    expect(manifest.version).toBe(11);
     if (record.entity !== "transactions") {
       throw new Error("expected transaction record");
     }
     expect(record.data.createdAt).toBeInstanceOf(Date);
     // A pre-v7 trade restores with its trade-date rate still unresolved.
     expect(record.data.usdBrlRate).toBeNull();
+    // A pre-v11 trade was never imported from a broker note.
+    expect(record.data.brokerNoteRef).toBeNull();
+  });
+
+  it("accepts a v11 broker note and defaults note counts for older manifests", () => {
+    const record = backupRecordSchema.parse({
+      type: "record",
+      entity: "brokerNotes",
+      data: {
+        ref: "4f1f8a5e-7d0c-4f43-9a55-2c6a0e1d9b10",
+        format: "inter-dtvm-sinacor",
+        fingerprint: "a".repeat(64),
+        fileName: "nota.pdf",
+        fileSha256: "b".repeat(64),
+        noteNumber: null,
+        account: "999",
+        tradeDate: "2026-09-01",
+        settlementDate: "2026-09-03",
+        currency: "BRL",
+        purchasesTotal: "2645.20000000",
+        salesTotal: "0.00000000",
+        feesTotal: "0.78000000",
+        withheldTax: "0.00000000",
+        netAmount: "-2645.98000000",
+        details: { version: 1, fees: [], withheldTaxBase: null, lines: [] },
+        createdAt: "2026-09-02T12:00:00.000Z",
+      },
+    });
+
+    expect(record.entity).toBe("brokerNotes");
+    expect(
+      manifestSchema.parse({
+        type: "manifest",
+        format: BACKUP_FORMAT,
+        version: 10,
+        exportedAt: "2026-09-06T20:00:00.000Z",
+        counts: {
+          categories: 0,
+          allocationAssets: 0,
+          assetReviews: 0,
+          transactions: 0,
+          assetCategories: 0,
+        },
+      }).counts,
+    ).toMatchObject({ brokerNotes: 0, brokerSecurityAliases: 0 });
   });
 
   it("accepts a v8 split record and defaults its count for older manifests", () => {

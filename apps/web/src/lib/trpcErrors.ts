@@ -74,6 +74,12 @@ const removeOversells = msg({
     "Removing this trade would leave a later sale without enough shares. Remove or adjust that sale first.",
 });
 
+const importedTradeLocked = msg({
+  id: "transactions.importedTradeLocked",
+  message:
+    "This trade was imported from a broker note. Delete the note to remove its trades.",
+});
+
 const editConflict = msg({
   id: "transactions.editConflict",
   message: "This trade changed meanwhile. Reload and try again.",
@@ -190,6 +196,10 @@ export function updateTradeErrorMessage(error: unknown): string {
     return i18n._(editConflict);
   }
 
+  if (code === "UNPROCESSABLE_CONTENT") {
+    return i18n._(importedTradeLocked);
+  }
+
   if (code === "PRECONDITION_FAILED") {
     return i18n._(currencyMismatch);
   }
@@ -259,6 +269,10 @@ export function removeTradeErrorMessage(error: unknown): string {
     return i18n._(transactionMissing);
   }
 
+  if (code === "UNPROCESSABLE_CONTENT") {
+    return i18n._(importedTradeLocked);
+  }
+
   if (code === "BAD_REQUEST") {
     return i18n._(removeOversells);
   }
@@ -296,6 +310,64 @@ export function categoryErrorMessage(error: unknown): string {
   if (isAuthCode(code)) {
     return i18n._(sessionExpired);
   }
+
+  return i18n._(unknownError);
+}
+
+const brokerNoteFilesInvalid = msg({
+  id: "brokerNotes.filesInvalid",
+  message: "Select at most 20 PDF files of up to 5 MB each.",
+});
+
+const brokerNoteStale = msg({
+  id: "brokerNotes.importStale",
+  message:
+    "Some selected notes can no longer be imported. They were checked again; review them before importing.",
+});
+
+const brokerNoteConflict = msg({
+  id: "brokerNotes.importConflict",
+  message:
+    "These notes or their tickers changed meanwhile. They were checked again; review them before importing.",
+});
+
+const brokerNoteMissing = msg({
+  id: "brokerNotes.notFound",
+  message: "Broker note not found.",
+});
+
+const brokerNoteRemoveOversells = msg({
+  id: "brokerNotes.removeOversells",
+  message:
+    "Deleting this note would leave a later sale without enough shares. Delete the later note or sale first.",
+});
+
+export function brokerNotePreviewErrorMessage(error: unknown): string {
+  const code = codeOf(error);
+
+  if (code === "BAD_REQUEST") return i18n._(brokerNoteFilesInvalid);
+  if (isAuthCode(code)) return i18n._(sessionExpired);
+
+  return i18n._(unknownError);
+}
+
+export function brokerNoteImportErrorMessage(error: unknown): string {
+  const code = codeOf(error);
+
+  if (code === "PRECONDITION_FAILED") return i18n._(brokerNoteStale);
+  if (code === "CONFLICT") return i18n._(brokerNoteConflict);
+  if (code === "BAD_REQUEST") return i18n._(brokerNoteFilesInvalid);
+  if (isAuthCode(code)) return i18n._(sessionExpired);
+
+  return i18n._(unknownError);
+}
+
+export function removeBrokerNoteErrorMessage(error: unknown): string {
+  const code = codeOf(error);
+
+  if (code === "NOT_FOUND") return i18n._(brokerNoteMissing);
+  if (code === "BAD_REQUEST") return i18n._(brokerNoteRemoveOversells);
+  if (isAuthCode(code)) return i18n._(sessionExpired);
 
   return i18n._(unknownError);
 }

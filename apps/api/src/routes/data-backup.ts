@@ -7,6 +7,8 @@ import {
   allocationAssets,
   assetCategories,
   assetReviews,
+  brokerNotes,
+  brokerSecurityAliases,
   cashBalances,
   categories,
   corporateActions,
@@ -14,7 +16,10 @@ import {
   userContributionPlanConfigs,
   userScoreConfigs,
 } from "../db/schema";
-import { assertBackupTransactionsValid } from "../domain/backup-validation";
+import {
+  assertBackupBrokerNotesValid,
+  assertBackupTransactionsValid,
+} from "../domain/backup-validation";
 import {
   BACKUP_ENTITIES,
   BACKUP_FORMAT,
@@ -111,6 +116,20 @@ function serializeRow(row: Record<string, unknown>) {
   );
 }
 
+const BACKUP_TABLES: Record<BackupEntity, string> = {
+  categories: "categories",
+  allocationAssets: "allocation_assets",
+  cashBalances: "cash_balances",
+  assetReviews: "asset_reviews",
+  brokerNotes: "broker_notes",
+  transactions: "transactions",
+  corporateActions: "corporate_actions",
+  assetCategories: "asset_categories",
+  scoreConfigs: "user_score_configs",
+  contributionPlanConfigs: "user_contribution_plan_configs",
+  brokerSecurityAliases: "broker_security_aliases",
+};
+
 async function* exportBackup(userId: string): AsyncGenerator<string> {
   const connection = await sql.reserve();
   let completed = false;
@@ -120,22 +139,7 @@ async function* exportBackup(userId: string): AsyncGenerator<string> {
 
     const counts = emptyBackupCounts();
     for (const entity of BACKUP_ENTITIES) {
-      const tableName =
-        entity === "allocationAssets"
-          ? "allocation_assets"
-          : entity === "cashBalances"
-            ? "cash_balances"
-            : entity === "assetReviews"
-              ? "asset_reviews"
-              : entity === "corporateActions"
-                ? "corporate_actions"
-                : entity === "assetCategories"
-                  ? "asset_categories"
-                  : entity === "scoreConfigs"
-                    ? "user_score_configs"
-                    : entity === "contributionPlanConfigs"
-                      ? "user_contribution_plan_configs"
-                      : entity;
+      const tableName = BACKUP_TABLES[entity];
       const [result] = await connection`
         select count(*)::text as value
         from ${connection(tableName)}
@@ -220,9 +224,28 @@ async function* exportBackup(userId: string): AsyncGenerator<string> {
     }
 
     for await (const rows of connection`
+      select id as ref, format, fingerprint, file_name as "fileName",
+        file_sha256 as "fileSha256", note_number as "noteNumber", account,
+        trade_date as "tradeDate", settlement_date as "settlementDate",
+        currency, purchases_total as "purchasesTotal",
+        sales_total as "salesTotal", fees_total as "feesTotal",
+        withheld_tax as "withheldTax", net_amount as "netAmount", details,
+        created_at as "createdAt"
+      from broker_notes where user_id = ${userId} order by id
+    `.cursor(BATCH_SIZE)) {
+      for (const data of rows) {
+        yield emit({
+          type: "record",
+          entity: "brokerNotes",
+          data: serializeRow(data),
+        });
+      }
+    }
+
+    for await (const rows of connection`
       select ticker, asset_class as "assetClass", currency, side, quantity,
         price, fees, traded_at as "tradedAt", usd_brl_rate as "usdBrlRate",
-        notes, created_at as "createdAt"
+        notes, broker_note_id as "brokerNoteRef", created_at as "createdAt"
       from transactions where user_id = ${userId} order by id
     `.cursor(BATCH_SIZE)) {
       for (const data of rows) {
@@ -315,6 +338,20 @@ async function* exportBackup(userId: string): AsyncGenerator<string> {
       }
     }
 
+    for await (const rows of connection`
+      select source_key as "sourceKey", ticker,
+        created_at as "createdAt", updated_at as "updatedAt"
+      from broker_security_aliases where user_id = ${userId} order by id
+    `.cursor(BATCH_SIZE)) {
+      for (const data of rows) {
+        yield emit({
+          type: "record",
+          entity: "brokerSecurityAliases",
+          data: serializeRow(data),
+        });
+      }
+    }
+
     yield encodeBackupLine({
       type: "checksum",
       algorithm: "sha256",
@@ -342,11 +379,13 @@ type ParsedBackup = {
   allocationAssets: RecordData<"allocationAssets">[];
   cashBalances: RecordData<"cashBalances">[];
   assetReviews: RecordData<"assetReviews">[];
+  brokerNotes: RecordData<"brokerNotes">[];
   transactions: RecordData<"transactions">[];
   corporateActions: RecordData<"corporateActions">[];
   assetCategories: RecordData<"assetCategories">[];
   scoreConfigs: RecordData<"scoreConfigs">[];
   contributionPlanConfigs: RecordData<"contributionPlanConfigs">[];
+  brokerSecurityAliases: RecordData<"brokerSecurityAliases">[];
 };
 
 /**
@@ -386,11 +425,13 @@ async function parseBackup(
     allocationAssets: [],
     cashBalances: [],
     assetReviews: [],
+    brokerNotes: [],
     transactions: [],
     corporateActions: [],
     assetCategories: [],
     scoreConfigs: [],
     contributionPlanConfigs: [],
+    brokerSecurityAliases: [],
   };
   let lastEntityIndex = 0;
   let totalRecords = 0;
@@ -453,6 +494,9 @@ async function parseBackup(
       case "assetReviews":
         parsed.assetReviews.push(record.data);
         break;
+      case "brokerNotes":
+        parsed.brokerNotes.push(record.data);
+        break;
       case "transactions":
         parsed.transactions.push(record.data);
         break;
@@ -467,6 +511,9 @@ async function parseBackup(
         break;
       case "contributionPlanConfigs":
         parsed.contributionPlanConfigs.push(record.data);
+        break;
+      case "brokerSecurityAliases":
+        parsed.brokerSecurityAliases.push(record.data);
         break;
     }
   }
@@ -484,6 +531,11 @@ async function parseBackup(
 
   // Replaying a backup must never smuggle in a state a live write would refuse.
   assertBackupTransactionsValid(parsed.transactions, parsed.corporateActions);
+  assertBackupBrokerNotesValid(
+    parsed.brokerNotes,
+    parsed.transactions,
+    parsed.brokerSecurityAliases,
+  );
 
   return parsed;
 }
@@ -502,6 +554,10 @@ async function replaceAccountData(parsed: ParsedBackup, userId: string) {
       .where(eq(allocationAssets.userId, userId));
     await tx.delete(cashBalances).where(eq(cashBalances.userId, userId));
     await tx.delete(transactions).where(eq(transactions.userId, userId));
+    await tx.delete(brokerNotes).where(eq(brokerNotes.userId, userId));
+    await tx
+      .delete(brokerSecurityAliases)
+      .where(eq(brokerSecurityAliases.userId, userId));
     await tx
       .delete(corporateActions)
       .where(eq(corporateActions.userId, userId));
@@ -559,18 +615,42 @@ async function replaceAccountData(parsed: ParsedBackup, userId: string) {
         );
     }
 
+    const brokerNoteIdByRef = new Map<string, string>();
+    for (
+      let index = 0;
+      index < parsed.brokerNotes.length;
+      index += BATCH_SIZE
+    ) {
+      await tx.insert(brokerNotes).values(
+        parsed.brokerNotes
+          .slice(index, index + BATCH_SIZE)
+          .map(({ ref, ...row }) => {
+            const id = randomUUID();
+            brokerNoteIdByRef.set(ref, id);
+            return { ...row, id, userId };
+          }),
+      );
+    }
+
     for (
       let index = 0;
       index < parsed.transactions.length;
       index += BATCH_SIZE
     ) {
-      await tx
-        .insert(transactions)
-        .values(
-          parsed.transactions
-            .slice(index, index + BATCH_SIZE)
-            .map((row) => ({ ...row, userId })),
-        );
+      await tx.insert(transactions).values(
+        parsed.transactions
+          .slice(index, index + BATCH_SIZE)
+          .map(({ brokerNoteRef, ...row }) => {
+            const brokerNoteId =
+              brokerNoteRef === null
+                ? null
+                : brokerNoteIdByRef.get(brokerNoteRef);
+            if (brokerNoteId === undefined) {
+              throw new Error("Backup contains a broken broker note reference");
+            }
+            return { ...row, brokerNoteId, userId };
+          }),
+      );
     }
 
     for (
@@ -616,6 +696,20 @@ async function replaceAccountData(parsed: ParsedBackup, userId: string) {
         .insert(userContributionPlanConfigs)
         .values(
           parsed.contributionPlanConfigs.map((row) => ({ ...row, userId })),
+        );
+    }
+
+    for (
+      let index = 0;
+      index < parsed.brokerSecurityAliases.length;
+      index += BATCH_SIZE
+    ) {
+      await tx
+        .insert(brokerSecurityAliases)
+        .values(
+          parsed.brokerSecurityAliases
+            .slice(index, index + BATCH_SIZE)
+            .map((row) => ({ ...row, userId })),
         );
     }
   });

@@ -1,5 +1,7 @@
 export * from "./allocation";
 export * from "./auth";
+export * from "./broker-note-formats";
+export * from "./broker-notes";
 export * from "./categories";
 export * from "./contribution-plan";
 export * from "./corporate-actions";

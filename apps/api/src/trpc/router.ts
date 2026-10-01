@@ -1,5 +1,6 @@
 import { allocationRouter } from "./routers/allocation";
 import { authRouter } from "./routers/auth";
+import { brokerNotesRouter } from "./routers/broker-notes";
 import { categoriesRouter } from "./routers/categories";
 import { contributionPlanConfigRouter } from "./routers/contribution-plan-config";
 import { corporateActionsRouter } from "./routers/corporate-actions";
@@ -17,6 +18,7 @@ import { publicProcedure, router } from "./trpc";
 export const appRouter = router({
   health: publicProcedure.query(() => ({ ok: true as const })),
   auth: authRouter,
+  brokerNotes: brokerNotesRouter,
   allocation: allocationRouter,
   categories: categoriesRouter,
   contributionPlanConfig: contributionPlanConfigRouter,

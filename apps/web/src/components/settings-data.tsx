@@ -172,8 +172,9 @@ export function SettingsData() {
             </AlertTitle>
             <AlertDescription>
               <Trans id="settings.data.scopeDescription">
-                Includes transactions, allocation assets, cash balance, reviews,
-                categories, assignments, contribution-score settings, and
+                Includes transactions, imported broker notes and their ticker
+                mappings, allocation assets, cash balance, reviews, categories,
+                assignments, contribution-score settings, and
                 contribution-planner settings. Passwords and active sessions are
                 excluded.
               </Trans>

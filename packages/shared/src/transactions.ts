@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { transactionBrokerNoteSchema } from "./broker-note-formats";
 import { type Currency, currencySchema, DEFAULT_CURRENCY } from "./currency";
 import { isoDate, nonNegativeDecimal, positiveDecimal } from "./decimal";
 
@@ -199,6 +200,11 @@ export const transactionSchema = z.object({
   usdBrlRate: z.string().nullable(),
   notes: z.string().nullable(),
   total: z.string(),
+  /**
+   * The broker note this trade was imported from. Such a trade can only be
+   * removed together with its note.
+   */
+  brokerNote: transactionBrokerNoteSchema.nullable(),
 });
 
 export type Transaction = z.infer<typeof transactionSchema>;

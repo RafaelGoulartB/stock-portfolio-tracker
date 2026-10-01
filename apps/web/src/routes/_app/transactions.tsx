@@ -20,6 +20,8 @@ import { toast } from "sonner";
 import type { z } from "zod";
 import { AssetClassLabel, SideLabel } from "@/components/asset-labels";
 import { BookHoldingsPanel } from "@/components/transactions/book-holdings-panel";
+import { BrokerNoteImport } from "@/components/transactions/broker-note-import";
+import { BrokerNoteList } from "@/components/transactions/broker-note-list";
 import { TransactionHistory } from "@/components/transactions/transaction-history";
 import { Button } from "@/components/ui/button";
 import {
@@ -64,7 +66,7 @@ export const Route = createFileRoute("/_app/transactions")({
 });
 
 type FormValues = z.input<typeof createTransactionInput>;
-type EntryMode = "trade" | "book";
+type EntryMode = "trade" | "book" | "notes";
 
 function today(): string {
   const now = new Date();
@@ -186,6 +188,9 @@ function TransactionsPage() {
       utils.performance.history.invalidate(),
       utils.dividends.history.invalidate(),
       utils.transactions.forTicker.invalidate(),
+      utils.brokerNotes.list.invalidate(),
+      utils.brokerNotes.get.invalidate(),
+      utils.data.summary.invalidate(),
     ]);
   }
 
@@ -415,6 +420,20 @@ function TransactionsPage() {
             }}
           >
             <Trans id="transactions.modeBook">Book holdings</Trans>
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            role="tab"
+            aria-selected={mode === "notes"}
+            variant={mode === "notes" ? "default" : "ghost"}
+            className={cn(mode !== "notes" && "text-muted-foreground")}
+            onClick={() => {
+              if (editing) stopEditing();
+              setMode("notes");
+            }}
+          >
+            <Trans id="transactions.modeNotes">Broker notes</Trans>
           </Button>
         </div>
       </header>
@@ -841,6 +860,17 @@ function TransactionsPage() {
             </CardContent>
           </Card>
 
+          {history}
+        </div>
+      ) : mode === "notes" ? (
+        <div className="space-y-6">
+          <BrokerNoteImport
+            onImported={async () => {
+              setPage(0);
+              await refresh();
+            }}
+          />
+          <BrokerNoteList onRemoved={refresh} />
           {history}
         </div>
       ) : (

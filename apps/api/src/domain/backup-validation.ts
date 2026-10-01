@@ -98,3 +98,72 @@ export function assertBackupTransactionsValid(
     }
   }
 }
+
+type BrokerNoteData = Extract<BackupRecord, { entity: "brokerNotes" }>["data"];
+type BrokerSecurityAliasData = Extract<
+  BackupRecord,
+  { entity: "brokerSecurityAliases" }
+>["data"];
+
+/**
+ * Imported notes must stay whole after a restore: every note keeps its own
+ * trades, in its currency and on its trade date, and no note, reference or
+ * security mapping appears twice.
+ */
+export function assertBackupBrokerNotesValid(
+  notes: readonly BrokerNoteData[],
+  transactions: readonly TransactionData[],
+  aliases: readonly BrokerSecurityAliasData[],
+): void {
+  const byRef = new Map<string, BrokerNoteData>();
+  const fingerprints = new Set<string>();
+
+  for (const note of notes) {
+    if (byRef.has(note.ref)) {
+      throw new BackupFinancialError("Backup repeats a broker note reference");
+    }
+    if (fingerprints.has(note.fingerprint)) {
+      throw new BackupFinancialError(
+        `Backup repeats the broker note of ${note.tradeDate}`,
+      );
+    }
+    byRef.set(note.ref, note);
+    fingerprints.add(note.fingerprint);
+  }
+
+  const tradeCounts = new Map<string, number>();
+
+  for (const trade of transactions) {
+    if (trade.brokerNoteRef === null) continue;
+
+    const note = byRef.get(trade.brokerNoteRef);
+    if (!note) {
+      throw new BackupFinancialError(
+        `Backup trade of ${trade.ticker} points at a missing broker note`,
+      );
+    }
+    if (note.currency !== trade.currency || note.tradeDate !== trade.tradedAt) {
+      throw new BackupFinancialError(
+        `Backup trade of ${trade.ticker} does not match its broker note`,
+      );
+    }
+    tradeCounts.set(note.ref, (tradeCounts.get(note.ref) ?? 0) + 1);
+  }
+
+  for (const note of notes) {
+    if (!tradeCounts.has(note.ref)) {
+      throw new BackupFinancialError(
+        `Backup broker note of ${note.tradeDate} has no trades`,
+      );
+    }
+  }
+
+  const keys = new Set<string>();
+
+  for (const alias of aliases) {
+    if (keys.has(alias.sourceKey)) {
+      throw new BackupFinancialError("Backup repeats a security mapping");
+    }
+    keys.add(alias.sourceKey);
+  }
+}

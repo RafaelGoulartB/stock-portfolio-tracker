@@ -41,6 +41,7 @@ Portfolio Tracker records investment transactions and turns them into positions,
 ## Record and review investments
 
 - **Transaction ledger:** record buys and sells for stocks, ETFs, REITs, fixed income, crypto, and other supported assets. Holdings and realized results are derived from transaction history using moving average cost.
+- **Broker notes:** import PDF notes from Inter DTVM (B3) and the Apex Clearing and DriveWealth confirmations of Inter's US account. Each note must reconcile with its own totals before its trades are recorded, costs are apportioned to its trades, and its trades can only be removed by deleting the note.
 - **Asset research:** set allocation targets and quarterly grades, notes, fair values, and watch-next reminders. Watch-only assets can be tracked without recording a position.
 - **Portfolio tools:** explore performance and daily results, review dividends, filter detailed positions, and discover assets through the allocation finder.
 - **Multiple currencies:** keep each ticker in its native BRL or USD currency and consolidate the portfolio into the selected display currency with an explicit exchange rate.

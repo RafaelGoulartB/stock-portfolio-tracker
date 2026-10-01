@@ -51,6 +51,8 @@ production deployment.
 - **review** — a ticker's quarterly grade, notes, optional fair value, and whether to watch the next quarter;
 - **contribution score** — the domain recommendation used to rank new capital;
 - **provider** — a replaceable source of market quotes, income events, or FX;
+- **broker note** — an imported nota de corretagem or trade confirmation that
+  owns the transactions read from it;
 - **account data** — every portfolio record owned by one authenticated user.
 
 Use these terms consistently in code, UI copy, tests, and documentation.
@@ -94,6 +96,8 @@ The web app runs on port 5173. Vite proxies `/trpc` and `/api` to
   tRPC endpoints use `protectedProcedure`.
 - Authentication uses the `portifolio_session` cookie, stores only its SHA-256
   hash, hashes passwords with scrypt, and keeps the 30-day session TTL.
+- Transactions imported from a broker note are edited or deleted only by
+  deleting the whole note, after the same oversell replay as a manual delete.
 - Backup export/import is account-scoped. Never export password hashes,
   sessions, or source user IDs. Import is atomic replacement, not an implicit
   merge; preserve the checksum and versioned `.jsonl.gz` contract described in
@@ -233,6 +237,8 @@ the stale guidance. Keep setup and user-facing configuration in `README.md`.
 - Do not create commits, branches, or pull requests unless explicitly asked and always commit without co-author.
 - Keep one concern per change and avoid opportunistic refactors.
 - No Electron, FIFO, Better Auth, Zustand, Effect, Next.js, or Prisma in v0.
-- Brokerage-note parsing remains out of scope until it has a dedicated plan.
+- Broker-note import follows `tasks/plan-broker-note-import.md`: a new layout
+  needs its own parser, mandatory reconciliation against the note's totals,
+  and tests. Never import a note that does not reconcile.
 - If a rule here conflicts with the requested work, surface the conflict and
   obtain an explicit decision before breaking the invariant.

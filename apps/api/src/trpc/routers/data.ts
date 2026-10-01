@@ -5,6 +5,8 @@ import {
   allocationAssets,
   assetCategories,
   assetReviews,
+  brokerNotes,
+  brokerSecurityAliases,
   cashBalances,
   categories,
   corporateActions,
@@ -24,7 +26,9 @@ async function countForUser(
     | typeof cashBalances
     | typeof assetCategories
     | typeof userScoreConfigs
-    | typeof userContributionPlanConfigs,
+    | typeof userContributionPlanConfigs
+    | typeof brokerNotes
+    | typeof brokerSecurityAliases,
   userId: string,
 ) {
   const [row] = await db
@@ -46,6 +50,8 @@ export const dataRouter = router({
       contributionPlanConfigCount,
       cashBalanceCount,
       corporateActionCount,
+      brokerNoteCount,
+      brokerSecurityAliasCount,
     ] = await Promise.all([
       countForUser(transactions, ctx.user.id),
       countForUser(allocationAssets, ctx.user.id),
@@ -56,6 +62,8 @@ export const dataRouter = router({
       countForUser(userContributionPlanConfigs, ctx.user.id),
       countForUser(cashBalances, ctx.user.id),
       countForUser(corporateActions, ctx.user.id),
+      countForUser(brokerNotes, ctx.user.id),
+      countForUser(brokerSecurityAliases, ctx.user.id),
     ]);
 
     return {
@@ -68,6 +76,8 @@ export const dataRouter = router({
       contributionPlanConfigs: contributionPlanConfigCount,
       cashBalances: cashBalanceCount,
       corporateActions: corporateActionCount,
+      brokerNotes: brokerNoteCount,
+      brokerSecurityAliases: brokerSecurityAliasCount,
     };
   }),
 
@@ -90,6 +100,10 @@ export const dataRouter = router({
         await tx
           .delete(transactions)
           .where(eq(transactions.userId, ctx.user.id));
+        await tx.delete(brokerNotes).where(eq(brokerNotes.userId, ctx.user.id));
+        await tx
+          .delete(brokerSecurityAliases)
+          .where(eq(brokerSecurityAliases.userId, ctx.user.id));
         await tx
           .delete(corporateActions)
           .where(eq(corporateActions.userId, ctx.user.id));
