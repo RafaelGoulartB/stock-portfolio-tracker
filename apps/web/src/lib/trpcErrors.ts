@@ -316,7 +316,7 @@ export function categoryErrorMessage(error: unknown): string {
 
 const brokerNoteFilesInvalid = msg({
   id: "brokerNotes.filesInvalid",
-  message: "Select at most 20 PDF files of up to 5 MB each.",
+  message: "Select PDF files of up to 5 MB each, at most 500 at once.",
 });
 
 const brokerNoteStale = msg({
@@ -341,6 +341,22 @@ const brokerNoteRemoveOversells = msg({
   message:
     "Deleting this note would leave a later sale without enough shares. Delete the later note or sale first.",
 });
+
+const brokerNoteReadFailed = msg({
+  id: "brokerNotes.readFailed",
+  message: "Some files could not be sent. You can try them again.",
+});
+
+/** The server restarted, so the notes it signed must be read again. */
+export function isBrokerNoteReadingExpired(error: unknown): boolean {
+  return codeOf(error) === "UNPROCESSABLE_CONTENT";
+}
+
+export function brokerNoteReadErrorMessage(error: unknown): string {
+  if (isAuthCode(codeOf(error))) return i18n._(sessionExpired);
+
+  return i18n._(brokerNoteReadFailed);
+}
 
 export function brokerNotePreviewErrorMessage(error: unknown): string {
   const code = codeOf(error);

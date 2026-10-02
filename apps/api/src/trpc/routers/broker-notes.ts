@@ -5,11 +5,15 @@ import {
   type BrokerNoteFileError,
   type BrokerNoteList,
   type BrokerNotePreview,
+  type BrokerNoteReadFile,
   brokerNoteIdInput,
   brokerNoteImportInput,
   brokerNoteListInput,
   brokerNotePreviewInput,
+  brokerNoteReadInput,
   MAX_BROKER_NOTE_FILE_BYTES,
+  parsedBrokerNoteSchema,
+  type SignedBrokerNoteDocument,
 } from "@portifolio-tracker/shared";
 import { TRPCError } from "@trpc/server";
 import { and, asc, count, desc, eq, inArray, sql } from "drizzle-orm";
@@ -38,6 +42,7 @@ import {
 } from "../../domain/positions";
 import { tradeDateRates } from "../../lib/fx/trade-rates";
 import { extractPdfPages, isPdf, PdfReadError } from "../../lib/pdf-text";
+import { signPayload, verifyPayload } from "../../lib/signed-payload";
 import { protectedProcedure, router } from "../trpc";
 import { lockTickers, readIdentifiedHistory, readSplits } from "./transactions";
 
@@ -49,28 +54,65 @@ type DbExecutor =
   | typeof db;
 
 type PreviewInput = z.output<typeof brokerNotePreviewInput>;
-
-type FileResult = BrokerNotePreview["files"][number];
+type ReadInput = z.output<typeof brokerNoteReadInput>;
 
 function fileError(
   fileName: string,
   sha256: string,
   error: BrokerNoteFileError,
   detail: string,
-): FileResult {
-  return { fileName, sha256, error, errorDetail: detail, noteCount: 0 };
+): BrokerNoteReadFile {
+  return { fileName, sha256, error, errorDetail: detail, document: null };
+}
+
+/** Signatures are only valid for the account that read the files. */
+export function signatureScope(userId: string): string {
+  return `broker-note-document:v1:${userId}`;
+}
+
+function signedContent(document: Omit<SignedBrokerNoteDocument, "signature">) {
+  return {
+    fileName: document.fileName,
+    sha256: document.sha256,
+    notes: document.notes,
+  };
+}
+
+/**
+ * Accepts documents the browser held between reading and importing, only
+ * if this server signed them for this account and nothing changed since.
+ */
+function verifiedDocuments(
+  userId: string,
+  documents: readonly SignedBrokerNoteDocument[],
+): PlanDocument[] {
+  for (const document of documents) {
+    if (
+      !verifyPayload(
+        signatureScope(userId),
+        signedContent(document),
+        document.signature,
+      )
+    ) {
+      throw new TRPCError({
+        code: "UNPROCESSABLE_CONTENT",
+        message: "The reading of these files expired. Read them again.",
+      });
+    }
+  }
+
+  return documents.map(signedContent);
 }
 
 /**
  * Decodes and parses every upload. A file that fails is reported and left
  * out; it never contributes a partial note.
  */
-async function readDocuments(files: PreviewInput["files"]): Promise<{
-  files: FileResult[];
-  documents: PlanDocument[];
-}> {
-  const results: FileResult[] = [];
-  const documents: PlanDocument[] = [];
+async function readFiles(
+  userId: string,
+  files: ReadInput["files"],
+): Promise<BrokerNoteReadFile[]> {
+  const results: BrokerNoteReadFile[] = [];
 
   for (const file of files) {
     if (!/^[A-Za-z0-9+/]*={0,2}$/.test(file.contentBase64)) {
@@ -92,15 +134,21 @@ async function readDocuments(files: PreviewInput["files"]): Promise<{
 
     try {
       const pages = await extractPdfPages(bytes, { maxPages: MAX_PDF_PAGES });
-      const notes = parseBrokerNotePages(pages);
+      // Signed in its transport shape, which is what comes back to verify.
+      const notes = parseBrokerNotePages(pages).map((note) =>
+        parsedBrokerNoteSchema.parse(note),
+      );
+      const content = { fileName: file.name, sha256, notes };
 
-      documents.push({ fileName: file.name, sha256, notes });
       results.push({
         fileName: file.name,
         sha256,
         error: null,
         errorDetail: null,
-        noteCount: notes.length,
+        document: {
+          ...content,
+          signature: signPayload(signatureScope(userId), content),
+        },
       });
     } catch (error) {
       if (error instanceof PdfReadError) {
@@ -121,7 +169,7 @@ async function readDocuments(files: PreviewInput["files"]): Promise<{
     }
   }
 
-  return { files: results, documents };
+  return results;
 }
 
 type LedgerContext = {
@@ -361,10 +409,19 @@ export const brokerNotesRouter = router({
    * Reads the uploaded PDFs and reports what importing them would do. Writes
    * nothing; the same files are sent again to import.
    */
+  /**
+   * Reads a batch of PDFs and returns their notes signed for this account.
+   * A large upload is read in several batches; preview and import then
+   * work on the signed notes without sending the files again.
+   */
+  read: protectedProcedure
+    .input(brokerNoteReadInput)
+    .mutation(async ({ ctx, input }) => readFiles(ctx.user.id, input.files)),
+
   preview: protectedProcedure
     .input(brokerNotePreviewInput)
     .mutation(async ({ ctx, input }): Promise<BrokerNotePreview> => {
-      const { files, documents } = await readDocuments(input.files);
+      const documents = verifiedDocuments(ctx.user.id, input.documents);
       const mappings = new Map(
         input.mappings.map((m) => [m.sourceKey, m.ticker]),
       );
@@ -377,7 +434,6 @@ export const brokerNotesRouter = router({
       const plan = planFor(input, documents, ledger, null);
 
       return {
-        files,
         notes: plan.notes.map((note) =>
           previewNote(note, plan, ledger.history),
         ),
@@ -387,16 +443,16 @@ export const brokerNotesRouter = router({
     }),
 
   /**
-   * Imports the selected notes all-or-nothing. The files are parsed again
-   * and the whole plan is re-validated under the ticker locks, so nothing
-   * the preview showed can be stale.
+   * Imports the selected notes all-or-nothing. The signed notes are checked
+   * again and the whole plan is re-validated under the ticker locks, so
+   * nothing the preview showed can be stale.
    */
   import: protectedProcedure
     .input(brokerNoteImportInput)
     .mutation(async ({ ctx, input }) => {
       const userId = ctx.user.id;
       const selected = new Set(input.fingerprints);
-      const { documents } = await readDocuments(input.files);
+      const documents = verifiedDocuments(userId, input.documents);
       const mappings = new Map(
         input.mappings.map((m) => [m.sourceKey, m.ticker]),
       );

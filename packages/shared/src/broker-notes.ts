@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { brokerNoteFormatSchema } from "./broker-note-formats";
 import { currencySchema } from "./currency";
+import { isoDate } from "./decimal";
 import {
   type AssetClass,
   assetClassSchema,
@@ -8,8 +9,11 @@ import {
   transactionSideSchema,
 } from "./transactions";
 
-export const MAX_BROKER_NOTE_FILES = 20;
+/** Files read per request; the browser sends a large upload in batches. */
+export const MAX_BROKER_NOTE_FILES = 10;
 export const MAX_BROKER_NOTE_FILE_BYTES = 5 * 1024 * 1024;
+/** Documents one preview or import may cover. */
+export const MAX_BROKER_NOTE_DOCUMENTS = 500;
 /** Base64 grows 4 characters for every 3 bytes, plus padding. */
 const MAX_BASE64_LENGTH = Math.ceil(MAX_BROKER_NOTE_FILE_BYTES / 3) * 4;
 
@@ -54,33 +58,16 @@ export const brokerNoteClassChoiceSchema = z.object({
   assetClass: brokerNoteAssetClassSchema,
 });
 
-export const brokerNotePreviewInput = z.object({
+export const brokerNoteReadInput = z.object({
   files: z
     .array(brokerNoteFileSchema)
     .min(1, "Select at least one PDF")
-    .max(
-      MAX_BROKER_NOTE_FILES,
-      `Select at most ${MAX_BROKER_NOTE_FILES} files at once`,
-    ),
-  mappings: z.array(brokerNoteMappingSchema).max(500).default([]),
-  assetClasses: z.array(brokerNoteClassChoiceSchema).max(500).default([]),
+    .max(MAX_BROKER_NOTE_FILES),
 });
-
-export type BrokerNotePreviewInput = z.input<typeof brokerNotePreviewInput>;
 
 export const brokerNoteFingerprintSchema = z
   .string()
   .regex(/^[a-f0-9]{64}$/, "Invalid note fingerprint");
-
-export const brokerNoteImportInput = brokerNotePreviewInput.extend({
-  /** Notes of the preview the user chose to import. */
-  fingerprints: z
-    .array(brokerNoteFingerprintSchema)
-    .min(1, "Select at least one note")
-    .max(200),
-});
-
-export type BrokerNoteImportInput = z.input<typeof brokerNoteImportInput>;
 
 /** Why a whole file could not be read. */
 export const BROKER_NOTE_FILE_ERRORS = [
@@ -177,6 +164,108 @@ export const brokerNoteDetailsSchema = z.object({
 
 export type BrokerNoteDetails = z.infer<typeof brokerNoteDetailsSchema>;
 
+/** Decimal string within `numeric(22, 8)`, signed. */
+const parsedDecimal = z.string().regex(/^-?\d{1,14}(?:\.\d{1,8})?$/);
+
+/** One trade line exactly as the server read it from the document. */
+export const parsedNoteTradeSchema = z.object({
+  side: transactionSideSchema,
+  /** Stable key of the security across notes of the same market. */
+  sourceKey: z.string().min(1).max(200),
+  description: z.string().max(300),
+  /** Ticker printed by the document, if any. */
+  ticker: z.string().max(20).nullable(),
+  /** Class suggested by the document for a ticker without trades. */
+  classHint: assetClassSchema,
+  quantity: parsedDecimal,
+  executionPrice: parsedDecimal,
+  /** Line value (B3) or principal (US), in cents. */
+  grossValue: parsedDecimal,
+  /**
+   * Cash the line settles for, fees included (US confirmations price each
+   * line). `null` when the costs are printed once for the whole note (B3).
+   */
+  netValue: parsedDecimal.nullable(),
+  market: z.string().max(40).nullable(),
+  flags: z.array(z.string().max(10)).max(10),
+  settlementDate: isoDate.nullable(),
+  references: z.record(z.string().max(40), z.string().max(80)),
+});
+
+export type ParsedNoteTrade = z.infer<typeof parsedNoteTradeSchema>;
+
+/** A note as the server read it, before anything is booked. */
+export const parsedBrokerNoteSchema = z.object({
+  format: brokerNoteFormatSchema,
+  currency: currencySchema,
+  noteNumber: z.string().max(40).nullable(),
+  account: z.string().max(60).nullable(),
+  tradeDate: isoDate,
+  settlementDate: isoDate.nullable(),
+  trades: z.array(parsedNoteTradeSchema).min(1).max(500),
+  /** Itemized note-level costs (B3); empty when each line prices its own. */
+  fees: z.array(brokerNoteFeeSchema).max(30),
+  purchasesTotal: parsedDecimal,
+  salesTotal: parsedDecimal,
+  /** Total costs; signed, a broker credit larger than fees is negative. */
+  feesTotal: parsedDecimal,
+  withheldTax: parsedDecimal,
+  withheldTaxBase: parsedDecimal.nullable(),
+  /** Signed settlement: positive is credited to the investor. */
+  netAmount: parsedDecimal,
+});
+
+export type ParsedBrokerNote = z.infer<typeof parsedBrokerNoteSchema>;
+
+/**
+ * A document the server read, signed for the signed-in account. The browser
+ * holds it between reading and importing; the signature proves the notes
+ * were not altered, so the PDFs are uploaded only once.
+ */
+export const signedBrokerNoteDocumentSchema = z.object({
+  fileName: z.string().trim().min(1).max(255),
+  sha256: z.string().regex(/^[a-f0-9]{64}$/),
+  notes: z.array(parsedBrokerNoteSchema).min(1).max(50),
+  signature: z.string().regex(/^[A-Za-z0-9_-]{43}$/),
+});
+
+export type SignedBrokerNoteDocument = z.infer<
+  typeof signedBrokerNoteDocumentSchema
+>;
+
+/** What reading one file produced. */
+export const brokerNoteReadFileSchema = z.object({
+  fileName: z.string(),
+  sha256: z.string(),
+  error: brokerNoteFileErrorSchema.nullable(),
+  /** Technical reason for `error`, in English. */
+  errorDetail: z.string().nullable(),
+  document: signedBrokerNoteDocumentSchema.nullable(),
+});
+
+export type BrokerNoteReadFile = z.infer<typeof brokerNoteReadFileSchema>;
+
+export const brokerNotePreviewInput = z.object({
+  documents: z
+    .array(signedBrokerNoteDocumentSchema)
+    .min(1, "Select at least one PDF")
+    .max(MAX_BROKER_NOTE_DOCUMENTS),
+  mappings: z.array(brokerNoteMappingSchema).max(2000).default([]),
+  assetClasses: z.array(brokerNoteClassChoiceSchema).max(2000).default([]),
+});
+
+export type BrokerNotePreviewInput = z.input<typeof brokerNotePreviewInput>;
+
+export const brokerNoteImportInput = brokerNotePreviewInput.extend({
+  /** Notes of the preview the user chose to import. */
+  fingerprints: z
+    .array(brokerNoteFingerprintSchema)
+    .min(1, "Select at least one note")
+    .max(5000),
+});
+
+export type BrokerNoteImportInput = z.input<typeof brokerNoteImportInput>;
+
 export const brokerNotePreviewTradeSchema = brokerNoteLineSchema.extend({
   /** Resolved ticker, `null` until the security is mapped. */
   ticker: z.string().nullable(),
@@ -219,16 +308,6 @@ export const brokerNotePreviewNoteSchema = z.object({
 export type BrokerNotePreviewNote = z.infer<typeof brokerNotePreviewNoteSchema>;
 
 export const brokerNotePreviewSchema = z.object({
-  files: z.array(
-    z.object({
-      fileName: z.string(),
-      sha256: z.string(),
-      error: brokerNoteFileErrorSchema.nullable(),
-      /** Technical reason for `error`, in English. */
-      errorDetail: z.string().nullable(),
-      noteCount: z.number().int().nonnegative(),
-    }),
-  ),
   notes: z.array(brokerNotePreviewNoteSchema),
   /** Securities printed without a ticker, with their current mapping. */
   securities: z.array(

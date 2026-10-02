@@ -530,6 +530,11 @@ msgstr ""
 #~ msgstr "Levar todas as posições de volta à meta ajustada venderia {0}, mais do que ainda está isento; por isso cada venda foi reduzida na mesma proporção."
 
 #. js-lingui-explicit-id
+#: src/components/transactions/broker-note-import.tsx:417
+#~ msgid "brokerNotes.reading"
+#~ msgstr "Lendo as notas…"
+
+#. js-lingui-explicit-id
 #. placeholder {0}: formatMonthLabel(month, locale)
 #: src/components/detailed-positions/toolbar.tsx:333
 #: src/components/positions/month-selector.tsx:40
@@ -613,6 +618,15 @@ msgid "allocation.detailReviewCount"
 msgstr "{0} trimestres"
 
 #. js-lingui-explicit-id
+#. placeholder {0}: counts.ready
+#. placeholder {1}: counts.blocked
+#. placeholder {2}: counts.imported
+#. placeholder {3}: counts.duplicate
+#: src/components/transactions/broker-note-import.tsx:901
+msgid "brokerNotes.noteCounts"
+msgstr "{0} prontas · {1} requerem atenção · {2} já importadas · {3} repetidas"
+
+#. js-lingui-explicit-id
 #. placeholder {0}: signedOrZero(summary.realizedPnl, currency)
 #: src/components/performance/summary-strip.tsx:129
 msgid "performance.realizedInWindow"
@@ -688,6 +702,11 @@ msgid "positions.closedCount"
 msgstr "{count, plural, one {# posição encerrada} other {# posições encerradas}}"
 
 #. js-lingui-explicit-id
+#: src/components/transactions/broker-note-import.tsx:694
+msgid "brokerNotes.sendFailed"
+msgstr "{count, plural, one {# arquivo não pôde ser enviado ao servidor.} other {# arquivos não puderam ser enviados ao servidor.}}"
+
+#. js-lingui-explicit-id
 #: src/routes/_app/deep-finder.tsx:348
 msgid "deepFinder.breadthHint"
 msgstr "{count, plural, one {# ativo com cotação comparável} other {# ativos com cotação comparável}}"
@@ -698,7 +717,7 @@ msgid "performance.monthsCovered"
 msgstr "{count, plural, one {# mês com rentabilidade} other {# meses com rentabilidade}}"
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:290
+#: src/components/transactions/broker-note-import.tsx:455
 msgid "brokerNotes.imported"
 msgstr "{count, plural, one {# nota importada com {trades} operações} other {# notas importadas com {trades} operações}}"
 
@@ -708,7 +727,7 @@ msgid "positions.openCount"
 msgstr "{count, plural, one {# posição aberta} other {# posições abertas}}"
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:673
+#: src/components/transactions/broker-note-import.tsx:978
 msgid "brokerNotes.unmappedCount"
 msgstr "{count, plural, one {# ativo ainda precisa de ticker.} other {# ativos ainda precisam de ticker.}}"
 
@@ -733,7 +752,7 @@ msgid "transactions.fxMissing"
 msgstr "{count, plural, one {# operação ainda não tem o USD/BRL da data, então seu custo é convertido pela cotação de hoje.} other {# operações ainda não têm o USD/BRL da data, então seu custo é convertido pela cotação de hoje.}}"
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:790
+#: src/components/transactions/broker-note-import.tsx:1095
 msgid "brokerNotes.tradeCount"
 msgstr "{count, plural, one {# operação} other {# operações}}"
 
@@ -748,7 +767,7 @@ msgid "daily.comparisonCoverageCount"
 msgstr "{count, plural, one {A variação do dia cobre {compared} de # ativo em aberto; o caixa entra no valor.} other {A variação do dia cobre {compared} de # ativos em aberto; o caixa entra no valor.}}"
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:693
+#: src/components/transactions/broker-note-import.tsx:998
 msgid "brokerNotes.importSelected"
 msgstr "{count, plural, one {Importar # nota} other {Importar # notas}}"
 
@@ -773,7 +792,7 @@ msgid "transactions.booked"
 msgstr "{count} posições lançadas como compras"
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:218
+#: src/components/transactions/broker-note-import.tsx:360
 msgid "brokerNotes.fileTooLargeToast"
 msgstr "{name} tem mais de 5 MB."
 
@@ -1480,7 +1499,7 @@ msgid "brokerNotes.notFound"
 msgstr "Nota de corretagem não encontrada."
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:393
+#: src/components/transactions/broker-note-import.tsx:585
 msgid "brokerNotes.chooseLabel"
 msgstr "PDFs de notas de corretagem"
 
@@ -1733,7 +1752,7 @@ msgid "documentation.comparisons.costViewDescription"
 msgstr "A variação é o valor de mercado da posição aberta menos o custo médio móvel."
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:576
+#: src/components/transactions/broker-note-import.tsx:828
 msgid "brokerNotes.recheck"
 msgstr "Verificar de novo"
 
@@ -1742,6 +1761,11 @@ msgstr "Verificar de novo"
 #: src/components/transactions/book-holdings-panel.tsx:140
 msgid "transactions.bookNumbersInvalid"
 msgstr "Confira a quantidade e o preço médio de {0}."
+
+#. js-lingui-explicit-id
+#: src/components/transactions/broker-note-import.tsx:630
+msgid "brokerNotes.checking"
+msgstr "Conferindo as notas com as suas operações…"
 
 #. js-lingui-explicit-id
 #: src/components/theme-editor.tsx:203
@@ -1759,7 +1783,7 @@ msgid "transactions.importFile"
 msgstr "Escolher arquivo"
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:384
+#: src/components/transactions/broker-note-import.tsx:576
 msgid "brokerNotes.choose"
 msgstr "Escolher PDFs"
 
@@ -1811,7 +1835,7 @@ msgid "allocation.addClass"
 msgstr "Classe"
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:619
+#: src/components/transactions/broker-note-import.tsx:871
 msgid "brokerNotes.classOf"
 msgstr "Classe de {ticker}"
 
@@ -1821,7 +1845,7 @@ msgid "categories.clearSelection"
 msgstr "Limpar"
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:411
+#: src/components/transactions/broker-note-import.tsx:603
 msgid "brokerNotes.clear"
 msgstr "Limpar"
 
@@ -2097,7 +2121,7 @@ msgid "documentation.comparisons.costView"
 msgstr "Visão por custo"
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:768
+#: src/components/transactions/broker-note-import.tsx:1073
 #: src/components/transactions/broker-note-list.tsx:130
 #: src/components/transactions/broker-note-list.tsx:391
 msgid "brokerNotes.fees"
@@ -2617,7 +2641,7 @@ msgid "login.noAccount"
 msgstr "Ainda não tem uma conta?"
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:371
+#: src/components/transactions/broker-note-import.tsx:563
 msgid "brokerNotes.dropHint"
 msgstr "Arraste os PDFs das notas de corretagem para cá ou escolha-os no seu computador."
 
@@ -2632,7 +2656,7 @@ msgid "documentation.performance.drawdown"
 msgstr "Drawdown"
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:369
+#: src/components/transactions/broker-note-import.tsx:561
 msgid "brokerNotes.dropNow"
 msgstr "Solte os PDFs para lê-los"
 
@@ -2960,7 +2984,7 @@ msgstr "Taxas"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/asset-movements.tsx:179
-#: src/components/transactions/broker-note-import.tsx:845
+#: src/components/transactions/broker-note-import.tsx:1150
 #: src/components/transactions/broker-note-list.tsx:446
 #: src/components/transactions/transaction-history.tsx:331
 msgid "transactions.colFees"
@@ -3318,7 +3342,7 @@ msgid "transactions.import"
 msgstr "Importar"
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:343
+#: src/components/transactions/broker-note-import.tsx:535
 msgid "brokerNotes.importTitle"
 msgstr "Importar notas de corretagem"
 
@@ -3328,7 +3352,7 @@ msgid "transactions.importTitle"
 msgstr "Importar posições"
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:737
+#: src/components/transactions/broker-note-import.tsx:1042
 msgid "brokerNotes.selectNote"
 msgstr "Importar a nota {broker} de {date}"
 
@@ -3408,7 +3432,7 @@ msgid "detailedPositions.subtitle"
 msgstr "Analise sua carteira em uma visão densa e personalizável. Escolha um padrão ou selecione exatamente quais colunas exibir."
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:503
+#: src/components/transactions/broker-note-import.tsx:755
 msgid "brokerNotes.securitiesHint"
 msgstr "O Inter imprime o nome de pregão em vez do ticker. Confirme cada ticker uma vez; as próximas notas reaproveitam."
 
@@ -3929,7 +3953,7 @@ msgid "brokerNotes.statusBlocked"
 msgstr "Requer atenção"
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:772
+#: src/components/transactions/broker-note-import.tsx:1077
 #: src/components/transactions/broker-note-list.tsx:133
 #: src/components/transactions/broker-note-list.tsx:403
 msgid "brokerNotes.net"
@@ -3946,7 +3970,7 @@ msgid "splits.to"
 msgstr "Ações novas"
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:585
+#: src/components/transactions/broker-note-import.tsx:837
 msgid "brokerNotes.newTickersTitle"
 msgstr "Tickers novos"
 
@@ -4177,7 +4201,7 @@ msgstr "A fonte selecionada não publicou eventos futuros."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: note.noteNumber
-#: src/components/transactions/broker-note-import.tsx:749
+#: src/components/transactions/broker-note-import.tsx:1054
 msgid "brokerNotes.noteNumber"
 msgstr "Nº {0}"
 
@@ -4232,7 +4256,7 @@ msgid "allocation.reviewNotes"
 msgstr "Anotações"
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:644
+#: src/components/transactions/broker-note-import.tsx:898
 msgid "brokerNotes.notesTitle"
 msgstr "Notas encontradas"
 
@@ -4257,7 +4281,12 @@ msgid "allocation.statusRadar"
 msgstr "No radar"
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:204
+#: src/components/transactions/broker-note-import.tsx:916
+msgid "brokerNotes.onlyAttention"
+msgstr "Só as notas que requerem atenção"
+
+#. js-lingui-explicit-id
+#: src/components/transactions/broker-note-import.tsx:341
 msgid "brokerNotes.notPdfToast"
 msgstr "Só arquivos PDF podem ser importados: {names}"
 
@@ -4582,7 +4611,7 @@ msgid "allocation.sales.descriptionV2"
 msgstr "Posições com preço acima do seu fair value que passaram mais de {0} do alvo da venda, reduzidas em direção a ele. O alvo da venda nunca fica abaixo do que o valuation do próprio ativo justifica. Apenas sugestão: nada é salvo até você registrar a venda."
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:879
+#: src/components/transactions/broker-note-import.tsx:1184
 msgid "brokerNotes.possibleDuplicate"
 msgstr "Possível duplicata de uma operação manual"
 
@@ -4609,7 +4638,7 @@ msgstr "Página anterior"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/asset-movements.tsx:176
-#: src/components/transactions/broker-note-import.tsx:842
+#: src/components/transactions/broker-note-import.tsx:1147
 #: src/components/transactions/transaction-history.tsx:328
 msgid "transactions.colPrice"
 msgstr "Preço"
@@ -4678,7 +4707,7 @@ msgid "dividends.disclaimer"
 msgstr "Eventos do provedor não confirmam o crédito da corretora. Os valores não incluem impostos nem ajustes da corretora."
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:760
+#: src/components/transactions/broker-note-import.tsx:1065
 #: src/components/transactions/broker-note-list.tsx:379
 msgid "brokerNotes.purchases"
 msgstr "Compras"
@@ -4692,7 +4721,7 @@ msgstr "Quantidade"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/asset-movements.tsx:173
-#: src/components/transactions/broker-note-import.tsx:839
+#: src/components/transactions/broker-note-import.tsx:1144
 #: src/components/transactions/broker-note-list.tsx:435
 #: src/components/transactions/transaction-history.tsx:249
 #: src/components/transactions/transaction-history.tsx:325
@@ -4794,9 +4823,9 @@ msgid "documentation.contribution.exampleSmallTitle"
 msgstr "R$ 2.000 em uma carteira de R$ 50.000"
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:417
-msgid "brokerNotes.reading"
-msgstr "Lendo as notas…"
+#: src/components/transactions/broker-note-import.tsx:613
+msgid "brokerNotes.readingProgress"
+msgstr "Lendo {done} de {total} arquivos…"
 
 #. js-lingui-explicit-id
 #: src/components/transactions/broker-note-labels.tsx:36
@@ -4968,7 +4997,7 @@ msgid "documentation.formula.releasedCost"
 msgstr "custo baixado = quantidade vendida × preço médio atual"
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:451
+#: src/components/transactions/broker-note-import.tsx:674
 msgid "brokerNotes.removeFile"
 msgstr "Remover {name}"
 
@@ -5193,7 +5222,7 @@ msgid "allocation.sales.title"
 msgstr "Sugestões de venda"
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:764
+#: src/components/transactions/broker-note-import.tsx:1069
 #: src/components/transactions/broker-note-list.tsx:385
 msgid "brokerNotes.sales"
 msgstr "Vendas"
@@ -5244,7 +5273,7 @@ msgid "theme.editor.save"
 msgstr "Salvar tema"
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:530
+#: src/components/transactions/broker-note-import.tsx:782
 msgid "brokerNotes.savedMapping"
 msgstr "Salvo de uma nota anterior"
 
@@ -5297,7 +5326,7 @@ msgid "allocation.search"
 msgstr "Buscar ticker…"
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:830
+#: src/components/transactions/broker-note-import.tsx:1135
 #: src/components/transactions/broker-note-list.tsx:426
 msgid "brokerNotes.colSecurity"
 msgstr "Ativo"
@@ -5314,19 +5343,29 @@ msgid "categories.selectTicker"
 msgstr "Selecionar {0}"
 
 #. js-lingui-explicit-id
+#: src/components/transactions/broker-note-import.tsx:936
+msgid "brokerNotes.selectAllReady"
+msgstr "Selecionar todas as prontas"
+
+#. js-lingui-explicit-id
 #: src/routes/_app/categories.tsx:526
 msgid "categories.selectAll"
 msgstr "Selecionar todos os tickers visíveis"
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:239
+#: src/components/transactions/broker-note-import.tsx:383
 msgid "brokerNotes.tooManyFiles"
 msgstr "Selecione no máximo {max} arquivos por vez."
 
 #. js-lingui-explicit-id
+#: src/components/transactions/broker-note-import.tsx:947
+msgid "brokerNotes.selectNone"
+msgstr "Desmarcar todas"
+
+#. js-lingui-explicit-id
 #: src/lib/trpcErrors.ts:317
 msgid "brokerNotes.filesInvalid"
-msgstr "Selecione no máximo 20 PDFs de até 5 MB cada."
+msgstr "Selecione PDFs de até 5 MB cada, no máximo 500 por vez."
 
 #. js-lingui-explicit-id
 #: src/routes/_app/categories.tsx:385
@@ -5334,7 +5373,7 @@ msgid "categories.assetsHint"
 msgstr "Selecione vários tickers e mova-os juntos quando a lista for longa."
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:346
+#: src/components/transactions/broker-note-import.tsx:538
 msgid "brokerNotes.importHint"
 msgstr "Selecione os PDFs das notas da sua corretora. Cada nota é conferida com os próprios totais antes de qualquer importação, e suas operações só podem ser removidas excluindo a nota."
 
@@ -5463,7 +5502,7 @@ msgstr "Tipo"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/asset-movements.tsx:170
-#: src/components/transactions/broker-note-import.tsx:836
+#: src/components/transactions/broker-note-import.tsx:1141
 #: src/components/transactions/broker-note-list.tsx:432
 #: src/components/transactions/transaction-history.tsx:243
 #: src/components/transactions/transaction-history.tsx:319
@@ -5563,7 +5602,12 @@ msgid "allocation.sales.sold"
 msgstr "Vendido no mês"
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:469
+#: src/lib/trpcErrors.ts:345
+msgid "brokerNotes.readFailed"
+msgstr "Alguns arquivos não puderam ser enviados. Você pode tentar de novo."
+
+#. js-lingui-explicit-id
+#: src/components/transactions/broker-note-import.tsx:722
 msgid "brokerNotes.fileErrorsTitle"
 msgstr "Alguns arquivos não foram lidos"
 
@@ -5578,7 +5622,7 @@ msgid "detailedPositions.fxPending"
 msgstr "Algumas operações ainda não têm o USD/BRL da data e são convertidas pela cotação de hoje."
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:816
+#: src/components/transactions/broker-note-import.tsx:1121
 msgid "brokerNotes.possibleDuplicates"
 msgstr "Algumas operações coincidem com operações que você registrou manualmente no mesmo dia. Importá-las as contaria duas vezes; exclua as manuais se esta nota as substitui."
 
@@ -5886,6 +5930,11 @@ msgid "documentation.comparisons.dailyPercent"
 msgstr "O percentual da carteira é essa variação dividida pelo valor comparável de ontem, incluindo o caixa. Não é o retorno nativo de cada ticker, nem o resultado em aberto contra o custo médio móvel."
 
 #. js-lingui-explicit-id
+#: src/components/transactions/broker-note-import.tsx:314
+msgid "brokerNotes.readingExpired"
+msgstr "A leitura destes arquivos expirou. Lendo de novo antes de continuar."
+
+#. js-lingui-explicit-id
 #: src/components/score-documentation.tsx:423
 msgid "documentation.score.pipelineNextV2"
 msgstr "A escada de regras então bloqueia, reduz ou pontua a lacuna relativa vezes a prioridade."
@@ -5962,7 +6011,7 @@ msgid "brokerNotes.importConflict"
 msgstr "Estas notas ou seus tickers mudaram nesse meio-tempo. Elas foram verificadas de novo; revise antes de importar."
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:588
+#: src/components/transactions/broker-note-import.tsx:840
 msgid "brokerNotes.newTickersHint"
 msgstr "Estes tickers ainda não têm operações. Confirme a classe de cada um."
 
@@ -6085,7 +6134,7 @@ msgid "transactions.ticker"
 msgstr "Ticker"
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:833
+#: src/components/transactions/broker-note-import.tsx:1138
 #: src/components/transactions/broker-note-list.tsx:429
 #: src/components/transactions/transaction-history.tsx:233
 #: src/components/transactions/transaction-history.tsx:316
@@ -6135,7 +6184,7 @@ msgid "categories.renameHint"
 msgstr "Os tickers desta categoria mantêm a atribuição."
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:564
+#: src/components/transactions/broker-note-import.tsx:816
 msgid "brokerNotes.staleHint"
 msgstr "Os tickers mudaram. Verifique as notas de novo antes de importar."
 
@@ -6145,7 +6194,7 @@ msgid "categories.deleteHint"
 msgstr "Os tickers desta categoria ficam sem categoria. A categoria em si é removida."
 
 #. js-lingui-explicit-id
-#: src/components/transactions/broker-note-import.tsx:498
+#: src/components/transactions/broker-note-import.tsx:750
 msgid "brokerNotes.securitiesTitle"
 msgstr "Tickers das notas da B3"
 
@@ -6206,7 +6255,7 @@ msgstr "Maiores perdas"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/asset-movements.tsx:182
-#: src/components/transactions/broker-note-import.tsx:848
+#: src/components/transactions/broker-note-import.tsx:1153
 #: src/components/transactions/broker-note-list.tsx:449
 #: src/components/transactions/transaction-history.tsx:257
 #: src/components/transactions/transaction-history.tsx:334
@@ -6319,6 +6368,11 @@ msgstr "Banda de redução (relativa)"
 #: src/components/score-documentation.tsx:112
 msgid "documentation.score.trackRecordRetry"
 msgstr "Tentar novamente"
+
+#. js-lingui-explicit-id
+#: src/components/transactions/broker-note-import.tsx:713
+msgid "brokerNotes.retryFailed"
+msgstr "Tentar de novo"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/allocation-filters.tsx:238

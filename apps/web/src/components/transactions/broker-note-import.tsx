@@ -3,10 +3,11 @@ import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import {
   BROKER_NOTE_ASSET_CLASSES,
-  type BrokerNoteFileError,
   type BrokerNotePreview,
   type BrokerNotePreviewNote,
+  type BrokerNoteReadFile,
   b3TickerSchema,
+  MAX_BROKER_NOTE_DOCUMENTS,
   MAX_BROKER_NOTE_FILE_BYTES,
   MAX_BROKER_NOTE_FILES,
 } from "@portifolio-tracker/shared";
@@ -20,7 +21,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { type DragEvent, useMemo, useRef, useState } from "react";
+import { type DragEvent, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { assetClassText, SideLabel } from "@/components/asset-labels";
 import { AssetLink } from "@/components/asset-link";
@@ -36,6 +37,7 @@ import {
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -43,6 +45,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -61,6 +64,8 @@ import {
 import {
   brokerNoteImportErrorMessage,
   brokerNotePreviewErrorMessage,
+  brokerNoteReadErrorMessage,
+  isBrokerNoteReadingExpired,
 } from "@/lib/trpcErrors";
 import { cn } from "@/lib/utils";
 import {
@@ -70,11 +75,21 @@ import {
   brokerNoteIssueText,
 } from "./broker-note-labels";
 
-type SelectedFile = {
+/**
+ * Bytes sent per read request. Files are read in small batches so a folder
+ * of hundreds of notes never becomes one huge upload.
+ */
+const READ_BATCH_BYTES = 6 * 1024 * 1024;
+
+type FileEntry = {
   key: string;
   name: string;
   size: number;
-  contentBase64: string;
+  /** Kept to read the file again if the server's reading expires. */
+  file: File;
+  status: "queued" | "reading" | "read" | "failed";
+  /** What the server read; `null` until read. */
+  result: BrokerNoteReadFile | null;
 };
 
 type NoteClass = (typeof BROKER_NOTE_ASSET_CLASSES)[number];
@@ -116,10 +131,26 @@ function formatFileSize(bytes: number): string {
     : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/** The next queued files that fit one read request. */
+function nextBatch(entries: readonly FileEntry[]): FileEntry[] {
+  const batch: FileEntry[] = [];
+  let bytes = 0;
+
+  for (const entry of entries) {
+    if (entry.status !== "queued") continue;
+    if (batch.length >= MAX_BROKER_NOTE_FILES) break;
+    if (batch.length > 0 && bytes + entry.size > READ_BATCH_BYTES) break;
+    batch.push(entry);
+    bytes += entry.size;
+  }
+
+  return batch;
+}
+
 /**
- * Upload, review and import of broker notes. The API reads the PDFs; this
- * screen only collects ticker mappings, classes for new tickers and the
- * notes to import, then sends the same files again to import them.
+ * Upload, review and import of broker notes. Files are read by the API in
+ * small batches and come back as signed notes; the preview and the import
+ * send those notes, not the PDFs, so hundreds of files are uploaded once.
  */
 export function BrokerNoteImport({
   onImported,
@@ -131,47 +162,81 @@ export function BrokerNoteImport({
   /** Nested drag enter/leave events, so children do not end the hover. */
   const dragDepth = useRef(0);
   const [dragging, setDragging] = useState(false);
-  const [files, setFiles] = useState<SelectedFile[]>([]);
+  const [entries, setEntries] = useState<FileEntry[]>([]);
+  /** Source of truth for the async reading loop, mirrored into state. */
+  const entriesRef = useRef<FileEntry[]>([]);
+  /** Bumped by Clear so a reading loop in flight stops touching state. */
+  const generation = useRef(0);
+  const readingLoop = useRef(false);
+  const [reading, setReading] = useState(false);
   const [mappings, setMappings] = useState<Record<string, string>>({});
+  const mappingsRef = useRef(mappings);
   const [classes, setClasses] = useState<Record<string, NoteClass>>({});
   const [preview, setPreview] = useState<BrokerNotePreview | null>(null);
+  /** Only the latest preview request may replace the shown preview. */
+  const previewSequence = useRef(0);
   /** The mappings the shown preview was computed with. */
   const [previewMappings, setPreviewMappings] = useState<string>("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [onlyAttention, setOnlyAttention] = useState(false);
 
-  const previewMutation = trpc.brokerNotes.preview.useMutation({
-    onError: (error) => toast.error(brokerNotePreviewErrorMessage(error)),
+  useEffect(() => {
+    mappingsRef.current = mappings;
+  }, [mappings]);
+
+  const readMutation = trpc.brokerNotes.read.useMutation({
+    onError: (error) =>
+      toast.error(brokerNoteReadErrorMessage(error), {
+        id: "broker-note-read",
+      }),
   });
-  const importMutation = trpc.brokerNotes.import.useMutation({
-    onError: (error) => toast.error(brokerNoteImportErrorMessage(error)),
-  });
+  const previewMutation = trpc.brokerNotes.preview.useMutation();
+  const importMutation = trpc.brokerNotes.import.useMutation();
 
   const mappingInput = useMemo(() => mappingList(mappings), [mappings]);
   const mappingKey = JSON.stringify(mappingInput);
   const stale = preview !== null && mappingKey !== previewMappings;
 
-  async function runPreview(nextFiles: SelectedFile[]) {
-    if (nextFiles.length === 0) {
+  function commit(next: FileEntry[]) {
+    entriesRef.current = next;
+    setEntries(next);
+  }
+
+  /** Reads the server's verdict again; reruns automatically after reading. */
+  async function runPreview() {
+    const sequence = ++previewSequence.current;
+    const documents = entriesRef.current.flatMap((entry) =>
+      entry.result?.document ? [entry.result.document] : [],
+    );
+
+    if (documents.length === 0) {
       setPreview(null);
       setSelected(new Set());
       return;
     }
 
-    const result = await previewMutation
-      .mutateAsync({
-        files: nextFiles.map(({ name, contentBase64 }) => ({
-          name,
-          contentBase64,
-        })),
-        mappings: mappingInput,
-      })
-      .catch(() => null);
+    const current = mappingsRef.current;
+    let result: BrokerNotePreview;
 
-    if (!result) return;
+    try {
+      result = await previewMutation.mutateAsync({
+        documents,
+        mappings: mappingList(current),
+      });
+    } catch (error) {
+      if (isBrokerNoteReadingExpired(error)) {
+        rereadAll();
+      } else {
+        toast.error(brokerNotePreviewErrorMessage(error));
+      }
+      return;
+    }
+
+    if (sequence !== previewSequence.current) return;
 
     // Saved mappings come back resolved; showing them in the form does not
     // change what the preview was computed with.
-    const next = { ...mappings };
+    const next = { ...current };
     for (const security of result.securities) {
       if (next[security.sourceKey] === undefined && security.ticker) {
         next[security.sourceKey] = security.ticker;
@@ -190,11 +255,83 @@ export function BrokerNoteImport({
     );
   }
 
-  async function addFiles(list: FileList | null) {
+  /** Sends queued files batch by batch, then previews everything read. */
+  async function readQueue() {
+    if (readingLoop.current) return;
+
+    const run = generation.current;
+    readingLoop.current = true;
+    setReading(true);
+
+    for (;;) {
+      const batch = nextBatch(entriesRef.current);
+      if (batch.length === 0) break;
+
+      const keys = new Set(batch.map((entry) => entry.key));
+      commit(
+        entriesRef.current.map((entry) =>
+          keys.has(entry.key) ? { ...entry, status: "reading" } : entry,
+        ),
+      );
+
+      let results: BrokerNoteReadFile[] | null = null;
+      try {
+        const files = await Promise.all(
+          batch.map(async (entry) => ({
+            name: entry.name,
+            contentBase64: await readBase64(entry.file),
+          })),
+        );
+        results = await readMutation.mutateAsync({ files });
+      } catch {
+        results = null;
+      }
+
+      if (run !== generation.current) return;
+
+      // The API answers in request order, one result per file.
+      commit(
+        entriesRef.current.map((entry) => {
+          const index = batch.findIndex((item) => item.key === entry.key);
+          if (index < 0) return entry;
+
+          const result = results?.[index] ?? null;
+          return result
+            ? { ...entry, status: "read", result }
+            : { ...entry, status: "failed", result: null };
+        }),
+      );
+    }
+
+    readingLoop.current = false;
+    setReading(false);
+    await runPreview();
+  }
+
+  /** The server restarted and its signatures expired: read everything again. */
+  function rereadAll() {
+    toast.info(
+      t({
+        id: "brokerNotes.readingExpired",
+        message:
+          "The reading of these files expired. Reading them again before you continue.",
+      }),
+    );
+    setPreview(null);
+    commit(
+      entriesRef.current.map((entry) => ({
+        ...entry,
+        status: "queued",
+        result: null,
+      })),
+    );
+    void readQueue();
+  }
+
+  function addFiles(list: FileList | null) {
     if (!list || list.length === 0) return;
 
     const incoming = [...list];
-    const accepted: SelectedFile[] = [];
     const rejected = incoming.filter((file) => !isPdfFile(file));
 
     // A drop bypasses the input's `accept`; only PDFs go to the API.
@@ -208,10 +345,15 @@ export function BrokerNoteImport({
       );
     }
 
+    const known = new Set(entriesRef.current.map((entry) => entry.key));
+    const added: FileEntry[] = [];
+
     for (const file of incoming.filter(isPdfFile)) {
       const key = `${file.name}:${file.size}:${file.lastModified}`;
 
-      if (files.some((existing) => existing.key === key)) continue;
+      if (known.has(key)) continue;
+      known.add(key);
+
       if (file.size > MAX_BROKER_NOTE_FILE_BYTES) {
         const name = file.name;
         toast.error(
@@ -223,18 +365,20 @@ export function BrokerNoteImport({
         continue;
       }
 
-      accepted.push({
+      added.push({
         key,
         name: file.name,
         size: file.size,
-        contentBase64: await readBase64(file),
+        file,
+        status: "queued",
+        result: null,
       });
     }
 
-    const next = [...files, ...accepted].slice(0, MAX_BROKER_NOTE_FILES);
+    const room = MAX_BROKER_NOTE_DOCUMENTS - entriesRef.current.length;
 
-    if (files.length + accepted.length > MAX_BROKER_NOTE_FILES) {
-      const max = MAX_BROKER_NOTE_FILES;
+    if (added.length > room) {
+      const max = MAX_BROKER_NOTE_DOCUMENTS;
       toast.warning(
         t({
           id: "brokerNotes.tooManyFiles",
@@ -243,44 +387,65 @@ export function BrokerNoteImport({
       );
     }
 
-    setFiles(next);
-    await runPreview(next);
+    const accepted = added.slice(0, Math.max(0, room));
+    if (accepted.length === 0) return;
+
+    commit([...entriesRef.current, ...accepted]);
+    void readQueue();
   }
 
-  async function removeFile(key: string) {
-    const next = files.filter((file) => file.key !== key);
-    setFiles(next);
-    await runPreview(next);
+  function removeFile(key: string) {
+    commit(entriesRef.current.filter((entry) => entry.key !== key));
+    if (!readingLoop.current) void runPreview();
+  }
+
+  function retryFailed() {
+    commit(
+      entriesRef.current.map((entry) =>
+        entry.status === "failed" ? { ...entry, status: "queued" } : entry,
+      ),
+    );
+    void readQueue();
   }
 
   function reset() {
-    setFiles([]);
+    generation.current += 1;
+    previewSequence.current += 1;
+    readingLoop.current = false;
+    setReading(false);
+    commit([]);
     setPreview(null);
     setSelected(new Set());
     setClasses({});
     setPreviewMappings("");
+    setOnlyAttention(false);
   }
 
   async function importSelected() {
     if (!preview || selected.size === 0 || stale) return;
 
-    const result = await importMutation
-      .mutateAsync({
-        files: files.map(({ name, contentBase64 }) => ({
-          name,
-          contentBase64,
-        })),
+    const documents = entriesRef.current.flatMap((entry) =>
+      entry.result?.document ? [entry.result.document] : [],
+    );
+    let result: { notes: number; transactions: number };
+
+    try {
+      result = await importMutation.mutateAsync({
+        documents,
         mappings: mappingInput,
         assetClasses: preview.newTickers.map((entry) => ({
           ticker: entry.ticker,
           assetClass: classes[entry.ticker] ?? entry.assetClass,
         })),
         fingerprints: [...selected],
-      })
-      .catch(() => null);
-
-    if (!result) {
-      await runPreview(files);
+      });
+    } catch (error) {
+      if (isBrokerNoteReadingExpired(error)) {
+        rereadAll();
+      } else {
+        toast.error(brokerNoteImportErrorMessage(error));
+        await runPreview();
+      }
       return;
     }
 
@@ -302,13 +467,38 @@ export function BrokerNoteImport({
     await onImported();
   }
 
-  const fileErrors = preview?.files.filter((file) => file.error !== null) ?? [];
+  const total = entries.length;
+  const done = entries.filter(
+    (entry) => entry.status === "read" || entry.status === "failed",
+  ).length;
+  const failed = entries.filter((entry) => entry.status === "failed");
+  const fileErrors = entries.flatMap((entry) =>
+    entry.result?.error ? [entry.result] : [],
+  );
   const unmapped =
     preview?.securities.filter((security) => {
       const value = (mappings[security.sourceKey] ?? "").trim().toUpperCase();
       return !b3TickerSchema.safeParse(value).success;
     }).length ?? 0;
-  const busy = previewMutation.isPending || importMutation.isPending;
+  const busy = reading || previewMutation.isPending || importMutation.isPending;
+  const notes = useMemo(
+    () =>
+      [...(preview?.notes ?? [])].sort(
+        (a, b) =>
+          a.tradeDate.localeCompare(b.tradeDate) ||
+          a.fileName.localeCompare(b.fileName),
+      ),
+    [preview],
+  );
+  const counts = {
+    ready: notes.filter((note) => note.status === "ready").length,
+    blocked: notes.filter((note) => note.status === "blocked").length,
+    imported: notes.filter((note) => note.status === "imported").length,
+    duplicate: notes.filter((note) => note.status === "duplicate").length,
+  };
+  const shownNotes = onlyAttention
+    ? notes.filter((note) => note.status === "blocked")
+    : notes;
 
   const dropHandlers = {
     onDragEnter(event: DragEvent<HTMLElement>) {
@@ -320,7 +510,9 @@ export function BrokerNoteImport({
     onDragOver(event: DragEvent<HTMLElement>) {
       if (!draggingFiles(event)) return;
       event.preventDefault();
-      event.dataTransfer.dropEffect = busy ? "none" : "copy";
+      event.dataTransfer.dropEffect = importMutation.isPending
+        ? "none"
+        : "copy";
     },
     onDragLeave(event: DragEvent<HTMLElement>) {
       if (!draggingFiles(event)) return;
@@ -332,7 +524,7 @@ export function BrokerNoteImport({
       event.preventDefault();
       dragDepth.current = 0;
       setDragging(false);
-      if (!busy) void addFiles(event.dataTransfer.files);
+      if (!importMutation.isPending) addFiles(event.dataTransfer.files);
     },
   };
 
@@ -377,7 +569,7 @@ export function BrokerNoteImport({
             <Button
               type="button"
               variant="outline"
-              disabled={busy}
+              disabled={importMutation.isPending}
               onClick={() => fileInput.current?.click()}
             >
               <Upload className="size-4" aria-hidden="true" />
@@ -396,53 +588,84 @@ export function BrokerNoteImport({
                 }),
               )}
               onChange={(event) => {
-                void addFiles(event.target.files);
+                addFiles(event.target.files);
                 event.target.value = "";
               }}
             />
-            {files.length > 0 ? (
+            {total > 0 ? (
               <Button
                 type="button"
                 variant="ghost"
-                disabled={busy}
+                disabled={importMutation.isPending}
                 onClick={reset}
               >
                 <X className="size-4" aria-hidden="true" />
                 <Trans id="brokerNotes.clear">Clear</Trans>
               </Button>
             ) : null}
-            {previewMutation.isPending ? (
-              <span className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-                <Trans id="brokerNotes.reading">Reading notes…</Trans>
-              </span>
-            ) : null}
           </div>
         </div>
 
-        {files.length > 0 ? (
-          <ul className="flex flex-wrap gap-2" aria-live="polite">
-            {files.map((file) => {
-              const name = file.name;
-              const result = preview?.files.find(
-                (entry) => entry.fileName === file.name,
-              );
+        {reading ? (
+          <div className="space-y-2" role="status" aria-live="polite">
+            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+              <Trans id="brokerNotes.readingProgress">
+                Reading {done} of {total} files…
+              </Trans>
+            </p>
+            <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-primary transition-[width]"
+                style={{ width: `${total ? (done / total) * 100 : 0}%` }}
+              />
+            </div>
+          </div>
+        ) : previewMutation.isPending ? (
+          <p
+            className="flex items-center gap-2 text-sm text-muted-foreground"
+            role="status"
+          >
+            <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+            <Trans id="brokerNotes.checking">
+              Checking the notes against your trades…
+            </Trans>
+          </p>
+        ) : null}
+
+        {total > 0 ? (
+          <ul className="flex max-h-40 flex-wrap gap-2 overflow-y-auto">
+            {entries.map((entry) => {
+              const name = entry.name;
 
               return (
                 <li
-                  key={file.key}
+                  key={entry.key}
                   className={cn(
                     "flex max-w-full items-center gap-2 rounded-md border px-2 py-1 text-xs",
-                    result?.error && "border-loss/40",
+                    (entry.status === "failed" || entry.result?.error) &&
+                      "border-loss/40",
                   )}
                 >
-                  <FileText
-                    className="size-3.5 shrink-0 text-muted-foreground"
-                    aria-hidden="true"
-                  />
-                  <span className="truncate">{file.name}</span>
+                  {entry.status === "reading" ? (
+                    <Loader2
+                      className="size-3.5 shrink-0 animate-spin text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                  ) : entry.status === "failed" || entry.result?.error ? (
+                    <TriangleAlert
+                      className="size-3.5 shrink-0 text-loss"
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <FileText
+                      className="size-3.5 shrink-0 text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                  )}
+                  <span className="truncate">{entry.name}</span>
                   <span className="shrink-0 text-muted-foreground">
-                    {formatFileSize(file.size)}
+                    {formatFileSize(entry.size)}
                   </span>
                   <button
                     type="button"
@@ -452,7 +675,7 @@ export function BrokerNoteImport({
                       id: "brokerNotes.removeFile",
                       message: `Remove ${name}`,
                     })}
-                    onClick={() => void removeFile(file.key)}
+                    onClick={() => removeFile(entry.key)}
                   >
                     <X className="size-3.5" aria-hidden="true" />
                   </button>
@@ -460,6 +683,36 @@ export function BrokerNoteImport({
               );
             })}
           </ul>
+        ) : null}
+
+        {failed.length > 0 && !reading ? (
+          <div
+            role="status"
+            className="flex flex-wrap items-center gap-3 rounded-lg border border-loss/40 px-4 py-3 text-sm"
+          >
+            <p className="min-w-0 flex-1">
+              {t({
+                id: "brokerNotes.sendFailed",
+                message: plural(
+                  { count: failed.length },
+                  {
+                    one: "# file could not be sent to the server.",
+                    other: "# files could not be sent to the server.",
+                  },
+                ),
+              })}
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={busy}
+              onClick={retryFailed}
+            >
+              <RefreshCw className="size-4" aria-hidden="true" />
+              <Trans id="brokerNotes.retryFailed">Try again</Trans>
+            </Button>
+          </div>
         ) : null}
 
         {fileErrors.length > 0 ? (
@@ -471,21 +724,20 @@ export function BrokerNoteImport({
               </Trans>
             </AlertTitle>
             <AlertDescription>
-              <ul className="space-y-1">
-                {fileErrors.map((file) => (
-                  <li key={`${file.fileName}:${file.sha256}`}>
-                    <span className="font-medium">{file.fileName}</span>:{" "}
-                    {brokerNoteFileErrorText(
-                      file.error as BrokerNoteFileError,
-                      i18n,
-                    )}
-                    {file.errorDetail ? (
-                      <span className="block text-xs opacity-80">
-                        {file.errorDetail}
-                      </span>
-                    ) : null}
-                  </li>
-                ))}
+              <ul className="max-h-60 space-y-1 overflow-y-auto">
+                {fileErrors.map((file) =>
+                  file.error ? (
+                    <li key={`${file.fileName}:${file.sha256}`}>
+                      <span className="font-medium">{file.fileName}</span>:{" "}
+                      {brokerNoteFileErrorText(file.error, i18n)}
+                      {file.errorDetail ? (
+                        <span className="block text-xs opacity-80">
+                          {file.errorDetail}
+                        </span>
+                      ) : null}
+                    </li>
+                  ) : null,
+                )}
               </ul>
             </AlertDescription>
           </Alert>
@@ -570,7 +822,7 @@ export function BrokerNoteImport({
               size="sm"
               variant="outline"
               disabled={busy}
-              onClick={() => void runPreview(files)}
+              onClick={() => void runPreview()}
             >
               <RefreshCw className="size-4" aria-hidden="true" />
               <Trans id="brokerNotes.recheck">Check again</Trans>
@@ -638,13 +890,66 @@ export function BrokerNoteImport({
           </section>
         ) : null}
 
-        {preview && preview.notes.length > 0 ? (
+        {preview && notes.length > 0 ? (
           <section className="space-y-3">
-            <h3 className="text-sm font-medium">
-              <Trans id="brokerNotes.notesTitle">Notes found</Trans>
-            </h3>
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-medium">
+                  <Trans id="brokerNotes.notesTitle">Notes found</Trans>
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  <Trans id="brokerNotes.noteCounts">
+                    {counts.ready} ready · {counts.blocked} need attention ·{" "}
+                    {counts.imported} already imported · {counts.duplicate}{" "}
+                    repeated
+                  </Trans>
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <Switch
+                    id="broker-notes-attention"
+                    checked={onlyAttention}
+                    onCheckedChange={setOnlyAttention}
+                  />
+                  <Label htmlFor="broker-notes-attention" className="text-sm">
+                    <Trans id="brokerNotes.onlyAttention">
+                      Only notes that need attention
+                    </Trans>
+                  </Label>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={busy || stale || counts.ready === 0}
+                  onClick={() =>
+                    setSelected(
+                      new Set(
+                        notes
+                          .filter((note) => note.status === "ready")
+                          .map((note) => note.fingerprint),
+                      ),
+                    )
+                  }
+                >
+                  <Trans id="brokerNotes.selectAllReady">
+                    Select all ready
+                  </Trans>
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={busy || selected.size === 0}
+                  onClick={() => setSelected(new Set())}
+                >
+                  <Trans id="brokerNotes.selectNone">Select none</Trans>
+                </Button>
+              </div>
+            </div>
             <ul className="space-y-2">
-              {preview.notes.map((note) => (
+              {shownNotes.map((note) => (
                 <PreviewNoteRow
                   key={`${note.fileName}:${note.fingerprint}:${note.status}`}
                   note={note}

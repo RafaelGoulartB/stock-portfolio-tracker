@@ -1,11 +1,13 @@
 import { randomUUID } from "node:crypto";
+import type { ParsedBrokerNote } from "@portifolio-tracker/shared";
 import { TRPCError } from "@trpc/server";
 import { eq } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 import { sql as client, db } from "../../db";
 import { brokerNotes, transactions, users } from "../../db/schema";
+import { signPayload } from "../../lib/signed-payload";
 import type { Context } from "../context";
-import { brokerNotesRouter } from "./broker-notes";
+import { brokerNotesRouter, signatureScope } from "./broker-notes";
 import { transactionsRouter } from "./transactions";
 
 /**
@@ -165,6 +167,95 @@ describeIntegration("broker notes (Postgres integration)", () => {
         transactions: 1,
       });
       expect((await trades.list({ page: 0, pageSize: 10 })).total).toBe(0);
+    });
+  });
+
+  /** A B3 note with one 10 × 60,00 buy of a printed ticker. */
+  function parsedNote(): ParsedBrokerNote {
+    return {
+      format: "inter-dtvm-web",
+      currency: "BRL",
+      noteNumber: "123",
+      account: null,
+      tradeDate: "2026-01-05",
+      settlementDate: "2026-01-07",
+      trades: [
+        {
+          side: "buy",
+          sourceKey: "B3:VALE3",
+          description: "VALE3 ON",
+          ticker: "VALE3",
+          classHint: "stock_br",
+          quantity: "10",
+          executionPrice: "60.00",
+          grossValue: "600.00",
+          netValue: null,
+          market: "VIS",
+          flags: [],
+          settlementDate: "2026-01-07",
+          references: {},
+        },
+      ],
+      fees: [{ label: "Taxa de liquidação", amount: "0.15" }],
+      purchasesTotal: "600.00",
+      salesTotal: "0.00",
+      feesTotal: "0.15",
+      withheldTax: "0.00",
+      withheldTaxBase: null,
+      netAmount: "-600.15",
+    };
+  }
+
+  function signedDocument(userId: string, note = parsedNote()) {
+    const content = {
+      fileName: "nota.pdf",
+      sha256: "1".repeat(64),
+      notes: [note],
+    };
+
+    return {
+      ...content,
+      signature: signPayload(signatureScope(userId), content),
+    };
+  }
+
+  it("imports signed notes and refuses altered or foreign ones", async () => {
+    await withUser(async (userId) => {
+      const { notes, trades } = callers(userId);
+      const document = signedDocument(userId);
+      const preview = await notes.preview({ documents: [document] });
+
+      expect(preview.notes.map((note) => note.status)).toEqual(["ready"]);
+
+      const altered = {
+        ...document,
+        notes: [{ ...parsedNote(), purchasesTotal: "60.00" }],
+      };
+      expect(await codeOf(notes.preview({ documents: [altered] }))).toBe(
+        "UNPROCESSABLE_CONTENT",
+      );
+      expect(
+        await codeOf(
+          notes.preview({ documents: [signedDocument(randomUUID())] }),
+        ),
+      ).toBe("UNPROCESSABLE_CONTENT");
+
+      const fingerprint = preview.notes[0]?.fingerprint as string;
+      expect(
+        await notes.import({
+          documents: [document],
+          fingerprints: [fingerprint],
+        }),
+      ).toEqual({ notes: 1, transactions: 1 });
+
+      const [trade] = (await trades.list({ page: 0, pageSize: 10 })).items;
+      expect(trade).toMatchObject({
+        ticker: "VALE3",
+        quantity: "10.00000000",
+        price: "60.00000000",
+        fees: "0.15000000",
+        total: "600.15",
+      });
     });
   });
 });

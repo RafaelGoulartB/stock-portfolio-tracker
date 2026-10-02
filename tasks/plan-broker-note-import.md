@@ -102,10 +102,26 @@ document order). The preview runs the same plan without locks.
 
 ## Transport and limits
 
-Files travel as base64 in the tRPC mutation body: at most 20 files and 5 MB
-each. PDF.js runs with eval disabled and a page limit. Preview and import
-re-parse the uploaded bytes; the client only contributes ticker mappings,
-asset classes for new tickers, and the selection of notes.
+A folder of hundreds of notes is uploaded once, in batches:
+
+1. `brokerNotes.read` receives at most 10 PDFs (5 MB each; the browser also
+   caps a batch at about 6 MB) as base64 and returns, per file, either a
+   reason it was not read or its parsed notes signed with an HMAC bound to
+   the account. The browser sends batches one after another and shows the
+   progress.
+2. `brokerNotes.preview` and `brokerNotes.import` receive up to 500 signed
+   documents (a few KB each), verify every signature, and plan the whole
+   upload at once, so cross-batch coverage, duplicates and mappings are
+   judged together and the import stays all-or-nothing.
+
+The signing key is random per API process and never stored: a restart
+invalidates signatures, the API answers `UNPROCESSABLE_CONTENT`, and the
+browser reads the files again by itself. The browser can hold but not alter
+what the server read. The client contributes only ticker mappings, asset
+classes for new tickers, and the selection of notes. PDF.js runs with a page
+limit and no font or network access. Measured locally: 14 real PDFs read in
+under a second; preview of 250 notes in about 60 ms and their import with
+2,500 trades in under a second.
 
 ## Known limits
 
