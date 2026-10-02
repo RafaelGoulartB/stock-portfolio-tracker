@@ -178,6 +178,7 @@ describe("Inter DTVM SINACOR note", () => {
       salesTotal: "431.00",
       feesTotal: "0.98",
       withheldTax: "0.02",
+      dayTradeWithheldTax: "0.00",
       withheldTaxBase: "431.00",
       netAmount: "-2215.20",
       fees: [

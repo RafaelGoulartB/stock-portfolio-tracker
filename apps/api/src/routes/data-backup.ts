@@ -7,11 +7,15 @@ import {
   allocationAssets,
   assetCategories,
   assetReviews,
+  assetTaxProfiles,
   brokerNotes,
   brokerSecurityAliases,
   cashBalances,
   categories,
   corporateActions,
+  darfPayments,
+  foreignCashBalances,
+  incomeTaxSettings,
   transactions,
   userContributionPlanConfigs,
   userScoreConfigs,
@@ -128,6 +132,10 @@ const BACKUP_TABLES: Record<BackupEntity, string> = {
   scoreConfigs: "user_score_configs",
   contributionPlanConfigs: "user_contribution_plan_configs",
   brokerSecurityAliases: "broker_security_aliases",
+  incomeTaxSettings: "income_tax_settings",
+  darfPayments: "darf_payments",
+  assetTaxProfiles: "asset_tax_profiles",
+  foreignCashBalances: "foreign_cash_balances",
 };
 
 async function* exportBackup(userId: string): AsyncGenerator<string> {
@@ -229,7 +237,9 @@ async function* exportBackup(userId: string): AsyncGenerator<string> {
         trade_date as "tradeDate", settlement_date as "settlementDate",
         currency, purchases_total as "purchasesTotal",
         sales_total as "salesTotal", fees_total as "feesTotal",
-        withheld_tax as "withheldTax", net_amount as "netAmount", details,
+        withheld_tax as "withheldTax",
+        day_trade_withheld_tax as "dayTradeWithheldTax",
+        net_amount as "netAmount", details,
         created_at as "createdAt"
       from broker_notes where user_id = ${userId} order by id
     `.cursor(BATCH_SIZE)) {
@@ -259,7 +269,8 @@ async function* exportBackup(userId: string): AsyncGenerator<string> {
 
     for await (const rows of connection`
       select ticker, kind, effective_at as "effectiveAt",
-        from_quantity as "fromQuantity", to_quantity as "toQuantity", notes,
+        from_quantity as "fromQuantity", to_quantity as "toQuantity",
+        unit_cost as "unitCost", notes,
         created_at as "createdAt"
       from corporate_actions where user_id = ${userId} order by id
     `.cursor(BATCH_SIZE)) {
@@ -352,6 +363,64 @@ async function* exportBackup(userId: string): AsyncGenerator<string> {
       }
     }
 
+    for await (const rows of connection`
+      select start_year as "startYear", ordinary_loss as "ordinaryLoss",
+        day_trade_loss as "dayTradeLoss", fii_loss as "fiiLoss",
+        foreign_loss as "foreignLoss", pending_darf as "pendingDarf",
+        updated_at as "updatedAt"
+      from income_tax_settings where user_id = ${userId} order by user_id
+    `.cursor(BATCH_SIZE)) {
+      for (const data of rows) {
+        yield emit({
+          type: "record",
+          entity: "incomeTaxSettings",
+          data: serializeRow(data),
+        });
+      }
+    }
+
+    for await (const rows of connection`
+      select month, paid_on as "paidOn", amount,
+        created_at as "createdAt", updated_at as "updatedAt"
+      from darf_payments where user_id = ${userId} order by month
+    `.cursor(BATCH_SIZE)) {
+      for (const data of rows) {
+        yield emit({
+          type: "record",
+          entity: "darfPayments",
+          data: serializeRow(data),
+        });
+      }
+    }
+
+    for await (const rows of connection`
+      select ticker, legal_name as "legalName", cnpj, broker,
+        created_at as "createdAt", updated_at as "updatedAt"
+      from asset_tax_profiles where user_id = ${userId} order by ticker
+    `.cursor(BATCH_SIZE)) {
+      for (const data of rows) {
+        yield emit({
+          type: "record",
+          entity: "assetTaxProfiles",
+          data: serializeRow(data),
+        });
+      }
+    }
+
+    for await (const rows of connection`
+      select year, amount_usd as "amountUsd", value_brl as "valueBrl",
+        institution, updated_at as "updatedAt"
+      from foreign_cash_balances where user_id = ${userId} order by year
+    `.cursor(BATCH_SIZE)) {
+      for (const data of rows) {
+        yield emit({
+          type: "record",
+          entity: "foreignCashBalances",
+          data: serializeRow(data),
+        });
+      }
+    }
+
     yield encodeBackupLine({
       type: "checksum",
       algorithm: "sha256",
@@ -386,6 +455,10 @@ type ParsedBackup = {
   scoreConfigs: RecordData<"scoreConfigs">[];
   contributionPlanConfigs: RecordData<"contributionPlanConfigs">[];
   brokerSecurityAliases: RecordData<"brokerSecurityAliases">[];
+  incomeTaxSettings: RecordData<"incomeTaxSettings">[];
+  darfPayments: RecordData<"darfPayments">[];
+  assetTaxProfiles: RecordData<"assetTaxProfiles">[];
+  foreignCashBalances: RecordData<"foreignCashBalances">[];
 };
 
 /**
@@ -432,6 +505,10 @@ async function parseBackup(
     scoreConfigs: [],
     contributionPlanConfigs: [],
     brokerSecurityAliases: [],
+    incomeTaxSettings: [],
+    darfPayments: [],
+    assetTaxProfiles: [],
+    foreignCashBalances: [],
   };
   let lastEntityIndex = 0;
   let totalRecords = 0;
@@ -515,6 +592,18 @@ async function parseBackup(
       case "brokerSecurityAliases":
         parsed.brokerSecurityAliases.push(record.data);
         break;
+      case "incomeTaxSettings":
+        parsed.incomeTaxSettings.push(record.data);
+        break;
+      case "darfPayments":
+        parsed.darfPayments.push(record.data);
+        break;
+      case "assetTaxProfiles":
+        parsed.assetTaxProfiles.push(record.data);
+        break;
+      case "foreignCashBalances":
+        parsed.foreignCashBalances.push(record.data);
+        break;
     }
   }
 
@@ -528,6 +617,26 @@ async function parseBackup(
   if (parsed.contributionPlanConfigs.length > 1) {
     throw new Error("Backup contains more than one contribution plan config");
   }
+  if (parsed.incomeTaxSettings.length > 1) {
+    throw new Error("Backup contains more than one set of income tax balances");
+  }
+  const unique = (values: readonly (string | number)[], what: string) => {
+    if (new Set(values).size !== values.length) {
+      throw new Error(`Backup repeats ${what}`);
+    }
+  };
+  unique(
+    parsed.darfPayments.map((row) => row.month),
+    "a DARF payment month",
+  );
+  unique(
+    parsed.assetTaxProfiles.map((row) => row.ticker),
+    "a ticker's tax details",
+  );
+  unique(
+    parsed.foreignCashBalances.map((row) => row.year),
+    "a foreign cash year",
+  );
 
   // Replaying a backup must never smuggle in a state a live write would refuse.
   assertBackupTransactionsValid(parsed.transactions, parsed.corporateActions);
@@ -568,6 +677,16 @@ async function replaceAccountData(parsed: ParsedBackup, userId: string) {
     await tx
       .delete(userContributionPlanConfigs)
       .where(eq(userContributionPlanConfigs.userId, userId));
+    await tx
+      .delete(incomeTaxSettings)
+      .where(eq(incomeTaxSettings.userId, userId));
+    await tx.delete(darfPayments).where(eq(darfPayments.userId, userId));
+    await tx
+      .delete(assetTaxProfiles)
+      .where(eq(assetTaxProfiles.userId, userId));
+    await tx
+      .delete(foreignCashBalances)
+      .where(eq(foreignCashBalances.userId, userId));
 
     const categoryIdByRef = new Map<string, string>();
     for (let index = 0; index < parsed.categories.length; index += BATCH_SIZE) {
@@ -711,6 +830,39 @@ async function replaceAccountData(parsed: ParsedBackup, userId: string) {
             .slice(index, index + BATCH_SIZE)
             .map((row) => ({ ...row, userId })),
         );
+    }
+
+    if (parsed.incomeTaxSettings.length > 0) {
+      await tx
+        .insert(incomeTaxSettings)
+        .values(parsed.incomeTaxSettings.map((row) => ({ ...row, userId })));
+    }
+
+    // One row per month, ticker or year: bounded by the account's history.
+    if (parsed.darfPayments.length > 0) {
+      await tx
+        .insert(darfPayments)
+        .values(parsed.darfPayments.map((row) => ({ ...row, userId })));
+    }
+
+    for (
+      let index = 0;
+      index < parsed.assetTaxProfiles.length;
+      index += BATCH_SIZE
+    ) {
+      await tx
+        .insert(assetTaxProfiles)
+        .values(
+          parsed.assetTaxProfiles
+            .slice(index, index + BATCH_SIZE)
+            .map((row) => ({ ...row, userId })),
+        );
+    }
+
+    if (parsed.foreignCashBalances.length > 0) {
+      await tx
+        .insert(foreignCashBalances)
+        .values(parsed.foreignCashBalances.map((row) => ({ ...row, userId })));
     }
   });
 }

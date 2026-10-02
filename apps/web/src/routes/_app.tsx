@@ -53,7 +53,7 @@ function AppLayout() {
         >
           <Trans id="a11y.skipToContent">Skip to main content</Trans>
         </a>
-        <header className="border-b bg-background">
+        <header className="border-b bg-background print:hidden">
           <div className="mx-auto flex min-h-14 w-full max-w-6xl flex-wrap items-center gap-2 px-4 py-2 lg:h-14 lg:flex-nowrap lg:gap-6 lg:px-6 lg:py-0">
             <Link to="/positions" className="flex shrink-0 items-center gap-2">
               <BrandLogo className="size-6 shrink-0" />
@@ -89,7 +89,7 @@ function AppLayout() {
         >
           <Outlet />
         </main>
-        <footer className="mx-auto flex w-full max-w-6xl justify-end px-4 pb-4 sm:px-6">
+        <footer className="mx-auto flex w-full max-w-6xl justify-end px-4 pb-4 sm:px-6 print:hidden">
           <LogoDevAttribution />
         </footer>
       </div>

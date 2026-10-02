@@ -469,7 +469,7 @@ export function AssetDetailPage() {
             <AssetMovements row={row} ledger={ledger.data} />
           ) : null}
           {ledger.data && ledger.data.trades.length > 0 ? (
-            <AssetSplits ticker={ticker} />
+            <AssetSplits ticker={ticker} currency={ledger.data.currency} />
           ) : null}
         </>
       ) : null}

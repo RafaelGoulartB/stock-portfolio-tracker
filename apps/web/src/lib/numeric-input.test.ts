@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatDecimalInput,
   formatPercentInput,
+  multiplyToCents,
   parseDecimalInput,
   parsePercentInput,
   shiftDecimalPoint,
@@ -76,5 +77,14 @@ describe("formatDecimalInput", () => {
 
   it("returns an empty string for null", () => {
     expect(formatDecimalInput(null, "en")).toBe("");
+  });
+});
+
+describe("multiplyToCents", () => {
+  it("converts exactly and rounds half up to cents", () => {
+    expect(multiplyToCents("12.34", "5.5018")).toBe("67.89");
+    expect(multiplyToCents("0.1", "0.05")).toBe("0.01");
+    expect(multiplyToCents("1000", "5.50180000")).toBe("5501.80");
+    expect(multiplyToCents("0", "5.5")).toBe("0.00");
   });
 });

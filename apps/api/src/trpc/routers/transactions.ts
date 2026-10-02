@@ -155,6 +155,8 @@ const splitColumns = {
   effectiveAt: corporateActions.effectiveAt,
   fromQuantity: corporateActions.fromQuantity,
   toQuantity: corporateActions.toQuantity,
+  kind: corporateActions.kind,
+  unitCost: corporateActions.unitCost,
 };
 
 /**

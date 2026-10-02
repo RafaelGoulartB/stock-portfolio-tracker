@@ -191,6 +191,7 @@ function TransactionsPage() {
       utils.brokerNotes.list.invalidate(),
       utils.brokerNotes.get.invalidate(),
       utils.data.summary.invalidate(),
+      utils.incomeTax.invalidate(),
     ]);
   }
 

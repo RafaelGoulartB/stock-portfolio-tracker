@@ -209,7 +209,10 @@ export const parsedBrokerNoteSchema = z.object({
   salesTotal: parsedDecimal,
   /** Total costs; signed, a broker credit larger than fees is negative. */
   feesTotal: parsedDecimal,
+  /** All IRRF withheld: 0.005% on sales plus 1% on day-trade gains. */
   withheldTax: parsedDecimal,
+  /** The day-trade part of `withheldTax`. */
+  dayTradeWithheldTax: parsedDecimal,
   withheldTaxBase: parsedDecimal.nullable(),
   /** Signed settlement: positive is credited to the investor. */
   netAmount: parsedDecimal,

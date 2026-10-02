@@ -196,6 +196,7 @@ export function buildUsNotes(
         salesTotal: formatDecimal(sales, 2),
         feesTotal: formatDecimal(fees, 2),
         withheldTax: "0.00",
+        dayTradeWithheldTax: "0.00",
         withheldTaxBase: null,
         netAmount: formatDecimal(netAmount, 2),
       } satisfies ParsedBrokerNote;

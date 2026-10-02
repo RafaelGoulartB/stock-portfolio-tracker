@@ -527,6 +527,7 @@ export const brokerNotesRouter = router({
                 salesTotal: note.salesTotal,
                 feesTotal: note.feesTotal,
                 withheldTax: note.withheldTax,
+                dayTradeWithheldTax: note.dayTradeWithheldTax,
                 netAmount: note.netAmount,
                 details: {
                   version: 1,

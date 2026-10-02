@@ -201,6 +201,7 @@ describeIntegration("broker notes (Postgres integration)", () => {
       salesTotal: "0.00",
       feesTotal: "0.15",
       withheldTax: "0.00",
+      dayTradeWithheldTax: "0.00",
       withheldTaxBase: null,
       netAmount: "-600.15",
     };

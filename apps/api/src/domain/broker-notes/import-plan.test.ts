@@ -41,6 +41,7 @@ function note(partial: Partial<ParsedBrokerNote> = {}): ParsedBrokerNote {
     salesTotal: "0.00",
     feesTotal: "0.00",
     withheldTax: "0.00",
+    dayTradeWithheldTax: "0.00",
     withheldTaxBase: null,
     netAmount: "-600.00",
     ...partial,

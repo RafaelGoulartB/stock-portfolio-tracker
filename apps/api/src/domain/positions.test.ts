@@ -20,6 +20,7 @@ import {
   type TickerLedgerEntry,
   tickerCurrencies,
   tradeCashTotal,
+  unitsHeldBefore,
   valuePositions,
   withCashPosition,
 } from "./positions";
@@ -926,6 +927,43 @@ describe("splits", () => {
     fromQuantity: string,
     toQuantity: string,
   ): SplitEvent => ({ ticker: "PETR4", effectiveAt, fromQuantity, toQuantity });
+
+  it("counts units held the day before a date, in that date's units", () => {
+    const ledger = [
+      tx({ side: "buy", quantity: "100", tradedAt: "2026-01-05" }),
+      tx({ side: "sell", quantity: "30", tradedAt: "2026-02-05" }),
+      tx({ side: "buy", quantity: "10", tradedAt: "2026-04-05" }),
+      tx({ side: "buy", quantity: "999", tradedAt: "2026-05-05" }),
+    ];
+    const splits = [split("2026-03-01", "1", "2")];
+
+    // (100 - 30) × 2 + 10, before the bonus date; same-day trades excluded.
+    expect(unitsHeldBefore(ledger, splits, "PETR4", "2026-05-05")).toBe(
+      15_000_000_000n,
+    );
+    expect(unitsHeldBefore(ledger, splits, "PETR4", "2026-01-05")).toBe(0n);
+    expect(unitsHeldBefore(ledger, splits, "VALE3", "2026-12-31")).toBe(0n);
+  });
+
+  it("scales units for a bonus like a split and leaves cash cost alone", () => {
+    const [position] = consolidatePositions(
+      adjustForSplits(
+        [tx({ side: "buy", quantity: "100", price: "40" })],
+        [
+          {
+            ...split("2026-03-01", "100", "110"),
+            kind: "bonus",
+            unitCost: "18",
+          },
+        ],
+      ),
+    );
+
+    expect(position).toMatchObject({
+      quantity: "110.00000000",
+      investedCost: "4000.00",
+    });
+  });
 
   it("restates earlier units without changing the cost basis", () => {
     const ledger = adjustForSplits(

@@ -502,6 +502,7 @@ type Summary = {
   settlementDate: string;
   fees: BrokerNoteFee[];
   withheldTax: Decimal;
+  dayTradeWithheldTax: Decimal;
   withheldTaxBase: string | null;
   operationsTotal: string | null;
 };
@@ -585,6 +586,7 @@ function parseSummary(page: PdfPage): Summary {
     settlementDate: parseBrazilianDate(settlement),
     fees,
     withheldTax: add(abs(irrfValue), abs(dayTradeValue)),
+    dayTradeWithheldTax: abs(dayTradeValue),
     withheldTaxBase: irrfMatch?.[1] ? parseBrazilianAmount(irrfMatch[1]) : null,
     operationsTotal: operationsTotal?.amount ?? null,
   };
@@ -714,6 +716,7 @@ export function parseInterDtvm(
       salesTotal: formatDecimal(toDecimal(summary.sales), 2),
       feesTotal: formatDecimal(feesTotal, 2),
       withheldTax: formatDecimal(summary.withheldTax, 2),
+      dayTradeWithheldTax: formatDecimal(summary.dayTradeWithheldTax, 2),
       withheldTaxBase: summary.withheldTaxBase,
       netAmount: formatDecimal(summary.net, 2),
     } satisfies ParsedBrokerNote;

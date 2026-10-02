@@ -89,6 +89,10 @@ export const brokerNotes = pgTable(
     feesTotal: numeric("fees_total", DECIMAL).notNull(),
     /** Income tax withheld at source (IRRF); not a trade cost. */
     withheldTax: numeric("withheld_tax", DECIMAL).notNull().default("0"),
+    /** The day-trade part of `withheldTax` (1% IRRF on day-trade gains). */
+    dayTradeWithheldTax: numeric("day_trade_withheld_tax", DECIMAL)
+      .notNull()
+      .default("0"),
     /** Signed settlement amount: positive is credited to the investor. */
     netAmount: numeric("net_amount", DECIMAL).notNull(),
     /**
@@ -203,6 +207,11 @@ export const corporateActions = pgTable(
     effectiveAt: date("effective_at").notNull(),
     fromQuantity: numeric("from_quantity", DECIMAL).notNull(),
     toQuantity: numeric("to_quantity", DECIMAL).notNull(),
+    /**
+     * Bonus issues only: cost per new share the company attributed. Added
+     * to the income tax cost basis, never to the cash-paid positions cost.
+     */
+    unitCost: numeric("unit_cost", DECIMAL),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
@@ -274,6 +283,108 @@ export const cashBalances = pgTable("cash_balances", {
     .notNull()
     .defaultNow(),
 });
+
+/**
+ * Opening balances of the income tax assessment: the first assessed year and
+ * what was carried into it as declared. Everything else in the assessment is
+ * derived from the transactions. Absence means "start at the first trade,
+ * with nothing carried".
+ */
+export const incomeTaxSettings = pgTable("income_tax_settings", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  startYear: integer("start_year").notNull(),
+  ordinaryLoss: numeric("ordinary_loss", DECIMAL).notNull().default("0"),
+  dayTradeLoss: numeric("day_trade_loss", DECIMAL).notNull().default("0"),
+  fiiLoss: numeric("fii_loss", DECIMAL).notNull().default("0"),
+  foreignLoss: numeric("foreign_loss", DECIMAL).notNull().default("0"),
+  /** Tax below the DARF minimum, not paid yet. */
+  pendingDarf: numeric("pending_darf", DECIMAL).notNull().default("0"),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+/** A DARF (code 6015) the user paid for one assessed month, `YYYY-MM`. */
+export const darfPayments = pgTable(
+  "darf_payments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    month: text("month").notNull(),
+    paidOn: date("paid_on").notNull(),
+    amount: numeric("amount", DECIMAL).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("darf_payments_user_month_key").on(table.userId, table.month),
+  ],
+);
+
+/**
+ * Declaration facts about a ticker the ledger cannot derive: the issuer's
+ * legal name and CNPJ, and a broker overriding the one read from notes.
+ */
+export const assetTaxProfiles = pgTable(
+  "asset_tax_profiles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    ticker: text("ticker").notNull(),
+    legalName: text("legal_name"),
+    cnpj: text("cnpj"),
+    broker: text("broker"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("asset_tax_profiles_user_ticker_key").on(
+      table.userId,
+      table.ticker,
+    ),
+  ],
+);
+
+/**
+ * Dollars in a non-remunerated account abroad on 31 December of `year`, as
+ * declared: the balance and its value in reais.
+ */
+export const foreignCashBalances = pgTable(
+  "foreign_cash_balances",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    year: integer("year").notNull(),
+    amountUsd: numeric("amount_usd", DECIMAL).notNull(),
+    valueBrl: numeric("value_brl", DECIMAL).notNull(),
+    institution: text("institution"),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("foreign_cash_balances_user_year_key").on(
+      table.userId,
+      table.year,
+    ),
+  ],
+);
 
 /** One quarterly review of an asset: a grade, notes, fair value, or any mix. */
 export const assetReviews = pgTable(
@@ -444,6 +555,10 @@ export type BrokerSecurityAliasRow = typeof brokerSecurityAliases.$inferSelect;
 export type CorporateActionRow = typeof corporateActions.$inferSelect;
 export type AllocationAssetRow = typeof allocationAssets.$inferSelect;
 export type CashBalanceRow = typeof cashBalances.$inferSelect;
+export type IncomeTaxSettingsRow = typeof incomeTaxSettings.$inferSelect;
+export type DarfPaymentRow = typeof darfPayments.$inferSelect;
+export type AssetTaxProfileRow = typeof assetTaxProfiles.$inferSelect;
+export type ForeignCashBalanceRow = typeof foreignCashBalances.$inferSelect;
 export type AssetReviewRow = typeof assetReviews.$inferSelect;
 export type CategoryRow = typeof categories.$inferSelect;
 export type AssetCategoryRow = typeof assetCategories.$inferSelect;

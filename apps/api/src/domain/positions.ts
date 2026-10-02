@@ -1,5 +1,6 @@
 import type {
   AssetClass,
+  CorporateActionKind,
   Currency,
   CurrencyTotal,
   PortfolioSummary,
@@ -43,13 +44,19 @@ export type ConsolidationInput = {
   unitScale?: { to: string; from: string };
 };
 
-/** A recorded split: `fromQuantity` old shares become `toQuantity` new ones. */
+/**
+ * A recorded split or bonus issue: `fromQuantity` old shares become
+ * `toQuantity` new ones. Units scale the same way for both; only the income
+ * tax ledger reads `unitCost`, the cost a bonus share was attributed.
+ */
 export type SplitEvent = {
   ticker: string;
   /** First trading day in the new units. */
   effectiveAt: string;
   fromQuantity: string;
   toQuantity: string;
+  kind?: CorporateActionKind;
+  unitCost?: string | null;
 };
 
 /** Share units a trade represents today, after every later split. */
@@ -117,6 +124,45 @@ export function adjustForSplits<T extends ConsolidationInput>(
       },
     };
   });
+}
+
+/**
+ * Units of `ticker` held at the end of the day before `day`, in the units of
+ * that date: trades as traded, with every split before `day` applied when it
+ * happened. `entries` must not be adjusted with {@link adjustForSplits}.
+ */
+export function unitsHeldBefore(
+  entries: readonly ConsolidationInput[],
+  splits: readonly SplitEvent[],
+  ticker: string,
+  day: string,
+): Decimal {
+  const events = [
+    ...entries
+      .filter((entry) => entry.ticker === ticker && entry.tradedAt < day)
+      .map((entry) => ({ at: entry.tradedAt, order: 1, entry })),
+    ...splits
+      .filter((split) => split.ticker === ticker && split.effectiveAt < day)
+      .map((split) => ({ at: split.effectiveAt, order: 0, split })),
+  ].sort((a, b) => (a.at === b.at ? a.order - b.order : a.at < b.at ? -1 : 1));
+  let units = ZERO;
+
+  for (const event of events) {
+    if ("split" in event) {
+      units = div(
+        mul(units, toDecimal(event.split.toQuantity)),
+        toDecimal(event.split.fromQuantity),
+      );
+    } else {
+      const quantity = toDecimal(event.entry.quantity);
+      units =
+        event.entry.side === "buy"
+          ? add(units, quantity)
+          : sub(units, quantity);
+    }
+  }
+
+  return units;
 }
 
 /**

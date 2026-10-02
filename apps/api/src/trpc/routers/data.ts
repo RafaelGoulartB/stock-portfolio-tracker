@@ -5,11 +5,15 @@ import {
   allocationAssets,
   assetCategories,
   assetReviews,
+  assetTaxProfiles,
   brokerNotes,
   brokerSecurityAliases,
   cashBalances,
   categories,
   corporateActions,
+  darfPayments,
+  foreignCashBalances,
+  incomeTaxSettings,
   transactions,
   userContributionPlanConfigs,
   userScoreConfigs,
@@ -28,7 +32,11 @@ async function countForUser(
     | typeof userScoreConfigs
     | typeof userContributionPlanConfigs
     | typeof brokerNotes
-    | typeof brokerSecurityAliases,
+    | typeof brokerSecurityAliases
+    | typeof incomeTaxSettings
+    | typeof darfPayments
+    | typeof assetTaxProfiles
+    | typeof foreignCashBalances,
   userId: string,
 ) {
   const [row] = await db
@@ -52,6 +60,10 @@ export const dataRouter = router({
       corporateActionCount,
       brokerNoteCount,
       brokerSecurityAliasCount,
+      incomeTaxSettingsCount,
+      darfPaymentCount,
+      assetTaxProfileCount,
+      foreignCashBalanceCount,
     ] = await Promise.all([
       countForUser(transactions, ctx.user.id),
       countForUser(allocationAssets, ctx.user.id),
@@ -64,6 +76,10 @@ export const dataRouter = router({
       countForUser(corporateActions, ctx.user.id),
       countForUser(brokerNotes, ctx.user.id),
       countForUser(brokerSecurityAliases, ctx.user.id),
+      countForUser(incomeTaxSettings, ctx.user.id),
+      countForUser(darfPayments, ctx.user.id),
+      countForUser(assetTaxProfiles, ctx.user.id),
+      countForUser(foreignCashBalances, ctx.user.id),
     ]);
 
     return {
@@ -78,6 +94,10 @@ export const dataRouter = router({
       corporateActions: corporateActionCount,
       brokerNotes: brokerNoteCount,
       brokerSecurityAliases: brokerSecurityAliasCount,
+      incomeTaxSettings: incomeTaxSettingsCount,
+      darfPayments: darfPaymentCount,
+      assetTaxProfiles: assetTaxProfileCount,
+      foreignCashBalances: foreignCashBalanceCount,
     };
   }),
 
@@ -114,6 +134,18 @@ export const dataRouter = router({
         await tx
           .delete(userContributionPlanConfigs)
           .where(eq(userContributionPlanConfigs.userId, ctx.user.id));
+        await tx
+          .delete(incomeTaxSettings)
+          .where(eq(incomeTaxSettings.userId, ctx.user.id));
+        await tx
+          .delete(darfPayments)
+          .where(eq(darfPayments.userId, ctx.user.id));
+        await tx
+          .delete(assetTaxProfiles)
+          .where(eq(assetTaxProfiles.userId, ctx.user.id));
+        await tx
+          .delete(foreignCashBalances)
+          .where(eq(foreignCashBalances.userId, ctx.user.id));
       });
 
       return { ok: true as const };

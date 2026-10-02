@@ -262,6 +262,27 @@ export function splitErrorMessage(error: unknown): string {
   return i18n._(unknownError);
 }
 
+const bonusNoHolding = msg({
+  id: "splits.bonusNoHolding",
+  message: "No shares of this ticker were held the day before that date.",
+});
+
+const bonusUnsupported = msg({
+  id: "splits.bonusUnsupported",
+  message: "Bonus shares can only be recorded for B3 share-based assets.",
+});
+
+export function bonusErrorMessage(error: unknown): string {
+  const code = codeOf(error);
+
+  if (code === "PRECONDITION_FAILED") return i18n._(bonusNoHolding);
+  if (code === "CONFLICT") return i18n._(splitExists);
+  if (code === "BAD_REQUEST") return i18n._(bonusUnsupported);
+  if (isAuthCode(code)) return i18n._(sessionExpired);
+
+  return i18n._(unknownError);
+}
+
 export function removeTradeErrorMessage(error: unknown): string {
   const code = codeOf(error);
 

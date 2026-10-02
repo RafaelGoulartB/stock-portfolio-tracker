@@ -136,6 +136,7 @@ function note(partial: Partial<BrokerNoteData> = {}): BrokerNoteData {
     salesTotal: "0.00",
     feesTotal: "0.07",
     withheldTax: "0.00",
+    dayTradeWithheldTax: "0.00",
     netAmount: "-250.07",
     details: { version: 1, fees: [], withheldTaxBase: null, lines: [] },
     createdAt: new Date(Date.UTC(2026, 0, 2)),

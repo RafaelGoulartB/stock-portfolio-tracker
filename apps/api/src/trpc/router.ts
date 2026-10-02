@@ -8,6 +8,7 @@ import { dataRouter } from "./routers/data";
 import { devSeedRouter } from "./routers/dev-seed";
 import { dividendsRouter } from "./routers/dividends";
 import { fxRouter } from "./routers/fx";
+import { incomeTaxRouter } from "./routers/income-tax";
 import { performanceRouter } from "./routers/performance";
 import { positionsRouter } from "./routers/positions";
 import { quotesRouter } from "./routers/quotes";
@@ -26,6 +27,7 @@ export const appRouter = router({
   data: dataRouter,
   dividends: dividendsRouter,
   fx: fxRouter,
+  incomeTax: incomeTaxRouter,
   quotes: quotesRouter,
   scoreConfig: scoreConfigRouter,
   transactions: transactionsRouter,

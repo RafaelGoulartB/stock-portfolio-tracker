@@ -7,6 +7,7 @@ import {
   CURRENCIES,
   DEFAULT_CONTRIBUTION_PLAN_CONFIG,
   DEFAULT_SCORE_CONFIG,
+  normalizeCnpj,
   scoreConfigUpdateSchema,
   TRANSACTION_SIDES,
 } from "@portifolio-tracker/shared";
@@ -14,7 +15,7 @@ import { z } from "zod";
 import { formatDecimal, sub, toDecimal, ZERO } from "./decimal";
 
 export const BACKUP_FORMAT = "portifolio-tracker-backup";
-export const BACKUP_VERSION = 11;
+export const BACKUP_VERSION = 13;
 export const BACKUP_MEDIA_TYPE = "application/x-portifolio-backup+gzip";
 
 /**
@@ -47,6 +48,10 @@ export const BACKUP_ENTITIES = [
   "scoreConfigs",
   "contributionPlanConfigs",
   "brokerSecurityAliases",
+  "incomeTaxSettings",
+  "darfPayments",
+  "assetTaxProfiles",
+  "foreignCashBalances",
 ] as const;
 
 export type BackupEntity = (typeof BACKUP_ENTITIES)[number];
@@ -88,6 +93,10 @@ const backupCountsSchema = z.strictObject({
   scoreConfigs: z.number().int().nonnegative().default(0),
   contributionPlanConfigs: z.number().int().nonnegative().default(0),
   brokerSecurityAliases: z.number().int().nonnegative().default(0),
+  incomeTaxSettings: z.number().int().nonnegative().default(0),
+  darfPayments: z.number().int().nonnegative().default(0),
+  assetTaxProfiles: z.number().int().nonnegative().default(0),
+  foreignCashBalances: z.number().int().nonnegative().default(0),
 });
 
 export const manifestSchema = z.object({
@@ -105,6 +114,8 @@ export const manifestSchema = z.object({
     z.literal(9),
     z.literal(10),
     z.literal(11),
+    z.literal(12),
+    z.literal(13),
   ]),
   exportedAt: timestamp,
   counts: backupCountsSchema,
@@ -187,6 +198,8 @@ const brokerNoteRecord = z.strictObject({
     salesTotal: decimal,
     feesTotal: signedDecimal,
     withheldTax: decimal,
+    /** Added in v12; older notes count all of their IRRF as 0.005%. */
+    dayTradeWithheldTax: decimal.default("0"),
     netAmount: signedDecimal,
     details: brokerNoteDetailsSchema,
     createdAt: databaseTimestamp,
@@ -225,12 +238,24 @@ const corporateActionRecord = z.strictObject({
       effectiveAt: z.iso.date(),
       fromQuantity: positiveDecimal,
       toQuantity: positiveDecimal,
+      /** Added in v13: cost per bonus share; older backups hold splits only. */
+      unitCost: positiveDecimal.nullable().default(null),
       notes: z.string().nullable(),
       createdAt: databaseTimestamp,
     })
     .refine((row) => Number(row.fromQuantity) !== Number(row.toQuantity), {
       message: "A split must change the number of shares",
-    }),
+    })
+    .refine(
+      (row) =>
+        row.kind === "bonus"
+          ? row.unitCost !== null &&
+            Number(row.toQuantity) > Number(row.fromQuantity)
+          : row.unitCost === null,
+      {
+        message: "A bonus needs added shares and a unit cost; a split has none",
+      },
+    ),
 });
 
 const assetCategoryRecord = z.strictObject({
@@ -426,6 +451,68 @@ const brokerSecurityAliasRecord = z.strictObject({
   }),
 });
 
+/** Added in v12; older backups restore without opening balances. */
+const incomeTaxSettingsRecord = z.strictObject({
+  type: z.literal("record"),
+  entity: z.literal("incomeTaxSettings"),
+  data: z.strictObject({
+    startYear: z.number().int().min(2000).max(2100),
+    ordinaryLoss: decimal,
+    dayTradeLoss: decimal,
+    fiiLoss: decimal,
+    foreignLoss: decimal,
+    pendingDarf: decimal,
+    updatedAt: databaseTimestamp,
+  }),
+});
+
+const monthKey = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
+
+/** Added in v13. */
+const darfPaymentRecord = z.strictObject({
+  type: z.literal("record"),
+  entity: z.literal("darfPayments"),
+  data: z.strictObject({
+    month: monthKey,
+    paidOn: z.iso.date(),
+    amount: positiveDecimal,
+    createdAt: databaseTimestamp,
+    updatedAt: databaseTimestamp,
+  }),
+});
+
+/** Added in v13. */
+const assetTaxProfileRecord = z.strictObject({
+  type: z.literal("record"),
+  entity: z.literal("assetTaxProfiles"),
+  data: z.strictObject({
+    ticker: z.string().min(1),
+    legalName: z.string().min(1).max(160).nullable(),
+    cnpj: z
+      .string()
+      .nullable()
+      .refine((value) => value === null || normalizeCnpj(value) === value, {
+        message: "Invalid CNPJ",
+      }),
+    broker: z.string().min(1).max(160).nullable(),
+    createdAt: databaseTimestamp,
+    updatedAt: databaseTimestamp,
+  }),
+});
+
+/** Added in v13. */
+const foreignCashBalanceRecord = z.strictObject({
+  type: z.literal("record"),
+  entity: z.literal("foreignCashBalances"),
+  data: z.strictObject({
+    year: z.number().int().min(2000).max(2100),
+    amountUsd: decimal,
+    valueBrl: decimal,
+    institution: z.string().min(1).max(160).nullable(),
+    updatedAt: databaseTimestamp,
+  }),
+});
+
 export const backupRecordSchema = z.discriminatedUnion("entity", [
   categoryRecord,
   allocationAssetRecord,
@@ -438,6 +525,10 @@ export const backupRecordSchema = z.discriminatedUnion("entity", [
   scoreConfigRecord,
   contributionPlanConfigRecord,
   brokerSecurityAliasRecord,
+  incomeTaxSettingsRecord,
+  darfPaymentRecord,
+  assetTaxProfileRecord,
+  foreignCashBalanceRecord,
 ]);
 
 export type BackupRecord = z.infer<typeof backupRecordSchema>;
@@ -469,6 +560,10 @@ export function emptyBackupCounts(): BackupCounts {
     scoreConfigs: 0,
     contributionPlanConfigs: 0,
     brokerSecurityAliases: 0,
+    incomeTaxSettings: 0,
+    darfPayments: 0,
+    assetTaxProfiles: 0,
+    foreignCashBalances: 0,
   };
 }
 
