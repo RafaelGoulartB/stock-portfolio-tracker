@@ -53,9 +53,12 @@ function AppLayout() {
         >
           <Trans id="a11y.skipToContent">Skip to main content</Trans>
         </a>
-        <header className="border-b bg-background print:hidden">
+        <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:sticky lg:top-0 lg:z-40 print:hidden">
           <div className="mx-auto flex min-h-14 w-full max-w-6xl flex-wrap items-center gap-2 px-4 py-2 lg:h-14 lg:flex-nowrap lg:gap-6 lg:px-6 lg:py-0">
-            <Link to="/positions" className="flex shrink-0 items-center gap-2">
+            <Link
+              to="/allocation"
+              className="flex shrink-0 items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
               <BrandLogo className="size-6 shrink-0" />
               <span className="font-semibold tracking-tight">
                 <Trans id="shell.brand">Portfolio Tracker</Trans>
@@ -64,7 +67,7 @@ function AppLayout() {
 
             <nav
               aria-label={i18n._(msg({ id: "nav.main", message: "Main" }))}
-              className="order-3 flex w-full items-center gap-1 overflow-x-auto lg:order-none lg:w-auto"
+              className="order-3 grid w-full grid-cols-4 gap-1 lg:order-none lg:flex lg:w-auto lg:items-center"
             >
               <AppNav />
             </nav>

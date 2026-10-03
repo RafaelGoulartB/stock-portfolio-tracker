@@ -167,7 +167,7 @@ export function AssetDetailPage() {
       return;
     }
 
-    void navigate({ to: "/positions" });
+    void navigate({ to: "/allocation" });
   }
 
   return (

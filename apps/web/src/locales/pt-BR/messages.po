@@ -540,6 +540,16 @@ msgstr ""
 #~ msgstr "Localização"
 
 #. js-lingui-explicit-id
+#: src/components/app-nav.tsx:63
+#~ msgid "nav.results"
+#~ msgstr "Resultados"
+
+#. js-lingui-explicit-id
+#: src/components/app-nav.tsx:95
+#~ msgid "nav.tools"
+#~ msgstr "Ferramentas"
+
+#. js-lingui-explicit-id
 #. placeholder {0}: formatMonthLabel(month, locale)
 #: src/components/detailed-positions/toolbar.tsx:333
 #: src/components/positions/month-selector.tsx:40
@@ -1266,7 +1276,7 @@ msgid "allocation.title"
 msgstr "Alocação"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:203
+#: src/components/app-nav.tsx:228
 msgid "nav.allocation"
 msgstr "Alocação"
 
@@ -1324,6 +1334,11 @@ msgstr "Valor pago (R$)"
 #: src/components/documentation-dialog-body.tsx:649
 msgid "documentation.comparisons.dividendStatus"
 msgstr "Os valores são estimativas brutas: retenções, ajustes da corretora e liquidação confirmada não são modelados. Eventos com ex-date futura são anunciados; uma ex-date passada com pagamento futuro fica agendada; nos demais casos, o evento recebe o status de pagamento estimado. Esse último status é uma inferência, não uma confirmação de pagamento."
+
+#. js-lingui-explicit-id
+#: src/components/app-nav.tsx:75
+msgid "nav.analysis"
+msgstr "Análise"
 
 #. js-lingui-explicit-id
 #: src/components/transactions/book-holdings-panel.tsx:348
@@ -2608,7 +2623,7 @@ msgid "allocation.cycleMark"
 msgstr "Alternar cor de destaque de {0}"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:73
+#: src/components/app-nav.tsx:85
 msgid "nav.daily"
 msgstr "Diário"
 
@@ -2759,7 +2774,7 @@ msgid "deepFinder.title"
 msgstr "Deep Finder"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:78
+#: src/components/app-nav.tsx:90
 msgid "nav.deepFinder"
 msgstr "Deep Finder"
 
@@ -2884,7 +2899,7 @@ msgid "detailedPositions.title"
 msgstr "Posições detalhadas"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:56
+#: src/components/app-nav.tsx:58
 msgid "nav.detailedPositions"
 msgstr "Posições detalhadas"
 
@@ -3850,7 +3865,7 @@ msgid "dividends.title"
 msgstr "Proventos"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:83
+#: src/components/app-nav.tsx:102
 msgid "nav.dividends"
 msgstr "Proventos"
 
@@ -3858,6 +3873,11 @@ msgstr "Proventos"
 #: src/components/document-title.tsx:71
 msgid "document.income"
 msgstr "Proventos"
+
+#. js-lingui-explicit-id
+#: src/components/app-nav.tsx:97
+msgid "nav.incomeAndTax"
+msgstr "Proventos e IR"
 
 #. js-lingui-explicit-id
 #: src/components/dividends/charts.tsx:31
@@ -3890,8 +3910,13 @@ msgid "incomeTax.title"
 msgstr "Imposto de renda"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:88
+#: src/components/app-nav.tsx:107
 msgid "nav.incomeTax"
+msgstr "Imposto de renda"
+
+#. js-lingui-explicit-id
+#: src/components/document-title.tsx:74
+msgid "document.incomeTax"
 msgstr "Imposto de renda"
 
 #. js-lingui-explicit-id
@@ -4124,7 +4149,7 @@ msgid "documentation.score.field.tiltMin"
 msgstr "Inclinação mínima"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:66
+#: src/routes/_app.tsx:69
 msgid "nav.main"
 msgstr "Principal"
 
@@ -4440,12 +4465,12 @@ msgid "categories.title"
 msgstr "Minhas categorias"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:100
+#: src/components/app-nav.tsx:68
 msgid "nav.categories"
 msgstr "Minhas categorias"
 
 #. js-lingui-explicit-id
-#: src/components/document-title.tsx:74
+#: src/components/document-title.tsx:77
 msgid "document.categories"
 msgstr "Minhas categorias"
 
@@ -5108,7 +5133,7 @@ msgid "performance.title"
 msgstr "Rentabilidade"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:68
+#: src/components/app-nav.tsx:80
 msgid "nav.performance"
 msgstr "Rentabilidade"
 
@@ -5171,7 +5196,7 @@ msgid "settings.data.description"
 msgstr "Backups portáteis, restaurações, dados de teste e remoção de dados."
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:46
+#: src/components/app-nav.tsx:48
 msgid "nav.portfolio"
 msgstr "Carteira"
 
@@ -5201,7 +5226,7 @@ msgid "daily.total"
 msgstr "Total da carteira"
 
 #. js-lingui-explicit-id
-#: src/routes/_app.tsx:61
+#: src/routes/_app.tsx:64
 #: src/routes/login.tsx:98
 msgid "shell.brand"
 msgstr "Portfolio Tracker"
@@ -5233,7 +5258,7 @@ msgid "positions.title"
 msgstr "Posições"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:51
+#: src/components/app-nav.tsx:53
 msgid "nav.positions"
 msgstr "Posições"
 
@@ -5826,11 +5851,6 @@ msgstr "Contribuição para o resultado"
 #: src/components/allocation/allocation-table.tsx:624
 msgid "allocation.resultUnavailable"
 msgstr "Data de resultado temporariamente indisponível"
-
-#. js-lingui-explicit-id
-#: src/components/app-nav.tsx:63
-msgid "nav.results"
-msgstr "Resultados"
 
 #. js-lingui-explicit-id
 #: src/components/performance/category-return-card.tsx:83
@@ -7062,11 +7082,6 @@ msgid "performance.cashIncluded"
 msgstr "Os totais de hoje incluem {cash} de caixa; os gráficos e retornos mensais não, porque só o saldo atual de caixa é armazenado"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:95
-msgid "nav.tools"
-msgstr "Ferramentas"
-
-#. js-lingui-explicit-id
 #: src/components/allocation/contribution-planner.tsx:310
 msgid "allocation.plannerTop"
 msgstr "Top {option} ativos"
@@ -7162,7 +7177,12 @@ msgid "transactions.title"
 msgstr "Operações"
 
 #. js-lingui-explicit-id
-#: src/components/document-title.tsx:78
+#: src/components/app-nav.tsx:63
+msgid "nav.transactions"
+msgstr "Operações"
+
+#. js-lingui-explicit-id
+#: src/components/document-title.tsx:81
 msgid "document.transactions"
 msgstr "Operações"
 
