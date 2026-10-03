@@ -52,19 +52,37 @@ function quoteFixture(
 function stubYahoo({
   quote,
   chart,
-  ok = true,
   status = 200,
+  quoteStatus,
 }: {
   quote: unknown;
   chart: unknown;
-  ok?: boolean;
   status?: number;
+  quoteStatus?: number;
 }) {
   return vi.fn(async (url: string | URL) => {
     const href = String(url);
-    const body = href.includes("/v7/finance/quote") ? quote : chart;
-    return { ok, status, json: async () => body };
+    if (href.startsWith("https://fc.yahoo.com")) {
+      return new Response("", {
+        status: 404,
+        headers: { "set-cookie": "A=session; Path=/; Secure" },
+      });
+    }
+    if (href.includes("/v1/test/getcrumb")) {
+      return new Response("crumb-value", { status: 200 });
+    }
+    const isQuote = href.includes("/v7/finance/quote");
+    return new Response(JSON.stringify(isQuote ? quote : chart), {
+      status: isQuote ? (quoteStatus ?? status) : status,
+    });
   });
+}
+
+/** Market-data calls only, without the cookie/crumb handshake. */
+function upstream(fetchMock: { mock: { calls: unknown[][] } }): string[] {
+  return fetchMock.mock.calls
+    .map((call) => String(call[0]))
+    .filter((url) => url.includes("/finance/"));
 }
 
 function unixDay(day: string): number {
@@ -123,8 +141,16 @@ describe("YahooProvider", () => {
       source: "yahoo",
       previousClose: "45.25000000",
     });
-    expect(fetchMock).toHaveBeenCalledOnce();
-    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/v7/finance/quote");
+    const calls = upstream(fetchMock);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toContain("/v7/finance/quote");
+    expect(calls[0]).toContain("crumb=crumb-value");
+    const quoteCall = fetchMock.mock.calls.find((call) =>
+      String(call[0]).includes("/v7/finance/quote"),
+    ) as unknown[] | undefined;
+    expect(
+      (quoteCall?.[1] as { headers?: Record<string, string> })?.headers,
+    ).toMatchObject({ Cookie: "A=session" });
   });
 
   it("batches concurrent spot quotes into one upstream request", async () => {
@@ -153,8 +179,8 @@ describe("YahooProvider", () => {
 
     expect(petr.price).toBe("47.11000000");
     expect(aapl.price).toBe("190.12000000");
-    expect(fetchMock).toHaveBeenCalledOnce();
-    const url = String(fetchMock.mock.calls[0]?.[0]);
+    expect(upstream(fetchMock)).toHaveLength(1);
+    const url = upstream(fetchMock)[0] ?? "";
     expect(url).toContain("PETR4.SA");
     expect(url).toContain("AAPL");
   });
@@ -178,7 +204,7 @@ describe("YahooProvider", () => {
     ]);
 
     expect(first).toEqual(second);
-    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(upstream(fetchMock)).toHaveLength(1);
   });
 
   it("uses the immediately preceding close for historical quotes", async () => {
@@ -303,24 +329,21 @@ describe("YahooProvider", () => {
     await provider.getQuote(request);
     await provider.getQuote(request);
 
-    expect(fetchMock).toHaveBeenCalledOnce();
+    expect(upstream(fetchMock)).toHaveLength(1);
   });
 
   it("replaces a cached spot quote when refresh is forced", async () => {
-    const fetchMock = vi
-      .fn<typeof fetch>()
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify(quoteFixture([{ symbol: "PETR4.SA", price: 47.11 }])),
-          { status: 200 },
-        ),
-      )
-      .mockResolvedValueOnce(
-        new Response(
-          JSON.stringify(quoteFixture([{ symbol: "PETR4.SA", price: 48.25 }])),
-          { status: 200 },
-        ),
-      );
+    let price = 47.11;
+    const fetchMock = vi.fn(async (url: string | URL) => {
+      const href = String(url);
+      if (href.startsWith("https://fc.yahoo.com")) {
+        return new Response("", { headers: { "set-cookie": "A=1" } });
+      }
+      if (href.includes("/getcrumb")) return new Response("crumb");
+      const body = quoteFixture([{ symbol: "PETR4.SA", price }]);
+      price = 48.25;
+      return new Response(JSON.stringify(body));
+    });
     vi.stubGlobal("fetch", fetchMock);
     const provider = new YahooProvider();
     const request = {
@@ -339,7 +362,139 @@ describe("YahooProvider", () => {
     expect(original.price).toBe("47.11000000");
     expect(refreshed.price).toBe("48.25000000");
     expect(cachedRefresh).toEqual(refreshed);
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(upstream(fetchMock)).toHaveLength(2);
+  });
+
+  it("falls back to a short daily chart when the batch endpoint refuses", async () => {
+    const fetchMock = stubYahoo({
+      quote: {},
+      quoteStatus: 401,
+      chart: chartFixture(
+        [
+          { timestamp: unixDay("2026-09-03"), close: 45.25 },
+          { timestamp: unixDay("2026-09-04"), close: 46.9 },
+        ],
+        47.11,
+        unixDay("2026-09-04") + 15 * 3600,
+      ),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const provider = new YahooProvider();
+    const request = {
+      ticker: "PETR4",
+      assetClass: "stock_br" as const,
+      currency: "BRL" as const,
+    };
+
+    const quote = await provider.getQuote(request);
+
+    // Live delayed price from the chart meta, not the last stored daily bar.
+    expect(quote).toMatchObject({
+      price: "47.11000000",
+      asOf: "2026-09-04",
+      previousClose: "45.25000000",
+      previousCloseAsOf: "2026-09-03",
+    });
+    const calls = upstream(fetchMock);
+    // Refused once, retried with a renewed session, then one small chart.
+    expect(calls.filter((url) => url.includes("/v7/"))).toHaveLength(2);
+    const charts = calls.filter((url) => url.includes("/v8/finance/chart/"));
+    expect(charts).toHaveLength(1);
+    expect(charts[0]).toContain("range=5d");
+
+    // The refusal pauses the batch path instead of retrying it every flush.
+    await provider.getQuote({ ...request, forceRefresh: true });
+    const later = upstream(fetchMock);
+    expect(later.filter((url) => url.includes("/v7/"))).toHaveLength(2);
+    expect(later.filter((url) => url.includes("/v8/"))).toHaveLength(2);
+  });
+
+  it("dates a live price traded after the last daily bar to its own session", async () => {
+    vi.stubGlobal(
+      "fetch",
+      stubYahoo({
+        quote: {},
+        quoteStatus: 401,
+        chart: chartFixture(
+          [
+            { timestamp: unixDay("2026-09-03"), close: 45.25 },
+            { timestamp: unixDay("2026-09-04"), close: 46.9 },
+          ],
+          47.11,
+          unixDay("2026-09-07") + 14 * 3600,
+        ),
+      }),
+    );
+
+    const quote = await new YahooProvider().getQuote({
+      ticker: "PETR4",
+      assetClass: "stock_br",
+      currency: "BRL",
+    });
+
+    // Monday's bar is not published yet: Friday is the previous close.
+    expect(quote).toMatchObject({
+      price: "47.11000000",
+      asOf: "2026-09-07",
+      previousClose: "46.90000000",
+      previousCloseAsOf: "2026-09-04",
+    });
+  });
+
+  it("re-reads a same-day close until a later download settles it", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-04T15:00:00Z"));
+    const closes = [46.0, 46.5, 47.0];
+    let reads = 0;
+    const fetchMock = vi.fn<typeof fetch>(async () => {
+      const close = closes[Math.min(reads, closes.length - 1)] ?? 0;
+      reads += 1;
+      return new Response(
+        JSON.stringify(
+          chartFixture([
+            { timestamp: unixDay("2026-09-03"), close: 45.25 },
+            { timestamp: unixDay("2026-09-04"), close },
+          ]),
+        ),
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const provider = new YahooProvider();
+    const request = {
+      ticker: "PETR4",
+      assetClass: "stock_br" as const,
+      currency: "BRL" as const,
+      asOf: "2026-09-04",
+    };
+
+    try {
+      await expect(provider.getQuote(request)).resolves.toMatchObject({
+        price: "46.00000000",
+      });
+      vi.setSystemTime(new Date("2026-09-04T15:20:00Z"));
+      await expect(provider.getQuote(request)).resolves.toMatchObject({
+        price: "46.00000000",
+      });
+      expect(fetchMock).toHaveBeenCalledOnce();
+
+      // Past the short lifetime, the cached series is not trusted either.
+      vi.setSystemTime(new Date("2026-09-04T15:31:00Z"));
+      await expect(provider.getQuote(request)).resolves.toMatchObject({
+        price: "46.50000000",
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+
+      // Downloaded the next day, the bar is final and kept.
+      vi.setSystemTime(new Date("2026-09-05T10:00:00Z"));
+      await expect(provider.getQuote(request)).resolves.toMatchObject({
+        price: "47.00000000",
+      });
+      vi.setSystemTime(new Date("2026-09-05T12:00:00Z"));
+      await provider.getQuote(request);
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("replaces a cached historical series when refresh is forced", async () => {
@@ -404,15 +559,11 @@ describe("YahooProvider", () => {
       QuoteUnavailableError,
     );
 
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(upstream(fetchMock)).toHaveLength(2);
   });
 
   it("remembers a 404 but retries a rate limit or outage", async () => {
-    const notFound = vi.fn(async () => ({
-      ok: false,
-      status: 404,
-      json: async () => ({}),
-    }));
+    const notFound = stubYahoo({ quote: {}, chart: {}, status: 404 });
     vi.stubGlobal("fetch", notFound);
     const provider = new YahooProvider();
     const missing = {
@@ -427,13 +578,10 @@ describe("YahooProvider", () => {
     await expect(provider.getQuote(missing)).rejects.toBeInstanceOf(
       QuoteUnavailableError,
     );
-    expect(notFound).toHaveBeenCalledTimes(2);
+    expect(upstream(notFound)).toHaveLength(2);
 
-    const rateLimited = vi.fn(async () => ({
-      ok: false,
-      status: 429,
-      json: async () => ({}),
-    }));
+    clearQuoteCache();
+    const rateLimited = stubYahoo({ quote: {}, chart: {}, status: 429 });
     vi.stubGlobal("fetch", rateLimited);
     const throttled = {
       ticker: "BUSY",
@@ -447,7 +595,7 @@ describe("YahooProvider", () => {
     await expect(provider.getQuote(throttled)).rejects.toBeInstanceOf(
       QuoteUnavailableError,
     );
-    expect(rateLimited.mock.calls.length).toBeGreaterThan(2);
+    expect(upstream(rateLimited).length).toBeGreaterThan(2);
   });
 
   it("does not remember a network failure", async () => {

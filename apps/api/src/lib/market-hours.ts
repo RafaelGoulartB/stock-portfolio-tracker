@@ -2,6 +2,13 @@ import type { AssetClass, Currency } from "@portifolio-tracker/shared";
 
 export const SPOT_OPEN_TTL_MS = 15 * 60 * 1_000;
 const MAX_CLOSED_TTL_MS = 3 * 24 * 60 * 60 * 1_000;
+/**
+ * Minutes after the close during which quotes keep the short TTL. Yahoo's
+ * tape is about 15 minutes behind and closing auctions settle late, so a
+ * quote fetched right at the bell is not yet the official close and must not
+ * be held until the next session (a whole weekend on Fridays).
+ */
+const SETTLE_MINUTES = 45;
 
 type Session = "b3" | "us" | "crypto" | "none";
 
@@ -81,6 +88,16 @@ function sessionIsOpen(session: SessionHours, now: Date): boolean {
     isWeekday(clock.weekday) &&
     clock.minutes >= session.openMinutes &&
     clock.minutes < session.closeMinutes
+  );
+}
+
+function sessionIsSettling(session: SessionHours, now: Date): boolean {
+  const clock = zonedClock(now, session.timeZone);
+
+  return (
+    isWeekday(clock.weekday) &&
+    clock.minutes >= session.closeMinutes &&
+    clock.minutes < session.closeMinutes + SETTLE_MINUTES
   );
 }
 
@@ -177,7 +194,7 @@ export function spotTtlMs(
 
   const hours = SESSIONS[session];
 
-  if (sessionIsOpen(hours, now)) {
+  if (sessionIsOpen(hours, now) || sessionIsSettling(hours, now)) {
     return SPOT_OPEN_TTL_MS;
   }
 

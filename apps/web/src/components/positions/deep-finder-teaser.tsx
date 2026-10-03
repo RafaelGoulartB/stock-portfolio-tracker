@@ -1,9 +1,8 @@
 import { Trans } from "@lingui/react/macro";
-import {
-  type Currency,
-  type PortfolioSummary,
-  positiveDecimal,
-  type ValuedPosition,
+import type {
+  Currency,
+  PortfolioSummary,
+  ValuedPosition,
 } from "@portifolio-tracker/shared";
 import { Link } from "@tanstack/react-router";
 import { ScanSearch } from "lucide-react";
@@ -19,10 +18,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  monthMoversInput,
+  usePortfolioQueryInput,
+} from "@/lib/allocation-query";
 import { trpc } from "@/lib/api";
 import { formatSignedPercent, pnlClassName } from "@/lib/format";
-import { useFxRequest } from "@/lib/fx";
-import { useSettings } from "@/lib/settings";
 import { cn } from "@/lib/utils";
 import { signedOrZero } from "./shared";
 
@@ -46,6 +47,17 @@ function pickTopMovers(rows: MoverRow[], limit = 3) {
   return { gainers, losers };
 }
 
+/**
+ * One-month movers behind the teaser. Positions also calls this on mount so
+ * the request joins the same batch as `positions.list` instead of waiting for
+ * the holdings to render the teaser.
+ */
+export function useMonthMovers() {
+  return trpc.positions.finder.useQuery(
+    monthMoversInput(usePortfolioQueryInput()),
+  );
+}
+
 export function DeepFinderTeaser({
   className,
   positions,
@@ -55,27 +67,7 @@ export function DeepFinderTeaser({
   positions: ValuedPosition[];
   summary: PortfolioSummary;
 }) {
-  const { displayCurrency, quoteSource, manualPrices } = useSettings();
-  const fxRequest = useFxRequest();
-  const sanitizedManualPrices = useMemo(
-    () =>
-      Object.fromEntries(
-        Object.entries(manualPrices).filter(
-          ([, price]) => positiveDecimal.safeParse(price).success,
-        ),
-      ),
-    [manualPrices],
-  );
-  const month = trpc.positions.finder.useQuery({
-    displayCurrency,
-    ...fxRequest,
-    quoteSource,
-    window: "1m",
-    manualPrices:
-      quoteSource === "manual" && Object.keys(sanitizedManualPrices).length > 0
-        ? sanitizedManualPrices
-        : undefined,
-  });
+  const month = useMonthMovers();
 
   const fallbackRows = useMemo<MoverRow[]>(
     () =>

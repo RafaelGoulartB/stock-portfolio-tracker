@@ -1,10 +1,6 @@
 import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
-import {
-  type AssetClass,
-  type PerformanceWindow,
-  positiveDecimal,
-} from "@portifolio-tracker/shared";
+import type { AssetClass, PerformanceWindow } from "@portifolio-tracker/shared";
 import { createFileRoute } from "@tanstack/react-router";
 import { RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
@@ -32,46 +28,34 @@ import {
 } from "@/components/performance/types";
 import { ValueCard } from "@/components/performance/value-card";
 import { Button } from "@/components/ui/button";
+import { usePortfolioQueryInput } from "@/lib/allocation-query";
 import { trpc } from "@/lib/api";
-import { useSettings } from "@/lib/settings";
+import { prefetchPortfolio, trpcQueryUtils } from "@/lib/route-prefetch";
 import { isFxRateRequired, queryErrorMessage } from "@/lib/trpcErrors";
 
+/** A month-end history only changes when a new close lands. */
+const HISTORY_FRESH_MS = 30 * 60 * 1_000;
+const DEFAULT_MONTHS: PerformanceWindow = 12;
+
 export const Route = createFileRoute("/_app/performance")({
+  loader: ({ preload }) =>
+    prefetchPortfolio(preload, (input) => [
+      trpcQueryUtils.performance.history.prefetch(
+        { ...input, months: DEFAULT_MONTHS },
+        { staleTime: HISTORY_FRESH_MS, gcTime: HISTORY_FRESH_MS },
+      ),
+    ]),
   component: PerformancePage,
 });
 
 function PerformancePage() {
   const { i18n } = useLingui();
-  const { displayCurrency, quoteSource, manualPrices, fxSource, manualRate } =
-    useSettings();
-  const [months, setMonths] = useState<PerformanceWindow>(12);
-
-  const sanitizedManualPrices = useMemo(
-    () =>
-      Object.fromEntries(
-        Object.entries(manualPrices).filter(
-          ([, price]) => positiveDecimal.safeParse(price).success,
-        ),
-      ),
-    [manualPrices],
-  );
-  const manualRateValid = positiveDecimal.safeParse(manualRate).success;
+  const [months, setMonths] = useState<PerformanceWindow>(DEFAULT_MONTHS);
+  const portfolioInput = usePortfolioQueryInput();
 
   const history = trpc.performance.history.useQuery(
-    {
-      displayCurrency,
-      months,
-      quoteSource,
-      manualPrices:
-        quoteSource === "manual" &&
-        Object.keys(sanitizedManualPrices).length > 0
-          ? sanitizedManualPrices
-          : undefined,
-      fxSource,
-      manualRate: manualRateValid ? manualRate : undefined,
-    },
-    // A month-end history only changes when a new close lands.
-    { staleTime: 30 * 60 * 1_000, gcTime: 30 * 60 * 1_000 },
+    { ...portfolioInput, months },
+    { staleTime: HISTORY_FRESH_MS, gcTime: HISTORY_FRESH_MS },
   );
 
   const data = history.data;
@@ -133,8 +117,8 @@ function PerformancePage() {
   const missingManualRate =
     !!history.error &&
     isFxRateRequired(history.error) &&
-    fxSource === "manual" &&
-    !manualRateValid;
+    portfolioInput.fxSource === "manual" &&
+    !portfolioInput.manualRate;
 
   return (
     <div className="space-y-5">

@@ -64,7 +64,10 @@ export type MarketSignals = {
  * Loads the price history behind the score's market signals: momentum for
  * targeted assets, and the closes on the day each fair value was known and
  * 12 months later (the valuation track record). History is never stored;
- * the quote provider's series cache keeps repeat loads cheap. A ticker whose
+ * the quote provider's series cache keeps repeat loads cheap. A user's
+ * "refresh quotes" deliberately does not force these: 12-1 momentum skips
+ * the latest month and reference closes are in the past, so refetching
+ * every multi-year series would spend provider quota without changing them. A ticker whose
  * history fails has no signal, which the score treats as neutral, and is
  * reported in `unavailable` (and as `missing` in the skill) so the screen
  * can say so.
@@ -74,7 +77,6 @@ export async function loadMarketSignals(input: {
   reviews: readonly FairValueReview[];
   today: string;
   quoteSource: QuoteSource;
-  forceRefresh?: boolean;
   config?: ScoreConfig;
 }): Promise<MarketSignals> {
   const config = input.config ?? DEFAULT_SCORE_CONFIG;
@@ -135,7 +137,6 @@ export async function loadMarketSignals(input: {
             currency: asset.currency,
             start,
             end: input.today,
-            forceRefresh: input.forceRefresh,
           });
           seriesByTicker.set(ticker, points);
         } catch (error) {

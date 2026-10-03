@@ -13,6 +13,13 @@ type SeriesCacheEntry = { points: FxSeriesPoint[]; expiresAt: number };
 
 /** In-memory quotes with a TTL, so one page load costs one upstream call. */
 const CACHE_TTL_MS = 6 * 60 * 60 * 1_000;
+/**
+ * A published reference rate for a past day never changes, so dated quotes
+ * and ranges that end before today are kept much longer.
+ */
+const SETTLED_TTL_MS = 7 * 24 * 60 * 60 * 1_000;
+/** `api.frankfurter.app` now answers every call with a 301 to this base. */
+const BASE_URL = "https://api.frankfurter.dev/v1";
 const cache = new Map<string, CacheEntry>();
 const seriesCache = new Map<string, SeriesCacheEntry>();
 const pendingQuotes = new Map<string, Promise<FxQuote>>();
@@ -20,6 +27,17 @@ const pendingSeries = new Map<string, Promise<FxSeriesPoint[]>>();
 
 function todayUtc(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+/** Days before yesterday (UTC) are settled on every timezone the app uses. */
+function ttlFor(lastDay: string | undefined): number {
+  if (!lastDay) {
+    return CACHE_TTL_MS;
+  }
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1_000)
+    .toISOString()
+    .slice(0, 10);
+  return lastDay < yesterday ? SETTLED_TTL_MS : CACHE_TTL_MS;
 }
 
 function cacheKey(
@@ -60,7 +78,7 @@ export class FrankfurterProvider implements FxProvider {
     return coalesce(pendingQuotes, key, async () => {
       const endpoint = asOf ?? "latest";
       const response = await fetch(
-        `https://api.frankfurter.app/${endpoint}?from=${from}&to=${to}`,
+        `${BASE_URL}/${endpoint}?from=${from}&to=${to}`,
         { signal: AbortSignal.timeout(8_000) },
       );
 
@@ -87,7 +105,7 @@ export class FrankfurterProvider implements FxProvider {
       };
 
       pruneExpired(cache);
-      cache.set(key, { quote, expiresAt: Date.now() + CACHE_TTL_MS });
+      cache.set(key, { quote, expiresAt: Date.now() + ttlFor(asOf) });
       return quote;
     });
   }
@@ -115,7 +133,7 @@ export class FrankfurterProvider implements FxProvider {
 
     return coalesce(pendingSeries, key, async () => {
       const response = await fetch(
-        `https://api.frankfurter.app/${start}..${end}?from=${from}&to=${to}`,
+        `${BASE_URL}/${start}..${end}?from=${from}&to=${to}`,
         { signal: AbortSignal.timeout(10_000) },
       );
 
@@ -147,7 +165,7 @@ export class FrankfurterProvider implements FxProvider {
 
       points.sort((a, b) => a.asOf.localeCompare(b.asOf));
       pruneExpired(seriesCache);
-      seriesCache.set(key, { points, expiresAt: Date.now() + CACHE_TTL_MS });
+      seriesCache.set(key, { points, expiresAt: Date.now() + ttlFor(end) });
       return points;
     });
   }

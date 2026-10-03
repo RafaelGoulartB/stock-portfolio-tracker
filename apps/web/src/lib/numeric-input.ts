@@ -118,3 +118,26 @@ export function formatDecimalInput(
 
   return tidy(value).replace(".", decimalSeparator(locale));
 }
+
+const EIGHT_PLACES = 100_000_000n;
+
+/** A non-negative decimal string as an integer of 1e-8 units. */
+function scaled(value: string): bigint {
+  const [whole = "0", fraction = ""] = value.split(".");
+
+  return (
+    BigInt(whole) * EIGHT_PLACES + BigInt(fraction.padEnd(8, "0").slice(0, 8))
+  );
+}
+
+/**
+ * `a × b` rounded half up to cents, exactly: the value in reais is stored,
+ * so it never passes through a floating-point number.
+ */
+export function multiplyToCents(a: string, b: string): string {
+  const product = scaled(a) * scaled(b);
+  const unit = (EIGHT_PLACES * EIGHT_PLACES) / 100n;
+  const cents = (product + unit / 2n) / unit;
+
+  return `${cents / 100n}.${String(cents % 100n).padStart(2, "0")}`;
+}

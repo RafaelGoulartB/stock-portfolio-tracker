@@ -2,6 +2,7 @@ import type { AssetClass, Currency } from "@portifolio-tracker/shared";
 import { coalesce, createConcurrencyLimiter, pruneExpired } from "../async";
 import { formatDecimal, toDecimal } from "../decimal";
 import { spotStaleWhileRevalidateMs, spotTtlMs } from "../market-hours";
+import { type YahooCredentials, yahooSession } from "../yahoo-session";
 import {
   type MarketQuote,
   type QuoteProvider,
@@ -28,6 +29,8 @@ type SeriesCacheEntry = {
   splits: YahooSplitPoint[];
   start: string;
   end: string;
+  /** When the chart was downloaded; decides whether a recent bar is final. */
+  fetchedAt: number;
   expiresAt: number;
   staleUntil: number;
 };
@@ -65,8 +68,27 @@ type PendingSpot = {
 };
 
 const HISTORY_TTL_MS = 7 * 24 * 60 * 60 * 1_000;
+/**
+ * A daily bar downloaded on or before its own (UTC) day may still be the
+ * session in progress. Such a close is re-read from a fresh chart after this
+ * long, both in the derived quote and in the series behind it; a bar
+ * downloaded on a later day is final and keeps the long lifetime.
+ */
+const RECENT_HISTORY_TTL_MS = 30 * 60 * 1_000;
 const SERIES_TTL_MS = 6 * 60 * 60 * 1_000;
 const FAILURE_TTL_MS = 10 * 60 * 1_000;
+/**
+ * After the authenticated batch endpoint refuses twice in a row, spot quotes
+ * go straight to the per-symbol chart for this long instead of paying a
+ * doomed handshake and batch call on every flush.
+ */
+const BATCH_BACKOFF_MS = 15 * 60 * 1_000;
+/** Shorter pause after a handshake or network failure, which may be transient. */
+const BATCH_ERROR_BACKOFF_MS = 2 * 60 * 1_000;
+/** A few sessions back covers weekends and holidays for the previous close. */
+const SPOT_CHART_RANGE = "5d";
+const QUOTE_FIELDS =
+  "symbol,regularMarketPrice,regularMarketTime,regularMarketPreviousClose";
 const CANONICAL_LOOKBACK_MONTHS = 36;
 const SERIES_LEAD_DAYS = 12;
 const QUOTE_BATCH_SIZE = 40;
@@ -80,6 +102,7 @@ const pendingQuotes = new Map<string, Promise<MarketQuote>>();
 const pendingSeries = new Map<string, Promise<SeriesCacheEntry>>();
 const limitUpstream = createConcurrencyLimiter(8);
 
+let batchDisabledUntil = 0;
 let queuedSpots: PendingSpot[] = [];
 let flushScheduled = false;
 const refreshingSpots = new Set<string>();
@@ -124,6 +147,11 @@ function toPriceString(raw: number, ticker: string): string {
     throw new QuoteUnavailableError(ticker);
   }
   return formatDecimal(toDecimal(raw.toFixed(8)), 8);
+}
+
+/** True once the chart was downloaded after `asOf`'s UTC day had ended. */
+function barIsFinal(entry: SeriesCacheEntry, asOf: string): boolean {
+  return unixToDay(Math.floor(entry.fetchedAt / 1_000)) > asOf;
 }
 
 function covers(entry: SeriesCacheEntry, start: string, end: string): boolean {
@@ -179,14 +207,18 @@ function retryDelayMs(attempt: number): number {
   return process.env.VITEST ? 0 : 250 * 2 ** attempt;
 }
 
-async function fetchYahoo(url: string, ticker: string): Promise<Response> {
+async function fetchYahoo(
+  url: string,
+  ticker: string,
+  headers: Record<string, string> = {},
+): Promise<Response> {
   let lastError: unknown;
 
   for (let attempt = 0; attempt < 3; attempt += 1) {
     try {
       const response = await limitUpstream(() =>
         fetch(url, {
-          headers: { "User-Agent": USER_AGENT },
+          headers: { ...headers, "User-Agent": USER_AGENT },
           signal: AbortSignal.timeout(10_000),
         }),
       );
@@ -390,33 +422,63 @@ async function fetchChart(
   return result;
 }
 
+async function requestQuoteBatch(
+  chunk: string[],
+  ticker: string,
+): Promise<{ response: Response; session: YahooCredentials }> {
+  const session = await yahooSession.get();
+  const url = new URL("https://query1.finance.yahoo.com/v7/finance/quote");
+  url.searchParams.set("symbols", chunk.join(","));
+  url.searchParams.set("fields", QUOTE_FIELDS);
+  url.searchParams.set("crumb", session.crumb);
+  const response = await fetchYahoo(url.toString(), ticker, {
+    Cookie: session.cookie,
+  });
+  return { response, session };
+}
+
+/**
+ * One authenticated request per 40 symbols. Any failure resolves to an empty
+ * map so each symbol falls back to its own small chart request; a refusal
+ * that survives a fresh session also pauses the batch path for a while.
+ */
 async function fetchQuoteBatch(
   symbols: string[],
   ticker: string,
 ): Promise<Map<string, YahooQuoteResult>> {
   const quoted = new Map<string, YahooQuoteResult>();
 
-  for (let offset = 0; offset < symbols.length; offset += QUOTE_BATCH_SIZE) {
-    const chunk = symbols.slice(offset, offset + QUOTE_BATCH_SIZE);
-    const response = await fetchYahoo(
-      `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(chunk.join(","))}`,
-      ticker,
-    );
-    if (!response.ok) {
-      throw new QuoteUnavailableError(
-        ticker,
-        `Quote request failed (${response.status})`,
-        { transient: response.status !== 404 && response.status !== 400 },
-      );
-    }
-    const body = (await response.json()) as {
-      quoteResponse?: { result?: YahooQuoteResult[] | null };
-    };
-    for (const item of body.quoteResponse?.result ?? []) {
-      if (item.symbol) {
-        quoted.set(item.symbol, item);
+  if (batchDisabledUntil > Date.now()) {
+    return quoted;
+  }
+
+  try {
+    for (let offset = 0; offset < symbols.length; offset += QUOTE_BATCH_SIZE) {
+      const chunk = symbols.slice(offset, offset + QUOTE_BATCH_SIZE);
+      let { response, session } = await requestQuoteBatch(chunk, ticker);
+      if (response.status === 401 || response.status === 403) {
+        yahooSession.invalidate(session);
+        ({ response, session } = await requestQuoteBatch(chunk, ticker));
+      }
+      if (response.status === 401 || response.status === 403) {
+        batchDisabledUntil = Date.now() + BATCH_BACKOFF_MS;
+        return quoted;
+      }
+      if (!response.ok) {
+        return quoted;
+      }
+      const body = (await response.json()) as {
+        quoteResponse?: { result?: YahooQuoteResult[] | null };
+      };
+      for (const item of body.quoteResponse?.result ?? []) {
+        if (item.symbol) {
+          quoted.set(item.symbol, item);
+        }
       }
     }
+  } catch {
+    // Handshake or network failure: the per-symbol chart still answers.
+    batchDisabledUntil = Date.now() + BATCH_ERROR_BACKOFF_MS;
   }
 
   return quoted;
@@ -451,11 +513,11 @@ function quoteFromBatch(
 
 function quoteFromSeries(
   request: QuoteRequest,
-  entry: SeriesCacheEntry,
+  points: readonly QuoteSeriesPoint[],
   asOf: string,
   spotPrice?: number,
 ): MarketQuote {
-  const current = closeOnOrBefore(entry.points, asOf);
+  const current = closeOnOrBefore(points, asOf);
   if (!current && spotPrice == null) {
     throw new QuoteUnavailableError(request.ticker);
   }
@@ -466,8 +528,13 @@ function quoteFromSeries(
   if (!price) {
     throw new QuoteUnavailableError(request.ticker);
   }
-  const quoteAsOf = current?.asOf ?? asOf;
-  const previous = previousPoint(entry.points, quoteAsOf);
+  // A live price traded after the last published daily bar (that session's
+  // bar can lag the open) belongs to its own day, and the bar is its
+  // previous close.
+  const ahead =
+    spotPrice != null && current !== undefined && current.asOf < asOf;
+  const quoteAsOf = ahead ? asOf : (current?.asOf ?? asOf);
+  const previous = ahead ? current : previousPoint(points, quoteAsOf);
   return {
     ticker: request.ticker,
     price,
@@ -528,6 +595,7 @@ async function loadSeriesEntry(
         splits: parsed.splits,
         start: range.start,
         end: range.end,
+        fetchedAt: Date.now(),
         expiresAt: Date.now() + SERIES_TTL_MS,
         staleUntil: Date.now() + SERIES_TTL_MS * 2,
       };
@@ -579,16 +647,41 @@ function cacheSpot(request: QuoteRequest, symbol: string, quote: MarketQuote) {
   failureCache.delete(symbol);
 }
 
+/**
+ * Per-symbol spot fallback. A five-session daily chart (about 2 KB) carries
+ * the live delayed price in `meta` plus the previous close; the 36-month
+ * history cache is never used here because it can be hours old.
+ */
 async function resolveSpotFromChart(item: PendingSpot): Promise<MarketQuote> {
-  const asOf = todayUtc();
-  const entry = await loadSeriesEntry(
-    item.symbol,
+  const response = await fetchYahoo(
+    `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(item.symbol)}?interval=1d&range=${SPOT_CHART_RANGE}`,
     item.request.ticker,
-    shiftDays(asOf, -14),
-    asOf,
-    item.request.forceRefresh,
   );
-  return quoteFromSeries(item.request, entry, asOf);
+  if (!response.ok) {
+    const unknownSymbol = response.status === 404 || response.status === 400;
+    throw new QuoteUnavailableError(
+      item.request.ticker,
+      `Quote request failed (${response.status})`,
+      { transient: !unknownSymbol },
+    );
+  }
+  const body = (await response.json()) as {
+    chart?: { result?: ChartResult[] | null };
+  };
+  const result = body.chart?.result?.[0];
+  if (!result) {
+    throw new QuoteUnavailableError(item.request.ticker);
+  }
+  const parsed = parseChart(result, item.request.ticker);
+  const spotPrice =
+    parsed.spotPrice != null && parsed.spotPrice > 0
+      ? parsed.spotPrice
+      : undefined;
+  const asOf =
+    result.meta?.regularMarketTime != null
+      ? unixToDay(result.meta.regularMarketTime)
+      : todayUtc();
+  return quoteFromSeries(item.request, parsed.points, asOf, spotPrice);
 }
 
 async function flushQuoteBatch(): Promise<void> {
@@ -600,12 +693,7 @@ async function flushQuoteBatch(): Promise<void> {
   }
 
   const symbols = [...new Set(batch.map((item) => item.symbol))];
-  let quoted = new Map<string, YahooQuoteResult>();
-  try {
-    quoted = await fetchQuoteBatch(symbols, batch[0]?.request.ticker ?? "");
-  } catch {
-    quoted = new Map();
-  }
+  const quoted = await fetchQuoteBatch(symbols, batch[0]?.request.ticker ?? "");
 
   const leftover: PendingSpot[] = [];
   for (const item of batch) {
@@ -746,19 +834,35 @@ export class YahooProvider implements QuoteProvider {
     }
 
     return coalesce(pendingQuotes, key, async () => {
-      const entry = await loadSeriesEntry(
+      let entry = await loadSeriesEntry(
         symbol,
         request.ticker,
         asOf,
         asOf,
         request.forceRefresh,
       );
-      const quote = quoteFromSeries(request, entry, asOf);
+      if (
+        !barIsFinal(entry, asOf) &&
+        entry.fetchedAt + RECENT_HISTORY_TTL_MS <= Date.now()
+      ) {
+        // Keep the cached start so a longer series is not narrowed.
+        entry = await loadSeriesEntry(
+          symbol,
+          request.ticker,
+          entry.start,
+          asOf,
+          true,
+        );
+      }
+      const quote = quoteFromSeries(request, entry.points, asOf);
+      const ttl = barIsFinal(entry, asOf)
+        ? HISTORY_TTL_MS
+        : RECENT_HISTORY_TTL_MS;
       pruneStale(cache);
       cache.set(key, {
         quote,
-        expiresAt: Date.now() + HISTORY_TTL_MS,
-        staleUntil: Date.now() + HISTORY_TTL_MS,
+        expiresAt: Date.now() + ttl,
+        staleUntil: Date.now() + ttl,
       });
       return quote;
     });
@@ -783,6 +887,8 @@ export function clearQuoteCache(): void {
   pendingSeries.clear();
   queuedSpots = [];
   flushScheduled = false;
+  batchDisabledUntil = 0;
+  yahooSession.invalidate();
   refreshingSpots.clear();
   refreshingSeries.clear();
 }

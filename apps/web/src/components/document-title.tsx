@@ -70,6 +70,9 @@ function titleForPath(
   if (pathname === "/dividends") {
     return i18n._(msg({ id: "document.income", message: "Income" }));
   }
+  if (pathname === "/income-tax") {
+    return i18n._(msg({ id: "document.incomeTax", message: "Income tax" }));
+  }
   if (pathname === "/categories") {
     return i18n._(msg({ id: "document.categories", message: "My categories" }));
   }

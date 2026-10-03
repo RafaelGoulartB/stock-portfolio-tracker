@@ -47,6 +47,8 @@ export type ValuationRequest = {
    * reasons passes it here so the account history is read once per request.
    */
   transactions?: ConsolidationInput[];
+  /** Already-loaded stored cash balance (`null` when the account has none). */
+  cashAmount?: string | null;
   /** `YYYY-MM-DD` snapshot; omitted values the live portfolio. */
   asOf?: string;
   /**
@@ -103,6 +105,22 @@ async function loadStoredManualPricesUncached(
 }
 
 /**
+ * The stored cash balance, read once per request. Allocation reads it in its
+ * first query wave and passes it in, so valuation adds no round trip after
+ * the ledger.
+ */
+export function loadCashAmount(userId: string): Promise<string | null> {
+  return memoizeRequest(`cash:${userId}`, async () => {
+    const [row] = await db
+      .select({ amount: cashBalances.amount })
+      .from(cashBalances)
+      .where(eq(cashBalances.userId, userId))
+      .limit(1);
+    return row?.amount ?? null;
+  });
+}
+
+/**
  * Consolidates the trade log, converts it into the display currency and
  * values every open position with the requested quote source. Shared by the
  * screens that need a valued portfolio (positions, allocation) so the
@@ -131,26 +149,32 @@ export async function loadValuedPortfolio(
     JSON.stringify(request.manualPrices ?? {}),
     request.transactions ? "preloaded-tx" : "tx",
     request.storedManualPrices ? "preloaded-manuals" : "manuals",
+    request.cashAmount !== undefined ? "preloaded-cash" : "cash-read",
     request.forceRefresh ? "refresh" : "cached",
   ].join("|");
 
   return memoizeRequest(key, () => loadValuedPortfolioUncached(request));
 }
 
+function missingRateError(): TRPCError {
+  return new TRPCError({
+    code: "BAD_REQUEST",
+    message: "An USD/BRL rate is required to consolidate mixed currencies",
+  });
+}
+
 async function loadValuedPortfolioUncached(
   request: ValuationRequest,
 ): Promise<ValuationResult> {
   const includeCash = request.includeCash ?? request.asOf === undefined;
-  const [transactions, storedManualPrices, cashRows] = await Promise.all([
+  const [transactions, storedManualPrices, cashAmount] = await Promise.all([
     request.transactions ?? loadTransactions(request.userId),
     request.storedManualPrices ?? loadStoredManualPrices(request.userId),
-    includeCash
-      ? db
-          .select({ amount: cashBalances.amount })
-          .from(cashBalances)
-          .where(eq(cashBalances.userId, request.userId))
-          .limit(1)
-      : Promise.resolve([]),
+    !includeCash
+      ? null
+      : request.cashAmount !== undefined
+        ? request.cashAmount
+        : loadCashAmount(request.userId),
   ]);
   const native = consolidatePositions(
     filterTransactionsByAsOf(transactions, request.asOf ?? null),
@@ -159,33 +183,15 @@ async function loadValuedPortfolioUncached(
     native.some((position) => position.currency !== request.displayCurrency) ||
     (includeCash && request.displayCurrency !== "BRL");
 
-  // Resolved only when the portfolio actually needs a conversion, so a
-  // single-currency account never triggers an upstream FX request.
-  const usdBrlRate =
-    needsRate && !request.usdBrlRate
-      ? await resolveUsdBrlRate(request)
-      : request.usdBrlRate;
-
-  if (needsRate && !usdBrlRate) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "An USD/BRL rate is required to consolidate mixed currencies",
-    });
-  }
-
-  let converted: Position[];
-
-  try {
-    converted = convertPositions(
-      native,
-      request.displayCurrency,
-      usdBrlRate ?? null,
-    );
-  } catch {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "The USD/BRL rate is invalid",
-    });
+  if (
+    needsRate &&
+    !request.usdBrlRate &&
+    request.fxSource === "manual" &&
+    !request.manualRate
+  ) {
+    // Known before any quote is requested: fail without spending provider
+    // calls whose results would be discarded.
+    throw missingRateError();
   }
 
   const manualPrices = {
@@ -204,44 +210,71 @@ async function loadValuedPortfolioUncached(
   let providerFailures = 0;
   let lastProviderError: string | null = null;
 
-  await Promise.all(
-    converted.map(async (position) => {
-      if (!isOpenQuantity(position.quantity)) {
-        return;
-      }
-
-      try {
-        const resolved = await getQuoteWithManualFallback(provider, {
-          ticker: position.ticker,
-          assetClass: position.assetClass,
-          currency: position.currency,
-          asOf: request.asOf,
-          manualPrice: manualPrices[position.ticker],
-          forceRefresh: request.forceRefresh,
-        });
-
-        quotes.set(position.ticker, {
-          ticker: resolved.quote.ticker,
-          price: resolved.quote.price,
-          asOf: resolved.quote.asOf,
-          previousClose: resolved.quote.previousClose,
-          previousCloseAsOf: resolved.quote.previousCloseAsOf,
-        });
-
-        if (resolved.manual) {
-          manual.push(position.ticker);
+  // Resolved only when the portfolio actually needs a conversion, so a
+  // single-currency account never triggers an upstream FX request. Quotes are
+  // native-currency, so the rate is fetched alongside them, not before.
+  const [usdBrlRate] = await Promise.all([
+    needsRate && !request.usdBrlRate
+      ? resolveUsdBrlRate(request)
+      : Promise.resolve(request.usdBrlRate),
+    Promise.all(
+      native.map(async (position) => {
+        if (!isOpenQuantity(position.quantity)) {
+          return;
         }
-      } catch (error) {
-        missing.push(position.ticker);
 
-        if (!(error instanceof QuoteUnavailableError)) {
-          providerFailures += 1;
-          lastProviderError =
-            error instanceof Error ? error.message : "Quote provider failed";
+        try {
+          const resolved = await getQuoteWithManualFallback(provider, {
+            ticker: position.ticker,
+            assetClass: position.assetClass,
+            currency: position.currency,
+            asOf: request.asOf,
+            manualPrice: manualPrices[position.ticker],
+            forceRefresh: request.forceRefresh,
+          });
+
+          quotes.set(position.ticker, {
+            ticker: resolved.quote.ticker,
+            price: resolved.quote.price,
+            asOf: resolved.quote.asOf,
+            previousClose: resolved.quote.previousClose,
+            previousCloseAsOf: resolved.quote.previousCloseAsOf,
+          });
+
+          if (resolved.manual) {
+            manual.push(position.ticker);
+          }
+        } catch (error) {
+          missing.push(position.ticker);
+
+          if (!(error instanceof QuoteUnavailableError)) {
+            providerFailures += 1;
+            lastProviderError =
+              error instanceof Error ? error.message : "Quote provider failed";
+          }
         }
-      }
-    }),
-  );
+      }),
+    ),
+  ]);
+
+  if (needsRate && !usdBrlRate) {
+    throw missingRateError();
+  }
+
+  let converted: Position[];
+
+  try {
+    converted = convertPositions(
+      native,
+      request.displayCurrency,
+      usdBrlRate ?? null,
+    );
+  } catch {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "The USD/BRL rate is invalid",
+    });
+  }
 
   if (quotes.size === 0 && providerFailures > 0) {
     throw new TRPCError({
@@ -262,7 +295,7 @@ async function loadValuedPortfolioUncached(
     positions: includeCash
       ? withCashPosition(
           valued,
-          cashRows[0]?.amount ?? "0",
+          cashAmount ?? "0",
           request.displayCurrency,
           usdBrlRate ?? null,
         )

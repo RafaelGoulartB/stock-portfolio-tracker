@@ -4,9 +4,11 @@
 
 Splits are user-recorded ledger events in the account-owned
 `corporate_actions` table: `from_quantity` old shares become `to_quantity`
-new ones on `effective_at`, the first day trading in the new units. Only
-`kind = 'split'` exists; a bonus issue (bonificação) also changes cost basis
-and needs its own rules and plan.
+new ones on `effective_at`, the first day trading in the new units. A
+`kind = 'bonus'` row (bonificação) scales units the same way and stores the
+cost per share the company attributed in `unit_cost`; that cost enters only
+the income tax ledger (see `tasks/plan-income-tax.md`), so positions keep the
+cash actually paid.
 
 The ledger is read in today's share units. `adjustForSplits` multiplies the
 units of every trade dated before a split by `to / from`; the trade's money

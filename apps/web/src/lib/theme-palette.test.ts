@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   CUSTOM_THEME_STORAGE_KEY,
@@ -8,8 +9,25 @@ import {
   readCustomThemes,
   readStoredThemePaletteId,
   storeCustomThemes,
+  THEME_COLOR_ROLES,
   THEME_PALETTES,
 } from "./theme-palette";
+
+function readStyles(file: string): string {
+  return readFileSync(new URL(`../styles/${file}`, import.meta.url), "utf8");
+}
+
+/** Custom properties declared by the rule whose selector is `selector`. */
+function readTokenBlock(css: string, selector: string): Record<string, string> {
+  const start = css.indexOf(`${selector} {`);
+  if (start === -1) throw new Error(`Missing rule ${selector}`);
+  const body = css.slice(start, css.indexOf("}", start));
+  return Object.fromEntries(
+    [...body.matchAll(/--([\w-]+):\s*([^;]+);/g)]
+      .filter(([, name]) => name !== "radius")
+      .map(([, name, value]) => [name, value.trim()]),
+  );
+}
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -27,29 +45,37 @@ describe("built-in theme palettes", () => {
     ]);
   });
 
-  it("uses the built-in action colors for the palette swatches", () => {
-    expect(THEME_PALETTES.slice(1).map((palette) => palette.swatch)).toEqual([
-      {
-        light: "oklch(0.591646 0.217985 0.584)",
-        dark: "oklch(0.460685 0.185347 4.099)",
-      },
-      {
-        light: "oklch(0.535028 0.106403 77.549)",
-        dark: "oklch(0.791603 0.129713 83.299)",
-      },
-      {
-        light: "oklch(0.493961 0.08175 201.584)",
-        dark: "oklch(0.793363 0.105022 199.893)",
-      },
-      {
-        light: "oklch(0.516323 0.161628 24.82)",
-        dark: "oklch(0.747955 0.135578 29.432)",
-      },
-      {
-        light: "oklch(0.516084 0.185229 340.776)",
-        dark: "oklch(0.789904 0.130063 337.621)",
-      },
-    ]);
+  it("mirrors the default tokens of globals.css in the editor seed", () => {
+    const css = readStyles("globals.css");
+
+    expect(
+      readTokenBlock(css, ':root,\n[data-theme-palette="default"]'),
+    ).toEqual(expect.objectContaining(getDefaultThemeColors("light")));
+    expect(
+      readTokenBlock(
+        css,
+        '.dark,\n[data-theme-palette="default"][data-scheme="dark"]',
+      ),
+    ).toEqual(expect.objectContaining(getDefaultThemeColors("dark")));
+  });
+
+  it("defines every editable role and the chart accent in both modes", () => {
+    const css = readStyles("theme-palettes.css");
+    const roles = [...THEME_COLOR_ROLES, "chart-primary"].sort();
+
+    for (const { id } of THEME_PALETTES.slice(1)) {
+      const light = readTokenBlock(
+        css,
+        `:root[data-theme-palette="${id}"],\n[data-theme-palette="${id}"]`,
+      );
+      const dark = readTokenBlock(
+        css,
+        `:root.dark[data-theme-palette="${id}"],\n[data-theme-palette="${id}"][data-scheme="dark"]`,
+      );
+
+      expect(Object.keys(light).sort()).toEqual(roles);
+      expect(Object.keys(dark).sort()).toEqual(roles);
+    }
   });
 });
 

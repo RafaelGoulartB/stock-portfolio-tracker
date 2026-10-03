@@ -32,7 +32,10 @@ export function ShareBar({
       aria-hidden="true"
     >
       <span
-        className={cn("block h-full rounded-r-[3px]", !color && "bg-chart-1")}
+        className={cn(
+          "block h-full rounded-r-[3px]",
+          !color && "bg-chart-primary",
+        )}
         style={{
           // A sliver keeps sub-percent rows visible instead of blank.
           width: `${Math.max(fraction * 100, 1.2)}%`,

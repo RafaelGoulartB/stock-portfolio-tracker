@@ -40,7 +40,7 @@ export function CumulativeReturnCard({ rows }: { rows: MonthRow[] }) {
         id: "performance.cumulativeReturn",
         message: "Cumulative return",
       }),
-      color: "var(--chart-1)",
+      color: "var(--chart-primary)",
     },
   };
 
@@ -99,7 +99,7 @@ export function CumulativeReturnCard({ rows }: { rows: MonthRow[] }) {
 
                       return (
                         <TooltipRow
-                          color="var(--chart-1)"
+                          color="var(--chart-primary)"
                           label={
                             <Trans id="performance.cumulativeReturn">
                               Cumulative return
@@ -120,7 +120,7 @@ export function CumulativeReturnCard({ rows }: { rows: MonthRow[] }) {
               <Line
                 dataKey="cumulativeReturn"
                 type="monotone"
-                stroke="var(--chart-1)"
+                stroke="var(--chart-primary)"
                 strokeWidth={2}
                 dot={false}
                 activeDot={{ r: 3 }}

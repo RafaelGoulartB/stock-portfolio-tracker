@@ -9,18 +9,23 @@ import { lockTickers } from "./transactions";
  */
 function captureLockKeys() {
   const keys: string[] = [];
-  const execute = vi.fn(async (query: unknown) => {
-    // Drizzle renders sql`` into `queryChunks`: literal `StringChunk`s carry a
-    // string[] value, while an interpolated primitive (our `user:ticker` lock
-    // key) is stored directly as a string chunk.
+  // Drizzle renders sql`` into `queryChunks`: literal `StringChunk`s carry a
+  // string[] value, an interpolated primitive (our `user:ticker` lock key) is
+  // stored directly as a string chunk, and `sql.join` nests further SQL
+  // objects, which are walked in rendering order.
+  const collect = (query: unknown) => {
     const chunks = (query as { queryChunks?: unknown[] }).queryChunks;
 
     for (const chunk of chunks ?? []) {
       if (typeof chunk === "string") {
         keys.push(chunk);
+      } else if (chunk && typeof chunk === "object") {
+        collect(chunk);
       }
     }
-
+  };
+  const execute = vi.fn(async (query: unknown) => {
+    collect(query);
     return { rows: [] };
   });
 

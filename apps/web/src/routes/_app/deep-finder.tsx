@@ -5,7 +5,6 @@ import {
   DEEP_FINDER_WINDOWS,
   DEFAULT_DEEP_FINDER_WINDOW,
   type DeepFinderWindow,
-  positiveDecimal,
 } from "@portifolio-tracker/shared";
 import { createFileRoute } from "@tanstack/react-router";
 import {
@@ -44,6 +43,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { usePortfolioQueryInput } from "@/lib/allocation-query";
 import { type RouterOutputs, trpc } from "@/lib/api";
 import {
   formatMoney,
@@ -52,8 +52,7 @@ import {
   formatTradeDate,
   pnlClassName,
 } from "@/lib/format";
-import { useFxQuote, useFxRequest } from "@/lib/fx";
-import { useSettings } from "@/lib/settings";
+import { useFxQuote } from "@/lib/fx";
 import { isFxRateRequired, queryErrorMessage } from "@/lib/trpcErrors";
 import { cn } from "@/lib/utils";
 
@@ -73,37 +72,18 @@ type ChartDatum = {
 };
 
 function DeepFinderPage() {
-  const { displayCurrency, quoteSource, manualPrices } = useSettings();
   const fx = useFxQuote();
-  const fxRequest = useFxRequest();
   const utils = trpc.useUtils();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [window, setWindow] = useState<DeepFinderWindow>(
     DEFAULT_DEEP_FINDER_WINDOW,
   );
   const [breadth, setBreadth] = useState<Breadth>("all");
-  const sanitizedManualPrices = useMemo(
-    () =>
-      Object.fromEntries(
-        Object.entries(manualPrices).filter(
-          ([, price]) => positiveDecimal.safeParse(price).success,
-        ),
-      ),
-    [manualPrices],
-  );
+  // Same input as the Positions teaser, so the 1M window shares its cache.
+  const portfolioInput = usePortfolioQueryInput();
   const queryInput = useMemo(
-    () => ({
-      displayCurrency,
-      ...fxRequest,
-      quoteSource,
-      window,
-      manualPrices:
-        quoteSource === "manual" &&
-        Object.keys(sanitizedManualPrices).length > 0
-          ? sanitizedManualPrices
-          : undefined,
-    }),
-    [displayCurrency, fxRequest, quoteSource, sanitizedManualPrices, window],
+    () => ({ ...portfolioInput, window }),
+    [portfolioInput, window],
   );
   const finder = trpc.positions.finder.useQuery(queryInput);
 

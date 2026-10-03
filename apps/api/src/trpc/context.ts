@@ -1,12 +1,17 @@
 import { getConnInfo } from "@hono/node-server/conninfo";
 import type { SessionUser } from "@portifolio-tracker/shared";
 import type { Context as HonoContext } from "hono";
-import { deleteCookie, getCookie, setCookie } from "hono/cookie";
+import {
+  deleteCookie,
+  generateCookie,
+  getCookie,
+  setCookie,
+} from "hono/cookie";
 import { env, sessionCookieSecure } from "../env";
 import { resolveClientKey } from "../lib/rate-limit";
 import { findSessionUser, SESSION_COOKIE } from "../lib/session";
 
-export async function createContext(c: HonoContext) {
+export async function createContext(c: HonoContext, responseHeaders?: Headers) {
   const token = getCookie(c, SESSION_COOKIE) ?? null;
   const user: SessionUser | null = token ? await findSessionUser(token) : null;
 
@@ -28,16 +33,33 @@ export async function createContext(c: HonoContext) {
     token,
     clientKey,
     setSessionCookie(value: string, expiresAt: Date) {
-      setCookie(c, SESSION_COOKIE, value, {
+      const options = {
         httpOnly: true,
-        sameSite: "Lax",
+        sameSite: "Lax" as const,
         secure: sessionCookieSecure,
         path: "/",
         expires: expiresAt,
-      });
+      };
+      // tRPC creates its own Response, so Hono's prepared headers do not
+      // reach the browser. Write cookies to the adapter's response headers.
+      if (responseHeaders) {
+        responseHeaders.append(
+          "Set-Cookie",
+          generateCookie(SESSION_COOKIE, value, options),
+        );
+      } else {
+        setCookie(c, SESSION_COOKIE, value, options);
+      }
     },
     clearSessionCookie() {
-      deleteCookie(c, SESSION_COOKIE, { path: "/" });
+      if (responseHeaders) {
+        responseHeaders.append(
+          "Set-Cookie",
+          generateCookie(SESSION_COOKIE, "", { path: "/", maxAge: 0 }),
+        );
+      } else {
+        deleteCookie(c, SESSION_COOKIE, { path: "/" });
+      }
     },
   };
 }

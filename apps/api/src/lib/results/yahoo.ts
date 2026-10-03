@@ -1,18 +1,16 @@
 import type { NextResult } from "@portifolio-tracker/shared";
+import {
+  type YahooCredentials,
+  YahooSession,
+  yahooSession,
+} from "../yahoo-session";
 import type { ResultDateAsset, ResultDateProvider } from "./provider";
 
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36";
-const SESSION_TTL_MS = 60 * 60 * 1_000;
 const POSITIVE_TTL_MS = 6 * 60 * 60 * 1_000;
 const ABSENT_TTL_MS = 6 * 60 * 60 * 1_000;
 const FAILURE_TTL_MS = 30 * 60 * 1_000;
-
-type YahooSession = {
-  cookie: string;
-  crumb: string;
-  expiresAt: number;
-};
 
 type ResultCacheEntry = {
   value: NextResult | null;
@@ -28,21 +26,6 @@ type YahooEvent = {
   period?: string;
   quarter?: string;
 };
-
-function normalizeCookie(headers: Headers): string | null {
-  const getSetCookie = (
-    headers as Headers & { getSetCookie?: () => string[] }
-  ).getSetCookie?.();
-  const values = getSetCookie?.length
-    ? getSetCookie
-    : [headers.get("set-cookie")].filter((value): value is string => !!value);
-  const cookie = values
-    .map((value) => value.split(";", 1)[0])
-    .filter(Boolean)
-    .join("; ");
-
-  return cookie || null;
-}
 
 function unixToDate(value: number): string | null {
   if (!Number.isFinite(value) || value <= 0) return null;
@@ -87,13 +70,13 @@ function periodFromEvent(event: YahooEvent): string | null {
 
 export class YahooResultProvider implements ResultDateProvider {
   readonly id = "yahoo" as const;
-  private session: YahooSession | null = null;
   private readonly cache = new Map<string, ResultCacheEntry>();
   private readonly pending = new Map<string, Promise<NextResult | null>>();
 
   constructor(
     private readonly fetchImpl: typeof fetch = fetch,
     private readonly now: () => number = Date.now,
+    private readonly session = new YahooSession(fetchImpl, now),
   ) {}
 
   async getNextResult(
@@ -123,7 +106,7 @@ export class YahooResultProvider implements ResultDateProvider {
   }
 
   clearCache() {
-    this.session = null;
+    this.session.invalidate();
     this.cache.clear();
     this.pending.clear();
   }
@@ -174,10 +157,10 @@ export class YahooResultProvider implements ResultDateProvider {
     asset: ResultDateAsset,
     today: string,
   ): Promise<NextResult | null> {
-    let response = await this.fetchCalendar(symbol);
+    let { response, session } = await this.fetchCalendar(symbol);
     if (response.status === 401 || response.status === 403) {
-      this.session = null;
-      response = await this.fetchCalendar(symbol);
+      this.session.invalidate(session);
+      ({ response, session } = await this.fetchCalendar(symbol));
     }
     if (!response.ok) {
       throw new Error(`Yahoo result request failed (${response.status})`);
@@ -204,64 +187,30 @@ export class YahooResultProvider implements ResultDateProvider {
     };
   }
 
-  private async fetchCalendar(symbol: string): Promise<Response> {
-    const session = await this.getSession();
+  private async fetchCalendar(
+    symbol: string,
+  ): Promise<{ response: Response; session: YahooCredentials }> {
+    const session = await this.session.get();
     const url = new URL(
       `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(symbol)}`,
     );
     url.searchParams.set("modules", "calendarEvents");
     url.searchParams.set("crumb", session.crumb);
 
-    return this.fetchImpl(url, {
+    const response = await this.fetchImpl(url, {
       headers: { Cookie: session.cookie, "User-Agent": USER_AGENT },
       signal: AbortSignal.timeout(10_000),
     });
-  }
-
-  private async getSession(): Promise<YahooSession> {
-    if (this.session && this.session.expiresAt > this.now()) {
-      return this.session;
-    }
-
-    const cookieResponse = await this.fetchImpl("https://fc.yahoo.com/", {
-      headers: { "User-Agent": USER_AGENT },
-      redirect: "manual",
-      signal: AbortSignal.timeout(10_000),
-    });
-    if (
-      !cookieResponse.ok &&
-      ![301, 302, 404].includes(cookieResponse.status)
-    ) {
-      throw new Error(`Yahoo cookie request failed (${cookieResponse.status})`);
-    }
-
-    const cookie = normalizeCookie(cookieResponse.headers);
-    if (!cookie) throw new Error("Yahoo did not return a session cookie");
-
-    const crumbResponse = await this.fetchImpl(
-      "https://query2.finance.yahoo.com/v1/test/getcrumb",
-      {
-        headers: { Cookie: cookie, "User-Agent": USER_AGENT },
-        signal: AbortSignal.timeout(10_000),
-      },
-    );
-    if (!crumbResponse.ok) {
-      throw new Error(`Yahoo crumb request failed (${crumbResponse.status})`);
-    }
-
-    const crumb = (await crumbResponse.text()).trim();
-    if (!crumb) throw new Error("Yahoo did not return a crumb");
-
-    this.session = {
-      cookie,
-      crumb,
-      expiresAt: this.now() + SESSION_TTL_MS,
-    };
-    return this.session;
+    return { response, session };
   }
 }
 
-const defaultProvider = new YahooResultProvider();
+// Shares its cookie/crumb with the quote provider: one handshake per hour.
+const defaultProvider = new YahooResultProvider(
+  (input, init) => fetch(input, init),
+  Date.now,
+  yahooSession,
+);
 
 export const yahooResultProvider: ResultDateProvider = defaultProvider;
 

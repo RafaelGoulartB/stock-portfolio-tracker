@@ -1,7 +1,6 @@
 import { plural, t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
-import { positiveDecimal } from "@portifolio-tracker/shared";
 import { createFileRoute } from "@tanstack/react-router";
 import {
   ArrowDown,
@@ -32,6 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { usePortfolioQueryInput } from "@/lib/allocation-query";
 import { type RouterOutputs, trpc } from "@/lib/api";
 import {
   formatMoney,
@@ -41,11 +41,15 @@ import {
   formatTradeDate,
   pnlClassName,
 } from "@/lib/format";
-import { useFxQuote, useFxRequest } from "@/lib/fx";
-import { useSettings } from "@/lib/settings";
+import { useFxQuote } from "@/lib/fx";
+import { prefetchPortfolio, trpcQueryUtils } from "@/lib/route-prefetch";
 import { isFxRateRequired, queryErrorMessage } from "@/lib/trpcErrors";
 
 export const Route = createFileRoute("/_app/daily")({
+  loader: ({ preload }) =>
+    prefetchPortfolio(preload, (input) => [
+      trpcQueryUtils.positions.daily.prefetch(input),
+    ]),
   component: DailyPage,
 });
 
@@ -56,33 +60,10 @@ type SortDirection = "asc" | "desc";
 
 function DailyPage() {
   const { i18n } = useLingui();
-  const { displayCurrency, quoteSource, manualPrices } = useSettings();
   const fx = useFxQuote();
-  const fxRequest = useFxRequest();
   const utils = trpc.useUtils();
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const sanitizedManualPrices = useMemo(
-    () =>
-      Object.fromEntries(
-        Object.entries(manualPrices).filter(
-          ([, price]) => positiveDecimal.safeParse(price).success,
-        ),
-      ),
-    [manualPrices],
-  );
-  const queryInput = useMemo(
-    () => ({
-      displayCurrency,
-      ...fxRequest,
-      quoteSource,
-      manualPrices:
-        quoteSource === "manual" &&
-        Object.keys(sanitizedManualPrices).length > 0
-          ? sanitizedManualPrices
-          : undefined,
-    }),
-    [displayCurrency, fxRequest, quoteSource, sanitizedManualPrices],
-  );
+  const queryInput = usePortfolioQueryInput();
   const daily = trpc.positions.daily.useQuery(queryInput);
 
   async function refreshQuotes() {

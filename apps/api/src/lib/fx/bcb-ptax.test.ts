@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { BcbPtaxProvider, clearPtaxCache, parsePtaxSeries } from "./bcb-ptax";
+import {
+  BcbPtaxProvider,
+  clearPtaxCache,
+  parsePtaxSeries,
+  ptaxBuyRateOnOrBefore,
+} from "./bcb-ptax";
 import { tradeDateRates } from "./trade-rates";
 
 function ptaxResponse(rows: unknown[]): Response {
@@ -34,6 +39,23 @@ describe("parsePtaxSeries", () => {
         ],
       }),
     ).toEqual([{ asOf: "2026-09-17", rate: "5.15210000" }]);
+  });
+
+  it("reads the buy rate when asked, ignoring the sell rate", () => {
+    expect(
+      parsePtaxSeries(
+        {
+          value: [
+            {
+              cotacaoCompra: 5.5018,
+              cotacaoVenda: 5.5024,
+              dataHoraCotacao: "2025-12-31 13:05:00.1",
+            },
+          ],
+        },
+        "cotacaoCompra",
+      ),
+    ).toEqual([{ asOf: "2025-12-31", rate: "5.50180000" }]);
   });
 
   it("treats an empty range as an error, not as a quote", () => {
@@ -125,5 +147,29 @@ describe("tradeDateRates", () => {
 
     // Monday's close is not out yet; Friday's must not be stored for it.
     expect([...rates.keys()]).toEqual(["2026-09-18"]);
+  });
+});
+
+describe("ptaxBuyRateOnOrBefore", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("returns the last business day's buy rate on or before the day", async () => {
+    const fetchMock = vi.fn(async () =>
+      ptaxResponse([
+        { cotacaoCompra: 5.4, dataHoraCotacao: "2026-12-30 13:00:00" },
+        { cotacaoCompra: 5.41, dataHoraCotacao: "2026-12-31 13:00:00" },
+      ]),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect(await ptaxBuyRateOnOrBefore("2027-01-01")).toEqual({
+      asOf: "2026-12-31",
+      rate: "5.41000000",
+    });
+    expect(String((fetchMock.mock.calls[0] as unknown[])[0])).toContain(
+      "cotacaoCompra",
+    );
   });
 });

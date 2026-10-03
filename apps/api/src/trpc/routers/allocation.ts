@@ -49,7 +49,7 @@ import {
 import { getQuoteProvider, QuoteUnavailableError } from "../../lib/quotes";
 import { getNextResults } from "../../lib/results";
 import { protectedProcedure, router } from "../trpc";
-import { loadValuedPortfolio } from "../valuation";
+import { loadCashAmount, loadValuedPortfolio } from "../valuation";
 import {
   ensureAsset,
   loadAsset,
@@ -67,9 +67,9 @@ import {
 } from "./allocation-helpers";
 import { loadMarketSignals } from "./allocation-market";
 import {
+  loadAccountSplits,
   loadTransactions,
   loadTransactionsForTickers,
-  readSplits,
 } from "./transactions";
 
 export const allocationRouter = router({
@@ -104,15 +104,15 @@ export const allocationRouter = router({
   list: protectedProcedure
     .input(allocationListInput)
     .query(async ({ ctx, input }) => {
-      const [assets, reviews, scorePolicy, history, splits] = await Promise.all(
-        [
+      const [assets, reviews, scorePolicy, history, splits, cashAmount] =
+        await Promise.all([
           loadAssets(ctx.user.id),
           loadReviews(ctx.user.id),
           loadScoreConfig(ctx.user.id),
           loadTransactions(ctx.user.id),
-          readSplits(db, ctx.user.id),
-        ],
-      );
+          loadAccountSplits(ctx.user.id),
+          loadCashAmount(ctx.user.id),
+        ]);
       const fairValues = fairValueReviews(reviews, splits);
       const stored = storedManualPrices(assets);
       const requestManuals = {
@@ -146,6 +146,7 @@ export const allocationRouter = router({
           manualPrices: requestManuals,
           storedManualPrices: stored,
           transactions: history,
+          cashAmount,
           forceRefresh: input.forceRefresh,
         }),
         quoteWatchOnly(
@@ -161,7 +162,6 @@ export const allocationRouter = router({
           reviews: fairValues,
           today: day,
           quoteSource: input.quoteSource,
-          forceRefresh: input.forceRefresh,
           config: scorePolicy.config,
         }),
       ]);

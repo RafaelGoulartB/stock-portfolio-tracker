@@ -33,7 +33,7 @@ export function ValueCard({
   const config: ChartConfig = {
     marketValue: {
       label: t({ id: "performance.value", message: "Portfolio value" }),
-      color: "var(--chart-1)",
+      color: "var(--chart-primary)",
     },
     investedCost: {
       label: t({ id: "performance.cost", message: "Cost basis" }),
@@ -64,12 +64,12 @@ export function ValueCard({
               <linearGradient id="performanceValue" x1="0" y1="0" x2="0" y2="1">
                 <stop
                   offset="0%"
-                  stopColor="var(--chart-1)"
+                  stopColor="var(--chart-primary)"
                   stopOpacity={0.35}
                 />
                 <stop
                   offset="100%"
-                  stopColor="var(--chart-1)"
+                  stopColor="var(--chart-primary)"
                   stopOpacity={0.02}
                 />
               </linearGradient>
@@ -159,7 +159,7 @@ export function ValueCard({
 
                     return (
                       <TooltipRow
-                        color="var(--chart-1)"
+                        color="var(--chart-primary)"
                         label={
                           <Trans id="performance.value">Portfolio value</Trans>
                         }
@@ -173,7 +173,7 @@ export function ValueCard({
             <Area
               dataKey="marketValue"
               type="monotone"
-              stroke="var(--chart-1)"
+              stroke="var(--chart-primary)"
               strokeWidth={2}
               fill="url(#performanceValue)"
               dot={false}

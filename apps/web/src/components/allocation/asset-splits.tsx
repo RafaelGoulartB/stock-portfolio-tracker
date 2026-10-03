@@ -2,6 +2,8 @@ import { t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import {
+  type Currency,
+  createBonusInput,
   createSplitInput,
   type Split,
   type SplitSuggestion,
@@ -20,20 +22,40 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/api";
-import { formatQuantity, formatTradeDate } from "@/lib/format";
+import {
+  formatPreciseMoney,
+  formatQuantity,
+  formatTradeDate,
+} from "@/lib/format";
 import { parseDecimalInput } from "@/lib/numeric-input";
-import { splitErrorMessage } from "@/lib/trpcErrors";
+import { bonusErrorMessage, splitErrorMessage } from "@/lib/trpcErrors";
+import { cn } from "@/lib/utils";
 
 function ratioText(split: { fromQuantity: string; toQuantity: string }) {
   return `${formatQuantity(split.fromQuantity)} → ${formatQuantity(split.toQuantity)}`;
 }
+
+/** Shares a bonus added: the API stores it as held → held + received. */
+function bonusShares(split: Split): string {
+  return formatQuantity(
+    (Number(split.toQuantity) - Number(split.fromQuantity)).toFixed(8),
+  );
+}
+
+type Mode = "split" | "bonus";
 
 /**
  * Splits and reverse splits of one ticker. Recording one restates the units
  * of every earlier trade; nothing is applied until the user records it,
  * even when the quote provider suggests it.
  */
-export function AssetSplits({ ticker }: { ticker: string }) {
+export function AssetSplits({
+  ticker,
+  currency,
+}: {
+  ticker: string;
+  currency: Currency | null;
+}) {
   const { i18n } = useLingui();
   const utils = trpc.useUtils();
   const splits = trpc.corporateActions.list.useQuery({ ticker });
@@ -44,6 +66,11 @@ export function AssetSplits({ ticker }: { ticker: string }) {
   const [effectiveAt, setEffectiveAt] = useState("");
   const [fromText, setFromText] = useState("1");
   const [toText, setToText] = useState("");
+  const [mode, setMode] = useState<Mode>("split");
+  const [receivedText, setReceivedText] = useState("");
+  const [unitCostText, setUnitCostText] = useState("");
+  // Bonus shares carry a cost in reais the company attributes on B3.
+  const bonusAllowed = currency === "BRL";
 
   async function refresh() {
     // Units change every quantity, weight, value and dividend entitlement.
@@ -54,8 +81,27 @@ export function AssetSplits({ ticker }: { ticker: string }) {
       utils.allocation.invalidate(),
       utils.performance.invalidate(),
       utils.dividends.invalidate(),
+      utils.incomeTax.invalidate(),
     ]);
   }
+
+  const createBonus = trpc.corporateActions.createBonus.useMutation({
+    onSuccess: async (split) => {
+      const shares = bonusShares(split);
+
+      toast.success(
+        t({
+          id: "splits.bonusRecorded",
+          message: `Bonus of ${shares} shares recorded`,
+        }),
+      );
+      setEffectiveAt("");
+      setReceivedText("");
+      setUnitCostText("");
+      await refresh();
+    },
+    onError: (error) => toast.error(bonusErrorMessage(error)),
+  });
 
   const create = trpc.corporateActions.createSplit.useMutation({
     onSuccess: async (split) => {
@@ -87,9 +133,21 @@ export function AssetSplits({ ticker }: { ticker: string }) {
     toQuantity: parseDecimalInput(toText) ?? "",
   });
 
+  const parsedBonus = createBonusInput.safeParse({
+    ticker,
+    effectiveAt,
+    receivedQuantity: parseDecimalInput(receivedText) ?? "",
+    unitCost: parseDecimalInput(unitCostText) ?? "",
+  });
+  const activeMode: Mode = bonusAllowed ? mode : "split";
+
   function submit(event: FormEvent) {
     event.preventDefault();
-    if (parsed.success) create.mutate(parsed.data);
+    if (activeMode === "bonus") {
+      if (parsedBonus.success) createBonus.mutate(parsedBonus.data);
+    } else if (parsed.success) {
+      create.mutate(parsed.data);
+    }
   }
 
   function record(suggestion: SplitSuggestion) {
@@ -108,13 +166,15 @@ export function AssetSplits({ ticker }: { ticker: string }) {
     <Card>
       <CardHeader>
         <CardTitle>
-          <Trans id="splits.title">Splits</Trans>
+          <Trans id="splits.title">Splits and bonus issues</Trans>
         </CardTitle>
         <CardDescription>
           <Trans id="splits.description">
             Splits and reverse splits change share units without moving money.
             Earlier trades are restated in today&apos;s units, so the cost basis
-            stays what you paid and the average price follows.
+            stays what you paid and the average price follows. Bonus shares
+            count the same way here; their attributed cost enters only the
+            income tax cost.
           </Trans>
         </CardDescription>
       </CardHeader>
@@ -137,7 +197,8 @@ export function AssetSplits({ ticker }: { ticker: string }) {
                   <span className="min-w-0 flex-1">
                     <Trans id="splits.suggestion">
                       Yahoo reports a {ratio} split effective {date} that is not
-                      recorded yet.
+                      recorded yet. If it was a bonus issue, record it as a
+                      bonus below instead, with the attributed cost.
                     </Trans>
                   </span>
                   <Button
@@ -166,19 +227,34 @@ export function AssetSplits({ ticker }: { ticker: string }) {
 
         {recorded.length === 0 ? (
           <p className="text-sm text-muted-foreground">
-            <Trans id="splits.empty">No split recorded for this ticker.</Trans>
+            <Trans id="splits.empty">
+              No split or bonus recorded for this ticker.
+            </Trans>
           </p>
         ) : (
           <ul className="divide-y rounded-lg border">
             {recorded.map((split) => {
               const date = formatTradeDate(split.effectiveAt);
               const ratio = ratioText(split);
-              const removeLabel = i18n._(
-                t({
-                  id: "splits.removeLabel",
-                  message: `Remove the ${ratio} split of ${date}`,
-                }),
-              );
+              const isBonus = split.kind === "bonus";
+              const shares = isBonus ? bonusShares(split) : "";
+              const unitCost =
+                isBonus && split.unitCost
+                  ? formatPreciseMoney(split.unitCost, "BRL")
+                  : "";
+              const removeLabel = isBonus
+                ? i18n._(
+                    t({
+                      id: "splits.removeBonusLabel",
+                      message: `Remove the bonus of ${date}`,
+                    }),
+                  )
+                : i18n._(
+                    t({
+                      id: "splits.removeLabel",
+                      message: `Remove the ${ratio} split of ${date}`,
+                    }),
+                  );
 
               return (
                 <li
@@ -189,7 +265,13 @@ export function AssetSplits({ ticker }: { ticker: string }) {
                     {date}
                   </span>
                   <span className="flex-1 font-medium tabular-nums">
-                    {ratio}
+                    {isBonus ? (
+                      <Trans id="splits.bonusRow">
+                        Bonus: +{shares} shares at {unitCost} each
+                      </Trans>
+                    ) : (
+                      ratio
+                    )}
                     {split.notes ? (
                       <span className="block text-xs font-normal text-muted-foreground">
                         {split.notes}
@@ -213,14 +295,43 @@ export function AssetSplits({ ticker }: { ticker: string }) {
           </ul>
         )}
 
+        {bonusAllowed ? (
+          <fieldset className="flex gap-1 rounded-lg border bg-muted/40 p-1 text-sm">
+            <legend className="sr-only">
+              <Trans id="splits.modeLegend">Event type</Trans>
+            </legend>
+            {(["split", "bonus"] as const).map((option) => (
+              <Button
+                key={option}
+                type="button"
+                size="sm"
+                variant={activeMode === option ? "secondary" : "ghost"}
+                aria-pressed={activeMode === option}
+                className={cn("flex-1", activeMode === option && "shadow-sm")}
+                onClick={() => setMode(option)}
+              >
+                {option === "split" ? (
+                  <Trans id="splits.modeSplit">Split</Trans>
+                ) : (
+                  <Trans id="splits.modeBonus">Bonus issue</Trans>
+                )}
+              </Button>
+            ))}
+          </fieldset>
+        ) : null}
+
         <form
-          className="grid gap-3 sm:grid-cols-[1fr_6rem_6rem_auto] sm:items-end"
+          className="grid gap-3 sm:grid-cols-[1fr_7rem_7rem_auto] sm:items-end"
           onSubmit={submit}
           noValidate
         >
           <div className="grid gap-1.5">
             <Label htmlFor="split-date">
-              <Trans id="splits.effectiveAt">First day in new units</Trans>
+              {activeMode === "bonus" ? (
+                <Trans id="splits.bonusDate">Ex-date</Trans>
+              ) : (
+                <Trans id="splits.effectiveAt">First day in new units</Trans>
+              )}
             </Label>
             <Input
               id="split-date"
@@ -229,41 +340,91 @@ export function AssetSplits({ ticker }: { ticker: string }) {
               onChange={(event) => setEffectiveAt(event.target.value)}
             />
           </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="split-from">
-              <Trans id="splits.from">Old shares</Trans>
-            </Label>
-            <Input
-              id="split-from"
-              inputMode="decimal"
-              value={fromText}
-              onChange={(event) => setFromText(event.target.value)}
-            />
-          </div>
-          <div className="grid gap-1.5">
-            <Label htmlFor="split-to">
-              <Trans id="splits.to">New shares</Trans>
-            </Label>
-            <Input
-              id="split-to"
-              inputMode="decimal"
-              placeholder="2"
-              value={toText}
-              onChange={(event) => setToText(event.target.value)}
-            />
-          </div>
-          <Button type="submit" disabled={!parsed.success || create.isPending}>
-            {create.isPending ? (
-              <Loader2 className="size-4 animate-spin" aria-hidden="true" />
-            ) : null}
-            <Trans id="splits.record">Record split</Trans>
-          </Button>
-          <p className="text-xs text-muted-foreground sm:col-span-4">
-            <Trans id="splits.formHint">
-              A split of 1 into 2 doubles the shares; a reverse split of 10 into
-              1 divides them by ten.
-            </Trans>
-          </p>
+          {activeMode === "bonus" ? (
+            <>
+              <div className="grid gap-1.5">
+                <Label htmlFor="bonus-received">
+                  <Trans id="splits.bonusReceived">Shares received</Trans>
+                </Label>
+                <Input
+                  id="bonus-received"
+                  inputMode="decimal"
+                  placeholder="29"
+                  value={receivedText}
+                  onChange={(event) => setReceivedText(event.target.value)}
+                />
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="bonus-cost">
+                  <Trans id="splits.bonusUnitCost">Cost per share (R$)</Trans>
+                </Label>
+                <Input
+                  id="bonus-cost"
+                  inputMode="decimal"
+                  placeholder="18,00"
+                  value={unitCostText}
+                  onChange={(event) => setUnitCostText(event.target.value)}
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={!parsedBonus.success || createBonus.isPending}
+              >
+                {createBonus.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                ) : null}
+                <Trans id="splits.recordBonus">Record bonus</Trans>
+              </Button>
+              <p className="text-xs text-muted-foreground sm:col-span-4">
+                <Trans id="splits.bonusHint">
+                  Use the shares your broker credited and the cost per share the
+                  company announced. Shares held the day before the ex-date
+                  receive them. Fractions sold at auction are a sale.
+                </Trans>
+              </p>
+            </>
+          ) : (
+            <>
+              <div className="grid gap-1.5">
+                <Label htmlFor="split-from">
+                  <Trans id="splits.from">Old shares</Trans>
+                </Label>
+                <Input
+                  id="split-from"
+                  inputMode="decimal"
+                  value={fromText}
+                  onChange={(event) => setFromText(event.target.value)}
+                />
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="split-to">
+                  <Trans id="splits.to">New shares</Trans>
+                </Label>
+                <Input
+                  id="split-to"
+                  inputMode="decimal"
+                  placeholder="2"
+                  value={toText}
+                  onChange={(event) => setToText(event.target.value)}
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={!parsed.success || create.isPending}
+              >
+                {create.isPending ? (
+                  <Loader2 className="size-4 animate-spin" aria-hidden="true" />
+                ) : null}
+                <Trans id="splits.record">Record split</Trans>
+              </Button>
+              <p className="text-xs text-muted-foreground sm:col-span-4">
+                <Trans id="splits.formHint">
+                  A split of 1 into 2 doubles the shares; a reverse split of 10
+                  into 1 divides them by ten.
+                </Trans>
+              </p>
+            </>
+          )}
         </form>
       </CardContent>
     </Card>

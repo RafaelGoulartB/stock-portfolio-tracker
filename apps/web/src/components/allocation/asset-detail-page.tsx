@@ -72,6 +72,12 @@ export function AssetDetailPage() {
     { ticker },
     { enabled: parsedTicker.success },
   );
+  // The splits panel mounts only once the ledger shows trades; asking for its
+  // list now puts it in the same request instead of a second round trip.
+  trpc.corporateActions.list.useQuery(
+    { ticker },
+    { enabled: parsedTicker.success },
+  );
   const utils = trpc.useUtils();
 
   async function refresh() {
@@ -161,7 +167,7 @@ export function AssetDetailPage() {
       return;
     }
 
-    void navigate({ to: "/positions" });
+    void navigate({ to: "/allocation" });
   }
 
   return (
@@ -469,7 +475,7 @@ export function AssetDetailPage() {
             <AssetMovements row={row} ledger={ledger.data} />
           ) : null}
           {ledger.data && ledger.data.trades.length > 0 ? (
-            <AssetSplits ticker={ticker} />
+            <AssetSplits ticker={ticker} currency={ledger.data.currency} />
           ) : null}
         </>
       ) : null}

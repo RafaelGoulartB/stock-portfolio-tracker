@@ -1,4 +1,5 @@
 import {
+  createBonusInput,
   createSplitInput,
   removeSplitInput,
   type Split,
@@ -14,8 +15,10 @@ import {
   adjustForSplits,
   availableBeforeOversell,
   pendingSplitSuggestions,
+  unitsHeldBefore,
 } from "../../domain/positions";
 import { yahooPublishedSplits } from "../../lib/corporate-actions/yahoo";
+import { add, formatDecimal, toDecimal, ZERO } from "../../lib/decimal";
 import { protectedProcedure, router } from "../trpc";
 import { lockTickers, readSplits, readTickerHistory } from "./transactions";
 
@@ -26,6 +29,7 @@ const splitColumns = {
   effectiveAt: corporateActions.effectiveAt,
   fromQuantity: corporateActions.fromQuantity,
   toQuantity: corporateActions.toQuantity,
+  unitCost: corporateActions.unitCost,
   notes: corporateActions.notes,
 };
 
@@ -113,6 +117,82 @@ export const corporateActionsRouter = router({
             effectiveAt: input.effectiveAt,
             fromQuantity: input.fromQuantity,
             toQuantity: input.toQuantity,
+            notes: input.notes && input.notes.length > 0 ? input.notes : null,
+          })
+          .returning(splitColumns);
+
+        return created;
+      });
+
+      if (!row) {
+        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      }
+
+      return row;
+    }),
+
+  /**
+   * Records a bonus issue of a B3 asset. The shares received become a units
+   * ratio over what the ledger held the day before the ex-date, so every
+   * screen counts them like a split; the attributed cost only enters the
+   * income tax ledger.
+   */
+  createBonus: protectedProcedure
+    .input(createBonusInput)
+    .mutation(async ({ ctx, input }): Promise<Split> => {
+      const row = await db.transaction(async (tx) => {
+        await lockTickers(tx, ctx.user.id, [input.ticker]);
+        const [history, splits] = await Promise.all([
+          readTickerHistory(tx, ctx.user.id, [input.ticker]),
+          readSplits(tx, ctx.user.id, [input.ticker]),
+        ]);
+        const last = history.at(-1);
+
+        if (
+          last?.currency !== "BRL" ||
+          last.assetClass === "fixed_income" ||
+          last.assetClass === "cash"
+        ) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Only B3 share-based assets receive bonus shares here.",
+          });
+        }
+
+        if (splits.some((split) => split.effectiveAt === input.effectiveAt)) {
+          throw new TRPCError({
+            code: "CONFLICT",
+            message: `A split of ${input.ticker} on ${input.effectiveAt} is already recorded.`,
+          });
+        }
+
+        const held = unitsHeldBefore(
+          history,
+          splits,
+          input.ticker,
+          input.effectiveAt,
+        );
+
+        if (held <= ZERO) {
+          throw new TRPCError({
+            code: "PRECONDITION_FAILED",
+            message: `No ${input.ticker} held before ${input.effectiveAt}.`,
+          });
+        }
+
+        const [created] = await tx
+          .insert(corporateActions)
+          .values({
+            userId: ctx.user.id,
+            ticker: input.ticker,
+            kind: "bonus",
+            effectiveAt: input.effectiveAt,
+            fromQuantity: formatDecimal(held, 8),
+            toQuantity: formatDecimal(
+              add(held, toDecimal(input.receivedQuantity)),
+              8,
+            ),
+            unitCost: input.unitCost,
             notes: input.notes && input.notes.length > 0 ? input.notes : null,
           })
           .returning(splitColumns);

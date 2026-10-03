@@ -91,6 +91,29 @@ function storedJsonRecord(key: string): Record<string, string> {
   }
 }
 
+/** Query-relevant preferences as persisted, readable outside React. */
+export type StoredQuerySettings = {
+  displayCurrency: Currency;
+  fxSource: FxSource;
+  manualRate: string;
+  quoteSource: QuoteSource;
+  manualPrices: Record<string, string>;
+};
+
+/**
+ * The persisted preferences the provider starts from. Route loaders use it to
+ * request a page's data before the page component (and its context) exists.
+ */
+export function readStoredSettings(): StoredQuerySettings {
+  return {
+    displayCurrency: storedValue(DISPLAY_CURRENCY_KEY, CURRENCIES, "BRL"),
+    fxSource: storedValue(FX_SOURCE_KEY, FX_SOURCES, "frankfurter"),
+    manualRate: storedText(FX_MANUAL_RATE_KEY),
+    quoteSource: storedValue(QUOTE_SOURCE_KEY, QUOTE_SOURCES, "yahoo"),
+    manualPrices: storedJsonRecord(QUOTE_MANUAL_PRICES_KEY),
+  };
+}
+
 export type PortfolioSettings = {
   displayCurrency: Currency;
   setDisplayCurrency: (currency: Currency) => void;
@@ -115,20 +138,17 @@ const SettingsContext = createContext<PortfolioSettings | null>(null);
  * and the positions page, so the controls live in one place.
  */
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [displayCurrency, setDisplayCurrencyState] = useState<Currency>(() =>
-    storedValue(DISPLAY_CURRENCY_KEY, CURRENCIES, "BRL"),
+  const [initial] = useState(readStoredSettings);
+  const [displayCurrency, setDisplayCurrencyState] = useState<Currency>(
+    initial.displayCurrency,
   );
-  const [fxSource, setFxSourceState] = useState<FxSource>(() =>
-    storedValue(FX_SOURCE_KEY, FX_SOURCES, "frankfurter"),
-  );
-  const [manualRate, setManualRateState] = useState(() =>
-    storedText(FX_MANUAL_RATE_KEY),
-  );
-  const [quoteSource, setQuoteSourceState] = useState<QuoteSource>(() =>
-    storedValue(QUOTE_SOURCE_KEY, QUOTE_SOURCES, "yahoo"),
+  const [fxSource, setFxSourceState] = useState<FxSource>(initial.fxSource);
+  const [manualRate, setManualRateState] = useState(initial.manualRate);
+  const [quoteSource, setQuoteSourceState] = useState<QuoteSource>(
+    initial.quoteSource,
   );
   const [manualPrices, setManualPricesState] = useState<Record<string, string>>(
-    () => storedJsonRecord(QUOTE_MANUAL_PRICES_KEY),
+    initial.manualPrices,
   );
   const [showLogos, setShowLogosState] = useState(() =>
     storedBoolean(SHOW_LOGOS_KEY, true),

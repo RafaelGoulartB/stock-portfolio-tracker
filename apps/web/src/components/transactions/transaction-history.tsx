@@ -2,7 +2,7 @@ import { msg, t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import type { Transaction, TransactionList } from "@portifolio-tracker/shared";
-import { Pencil, Trash2, TriangleAlert } from "lucide-react";
+import { FileText, Pencil, Trash2, TriangleAlert } from "lucide-react";
 import { useState } from "react";
 import { CurrencyBadge, SideLabel } from "@/components/asset-labels";
 import { AssetLink } from "@/components/asset-link";
@@ -37,6 +37,7 @@ import {
 import { formatMoney, formatQuantity, formatTradeDate } from "@/lib/format";
 import { queryErrorMessage } from "@/lib/trpcErrors";
 import { cn } from "@/lib/utils";
+import { brokerName } from "./broker-note-labels";
 
 type TransactionHistoryProps = {
   data: TransactionList | undefined;
@@ -348,6 +349,7 @@ function HistoryTable({
             message: `Edit ${ticker} trade from ${date}`,
           });
           const isFixedIncome = transaction.assetClass === "fixed_income";
+          const note = transaction.brokerNote;
 
           return (
             <TableRow
@@ -364,6 +366,13 @@ function HistoryTable({
                 {transaction.notes ? (
                   <span className="block text-xs font-normal text-muted-foreground">
                     {transaction.notes}
+                  </span>
+                ) : null}
+                {note ? (
+                  <span className="flex items-center gap-1 text-xs font-normal text-muted-foreground">
+                    <FileText className="size-3" aria-hidden="true" />
+                    {brokerName(note.format)}
+                    {note.noteNumber ? ` · ${note.noteNumber}` : ""}
                   </span>
                 ) : null}
               </TableCell>
@@ -404,34 +413,42 @@ function HistoryTable({
                 {formatMoney(transaction.total, transaction.currency)}
               </TableCell>
               <TableCell>
-                <div className="flex justify-end gap-2">
-                  {isFixedIncome ? null : (
+                {note ? (
+                  <p className="text-right text-xs text-muted-foreground">
+                    <Trans id="transactions.importedFromNote">
+                      Imported from a broker note
+                    </Trans>
+                  </p>
+                ) : (
+                  <div className="flex justify-end gap-2">
+                    {isFixedIncome ? null : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        aria-label={editLabel}
+                        title={editLabel}
+                        aria-pressed={editingId === transaction.id}
+                        onClick={() => onEdit(transaction)}
+                      >
+                        <Pencil className="size-4" aria-hidden="true" />
+                        <Trans id="transactions.edit">Edit</Trans>
+                      </Button>
+                    )}
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      aria-label={editLabel}
-                      title={editLabel}
-                      aria-pressed={editingId === transaction.id}
-                      onClick={() => onEdit(transaction)}
+                      aria-label={removeLabel}
+                      title={removeLabel}
+                      disabled={removingId === transaction.id}
+                      onClick={() => onRequestRemove(transaction)}
                     >
-                      <Pencil className="size-4" aria-hidden="true" />
-                      <Trans id="transactions.edit">Edit</Trans>
+                      <Trash2 className="size-4" aria-hidden="true" />
+                      <Trans id="transactions.delete">Delete</Trans>
                     </Button>
-                  )}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    aria-label={removeLabel}
-                    title={removeLabel}
-                    disabled={removingId === transaction.id}
-                    onClick={() => onRequestRemove(transaction)}
-                  >
-                    <Trash2 className="size-4" aria-hidden="true" />
-                    <Trans id="transactions.delete">Delete</Trans>
-                  </Button>
-                </div>
+                  </div>
+                )}
               </TableCell>
             </TableRow>
           );

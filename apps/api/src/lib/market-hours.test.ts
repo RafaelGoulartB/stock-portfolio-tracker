@@ -21,6 +21,17 @@ describe("spotTtlMs", () => {
     expect(ttl).toBeGreaterThan(10 * 60 * 60 * 1_000);
   });
 
+  it("keeps the short window while the delayed close settles", () => {
+    // Friday just after the B3 bell: holding this until Monday would freeze a
+    // pre-close price for the whole weekend.
+    expect(
+      spotTtlMs("stock_br", "BRL", new Date("2026-09-11T18:10:00-03:00")),
+    ).toBe(FIFTEEN_MIN);
+    expect(
+      spotTtlMs("stock_br", "BRL", new Date("2026-09-11T18:50:00-03:00")),
+    ).toBeGreaterThan(24 * 60 * 60 * 1_000);
+  });
+
   it("keeps crypto on the short delayed-tape window overnight", () => {
     expect(
       spotTtlMs("crypto", "USD", new Date("2026-09-08T23:00:00-03:00")),
@@ -29,13 +40,13 @@ describe("spotTtlMs", () => {
 
   it("uses absolute instants across the US spring DST weekend", () => {
     expect(
-      spotTtlMs("stock_us", "USD", new Date("2026-03-06T16:00:00-05:00")),
-    ).toBe(64.5 * 60 * 60 * 1_000);
+      spotTtlMs("stock_us", "USD", new Date("2026-03-06T17:00:00-05:00")),
+    ).toBe(63.5 * 60 * 60 * 1_000);
   });
 
   it("uses absolute instants across the US fall DST weekend", () => {
     expect(
-      spotTtlMs("stock_us", "USD", new Date("2026-10-30T16:00:00-04:00")),
-    ).toBe(66.5 * 60 * 60 * 1_000);
+      spotTtlMs("stock_us", "USD", new Date("2026-10-30T17:00:00-04:00")),
+    ).toBe(65.5 * 60 * 60 * 1_000);
   });
 });
