@@ -48,54 +48,49 @@ export type ThemePaletteId =
 export type ThemePalette = {
   id: ThemePaletteId;
   name: string;
-  /** Overlapping swatches shown on the Appearance picker. */
-  swatch: {
-    light: string;
-    dark: string;
-  };
 };
 
-/** Colors shown in the editor when a new theme starts from the app default. */
+/** Mirrors the default tokens in globals.css; seeds the custom-theme editor. */
 const DEFAULT_THEME_COLORS: Readonly<Record<ThemeMode, ThemeColors>> = {
   light: {
-    background: "oklch(1 0 0)",
-    foreground: "oklch(0.145 0 0)",
-    card: "oklch(1 0 0)",
-    "card-foreground": "oklch(0.145 0 0)",
-    popover: "oklch(1 0 0)",
-    "popover-foreground": "oklch(0.145 0 0)",
-    primary: "oklch(0.205 0 0)",
-    "primary-foreground": "oklch(0.985 0 0)",
-    secondary: "oklch(0.97 0 0)",
-    "secondary-foreground": "oklch(0.205 0 0)",
-    muted: "oklch(0.97 0 0)",
-    "muted-foreground": "oklch(0.556 0 0)",
-    accent: "oklch(0.97 0 0)",
-    "accent-foreground": "oklch(0.205 0 0)",
-    destructive: "oklch(0.577 0.245 27.325)",
-    border: "oklch(0.922 0 0)",
-    input: "oklch(0.922 0 0)",
-    ring: "oklch(0.708 0 0)",
+    background: "oklch(0.982 0.002 264)",
+    foreground: "oklch(0.2 0.007 264)",
+    card: "oklch(0.998 0 264)",
+    "card-foreground": "oklch(0.2 0.007 264)",
+    popover: "oklch(0.998 0 264)",
+    "popover-foreground": "oklch(0.2 0.007 264)",
+    primary: "oklch(0.22 0.008 264)",
+    "primary-foreground": "oklch(0.985 0.002 264)",
+    secondary: "oklch(0.952 0.004 264)",
+    "secondary-foreground": "oklch(0.24 0.008 264)",
+    muted: "oklch(0.958 0.003 264)",
+    "muted-foreground": "oklch(0.5 0.008 264)",
+    accent: "oklch(0.942 0.007 264)",
+    "accent-foreground": "oklch(0.26 0.015 264)",
+    destructive: "oklch(0.577 0.215 27)",
+    border: "oklch(0.912 0.003 264)",
+    input: "oklch(0.882 0.004 264)",
+    ring: "oklch(0.6 0.012 264)",
   },
   dark: {
-    background: "oklch(0.145 0 0)",
-    foreground: "oklch(0.985 0 0)",
-    card: "oklch(0.205 0 0)",
-    "card-foreground": "oklch(0.985 0 0)",
-    popover: "oklch(0.205 0 0)",
-    "popover-foreground": "oklch(0.985 0 0)",
-    primary: "oklch(0.922 0 0)",
-    "primary-foreground": "oklch(0.205 0 0)",
-    secondary: "oklch(0.269 0 0)",
-    "secondary-foreground": "oklch(0.985 0 0)",
-    muted: "oklch(0.269 0 0)",
-    "muted-foreground": "oklch(0.708 0 0)",
-    accent: "oklch(0.269 0 0)",
-    "accent-foreground": "oklch(0.985 0 0)",
-    destructive: "oklch(0.704 0.191 22.216)",
-    border: "oklch(1 0 0 / 10%)",
-    input: "oklch(1 0 0 / 15%)",
-    ring: "oklch(0.556 0 0)",
+    background: "oklch(0.165 0.004 264)",
+    foreground: "oklch(0.965 0.002 264)",
+    card: "oklch(0.198 0.005 264)",
+    "card-foreground": "oklch(0.965 0.002 264)",
+    popover: "oklch(0.222 0.005 264)",
+    "popover-foreground": "oklch(0.965 0.002 264)",
+    primary: "oklch(0.93 0.004 264)",
+    "primary-foreground": "oklch(0.2 0.006 264)",
+    secondary: "oklch(0.27 0.006 264)",
+    "secondary-foreground": "oklch(0.965 0.002 264)",
+    muted: "oklch(0.255 0.005 264)",
+    "muted-foreground": "oklch(0.72 0.006 264)",
+    accent: "oklch(0.285 0.011 264)",
+    "accent-foreground": "oklch(0.965 0.002 264)",
+    destructive: "oklch(0.68 0.19 24)",
+    border: "oklch(0.29 0.006 264)",
+    input: "oklch(0.33 0.007 264)",
+    ring: "oklch(0.62 0.012 264)",
   },
 };
 
@@ -105,50 +100,26 @@ export const THEME_PALETTES = [
   {
     id: "default",
     name: "Default",
-    swatch: {
-      light: "oklch(1 0 0)",
-      dark: "oklch(0.145 0 0)",
-    },
   },
   {
     id: "bloom",
     name: "Bloom",
-    swatch: {
-      light: "oklch(0.591646 0.217985 0.584)",
-      dark: "oklch(0.460685 0.185347 4.099)",
-    },
   },
   {
     id: "grove",
     name: "Grove",
-    swatch: {
-      light: "oklch(0.535028 0.106403 77.549)",
-      dark: "oklch(0.791603 0.129713 83.299)",
-    },
   },
   {
     id: "ocean",
     name: "Ocean",
-    swatch: {
-      light: "oklch(0.493961 0.08175 201.584)",
-      dark: "oklch(0.793363 0.105022 199.893)",
-    },
   },
   {
     id: "ember",
     name: "Ember",
-    swatch: {
-      light: "oklch(0.516323 0.161628 24.82)",
-      dark: "oklch(0.747955 0.135578 29.432)",
-    },
   },
   {
     id: "iris",
     name: "Iris",
-    swatch: {
-      light: "oklch(0.516084 0.185229 340.776)",
-      dark: "oklch(0.789904 0.130063 337.621)",
-    },
   },
 ] as const satisfies readonly ThemePalette[];
 

@@ -3,7 +3,7 @@ import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import { Check, Monitor, Moon, Pencil, Plus, Sun, Trash2 } from "lucide-react";
 import { useTheme } from "next-themes";
-import { type ReactNode, useEffect, useState } from "react";
+import { type CSSProperties, type ReactNode, useEffect, useState } from "react";
 import { ThemeEditor, type ThemeEditorDraft } from "@/components/theme-editor";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,7 +34,7 @@ type EditorState = {
 /** Color scheme cards, named palettes, and the lightweight custom theme editor. */
 export function SettingsAppearance() {
   const { i18n } = useLingui();
-  const { theme, setTheme } = useTheme();
+  const { theme, resolvedTheme, setTheme } = useTheme();
   const {
     paletteId,
     customThemes,
@@ -57,6 +57,10 @@ export function SettingsAppearance() {
   }, [clearThemePreview]);
 
   const activeScheme = mounted ? (theme ?? "system") : "system";
+  const previewMode: ThemeMode = resolvedTheme === "dark" ? "dark" : "light";
+  const activeCustomColors = customThemes.find(
+    (item) => item.id === paletteId,
+  )?.colors;
 
   const startEditor = (state: EditorState) => {
     setDeleteTarget(null);
@@ -122,7 +126,7 @@ export function SettingsAppearance() {
         <h3 className="text-sm font-medium">
           <Trans id="settings.appearance.colorScheme">Color scheme</Trans>
         </h3>
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 gap-2 sm:gap-3">
           {COLOR_SCHEMES.map((scheme) => {
             const selected = activeScheme === scheme.value;
 
@@ -132,14 +136,18 @@ export function SettingsAppearance() {
                 type="button"
                 aria-pressed={selected}
                 onClick={() => setTheme(scheme.value)}
-                className={cn(
-                  "flex flex-col gap-2 rounded-lg border p-2 text-left outline-none transition-colors hover:bg-accent/50 focus-visible:ring-2 focus-visible:ring-ring",
-                  selected && "border-ring bg-accent/40 ring-1 ring-ring",
-                )}
+                className={cn(OPTION_TILE, selected && OPTION_TILE_SELECTED)}
               >
-                <SchemePreview scheme={scheme.value} />
-                <span className="flex items-center gap-1.5 px-1 text-sm font-medium">
-                  <scheme.icon className="size-3.5" aria-hidden="true" />
+                <SchemePreview
+                  scheme={scheme.value}
+                  paletteId={paletteId}
+                  customColors={activeCustomColors}
+                />
+                <span className="flex min-w-0 items-center gap-1.5 px-2.5 py-2 text-sm font-medium sm:px-3 sm:py-2.5">
+                  <scheme.icon
+                    className="hidden size-3.5 shrink-0 text-muted-foreground min-[480px]:block"
+                    aria-hidden="true"
+                  />
                   {scheme.value === "light" ? (
                     <Trans id="theme.light">Light</Trans>
                   ) : scheme.value === "dark" ? (
@@ -147,6 +155,7 @@ export function SettingsAppearance() {
                   ) : (
                     <Trans id="theme.system">System</Trans>
                   )}
+                  {selected ? <SelectedMark /> : null}
                 </span>
               </button>
             );
@@ -189,7 +198,7 @@ export function SettingsAppearance() {
           />
         ) : null}
 
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
           {THEME_PALETTES.map((palette) => (
             <ThemeCard
               key={palette.id}
@@ -201,8 +210,9 @@ export function SettingsAppearance() {
                 )
               }
               selected={paletteId === palette.id}
-              lightColor={palette.swatch.light}
-              darkColor={palette.swatch.dark}
+              preview={
+                <PalettePreview paletteId={palette.id} scheme={previewMode} />
+              }
               onApply={() => handleApplyPalette(palette.id)}
               onCustomize={
                 palette.id === "default"
@@ -216,8 +226,13 @@ export function SettingsAppearance() {
               key={theme.id}
               name={theme.name}
               selected={paletteId === theme.id}
-              lightColor={theme.colors.light.primary}
-              darkColor={theme.colors.dark.primary}
+              preview={
+                <PalettePreview
+                  paletteId={theme.id}
+                  scheme={previewMode}
+                  customColors={theme.colors}
+                />
+              }
               onApply={() => handleApplyPalette(theme.id)}
               onCustomize={() => startEditingPalette(theme.id)}
               onDelete={() => setDeleteTarget(theme.id)}
@@ -300,11 +315,23 @@ function readBuiltInPaletteColors(
   }
 }
 
+const OPTION_TILE =
+  "group grid overflow-hidden rounded-lg border bg-card text-left outline-none transition-[border-color,box-shadow] hover:border-ring/70 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-popover";
+const OPTION_TILE_SELECTED =
+  "border-primary ring-1 ring-primary hover:border-primary";
+
+function SelectedMark() {
+  return (
+    <span className="ml-auto flex size-4 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground">
+      <Check className="size-3" strokeWidth={3} aria-hidden="true" />
+    </span>
+  );
+}
+
 function ThemeCard({
   name,
   selected,
-  lightColor,
-  darkColor,
+  preview,
   onApply,
   onCustomize,
   onDelete,
@@ -314,8 +341,7 @@ function ThemeCard({
 }: {
   name: ReactNode;
   selected: boolean;
-  lightColor: string;
-  darkColor: string;
+  preview: ReactNode;
   onApply: () => void;
   onCustomize?: () => void;
   onDelete?: () => void;
@@ -326,34 +352,36 @@ function ThemeCard({
   const { i18n } = useLingui();
   const editLabel = i18n._(msg({ id: "theme.edit", message: "Edit" }));
   const deleteLabel = i18n._(msg({ id: "theme.delete", message: "Delete" }));
+  const actionCount = (onCustomize ? 1 : 0) + (onDelete ? 1 : 0);
 
   return (
     <div
       className={cn(
-        "grid gap-2 rounded-lg border p-3 transition-colors",
-        selected && "border-ring bg-accent/40 ring-1 ring-ring",
+        "relative grid overflow-hidden rounded-lg border bg-card transition-[border-color,box-shadow] hover:border-ring/70",
+        selected && OPTION_TILE_SELECTED,
       )}
     >
       <button
         type="button"
         aria-pressed={selected}
         onClick={onApply}
-        className="grid gap-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="grid text-left outline-none focus-visible:bg-accent/40"
       >
-        <ThemeCardPreview lightColor={lightColor} darkColor={darkColor} />
-        <span className="flex min-w-0 items-center gap-2 text-sm font-medium">
+        {preview}
+        <span
+          className={cn(
+            "flex min-w-0 items-center gap-2 px-3 py-2.5 text-sm font-medium",
+            actionCount === 1 && "pr-11",
+            actionCount === 2 && "pr-[4.75rem]",
+          )}
+        >
           <span className="truncate">{name}</span>
-          {selected ? (
-            <Check
-              className="ml-auto size-4 shrink-0 text-primary"
-              aria-hidden="true"
-            />
-          ) : null}
+          {selected ? <SelectedMark /> : null}
         </span>
       </button>
 
       {deletePending ? (
-        <div className="grid gap-2 rounded-md bg-muted/60 p-2 text-xs">
+        <div className="grid gap-2 border-t bg-muted/50 p-2.5 text-xs">
           <span>
             <Trans id="theme.deletePrompt">Remove this custom theme?</Trans>
           </span>
@@ -376,32 +404,32 @@ function ThemeCard({
             </Button>
           </div>
         </div>
-      ) : onCustomize || onDelete ? (
-        <div className="flex justify-end gap-1">
+      ) : actionCount > 0 ? (
+        <div className="absolute right-1.5 bottom-1.5 flex gap-0.5">
           {onCustomize ? (
             <Button
               type="button"
               variant="ghost"
-              size="xs"
+              size="icon-sm"
+              className="size-7 text-muted-foreground"
               onClick={onCustomize}
               aria-label={editLabel}
               title={editLabel}
             >
-              <Pencil className="size-3" aria-hidden="true" />
-              <span className="sr-only">{editLabel}</span>
+              <Pencil className="size-3.5" aria-hidden="true" />
             </Button>
           ) : null}
           {onDelete ? (
             <Button
               type="button"
               variant="ghost"
-              size="xs"
+              size="icon-sm"
+              className="size-7 text-muted-foreground hover:text-destructive"
               onClick={onDelete}
               aria-label={deleteLabel}
               title={deleteLabel}
             >
-              <Trash2 className="size-3" aria-hidden="true" />
-              <span className="sr-only">{deleteLabel}</span>
+              <Trash2 className="size-3.5" aria-hidden="true" />
             </Button>
           ) : null}
         </div>
@@ -410,101 +438,108 @@ function ThemeCard({
   );
 }
 
-function ThemeCardPreview({
-  lightColor,
-  darkColor,
+function customColorStyle(colors: ThemeColors): CSSProperties {
+  return Object.fromEntries(
+    THEME_COLOR_ROLES.map((role) => [`--${role}`, colors[role]]),
+  ) as CSSProperties;
+}
+
+/**
+ * A miniature dashboard drawn with a palette's real tokens. Built-in palettes
+ * resolve through the scoped `data-theme-palette` rules in the stylesheets;
+ * custom themes pass their stored colors inline.
+ */
+function PalettePreview({
+  paletteId,
+  scheme,
+  customColors,
+  className,
 }: {
-  lightColor: string;
-  darkColor: string;
+  paletteId: string;
+  scheme: ThemeMode;
+  customColors?: Readonly<Record<ThemeMode, ThemeColors>>;
+  className?: string;
 }) {
   return (
-    <span className="flex items-center" aria-hidden="true">
-      <span
-        className="size-9 rounded-full"
-        style={{ background: lightColor }}
-      />
-      <span
-        className="-ml-3 size-9 rounded-full ring-2 ring-background"
-        style={{ background: darkColor }}
-      />
+    <span
+      aria-hidden="true"
+      data-theme-palette={paletteId}
+      data-scheme={scheme}
+      style={customColors ? customColorStyle(customColors[scheme]) : undefined}
+      className={cn(
+        "flex aspect-[16/9] flex-col border-b bg-background",
+        className,
+      )}
+    >
+      <span className="flex h-[22%] items-center gap-1 border-b bg-card px-2">
+        <span className="size-1.5 rounded-full bg-primary" />
+        <span className="h-1 w-6 rounded-full bg-muted-foreground/40" />
+        <span className="ml-auto h-1.5 w-4 rounded-full bg-accent" />
+      </span>
+      <span className="flex min-h-0 flex-1 gap-1.5 p-2">
+        <span className="flex w-1/4 flex-col gap-1 rounded-sm border bg-card p-1">
+          <span className="h-1 rounded-full bg-accent" />
+          <span className="h-1 w-3/4 rounded-full bg-muted" />
+          <span className="h-1 w-2/3 rounded-full bg-muted" />
+        </span>
+        <span className="flex min-w-0 flex-1 flex-col gap-1 rounded-sm border bg-card p-1.5">
+          <span className="h-1 w-1/2 rounded-full bg-foreground/80" />
+          <svg
+            aria-hidden="true"
+            className="min-h-0 w-full flex-1"
+            viewBox="0 0 40 12"
+            preserveAspectRatio="none"
+          >
+            <polyline
+              points="0,10 7,8 13,9 20,5 27,6 33,3 40,2"
+              fill="none"
+              stroke="var(--chart-primary)"
+              strokeWidth="1.5"
+              vectorEffect="non-scaling-stroke"
+            />
+          </svg>
+          <span className="flex items-center gap-1">
+            <span className="h-1.5 w-5 rounded-sm bg-primary" />
+            <span className="h-1.5 w-3 rounded-sm border bg-secondary" />
+          </span>
+        </span>
+      </span>
     </span>
   );
 }
 
-function SchemePreview({ scheme }: { scheme: "system" | "light" | "dark" }) {
-  if (scheme === "system") {
+function SchemePreview({
+  scheme,
+  paletteId,
+  customColors,
+}: {
+  scheme: "system" | "light" | "dark";
+  paletteId: string;
+  customColors?: Readonly<Record<ThemeMode, ThemeColors>>;
+}) {
+  if (scheme !== "system") {
     return (
-      <span
-        aria-hidden="true"
-        className="relative block aspect-[16/10] overflow-hidden rounded-md border"
-      >
-        <MiniChrome
-          className="absolute inset-0"
-          background="#f4f4f5"
-          card="#ffffff"
-          text="#18181b"
-          muted="#d4d4d8"
-        />
-        <span className="absolute inset-0 [clip-path:inset(0_0_0_50%)]">
-          <MiniChrome
-            className="absolute inset-0"
-            background="#18181b"
-            card="#27272a"
-            text="#fafafa"
-            muted="#3f3f46"
-          />
-        </span>
-      </span>
+      <PalettePreview
+        paletteId={paletteId}
+        scheme={scheme}
+        customColors={customColors}
+      />
     );
   }
 
-  const dark = scheme === "dark";
-
   return (
-    <MiniChrome
-      className="aspect-[16/10] overflow-hidden rounded-md border"
-      background={dark ? "#18181b" : "#f4f4f5"}
-      card={dark ? "#27272a" : "#ffffff"}
-      text={dark ? "#fafafa" : "#18181b"}
-      muted={dark ? "#3f3f46" : "#d4d4d8"}
-    />
-  );
-}
-
-function MiniChrome({
-  className,
-  background,
-  card,
-  text,
-  muted,
-}: {
-  className?: string;
-  background: string;
-  card: string;
-  text: string;
-  muted: string;
-}) {
-  return (
-    <span className={cn("flex flex-col", className)} style={{ background }}>
-      <span
-        className="flex h-1/4 items-center gap-1 px-1.5"
-        style={{ background: card }}
-      >
-        <span className="size-1.5 rounded-full" style={{ background: text }} />
-        <span className="h-1 w-5 rounded-full" style={{ background: muted }} />
-      </span>
-      <span className="flex flex-1 gap-1 p-1.5">
-        <span className="w-1/4 rounded-sm" style={{ background: card }} />
-        <span className="flex flex-1 flex-col justify-center gap-1">
-          <span
-            className="h-1 w-full rounded-full"
-            style={{ background: text }}
-          />
-          <span
-            className="h-1 w-2/3 rounded-full"
-            style={{ background: muted }}
-          />
-        </span>
+    <span aria-hidden="true" className="relative block">
+      <PalettePreview
+        paletteId={paletteId}
+        scheme="light"
+        customColors={customColors}
+      />
+      <span className="absolute inset-0 [clip-path:inset(0_0_0_50%)]">
+        <PalettePreview
+          paletteId={paletteId}
+          scheme="dark"
+          customColors={customColors}
+        />
       </span>
     </span>
   );

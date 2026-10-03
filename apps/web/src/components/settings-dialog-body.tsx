@@ -71,7 +71,7 @@ export function SettingsDialogBody() {
     <>
       <SettingsSidebar section={section} onSectionChange={setSection} />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <DialogHeader className="gap-1.5 border-b bg-muted/20 px-6 py-5 pr-12 text-left">
+        <DialogHeader className="gap-1.5 border-b px-6 py-5 pr-12 text-left">
           <DialogTitle className="flex items-center gap-3">
             <DialogTitleIcon>
               {section === "appearance" ? (
@@ -132,7 +132,7 @@ function SettingsSidebar({
   return (
     <>
       <nav
-        className="flex shrink-0 gap-1 overflow-x-auto border-b p-2 pr-12 sm:hidden"
+        className="flex shrink-0 gap-1 overflow-x-auto border-b bg-background/50 p-2 pr-12 sm:hidden"
         aria-label={navLabel}
       >
         {SECTIONS.map((item) => (
@@ -145,7 +145,7 @@ function SettingsSidebar({
           />
         ))}
       </nav>
-      <aside className="hidden w-52 shrink-0 flex-col gap-1 border-r bg-muted/40 p-3 sm:flex">
+      <aside className="hidden w-52 shrink-0 flex-col gap-1 border-r bg-background/50 p-3 sm:flex">
         <nav className="flex flex-col gap-1" aria-label={navLabel}>
           {SECTIONS.map((item) => (
             <SectionButton
@@ -179,11 +179,14 @@ function SectionButton({
       onClick={onSelect}
       aria-current={active ? "page" : undefined}
       className={cn(
-        "flex items-center gap-2 rounded-md px-2.5 py-2 text-sm font-medium text-muted-foreground outline-none transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring",
-        active && "bg-accent text-accent-foreground",
+        "flex shrink-0 items-center gap-2 rounded-md px-2.5 py-2 text-sm font-medium text-muted-foreground outline-none transition-colors hover:bg-accent/60 hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
+        active && "bg-accent text-accent-foreground hover:bg-accent",
       )}
     >
-      <Icon className="size-4" aria-hidden="true" />
+      <Icon
+        className={cn("size-4", active && "text-primary")}
+        aria-hidden="true"
+      />
       <SettingsSectionLabel section={section} />
     </button>
   );
@@ -302,7 +305,7 @@ function GeneralSettings() {
             </span>
           }
         >
-          <div className="flex h-9 items-center gap-2 rounded-md border border-input bg-muted/60 px-3 text-sm tabular-nums dark:bg-black/25">
+          <div className="flex h-9 items-center gap-2 rounded-md border border-input bg-[color-mix(in_oklch,var(--background)_60%,var(--popover))] px-3 text-sm tabular-nums">
             {fx.isPending ? (
               <Skeleton className="h-4 w-40" />
             ) : fx.rate ? (
