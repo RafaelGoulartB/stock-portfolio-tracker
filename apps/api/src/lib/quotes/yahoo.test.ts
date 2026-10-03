@@ -409,6 +409,94 @@ describe("YahooProvider", () => {
     expect(later.filter((url) => url.includes("/v8/"))).toHaveLength(2);
   });
 
+  it("dates a live price traded after the last daily bar to its own session", async () => {
+    vi.stubGlobal(
+      "fetch",
+      stubYahoo({
+        quote: {},
+        quoteStatus: 401,
+        chart: chartFixture(
+          [
+            { timestamp: unixDay("2026-09-03"), close: 45.25 },
+            { timestamp: unixDay("2026-09-04"), close: 46.9 },
+          ],
+          47.11,
+          unixDay("2026-09-07") + 14 * 3600,
+        ),
+      }),
+    );
+
+    const quote = await new YahooProvider().getQuote({
+      ticker: "PETR4",
+      assetClass: "stock_br",
+      currency: "BRL",
+    });
+
+    // Monday's bar is not published yet: Friday is the previous close.
+    expect(quote).toMatchObject({
+      price: "47.11000000",
+      asOf: "2026-09-07",
+      previousClose: "46.90000000",
+      previousCloseAsOf: "2026-09-04",
+    });
+  });
+
+  it("re-reads a same-day close until a later download settles it", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-09-04T15:00:00Z"));
+    const closes = [46.0, 46.5, 47.0];
+    let reads = 0;
+    const fetchMock = vi.fn<typeof fetch>(async () => {
+      const close = closes[Math.min(reads, closes.length - 1)] ?? 0;
+      reads += 1;
+      return new Response(
+        JSON.stringify(
+          chartFixture([
+            { timestamp: unixDay("2026-09-03"), close: 45.25 },
+            { timestamp: unixDay("2026-09-04"), close },
+          ]),
+        ),
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const provider = new YahooProvider();
+    const request = {
+      ticker: "PETR4",
+      assetClass: "stock_br" as const,
+      currency: "BRL" as const,
+      asOf: "2026-09-04",
+    };
+
+    try {
+      await expect(provider.getQuote(request)).resolves.toMatchObject({
+        price: "46.00000000",
+      });
+      vi.setSystemTime(new Date("2026-09-04T15:20:00Z"));
+      await expect(provider.getQuote(request)).resolves.toMatchObject({
+        price: "46.00000000",
+      });
+      expect(fetchMock).toHaveBeenCalledOnce();
+
+      // Past the short lifetime, the cached series is not trusted either.
+      vi.setSystemTime(new Date("2026-09-04T15:31:00Z"));
+      await expect(provider.getQuote(request)).resolves.toMatchObject({
+        price: "46.50000000",
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+
+      // Downloaded the next day, the bar is final and kept.
+      vi.setSystemTime(new Date("2026-09-05T10:00:00Z"));
+      await expect(provider.getQuote(request)).resolves.toMatchObject({
+        price: "47.00000000",
+      });
+      vi.setSystemTime(new Date("2026-09-05T12:00:00Z"));
+      await provider.getQuote(request);
+      expect(fetchMock).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("replaces a cached historical series when refresh is forced", async () => {
     const fetchMock = vi
       .fn<typeof fetch>()

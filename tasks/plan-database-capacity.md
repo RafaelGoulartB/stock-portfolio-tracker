@@ -535,8 +535,10 @@ review. No such cache is needed for the initial improvements above.
     from the multi-year history cache, which can be up to 12 hours old.
   - Spot TTL is 15 minutes while a market is open and for 45 minutes after
     its close (the delayed tape and closing auction settle late); only then
-    is a quote held until the next session. Closes from the last three days
-    are cached for 30 minutes, older closes for seven days.
+    is a quote held until the next session. A dated close whose chart was
+    downloaded on or before that (UTC) day may be a session in progress: it
+    and the series behind it are re-read after 30 minutes. A close downloaded
+    on a later day is final and kept for seven days.
   - "Refresh quotes" forces spot quotes (and Deep Finder baselines, whose 1d
     window depends on yesterday's close) but not the allocation market-signal
     histories: 12-1 momentum skips the latest month and fair-value reference

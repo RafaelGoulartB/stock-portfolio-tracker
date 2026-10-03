@@ -1,5 +1,9 @@
 import type { NextResult } from "@portifolio-tracker/shared";
-import { YahooSession, yahooSession } from "../yahoo-session";
+import {
+  type YahooCredentials,
+  YahooSession,
+  yahooSession,
+} from "../yahoo-session";
 import type { ResultDateAsset, ResultDateProvider } from "./provider";
 
 const USER_AGENT =
@@ -153,10 +157,10 @@ export class YahooResultProvider implements ResultDateProvider {
     asset: ResultDateAsset,
     today: string,
   ): Promise<NextResult | null> {
-    let response = await this.fetchCalendar(symbol);
+    let { response, session } = await this.fetchCalendar(symbol);
     if (response.status === 401 || response.status === 403) {
-      this.session.invalidate();
-      response = await this.fetchCalendar(symbol);
+      this.session.invalidate(session);
+      ({ response, session } = await this.fetchCalendar(symbol));
     }
     if (!response.ok) {
       throw new Error(`Yahoo result request failed (${response.status})`);
@@ -183,7 +187,9 @@ export class YahooResultProvider implements ResultDateProvider {
     };
   }
 
-  private async fetchCalendar(symbol: string): Promise<Response> {
+  private async fetchCalendar(
+    symbol: string,
+  ): Promise<{ response: Response; session: YahooCredentials }> {
     const session = await this.session.get();
     const url = new URL(
       `https://query2.finance.yahoo.com/v10/finance/quoteSummary/${encodeURIComponent(symbol)}`,
@@ -191,10 +197,11 @@ export class YahooResultProvider implements ResultDateProvider {
     url.searchParams.set("modules", "calendarEvents");
     url.searchParams.set("crumb", session.crumb);
 
-    return this.fetchImpl(url, {
+    const response = await this.fetchImpl(url, {
       headers: { Cookie: session.cookie, "User-Agent": USER_AGENT },
       signal: AbortSignal.timeout(10_000),
     });
+    return { response, session };
   }
 }
 

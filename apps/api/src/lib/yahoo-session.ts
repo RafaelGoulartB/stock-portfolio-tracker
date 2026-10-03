@@ -23,8 +23,8 @@ function normalizeCookie(headers: Headers): string | null {
  * Yahoo's authenticated endpoints (`v7/finance/quote`, `quoteSummary`) need a
  * consent cookie plus a matching crumb. Both cost two upstream calls, so one
  * pair is shared by every caller for an hour and concurrent misses wait on the
- * same handshake. A 401/403 from a consumer should `invalidate()` and retry
- * once.
+ * same handshake. A 401/403 from a consumer should `invalidate()` the
+ * credentials it used and retry once.
  */
 export class YahooSession {
   private credentials: (YahooCredentials & { expiresAt: number }) | null = null;
@@ -48,8 +48,15 @@ export class YahooSession {
     return this.pending;
   }
 
-  invalidate(): void {
-    this.credentials = null;
+  /**
+   * Drops the shared pair. Given the pair a request was refused with, it only
+   * drops that pair, so a late refusal cannot discard credentials another
+   * caller has just renewed. Without an argument it always clears.
+   */
+  invalidate(failed?: YahooCredentials): void {
+    if (!failed || this.credentials === failed) {
+      this.credentials = null;
+    }
   }
 
   private async handshake(): Promise<YahooCredentials> {

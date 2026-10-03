@@ -18,6 +18,12 @@ const SESSION_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 const LOOKUP_CACHE_TTL_MS = 60 * 1_000;
 const LOOKUP_CACHE_MAX = 1_000;
 const lookupCache = new Map<string, { user: SessionUser; expiresAt: number }>();
+/**
+ * Bumped after every logout's delete. A lookup that read the row before the
+ * delete committed sees a different value when it returns and does not
+ * re-cache a revoked session.
+ */
+let revocations = 0;
 
 function hashToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
@@ -50,6 +56,7 @@ export async function findSessionUser(
     return hit.user;
   }
 
+  const revocationsAtRead = revocations;
   const [row] = await db
     .select({
       id: users.id,
@@ -68,6 +75,10 @@ export async function findSessionUser(
 
   const user = { id: row.id, email: row.email };
 
+  if (revocationsAtRead !== revocations) {
+    return user;
+  }
+
   if (lookupCache.size >= LOOKUP_CACHE_MAX) {
     for (const [key, entry] of lookupCache) {
       if (entry.expiresAt <= now) lookupCache.delete(key);
@@ -84,8 +95,11 @@ export async function findSessionUser(
 
 export async function deleteSession(token: string): Promise<void> {
   const id = hashToken(token);
-  lookupCache.delete(id);
+  // Evict only after the row is gone, so a concurrent lookup cannot put it
+  // back in the cache.
   await db.delete(sessions).where(eq(sessions.id, id));
+  revocations += 1;
+  lookupCache.delete(id);
 }
 
 export async function deleteExpiredSessions(): Promise<void> {

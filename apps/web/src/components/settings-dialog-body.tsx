@@ -16,7 +16,7 @@ import {
   type Settings,
   SlidersHorizontal,
 } from "lucide-react";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { SettingsAppearance } from "@/components/settings-appearance";
 import { SettingsData } from "@/components/settings-data";
 import { Button } from "@/components/ui/button";
@@ -397,7 +397,9 @@ const MANUAL_RATE_COMMIT_MS = 600;
 /**
  * The manual rate is part of every portfolio query key, so applying each
  * keystroke ("5", "5.1", "5.12") would refetch every live screen per digit.
- * The draft is committed after a short pause, on blur, or on Enter.
+ * The draft is committed after a short pause, on blur, on Enter, or when the
+ * field unmounts (Esc closes the dialog without blurring it). A saved value
+ * changed elsewhere replaces the draft.
  */
 function ManualRateInput({
   value,
@@ -411,6 +413,25 @@ function ManualRateInput({
   "value" | "onChange" | "onBlur" | "onKeyDown"
 >) {
   const [draft, setDraft] = useState(value);
+  const [syncedValue, setSyncedValue] = useState(value);
+  const pending = useRef({ draft, value, onCommit });
+
+  useEffect(() => {
+    pending.current = { draft, value, onCommit };
+  });
+
+  if (value !== syncedValue) {
+    setSyncedValue(value);
+    setDraft(value);
+  }
+
+  useEffect(
+    () => () => {
+      const latest = pending.current;
+      if (latest.draft !== latest.value) latest.onCommit(latest.draft);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (draft === value) {

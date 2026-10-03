@@ -733,7 +733,7 @@ msgid "brokerNotes.sendFailed"
 msgstr "{count, plural, one {# arquivo não pôde ser enviado ao servidor.} other {# arquivos não puderam ser enviados ao servidor.}}"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/deep-finder.tsx:348
+#: src/routes/_app/deep-finder.tsx:328
 msgid "deepFinder.breadthHint"
 msgstr "{count, plural, one {# ativo com cotação comparável} other {# ativos com cotação comparável}}"
 
@@ -773,7 +773,7 @@ msgid "categories.assetCount"
 msgstr "{count, plural, one {# ticker} other {# tickers}}"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:332
+#: src/routes/_app/transactions.tsx:345
 msgid "transactions.fxMissing"
 msgstr "{count, plural, one {# operação ainda não tem o USD/BRL da data, então seu custo é convertido pela cotação de hoje.} other {# operações ainda não têm o USD/BRL da data, então seu custo é convertido pela cotação de hoje.}}"
 
@@ -813,7 +813,7 @@ msgid "brokerNotes.removeDescription"
 msgstr "{count, plural, one {Isto remove permanentemente a nota e sua # operação, e recalcula posições e resultados. Você pode importar o PDF de novo depois.} other {Isto remove permanentemente a nota e suas # operações, e recalcula posições e resultados. Você pode importar o PDF de novo depois.}}"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:284
+#: src/routes/_app/transactions.tsx:297
 msgid "transactions.booked"
 msgstr "{count} posições lançadas como compras"
 
@@ -858,7 +858,7 @@ msgid "incomeTax.holdings.descUnits"
 msgstr "{quantity} units de {ticker}, negociadas na B3. Custo médio unitário de {average}."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:213
+#: src/routes/_app/transactions.tsx:226
 msgid "transactions.registered"
 msgstr "{side} de {quantity} {ticker} registrada"
 
@@ -885,7 +885,7 @@ msgid "allocation.reorderAnnouncement"
 msgstr "{ticker} movido para a posição {0} de {1}."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:230
+#: src/routes/_app/transactions.tsx:243
 msgid "transactions.updated"
 msgstr "Operação de {ticker} atualizada"
 
@@ -915,7 +915,7 @@ msgid "documentation.score.trimBadgeV2"
 msgstr "{trimAbsolute} ou {trimRelative}"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/deep-finder.tsx:695
+#: src/routes/_app/deep-finder.tsx:675
 msgid "deepFinder.colPercent"
 msgstr "%"
 
@@ -952,25 +952,25 @@ msgstr "1 - peso atual / meta ajustada"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/allocation-deep-finder.tsx:126
-#: src/routes/_app/deep-finder.tsx:263
+#: src/routes/_app/deep-finder.tsx:243
 msgid "deepFinder.window1d"
 msgstr "1 dia"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/allocation-deep-finder.tsx:130
-#: src/routes/_app/deep-finder.tsx:267
+#: src/routes/_app/deep-finder.tsx:247
 msgid "deepFinder.window1m"
 msgstr "1 mês"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/allocation-deep-finder.tsx:128
-#: src/routes/_app/deep-finder.tsx:265
+#: src/routes/_app/deep-finder.tsx:245
 msgid "deepFinder.window1w"
 msgstr "1 semana"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/allocation-deep-finder.tsx:136
-#: src/routes/_app/deep-finder.tsx:273
+#: src/routes/_app/deep-finder.tsx:253
 msgid "deepFinder.window1y"
 msgstr "1 ano"
 
@@ -996,7 +996,7 @@ msgstr "249 – Estados Unidos"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/allocation-deep-finder.tsx:132
-#: src/routes/_app/deep-finder.tsx:269
+#: src/routes/_app/deep-finder.tsx:249
 msgid "deepFinder.window3m"
 msgstr "3 meses"
 
@@ -1082,7 +1082,7 @@ msgid "splits.exists"
 msgstr "Já existe um desdobramento registrado nesta data."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:707
+#: src/routes/_app/transactions.tsx:720
 msgid "transactions.currencyLockHint"
 msgstr "Um ticker sempre usa a moeda da sua primeira operação."
 
@@ -1224,7 +1224,7 @@ msgstr "Depois de uma compra, a prioridade começa em ×{0} e sobe linearmente a
 
 #. js-lingui-explicit-id
 #: src/components/allocation/allocation-deep-finder.tsx:408
-#: src/routes/_app/deep-finder.tsx:218
+#: src/routes/_app/deep-finder.tsx:198
 msgid "deepFinder.filterAll"
 msgstr "Todos"
 
@@ -1554,7 +1554,7 @@ msgstr "PTAX do BCB (Banco Central do Brasil)"
 #. js-lingui-explicit-id
 #. placeholder {0}: formatTradeDate(tradeFx.data.asOf)
 #. placeholder {1}: formatQuantity(tradeFx.data.rate)
-#: src/routes/_app/transactions.tsx:779
+#: src/routes/_app/transactions.tsx:792
 msgid "transactions.tradeFxPtax"
 msgstr "PTAX do BCB em {0}: {1}. Deixe em branco para usá-la ou informe a taxa da sua corretora."
 
@@ -1580,7 +1580,7 @@ msgid "incomeTax.holdings.title"
 msgstr "Bens e Direitos"
 
 #. js-lingui-explicit-id
-#: src/components/positions/deep-finder-teaser.tsx:110
+#: src/components/positions/deep-finder-teaser.tsx:104
 msgid "positions.teaserHint"
 msgstr "Maiores altas e quedas percentuais no último mês. Abra o Deep Finder para ver todos os tickers e janelas."
 
@@ -1620,12 +1620,12 @@ msgid "splits.bonusRow"
 msgstr "Bonificação: +{shares} ações a {unitCost} cada"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:428
+#: src/routes/_app/transactions.tsx:441
 msgid "transactions.modeBook"
 msgstr "Lançar posições"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:887
+#: src/routes/_app/transactions.tsx:900
 msgid "transactions.bookTitle"
 msgstr "Lançar posições"
 
@@ -1664,7 +1664,7 @@ msgid "allocation.sales.exemptTitle"
 msgstr "Ações brasileiras, dentro da isenção"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/deep-finder.tsx:342
+#: src/routes/_app/deep-finder.tsx:322
 msgid "deepFinder.breadth"
 msgstr "Amplitude"
 
@@ -1705,12 +1705,12 @@ msgid "brokerNotes.chooseLabel"
 msgstr "PDFs de notas de corretagem"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:442
+#: src/routes/_app/transactions.tsx:455
 msgid "transactions.modeNotes"
 msgstr "Notas de corretagem"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:823
+#: src/routes/_app/transactions.tsx:836
 msgid "transactions.notesDescription"
 msgstr "Corretora, estratégia ou qualquer coisa que valha lembrar."
 
@@ -1721,7 +1721,7 @@ msgstr "Corretora: {broker}."
 
 #. js-lingui-explicit-id
 #: src/components/asset-labels.tsx:15
-#: src/routes/_app/transactions.tsx:207
+#: src/routes/_app/transactions.tsx:220
 msgid "side.buy"
 msgstr "Compra"
 
@@ -1823,7 +1823,7 @@ msgid "allocation.addCancel"
 msgstr "Cancelar"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:861
+#: src/routes/_app/transactions.tsx:874
 msgid "transactions.cancelEdit"
 msgstr "Cancelar edição"
 
@@ -1953,7 +1953,7 @@ msgid "documentation.score.group.limits"
 msgstr "Tetos e reduções"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/deep-finder.tsx:707
+#: src/routes/_app/deep-finder.tsx:687
 msgid "deepFinder.colChange"
 msgstr "Variação"
 
@@ -2024,14 +2024,14 @@ msgid "categories.colClass"
 msgstr "Classe"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/deep-finder.tsx:672
+#: src/routes/_app/deep-finder.tsx:652
 msgid "deepFinder.colClass"
 msgstr "Classe"
 
 #. js-lingui-explicit-id
 #: src/components/transactions/book-holdings-panel.tsx:375
 #: src/components/transactions/book-holdings-panel.tsx:586
-#: src/routes/_app/transactions.tsx:556
+#: src/routes/_app/transactions.tsx:569
 msgid "transactions.class"
 msgstr "Classe"
 
@@ -2093,7 +2093,7 @@ msgid "allocation.clearAnalysis"
 msgstr "Limpar meta e desconto"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/deep-finder.tsx:647
+#: src/routes/_app/deep-finder.tsx:627
 msgid "deepFinder.tableHint"
 msgstr "Clique no cabeçalho para ordenar. Cotações ausentes ficam no fim."
 
@@ -2169,7 +2169,7 @@ msgid "documentation.contribution.chooseCountDescription"
 msgstr "Compare o aporte C com o patrimônio cotado V. O impacto mínimo de peso interpola de {smallImpact} em {smallBook} até {largeImpact} em {largeBook}. Arredonde a razão para um segundo nome abrir em 1,5× uma fatia mínima e limite entre 1 e {0}. Uma carteira vazia é tratada como razão grande para o primeiro cheque poder diversificar. Um override manual pula esta etapa."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/deep-finder.tsx:334
+#: src/routes/_app/deep-finder.tsx:314
 msgid "deepFinder.periodHint"
 msgstr "Comparado com o fechamento em ou antes de {startLabel}."
 
@@ -2417,7 +2417,7 @@ msgstr "Não foi possível excluir os dados da aplicação."
 #. js-lingui-explicit-id
 #: src/routes/_app/allocation.index.tsx:704
 #: src/routes/_app/detailed-positions.tsx:227
-#: src/routes/_app/positions.tsx:165
+#: src/routes/_app/positions.tsx:167
 msgid "positions.fxFailed"
 msgstr "Não foi possível buscar a cotação. Tente outra fonte ou informe manualmente."
 
@@ -2427,7 +2427,7 @@ msgid "daily.fxFailed"
 msgstr "Não foi possível obter a taxa de câmbio. Tente outra fonte ou informe a taxa manualmente."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/deep-finder.tsx:181
+#: src/routes/_app/deep-finder.tsx:161
 msgid "deepFinder.fxFailed"
 msgstr "Não foi possível buscar o câmbio. Tente outra fonte ou informe manualmente."
 
@@ -2541,7 +2541,7 @@ msgstr "Rentabilidade acumulada"
 #. js-lingui-explicit-id
 #: src/components/transactions/book-holdings-panel.tsx:378
 #: src/components/transactions/book-holdings-panel.tsx:589
-#: src/routes/_app/transactions.tsx:687
+#: src/routes/_app/transactions.tsx:700
 msgid "transactions.currency"
 msgstr "Moeda"
 
@@ -2577,7 +2577,7 @@ msgid "allocation.finderCurrent"
 msgstr "Preço atual"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:604
+#: src/routes/_app/transactions.tsx:617
 msgid "transactions.currentValue"
 msgstr "Valor atual"
 
@@ -2754,7 +2754,7 @@ msgid "dividends.declarationDate"
 msgstr "Declaração"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/deep-finder.tsx:136
+#: src/routes/_app/deep-finder.tsx:116
 msgid "deepFinder.title"
 msgstr "Deep Finder"
 
@@ -2942,7 +2942,7 @@ msgid "documentation.title"
 msgstr "Documentação"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog.tsx:18
+#: src/components/documentation-dialog.tsx:21
 msgid "documentation.open"
 msgstr "Documentação"
 
@@ -3054,14 +3054,14 @@ msgid "theme.editor.editTitle"
 msgstr "Editar tema"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:456
+#: src/routes/_app/transactions.tsx:469
 msgid "transactions.editTrade"
 msgstr "Editar operação"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: editing.ticker
 #. placeholder {1}: formatTradeDate(editing.tradedAt)
-#: src/routes/_app/transactions.tsx:463
+#: src/routes/_app/transactions.tsx:476
 msgid "transactions.editingHint"
 msgstr "Editando a operação de {0} de {1}. Posições e resultados são recalculados ao salvar."
 
@@ -3123,7 +3123,7 @@ msgid "validation.emailInvalid"
 msgstr "Informe um e-mail válido"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:154
+#: src/routes/_app/positions.tsx:156
 msgid "positions.fxManualRateRequired"
 msgstr "Informe uma taxa USD/BRL válida nas Configurações para consolidar esta carteira."
 
@@ -3133,7 +3133,7 @@ msgid "allocation.plannerAwaitingAmount"
 msgstr "Informe um valor para ver a divisão sugerida."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:890
+#: src/routes/_app/transactions.tsx:903
 msgid "transactions.bookHint"
 msgstr "Informe o custo médio e a quantidade de vários tickers de uma vez, ou importe um CSV/TXT. Cada linha vira uma compra na data de abertura."
 
@@ -3148,7 +3148,7 @@ msgid "incomeTax.holdings.cashAdd"
 msgstr "Informar saldo em dólar"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:399
+#: src/routes/_app/transactions.tsx:412
 msgid "transactions.entryMode"
 msgstr "Modo de lançamento"
 
@@ -3225,7 +3225,7 @@ msgid "allocation.plannerAll"
 msgstr "Todos os candidatos ({candidates})"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/deep-finder.tsx:426
+#: src/routes/_app/deep-finder.tsx:406
 msgid "deepFinder.chartCostHint"
 msgstr "Cada ticker em aberto, ordenado pelo resultado em aberto em percentual."
 
@@ -3369,18 +3369,18 @@ msgid "allocation.reviewFairValueSet"
 msgstr "Fair value definido"
 
 #. js-lingui-explicit-id
-#: src/components/positions/deep-finder-teaser.tsx:134
+#: src/components/positions/deep-finder-teaser.tsx:128
 msgid "positions.teaserFalling"
 msgstr "em queda"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/allocation-deep-finder.tsx:428
-#: src/routes/_app/deep-finder.tsx:238
+#: src/routes/_app/deep-finder.tsx:218
 msgid "deepFinder.filterDown"
 msgstr "Em queda"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:726
+#: src/routes/_app/transactions.tsx:739
 msgid "transactions.fees"
 msgstr "Taxas"
 
@@ -3393,7 +3393,7 @@ msgid "transactions.colFees"
 msgstr "Taxas"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:469
+#: src/routes/_app/transactions.tsx:482
 msgid "transactions.feesHint"
 msgstr "Taxas somam em uma compra e subtraem em uma venda."
 
@@ -3423,7 +3423,7 @@ msgid "allocation.sales.taxableTextV2"
 msgstr "FIIs, ETFs, BDRs, ativos no exterior e ações brasileiras depois que a isenção do mês acaba pagam imposto sobre o ganho. Direcionar os aportes para outros ativos costuma ser melhor que vender."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:356
+#: src/routes/_app/transactions.tsx:369
 msgid "transactions.fxFill"
 msgstr "Preencher com a PTAX do BCB"
 
@@ -3433,7 +3433,7 @@ msgid "documentation.contribution.waterFilling"
 msgstr "Encher primeiro as metas mais vazias"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:248
+#: src/routes/_app/transactions.tsx:261
 msgid "transactions.fxFilledPartial"
 msgstr "{updated} operações preenchidas. {missing} ainda não têm PTAX publicada."
 
@@ -3443,7 +3443,7 @@ msgid "incomeTax.profile.brokerHint"
 msgstr "Preenchida pelas notas de corretagem importadas quando vazia."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:255
+#: src/routes/_app/transactions.tsx:268
 msgid "transactions.fxFilled"
 msgstr "PTAX da data preenchida em {updated} operações"
 
@@ -3719,7 +3719,7 @@ msgid "performance.window"
 msgstr "Janela do histórico"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/deep-finder.tsx:644
+#: src/routes/_app/deep-finder.tsx:624
 msgid "deepFinder.tableTitle"
 msgstr "Posições"
 
@@ -4077,7 +4077,7 @@ msgid "transactions.importIssue"
 msgstr "Linha {line}: {detail}"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:104
+#: src/routes/_app/positions.tsx:106
 msgid "positions.live"
 msgstr "Ao vivo"
 
@@ -4087,7 +4087,7 @@ msgid "logoDev.attribution"
 msgstr "Logotipos fornecidos por Logo.dev"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:786
+#: src/routes/_app/transactions.tsx:799
 msgid "transactions.tradeFxLoading"
 msgstr "Buscando a PTAX do BCB…"
 
@@ -4243,7 +4243,7 @@ msgid "allocation.editValue"
 msgstr "Valor de mercado de {0}"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/deep-finder.tsx:330
+#: src/routes/_app/deep-finder.tsx:310
 msgid "deepFinder.costHint"
 msgstr "Valor de mercado versus o custo médio móvel."
 
@@ -4328,12 +4328,12 @@ msgid "documentation.performance.historyTradeFx"
 msgstr "Os fechamentos de mês usam a última cotação de mercado disponível até a data do snapshot. Os valores de mercado são convertidos pelo USD/BRL daquele snapshot; o custo e os fluxos das operações usam a taxa do próprio dia da operação. Uma taxa de câmbio manual não tem histórico, então a mesma taxa manual vale para todos os meses."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:114
+#: src/routes/_app/positions.tsx:116
 msgid "positions.subtitle"
 msgstr "Snapshots mensais avaliados no fechamento de cada período pelo custo médio móvel de todas as operações registradas."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/performance.tsx:147
+#: src/routes/_app/performance.tsx:131
 msgid "performance.subtitle"
 msgstr "Histórico de fechamento mensal: quanto a carteira valia, quanto disso é resultado e de onde ele vem."
 
@@ -4456,7 +4456,7 @@ msgid "documentation.formula.candidateCount"
 msgstr "N = limitar(arredondar(C / (V × impacto(V))), 1, {0})"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:493
+#: src/routes/_app/transactions.tsx:506
 msgid "transactions.fixedIncomeName"
 msgstr "Nome"
 
@@ -4528,12 +4528,12 @@ msgid "brokerNotes.newTickersTitle"
 msgstr "Tickers novos"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:414
+#: src/routes/_app/transactions.tsx:427
 msgid "transactions.modeTrade"
 msgstr "Nova operação"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:458
+#: src/routes/_app/transactions.tsx:471
 msgid "transactions.newTrade"
 msgstr "Nova operação"
 
@@ -4604,7 +4604,7 @@ msgid "dividends.calendarEmpty"
 msgstr "Nenhum evento neste mês."
 
 #. js-lingui-explicit-id
-#: src/components/positions/deep-finder-teaser.tsx:154
+#: src/components/positions/deep-finder-teaser.tsx:148
 msgid "positions.teaserEmptyDown"
 msgstr "Nenhuma queda neste mês."
 
@@ -4624,8 +4624,8 @@ msgid "transactions.importEmpty"
 msgstr "Nenhuma posição encontrada nesse texto."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/deep-finder.tsx:410
-#: src/routes/_app/deep-finder.tsx:766
+#: src/routes/_app/deep-finder.tsx:390
+#: src/routes/_app/deep-finder.tsx:746
 msgid "deepFinder.noMatches"
 msgstr "Nenhuma posição corresponde a este filtro na janela selecionada."
 
@@ -4666,7 +4666,7 @@ msgstr "Sem posições ainda. Registre sua primeira operação para vê-la aqui.
 
 #. js-lingui-explicit-id
 #. placeholder {0}: data.quotes.missing.join(", ")
-#: src/routes/_app/performance.tsx:225
+#: src/routes/_app/performance.tsx:209
 msgid "performance.missingQuotes"
 msgstr "Sem histórico de preço para {0}. Esses ativos ficam avaliados a custo, então somam valor sem somar rentabilidade."
 
@@ -4682,7 +4682,7 @@ msgid "allocation.detailChartEmpty"
 msgstr "Ainda não há histórico de preço para este ticker."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:790
+#: src/routes/_app/transactions.tsx:803
 msgid "transactions.tradeFxPending"
 msgstr "Ainda não há PTAX publicada para esta data. Deixe em branco para preencher depois ou informe uma taxa."
 
@@ -4697,7 +4697,7 @@ msgid "allocation.valueManualTooltip"
 msgstr "Sem cotação pública. Este valor foi definido por você. Limpe a célula para removê-lo."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/deep-finder.tsx:729
+#: src/routes/_app/deep-finder.tsx:709
 msgid "deepFinder.unquoted"
 msgstr "Sem cotação"
 
@@ -4708,7 +4708,7 @@ msgid "positions.missingQuotes"
 msgstr "Sem cotação para {0}. Valores e participações cobrem apenas ativos cotados."
 
 #. js-lingui-explicit-id
-#: src/components/positions/deep-finder-teaser.tsx:143
+#: src/components/positions/deep-finder-teaser.tsx:137
 msgid "positions.teaserEmptyUp"
 msgstr "Nenhuma alta neste mês."
 
@@ -4829,7 +4829,7 @@ msgid "brokerNotes.colExecutionPrice"
 msgstr "Preço na nota"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:808
+#: src/routes/_app/transactions.tsx:821
 msgid "transactions.notes"
 msgstr "Notas"
 
@@ -4889,7 +4889,7 @@ msgid "brokerNotes.notPdfToast"
 msgstr "Só arquivos PDF podem ser importados: {names}"
 
 #. js-lingui-explicit-id
-#: src/components/positions/deep-finder-teaser.tsx:169
+#: src/components/positions/deep-finder-teaser.tsx:163
 msgid "positions.openDeepFinder"
 msgstr "Abrir Deep Finder"
 
@@ -4938,7 +4938,7 @@ msgid "allocation.detailOpenResult"
 msgstr "Resultado em aberto"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/deep-finder.tsx:422
+#: src/routes/_app/deep-finder.tsx:402
 msgid "deepFinder.chartTitle"
 msgstr "Resultado em aberto por ativo"
 
@@ -4953,7 +4953,7 @@ msgid "allocation.detailTotalResultHint"
 msgstr "Resultado em aberto mais o P&L realizado."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/deep-finder.tsx:367
+#: src/routes/_app/deep-finder.tsx:347
 msgid "deepFinder.windowCostMeta"
 msgstr "Resultado em aberto vs custo"
 
@@ -4978,7 +4978,7 @@ msgid "transactions.openingDate"
 msgstr "Data de abertura"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:813
+#: src/routes/_app/transactions.tsx:826
 msgid "transactions.notesHint"
 msgstr "Opcional"
 
@@ -5093,7 +5093,7 @@ msgid "dividends.perShare"
 msgstr "Por ação"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/deep-finder.tsx:430
+#: src/routes/_app/deep-finder.tsx:410
 msgid "deepFinder.chartPeriodHint"
 msgstr "Variação percentual da carteira atual na janela selecionada."
 
@@ -5103,7 +5103,7 @@ msgid "documentation.score.field.trimAbsoluteHint"
 msgstr "Pontos percentuais acima da meta ajustada que tornam uma posição cara candidata a redução."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/performance.tsx:144
+#: src/routes/_app/performance.tsx:128
 msgid "performance.title"
 msgstr "Rentabilidade"
 
@@ -5128,8 +5128,8 @@ msgid "documentation.formula.periodChange"
 msgstr "variação no período = quantidade atual × (preço atual - preço-base)"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/deep-finder.tsx:312
-#: src/routes/_app/deep-finder.tsx:402
+#: src/routes/_app/deep-finder.tsx:292
+#: src/routes/_app/deep-finder.tsx:382
 msgid "deepFinder.periodMove"
 msgstr "Movimento do período"
 
@@ -5228,7 +5228,7 @@ msgid "allocation.filterStatus"
 msgstr "Posição"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/positions.tsx:111
+#: src/routes/_app/positions.tsx:113
 msgid "positions.title"
 msgstr "Posições"
 
@@ -5368,7 +5368,7 @@ msgstr "Compras"
 #. js-lingui-explicit-id
 #: src/components/transactions/book-holdings-panel.tsx:369
 #: src/components/transactions/book-holdings-panel.tsx:580
-#: src/routes/_app/transactions.tsx:642
+#: src/routes/_app/transactions.tsx:655
 msgid "transactions.quantity"
 msgstr "Quantidade"
 
@@ -5562,7 +5562,7 @@ msgid "dividends.refresh"
 msgstr "Atualizar"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/performance.tsx:166
+#: src/routes/_app/performance.tsx:150
 msgid "performance.refresh"
 msgstr "Atualizar"
 
@@ -5574,9 +5574,9 @@ msgstr "Atualizar tudo"
 #. js-lingui-explicit-id
 #: src/routes/_app/allocation.index.tsx:622
 #: src/routes/_app/daily.tsx:116
-#: src/routes/_app/deep-finder.tsx:157
+#: src/routes/_app/deep-finder.tsx:137
 #: src/routes/_app/detailed-positions.tsx:202
-#: src/routes/_app/positions.tsx:138
+#: src/routes/_app/positions.tsx:140
 msgid "quotes.refresh"
 msgstr "Atualizar cotações"
 
@@ -5599,7 +5599,7 @@ msgstr "Atualize a página e tente de novo. O planejador continua usando a últi
 #: src/components/allocation/asset-movements.tsx:264
 #: src/components/positions/states.tsx:23
 #: src/routes/_app/detailed-positions.tsx:207
-#: src/routes/_app/positions.tsx:143
+#: src/routes/_app/positions.tsx:145
 msgid "positions.registerTrade"
 msgstr "Registrar operação"
 
@@ -5614,7 +5614,7 @@ msgid "dividends.addTrade"
 msgstr "Registrar operação"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/deep-finder.tsx:202
+#: src/routes/_app/deep-finder.tsx:182
 msgid "deepFinder.empty"
 msgstr "Registre uma operação para começar a ranquear as posições em aberto."
 
@@ -5624,12 +5624,12 @@ msgid "daily.empty"
 msgstr "Registre uma negociação para começar a acompanhar a variação diária."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:388
+#: src/routes/_app/transactions.tsx:401
 msgid "transactions.subtitle"
 msgstr "Registre cada compra e venda. As posições são consolidadas deste histórico."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:846
+#: src/routes/_app/transactions.tsx:859
 msgid "transactions.registerFixedIncome"
 msgstr "Registrar renda fixa"
 
@@ -5639,7 +5639,7 @@ msgid "dividends.emptyDescription"
 msgstr "Registre operações de ações ou ETFs, ou tente um período maior."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:850
+#: src/routes/_app/transactions.tsx:863
 msgid "transactions.register"
 msgstr "Registrar operação"
 
@@ -5663,6 +5663,11 @@ msgstr "Lacuna relativa"
 #: src/components/documentation-dialog-body.tsx:322
 msgid "documentation.formula.releasedCost"
 msgstr "custo baixado = quantidade vendida × preço médio atual"
+
+#. js-lingui-explicit-id
+#: src/components/dialog-body-fallback.tsx:59
+msgid "dialog.reloadPage"
+msgstr "Recarregar página"
 
 #. js-lingui-explicit-id
 #: src/components/transactions/broker-note-import.tsx:674
@@ -5878,13 +5883,13 @@ msgid "documentation.score.unit.pairs"
 msgstr "revisões"
 
 #. js-lingui-explicit-id
-#: src/components/positions/deep-finder-teaser.tsx:131
+#: src/components/positions/deep-finder-teaser.tsx:125
 msgid "positions.teaserRising"
 msgstr "em alta"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/allocation-deep-finder.tsx:418
-#: src/routes/_app/deep-finder.tsx:228
+#: src/routes/_app/deep-finder.tsx:208
 msgid "deepFinder.filterUp"
 msgstr "Em alta"
 
@@ -5991,7 +5996,7 @@ msgid "allocation.reviewSave"
 msgstr "Salvar"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:844
+#: src/routes/_app/transactions.tsx:857
 msgid "transactions.saveEdit"
 msgstr "Salvar alterações"
 
@@ -6065,7 +6070,7 @@ msgid "brokerNotes.colSecurity"
 msgstr "Ativo"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/deep-finder.tsx:139
+#: src/routes/_app/deep-finder.tsx:119
 msgid "deepFinder.subtitle"
 msgstr "Veja quais posições em aberto sobem ou caem em um período. Custo é o resultado em aberto versus a média móvel; as outras janelas comparam a carteira de hoje a um fechamento passado."
 
@@ -6117,7 +6122,7 @@ msgstr "Período selecionado"
 
 #. js-lingui-explicit-id
 #: src/components/asset-labels.tsx:18
-#: src/routes/_app/transactions.tsx:208
+#: src/routes/_app/transactions.tsx:221
 msgid "side.sell"
 msgstr "Venda"
 
@@ -6127,7 +6132,7 @@ msgid "allocation.discountEmptyTooltip"
 msgstr "Defina um fair value em uma revisão trimestral"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/performance.tsx:175
+#: src/routes/_app/performance.tsx:159
 msgid "performance.manualRateMissing"
 msgstr "Defina uma cotação USD/BRL manual nas configurações para consolidar este histórico."
 
@@ -6148,7 +6153,7 @@ msgid "settings.title"
 msgstr "Configurações"
 
 #. js-lingui-explicit-id
-#: src/components/settings-dialog.tsx:17
+#: src/components/settings-dialog.tsx:20
 msgid "settings.open"
 msgstr "Configurações"
 
@@ -6239,7 +6244,7 @@ msgid "dividends.rowsShown"
 msgstr "Exibindo {0}–{1} de {2}"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:523
+#: src/routes/_app/transactions.tsx:536
 msgid "transactions.side"
 msgstr "Tipo"
 
@@ -6288,7 +6293,7 @@ msgid "documentation.formula.valuationSignal"
 msgstr "sinal = ln(fair value / preço) menos a banda de ruído"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/deep-finder.tsx:369
+#: src/routes/_app/deep-finder.tsx:349
 msgid "deepFinder.windowSince"
 msgstr "Desde {startLabel}"
 
@@ -6522,7 +6527,7 @@ msgid "documentation.contribution.moneyAndUnits"
 msgstr "Sugerir valores e unidades"
 
 #. js-lingui-explicit-id
-#: src/components/positions/deep-finder-teaser.tsx:107
+#: src/components/positions/deep-finder-teaser.tsx:101
 msgid "positions.teaserTitle"
 msgstr "Resumo"
 
@@ -6874,6 +6879,11 @@ msgid "brokerNotes.issueOversell"
 msgstr "Esta nota vende mais {ticker} do que você tinha na data ({available}). Importe antes as notas mais antigas ou registre as operações anteriores."
 
 #. js-lingui-explicit-id
+#: src/components/dialog-body-fallback.tsx:48
+msgid "dialog.bodyLoadFailed"
+msgstr "Não foi possível carregar este painel. O app pode ter sido atualizado depois que esta página foi aberta."
+
+#. js-lingui-explicit-id
 #: src/components/transactions/broker-note-labels.tsx:121
 msgid "brokerNotes.fileUnreadable"
 msgstr "Não foi possível ler este PDF."
@@ -6909,7 +6919,7 @@ msgid "transactions.importedTradeLocked"
 msgstr "Esta operação foi importada de uma nota de corretagem. Exclua a nota para remover suas operações."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:616
+#: src/routes/_app/transactions.tsx:629
 msgid "transactions.fixedIncomeValueHint"
 msgstr "Este valor é mantido por você. Atualize-o depois na página de Alocação; nenhuma rentabilidade é calculada para renda fixa."
 
@@ -6930,14 +6940,14 @@ msgstr "Ticker"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/allocation-deep-finder.tsx:444
-#: src/routes/_app/deep-finder.tsx:661
+#: src/routes/_app/deep-finder.tsx:641
 msgid "deepFinder.colTicker"
 msgstr "Ticker"
 
 #. js-lingui-explicit-id
 #: src/components/transactions/book-holdings-panel.tsx:366
 #: src/components/transactions/book-holdings-panel.tsx:577
-#: src/routes/_app/transactions.tsx:497
+#: src/routes/_app/transactions.tsx:510
 msgid "transactions.ticker"
 msgstr "Ticker"
 
@@ -7062,7 +7072,7 @@ msgid "allocation.plannerTop"
 msgstr "Top {option} ativos"
 
 #. js-lingui-explicit-id
-#: src/components/positions/deep-finder-teaser.tsx:141
+#: src/components/positions/deep-finder-teaser.tsx:135
 msgid "positions.teaserGainers"
 msgstr "Maiores altas"
 
@@ -7072,7 +7082,7 @@ msgid "performance.topGains"
 msgstr "Maiores ganhos"
 
 #. js-lingui-explicit-id
-#: src/components/positions/deep-finder-teaser.tsx:152
+#: src/components/positions/deep-finder-teaser.tsx:146
 msgid "positions.teaserLosers"
 msgstr "Maiores quedas"
 
@@ -7107,7 +7117,7 @@ msgid "allocation.detailTotalResult"
 msgstr "Resultado total"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:748
+#: src/routes/_app/transactions.tsx:761
 msgid "transactions.tradeDate"
 msgstr "Data da operação"
 
@@ -7142,12 +7152,12 @@ msgid "transactions.notFound"
 msgstr "Operação não encontrada."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:300
+#: src/routes/_app/transactions.tsx:313
 msgid "transactions.removed"
 msgstr "Operação removida"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:385
+#: src/routes/_app/transactions.tsx:398
 msgid "transactions.title"
 msgstr "Operações"
 
@@ -7267,7 +7277,7 @@ msgid "incomeTax.kind.unit"
 msgstr "Unit"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:662
+#: src/routes/_app/transactions.tsx:675
 msgid "transactions.unitPrice"
 msgstr "Preço unitário"
 
@@ -7287,7 +7297,7 @@ msgid "dividends.upcomingTitle"
 msgstr "Próximos eventos"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:625
+#: src/routes/_app/transactions.tsx:638
 msgid "transactions.updateFixedIncomeValue"
 msgstr "Atualizar valor atual"
 
@@ -7330,7 +7340,7 @@ msgid "transactions.fxAt"
 msgstr "USD/BRL {0}"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/transactions.tsx:765
+#: src/routes/_app/transactions.tsx:778
 msgid "transactions.tradeFx"
 msgstr "USD/BRL na data da operação"
 
@@ -7501,7 +7511,7 @@ msgid "documentation.score.tiltedTarget"
 msgstr "Meta ajustada pelo valuation"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/deep-finder.tsx:683
+#: src/routes/_app/deep-finder.tsx:663
 msgid "deepFinder.colValue"
 msgstr "Valor"
 
@@ -7594,7 +7604,7 @@ msgid "allocation.detailVsClose"
 msgstr "vs fechamento"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/deep-finder.tsx:261
+#: src/routes/_app/deep-finder.tsx:241
 msgid "deepFinder.windowCost"
 msgstr "Vs custo"
 
@@ -7683,7 +7693,7 @@ msgid "documentation.score.pipelineDescriptionV2"
 msgstr "Para onde ir, quanto falta e com que urgência são calculados separadamente, para que cada entrada tenha uma única função."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/deep-finder.tsx:362
+#: src/routes/_app/deep-finder.tsx:342
 msgid "deepFinder.window"
 msgstr "Janela"
 
@@ -7782,6 +7792,6 @@ msgstr "O histórico do seu valuation é calculado a partir da alocação."
 
 #. js-lingui-explicit-id
 #: src/components/allocation/allocation-deep-finder.tsx:134
-#: src/routes/_app/deep-finder.tsx:271
+#: src/routes/_app/deep-finder.tsx:251
 msgid "deepFinder.windowYtd"
 msgstr "No ano"

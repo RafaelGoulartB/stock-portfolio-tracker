@@ -104,17 +104,15 @@ export const allocationRouter = router({
   list: protectedProcedure
     .input(allocationListInput)
     .query(async ({ ctx, input }) => {
-      const [assets, reviews, scorePolicy, history, splits] = await Promise.all(
-        [
+      const [assets, reviews, scorePolicy, history, splits, cashAmount] =
+        await Promise.all([
           loadAssets(ctx.user.id),
           loadReviews(ctx.user.id),
           loadScoreConfig(ctx.user.id),
           loadTransactions(ctx.user.id),
           loadAccountSplits(ctx.user.id),
-          // Warms the request memo so valuation does not wait on it later.
           loadCashAmount(ctx.user.id),
-        ],
-      );
+        ]);
       const fairValues = fairValueReviews(reviews, splits);
       const stored = storedManualPrices(assets);
       const requestManuals = {
@@ -148,6 +146,7 @@ export const allocationRouter = router({
           manualPrices: requestManuals,
           storedManualPrices: stored,
           transactions: history,
+          cashAmount,
           forceRefresh: input.forceRefresh,
         }),
         quoteWatchOnly(

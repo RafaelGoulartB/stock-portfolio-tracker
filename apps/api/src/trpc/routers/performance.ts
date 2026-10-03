@@ -128,6 +128,15 @@ export const performanceRouter = router({
         ) ||
         (hasCash && input.displayCurrency !== "BRL");
 
+      // Checked before any price history is requested, so a missing manual
+      // rate does not spend provider calls whose results would be discarded.
+      if (needsFx && input.fxSource === "manual" && !input.manualRate) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Provide a manual USD/BRL rate",
+        });
+      }
+
       // The FX history and the price histories are independent upstream
       // calls, so they are requested together rather than one after another.
       const resolveRateAt = async (): Promise<PerformanceRateLookup> => {
@@ -136,15 +145,8 @@ export const performanceRouter = router({
         }
 
         if (input.fxSource === "manual") {
-          if (!input.manualRate) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Provide a manual USD/BRL rate",
-            });
-          }
-
           // A manual rate has no history, so it applies to every month.
-          const manualRate = input.manualRate;
+          const manualRate = input.manualRate ?? null;
           return () => manualRate;
         }
 

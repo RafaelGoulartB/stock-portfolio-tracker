@@ -47,6 +47,8 @@ export type ValuationRequest = {
    * reasons passes it here so the account history is read once per request.
    */
   transactions?: ConsolidationInput[];
+  /** Already-loaded stored cash balance (`null` when the account has none). */
+  cashAmount?: string | null;
   /** `YYYY-MM-DD` snapshot; omitted values the live portfolio. */
   asOf?: string;
   /**
@@ -103,8 +105,9 @@ async function loadStoredManualPricesUncached(
 }
 
 /**
- * The stored cash balance, read once per request. Allocation starts it in its
- * first query wave so valuation does not add a round trip after the ledger.
+ * The stored cash balance, read once per request. Allocation reads it in its
+ * first query wave and passes it in, so valuation adds no round trip after
+ * the ledger.
  */
 export function loadCashAmount(userId: string): Promise<string | null> {
   return memoizeRequest(`cash:${userId}`, async () => {
@@ -146,10 +149,18 @@ export async function loadValuedPortfolio(
     JSON.stringify(request.manualPrices ?? {}),
     request.transactions ? "preloaded-tx" : "tx",
     request.storedManualPrices ? "preloaded-manuals" : "manuals",
+    request.cashAmount !== undefined ? "preloaded-cash" : "cash-read",
     request.forceRefresh ? "refresh" : "cached",
   ].join("|");
 
   return memoizeRequest(key, () => loadValuedPortfolioUncached(request));
+}
+
+function missingRateError(): TRPCError {
+  return new TRPCError({
+    code: "BAD_REQUEST",
+    message: "An USD/BRL rate is required to consolidate mixed currencies",
+  });
 }
 
 async function loadValuedPortfolioUncached(
@@ -159,7 +170,11 @@ async function loadValuedPortfolioUncached(
   const [transactions, storedManualPrices, cashAmount] = await Promise.all([
     request.transactions ?? loadTransactions(request.userId),
     request.storedManualPrices ?? loadStoredManualPrices(request.userId),
-    includeCash ? loadCashAmount(request.userId) : Promise.resolve(null),
+    !includeCash
+      ? null
+      : request.cashAmount !== undefined
+        ? request.cashAmount
+        : loadCashAmount(request.userId),
   ]);
   const native = consolidatePositions(
     filterTransactionsByAsOf(transactions, request.asOf ?? null),
@@ -167,6 +182,17 @@ async function loadValuedPortfolioUncached(
   const needsRate =
     native.some((position) => position.currency !== request.displayCurrency) ||
     (includeCash && request.displayCurrency !== "BRL");
+
+  if (
+    needsRate &&
+    !request.usdBrlRate &&
+    request.fxSource === "manual" &&
+    !request.manualRate
+  ) {
+    // Known before any quote is requested: fail without spending provider
+    // calls whose results would be discarded.
+    throw missingRateError();
+  }
 
   const manualPrices = {
     ...storedManualPrices,
@@ -232,10 +258,7 @@ async function loadValuedPortfolioUncached(
   ]);
 
   if (needsRate && !usdBrlRate) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "An USD/BRL rate is required to consolidate mixed currencies",
-    });
+    throw missingRateError();
   }
 
   let converted: Position[];

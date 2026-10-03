@@ -2,7 +2,7 @@ import type { AssetClass, Currency } from "@portifolio-tracker/shared";
 import { coalesce, createConcurrencyLimiter, pruneExpired } from "../async";
 import { formatDecimal, toDecimal } from "../decimal";
 import { spotStaleWhileRevalidateMs, spotTtlMs } from "../market-hours";
-import { yahooSession } from "../yahoo-session";
+import { type YahooCredentials, yahooSession } from "../yahoo-session";
 import {
   type MarketQuote,
   type QuoteProvider,
@@ -29,6 +29,8 @@ type SeriesCacheEntry = {
   splits: YahooSplitPoint[];
   start: string;
   end: string;
+  /** When the chart was downloaded; decides whether a recent bar is final. */
+  fetchedAt: number;
   expiresAt: number;
   staleUntil: number;
 };
@@ -67,12 +69,12 @@ type PendingSpot = {
 
 const HISTORY_TTL_MS = 7 * 24 * 60 * 60 * 1_000;
 /**
- * A close from the last few days may have been read mid-session (Friday's
- * bar used for a weekend snapshot), so it is only trusted briefly; settled
- * history keeps the long lifetime.
+ * A daily bar downloaded on or before its own (UTC) day may still be the
+ * session in progress. Such a close is re-read from a fresh chart after this
+ * long, both in the derived quote and in the series behind it; a bar
+ * downloaded on a later day is final and keeps the long lifetime.
  */
 const RECENT_HISTORY_TTL_MS = 30 * 60 * 1_000;
-const RECENT_HISTORY_DAYS = 3;
 const SERIES_TTL_MS = 6 * 60 * 60 * 1_000;
 const FAILURE_TTL_MS = 10 * 60 * 1_000;
 /**
@@ -145,6 +147,11 @@ function toPriceString(raw: number, ticker: string): string {
     throw new QuoteUnavailableError(ticker);
   }
   return formatDecimal(toDecimal(raw.toFixed(8)), 8);
+}
+
+/** True once the chart was downloaded after `asOf`'s UTC day had ended. */
+function barIsFinal(entry: SeriesCacheEntry, asOf: string): boolean {
+  return unixToDay(Math.floor(entry.fetchedAt / 1_000)) > asOf;
 }
 
 function covers(entry: SeriesCacheEntry, start: string, end: string): boolean {
@@ -418,13 +425,16 @@ async function fetchChart(
 async function requestQuoteBatch(
   chunk: string[],
   ticker: string,
-): Promise<Response> {
+): Promise<{ response: Response; session: YahooCredentials }> {
   const session = await yahooSession.get();
   const url = new URL("https://query1.finance.yahoo.com/v7/finance/quote");
   url.searchParams.set("symbols", chunk.join(","));
   url.searchParams.set("fields", QUOTE_FIELDS);
   url.searchParams.set("crumb", session.crumb);
-  return fetchYahoo(url.toString(), ticker, { Cookie: session.cookie });
+  const response = await fetchYahoo(url.toString(), ticker, {
+    Cookie: session.cookie,
+  });
+  return { response, session };
 }
 
 /**
@@ -445,10 +455,10 @@ async function fetchQuoteBatch(
   try {
     for (let offset = 0; offset < symbols.length; offset += QUOTE_BATCH_SIZE) {
       const chunk = symbols.slice(offset, offset + QUOTE_BATCH_SIZE);
-      let response = await requestQuoteBatch(chunk, ticker);
+      let { response, session } = await requestQuoteBatch(chunk, ticker);
       if (response.status === 401 || response.status === 403) {
-        yahooSession.invalidate();
-        response = await requestQuoteBatch(chunk, ticker);
+        yahooSession.invalidate(session);
+        ({ response, session } = await requestQuoteBatch(chunk, ticker));
       }
       if (response.status === 401 || response.status === 403) {
         batchDisabledUntil = Date.now() + BATCH_BACKOFF_MS;
@@ -518,8 +528,13 @@ function quoteFromSeries(
   if (!price) {
     throw new QuoteUnavailableError(request.ticker);
   }
-  const quoteAsOf = current?.asOf ?? asOf;
-  const previous = previousPoint(points, quoteAsOf);
+  // A live price traded after the last published daily bar (that session's
+  // bar can lag the open) belongs to its own day, and the bar is its
+  // previous close.
+  const ahead =
+    spotPrice != null && current !== undefined && current.asOf < asOf;
+  const quoteAsOf = ahead ? asOf : (current?.asOf ?? asOf);
+  const previous = ahead ? current : previousPoint(points, quoteAsOf);
   return {
     ticker: request.ticker,
     price,
@@ -580,6 +595,7 @@ async function loadSeriesEntry(
         splits: parsed.splits,
         start: range.start,
         end: range.end,
+        fetchedAt: Date.now(),
         expiresAt: Date.now() + SERIES_TTL_MS,
         staleUntil: Date.now() + SERIES_TTL_MS * 2,
       };
@@ -818,18 +834,30 @@ export class YahooProvider implements QuoteProvider {
     }
 
     return coalesce(pendingQuotes, key, async () => {
-      const entry = await loadSeriesEntry(
+      let entry = await loadSeriesEntry(
         symbol,
         request.ticker,
         asOf,
         asOf,
         request.forceRefresh,
       );
+      if (
+        !barIsFinal(entry, asOf) &&
+        entry.fetchedAt + RECENT_HISTORY_TTL_MS <= Date.now()
+      ) {
+        // Keep the cached start so a longer series is not narrowed.
+        entry = await loadSeriesEntry(
+          symbol,
+          request.ticker,
+          entry.start,
+          asOf,
+          true,
+        );
+      }
       const quote = quoteFromSeries(request, entry.points, asOf);
-      const ttl =
-        asOf >= shiftDays(todayUtc(), -RECENT_HISTORY_DAYS)
-          ? RECENT_HISTORY_TTL_MS
-          : HISTORY_TTL_MS;
+      const ttl = barIsFinal(entry, asOf)
+        ? HISTORY_TTL_MS
+        : RECENT_HISTORY_TTL_MS;
       pruneStale(cache);
       cache.set(key, {
         quote,

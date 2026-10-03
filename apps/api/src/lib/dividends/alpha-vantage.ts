@@ -2,6 +2,7 @@ import {
   alphaVantageBlocked,
   noteAlphaVantageRefusal,
 } from "../alpha-vantage-quota";
+import { pruneExpired } from "../async";
 import { formatDecimal, toDecimal } from "../decimal";
 import {
   type DividendEvent,
@@ -29,21 +30,6 @@ const FAILURE_TTL_MS = 60 * 60 * 1_000;
 const cache = new Map<string, CacheEntry>();
 const failures = new Map<string, { message: string; expiresAt: number }>();
 const pending = new Map<string, Promise<DividendEvent[]>>();
-
-function pruneExpired() {
-  const now = Date.now();
-
-  for (const [key, entry] of cache) {
-    if (entry.expiresAt <= now) {
-      cache.delete(key);
-    }
-  }
-  for (const [key, entry] of failures) {
-    if (entry.expiresAt <= now) {
-      failures.delete(key);
-    }
-  }
-}
 
 function nullableDay(value: string | undefined): string | null {
   return value && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null;
@@ -99,7 +85,7 @@ export class AlphaVantageDividendProvider implements DividendProvider {
     try {
       return filterRange(await result, request);
     } catch (error) {
-      pruneExpired();
+      pruneExpired(failures);
       failures.set(request.ticker, {
         message:
           error instanceof Error ? error.message : "Alpha Vantage failed",
@@ -197,7 +183,7 @@ export class AlphaVantageDividendProvider implements DividendProvider {
       })
       .sort((a, b) => b.exDate.localeCompare(a.exDate));
 
-    pruneExpired();
+    pruneExpired(cache);
     cache.set(request.ticker, {
       expiresAt: Date.now() + CACHE_TTL_MS,
       events,

@@ -2,7 +2,10 @@ import { msg } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { Settings } from "lucide-react";
 import { lazy, Suspense } from "react";
-import { DialogBodyFallback } from "@/components/dialog-body-fallback";
+import {
+  DialogBodyBoundary,
+  DialogBodyFallback,
+} from "@/components/dialog-body-fallback";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 
@@ -33,9 +36,11 @@ export function SettingsDialog() {
         </Button>
       </DialogTrigger>
       <DialogContent className="flex h-[min(42rem,calc(100svh-2rem))] max-w-[calc(100%-2rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl sm:flex-row">
-        <Suspense fallback={<DialogBodyFallback title={title} />}>
-          <SettingsDialogBody />
-        </Suspense>
+        <DialogBodyBoundary title={title}>
+          <Suspense fallback={<DialogBodyFallback title={title} />}>
+            <SettingsDialogBody />
+          </Suspense>
+        </DialogBodyBoundary>
       </DialogContent>
     </Dialog>
   );
