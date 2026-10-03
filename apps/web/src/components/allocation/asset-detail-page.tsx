@@ -72,6 +72,12 @@ export function AssetDetailPage() {
     { ticker },
     { enabled: parsedTicker.success },
   );
+  // The splits panel mounts only once the ledger shows trades; asking for its
+  // list now puts it in the same request instead of a second round trip.
+  trpc.corporateActions.list.useQuery(
+    { ticker },
+    { enabled: parsedTicker.success },
+  );
   const utils = trpc.useUtils();
 
   async function refresh() {

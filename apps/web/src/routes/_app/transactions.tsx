@@ -51,6 +51,7 @@ import {
 import { trpc } from "@/lib/api";
 import { currencyText } from "@/lib/display-labels";
 import { formatQuantity, formatTradeDate } from "@/lib/format";
+import { trpcQueryUtils } from "@/lib/route-prefetch";
 import { useSettings } from "@/lib/settings";
 import {
   bookHoldingsErrorMessage,
@@ -61,7 +62,19 @@ import {
 } from "@/lib/trpcErrors";
 import { cn } from "@/lib/utils";
 
+const PAGE_SIZE = 100;
+
 export const Route = createFileRoute("/_app/transactions")({
+  // The first, unfiltered page is what the screen opens with.
+  loader: ({ preload }) => {
+    if (preload) return;
+    void trpcQueryUtils.transactions.list
+      .prefetch({ page: 0, pageSize: PAGE_SIZE, ticker: undefined })
+      .catch(() => undefined);
+    void trpcQueryUtils.transactions.tradeFxStatus
+      .prefetch()
+      .catch(() => undefined);
+  },
   component: TransactionsPage,
 });
 
@@ -133,7 +146,7 @@ function TransactionsPage() {
   const [tickerFilter, setTickerFilter] = useState("");
   const tickerQuery = useDebounced(tickerFilter.trim(), 250);
   const list = trpc.transactions.list.useQuery(
-    { page, pageSize: 100, ticker: tickerQuery || undefined },
+    { page, pageSize: PAGE_SIZE, ticker: tickerQuery || undefined },
     { placeholderData: keepPreviousData },
   );
   const fxStatus = trpc.transactions.tradeFxStatus.useQuery();
@@ -185,6 +198,11 @@ function TransactionsPage() {
       utils.positions.daily.invalidate(),
       utils.positions.finder.invalidate(),
       utils.allocation.list.invalidate(),
+      // Asset detail shows the newest trade; watch-only finder rows and the
+      // categories screen both depend on which tickers are held.
+      utils.allocation.history.invalidate(),
+      utils.allocation.finder.invalidate(),
+      utils.categories.list.invalidate(),
       utils.performance.history.invalidate(),
       utils.dividends.history.invalidate(),
       utils.transactions.forTicker.invalidate(),

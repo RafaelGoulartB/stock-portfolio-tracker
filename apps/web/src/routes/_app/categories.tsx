@@ -97,6 +97,8 @@ function CategoriesPage() {
 
   function sync(data: CategoryList) {
     utils.categories.list.setData(undefined, data);
+    // The allocation watchlist finder filters by category on the server.
+    void utils.allocation.finder.invalidate();
   }
 
   const create = trpc.categories.create.useMutation({
