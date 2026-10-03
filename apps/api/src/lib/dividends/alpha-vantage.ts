@@ -1,3 +1,7 @@
+import {
+  alphaVantageBlocked,
+  noteAlphaVantageRefusal,
+} from "../alpha-vantage-quota";
 import { formatDecimal, toDecimal } from "../decimal";
 import {
   type DividendEvent,
@@ -20,7 +24,10 @@ type CacheEntry = {
 };
 
 const CACHE_TTL_MS = 24 * 60 * 60 * 1_000;
+/** A failed ticker is not retried sooner; Yahoo answers meanwhile. */
+const FAILURE_TTL_MS = 60 * 60 * 1_000;
 const cache = new Map<string, CacheEntry>();
+const failures = new Map<string, { message: string; expiresAt: number }>();
 const pending = new Map<string, Promise<DividendEvent[]>>();
 
 function pruneExpired() {
@@ -29,6 +36,11 @@ function pruneExpired() {
   for (const [key, entry] of cache) {
     if (entry.expiresAt <= now) {
       cache.delete(key);
+    }
+  }
+  for (const [key, entry] of failures) {
+    if (entry.expiresAt <= now) {
+      failures.delete(key);
     }
   }
 }
@@ -69,11 +81,31 @@ export class AlphaVantageDividendProvider implements DividendProvider {
       return filterRange(await inFlight, request);
     }
 
+    const refusal =
+      alphaVantageBlocked() ??
+      (() => {
+        const failure = failures.get(request.ticker);
+        return failure && failure.expiresAt > Date.now()
+          ? failure.message
+          : null;
+      })();
+    if (refusal) {
+      throw new DividendUnavailableError(request.ticker, refusal);
+    }
+
     const result = this.fetchAndCache(request);
     pending.set(request.ticker, result);
 
     try {
       return filterRange(await result, request);
+    } catch (error) {
+      pruneExpired();
+      failures.set(request.ticker, {
+        message:
+          error instanceof Error ? error.message : "Alpha Vantage failed",
+        expiresAt: Date.now() + FAILURE_TTL_MS,
+      });
+      throw error;
     } finally {
       pending.delete(request.ticker);
     }
@@ -120,12 +152,13 @@ export class AlphaVantageDividendProvider implements DividendProvider {
     };
 
     if (!Array.isArray(body.data)) {
+      const refusal = body.Information ?? body.Note;
+      if (refusal) {
+        noteAlphaVantageRefusal(refusal);
+      }
       throw new DividendUnavailableError(
         request.ticker,
-        body.Information ??
-          body.Note ??
-          body["Error Message"] ??
-          "Invalid Alpha Vantage response",
+        refusal ?? body["Error Message"] ?? "Invalid Alpha Vantage response",
       );
     }
 
@@ -172,6 +205,13 @@ export class AlphaVantageDividendProvider implements DividendProvider {
 
     return filterRange(events, request);
   }
+}
+
+/** Clears cached events and remembered failures. Exported for tests. */
+export function clearAlphaVantageDividendCache(): void {
+  cache.clear();
+  failures.clear();
+  pending.clear();
 }
 
 function filterRange(

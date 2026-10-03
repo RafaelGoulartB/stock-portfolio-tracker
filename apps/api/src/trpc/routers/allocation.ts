@@ -161,7 +161,6 @@ export const allocationRouter = router({
           reviews: fairValues,
           today: day,
           quoteSource: input.quoteSource,
-          forceRefresh: input.forceRefresh,
           config: scorePolicy.config,
         }),
       ]);

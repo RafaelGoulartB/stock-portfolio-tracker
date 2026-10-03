@@ -12,6 +12,8 @@ type SeriesCacheEntry = { points: FxSeriesPoint[]; expiresAt: number };
 
 /** PTAX closes are final once published; today's may still be pending. */
 const CACHE_TTL_MS = 6 * 60 * 60 * 1_000;
+/** A range that ends before today in São Paulo can no longer change. */
+const SETTLED_TTL_MS = 7 * 24 * 60 * 60 * 1_000;
 /** Long enough to cross Carnival or a year-end holiday run. */
 const LOOKBACK_DAYS = 10;
 const ENDPOINT =
@@ -19,6 +21,15 @@ const ENDPOINT =
 
 const seriesCache = new Map<string, SeriesCacheEntry>();
 const pendingSeries = new Map<string, Promise<FxSeriesPoint[]>>();
+const buyRateCache = new Map<
+  string,
+  { point: FxSeriesPoint | null; expiresAt: number }
+>();
+const pendingBuyRates = new Map<string, Promise<FxSeriesPoint | null>>();
+
+function ttlFor(lastDay: string): number {
+  return lastDay < saoPauloToday() ? SETTLED_TTL_MS : CACHE_TTL_MS;
+}
 
 /** Today in São Paulo, where PTAX is published, `YYYY-MM-DD`. */
 export function saoPauloToday(): string {
@@ -138,7 +149,7 @@ export class BcbPtaxProvider implements FxProvider {
       const points = parsePtaxSeries(await response.json());
 
       pruneExpired(seriesCache);
-      seriesCache.set(key, { points, expiresAt: Date.now() + CACHE_TTL_MS });
+      seriesCache.set(key, { points, expiresAt: Date.now() + ttlFor(end) });
       return points;
     });
   }
@@ -205,6 +216,23 @@ type PtaxField = "cotacaoVenda" | "cotacaoCompra";
 export async function ptaxBuyRateOnOrBefore(
   day: string,
 ): Promise<FxSeriesPoint | null> {
+  const hit = buyRateCache.get(day);
+
+  if (hit && hit.expiresAt > Date.now()) {
+    return hit.point;
+  }
+
+  return coalesce(pendingBuyRates, day, async () => {
+    const point = await fetchBuyRateOnOrBefore(day);
+    pruneExpired(buyRateCache);
+    buyRateCache.set(day, { point, expiresAt: Date.now() + ttlFor(day) });
+    return point;
+  });
+}
+
+async function fetchBuyRateOnOrBefore(
+  day: string,
+): Promise<FxSeriesPoint | null> {
   const query = new URLSearchParams({
     "@dataInicial": odataDay(shiftDays(day, -LOOKBACK_DAYS)),
     "@dataFinalCotacao": odataDay(day),
@@ -229,4 +257,6 @@ export async function ptaxBuyRateOnOrBefore(
 export function clearPtaxCache(): void {
   seriesCache.clear();
   pendingSeries.clear();
+  buyRateCache.clear();
+  pendingBuyRates.clear();
 }
