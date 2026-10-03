@@ -6,17 +6,34 @@ import type {
   AllocationAssetMeta,
   StoredReview,
 } from "../../domain/allocation";
+import { memoizeRequest } from "../../lib/request-memo";
 import { normalizeAssetClass, parseMarkColor } from "./allocation-helpers";
 
 type DbExecutor =
   | Parameters<Parameters<typeof db.transaction>[0]>[0]
   | typeof db;
 
-export async function loadAssets(
+/** Allocation metadata, read once per request (list and result dates share it). */
+export function loadAssets(userId: string): Promise<AllocationAssetMeta[]> {
+  return memoizeRequest(`allocation-assets:${userId}`, () =>
+    loadAssetsUncached(userId),
+  );
+}
+
+async function loadAssetsUncached(
   userId: string,
 ): Promise<AllocationAssetMeta[]> {
   const rows = await db
-    .select()
+    .select({
+      ticker: allocationAssets.ticker,
+      assetClass: allocationAssets.assetClass,
+      currency: allocationAssets.currency,
+      targetWeight: allocationAssets.targetWeight,
+      valuationRef: allocationAssets.valuationRef,
+      manualPrice: allocationAssets.manualPrice,
+      markColor: allocationAssets.markColor,
+      sortOrder: allocationAssets.sortOrder,
+    })
     .from(allocationAssets)
     .where(eq(allocationAssets.userId, userId))
     .orderBy(asc(allocationAssets.sortOrder), asc(allocationAssets.ticker));

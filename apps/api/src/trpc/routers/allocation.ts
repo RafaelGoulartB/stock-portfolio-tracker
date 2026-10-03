@@ -49,7 +49,7 @@ import {
 import { getQuoteProvider, QuoteUnavailableError } from "../../lib/quotes";
 import { getNextResults } from "../../lib/results";
 import { protectedProcedure, router } from "../trpc";
-import { loadValuedPortfolio } from "../valuation";
+import { loadCashAmount, loadValuedPortfolio } from "../valuation";
 import {
   ensureAsset,
   loadAsset,
@@ -67,9 +67,9 @@ import {
 } from "./allocation-helpers";
 import { loadMarketSignals } from "./allocation-market";
 import {
+  loadAccountSplits,
   loadTransactions,
   loadTransactionsForTickers,
-  readSplits,
 } from "./transactions";
 
 export const allocationRouter = router({
@@ -110,7 +110,9 @@ export const allocationRouter = router({
           loadReviews(ctx.user.id),
           loadScoreConfig(ctx.user.id),
           loadTransactions(ctx.user.id),
-          readSplits(db, ctx.user.id),
+          loadAccountSplits(ctx.user.id),
+          // Warms the request memo so valuation does not wait on it later.
+          loadCashAmount(ctx.user.id),
         ],
       );
       const fairValues = fairValueReviews(reviews, splits);

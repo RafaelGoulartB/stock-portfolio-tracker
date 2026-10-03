@@ -30,7 +30,7 @@ import {
 import { formatDecimal, toDecimal } from "../../lib/decimal";
 import { ptaxBuyRateOnOrBefore, saoPauloToday } from "../../lib/fx/bcb-ptax";
 import { protectedProcedure, router } from "../trpc";
-import { loadTransactions, readSplits } from "./transactions";
+import { loadAccountSplits, loadTransactions } from "./transactions";
 
 function currentYear(): number {
   return Number(saoPauloToday().slice(0, 4));
@@ -153,7 +153,7 @@ export const incomeTaxRouter = router({
         cash,
       ] = await Promise.all([
         loadTransactions(userId),
-        readSplits(db, userId),
+        loadAccountSplits(userId),
         db
           .select({
             tradeDate: brokerNotes.tradeDate,

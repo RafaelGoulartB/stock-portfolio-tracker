@@ -57,6 +57,8 @@ type DbExecutor =
  * both validate against the same available quantity. Locks are taken in a
  * stable sorted order and deduplicated so two transactions touching the same
  * set of tickers can never deadlock by acquiring them in opposite orders.
+ * The lock key (`hashtext` of `userId:ticker`) must stay stable: concurrent
+ * API versions have to agree on it.
  * Must run inside a transaction: `pg_advisory_xact_lock` releases on commit.
  */
 export async function lockTickers(
@@ -66,11 +68,21 @@ export async function lockTickers(
 ): Promise<void> {
   const ordered = [...new Set(tickers)].sort();
 
-  for (const ticker of ordered) {
-    await tx.execute(
-      sql`SELECT pg_advisory_xact_lock(hashtext(${`${userId}:${ticker}`}))`,
-    );
+  if (ordered.length === 0) {
+    return;
   }
+
+  // One round trip for the whole set. `OFFSET 0` keeps the ordered subquery
+  // from being flattened, so the locks are still acquired in sorted order.
+  const keys = sql.join(
+    ordered.map(
+      (ticker, index) => sql`(${index}::int, ${`${userId}:${ticker}`}::text)`,
+    ),
+    sql`, `,
+  );
+  await tx.execute(
+    sql`SELECT count(pg_advisory_xact_lock(hashtext(ordered.key))) FROM (SELECT key FROM (VALUES ${keys}) AS input(position, key) ORDER BY position OFFSET 0) AS ordered`,
+  );
 }
 
 /**
@@ -189,6 +201,15 @@ export async function readSplits(
 }
 
 /**
+ * Every split for the account, read once per request: the ledger loader,
+ * Allocation's fair-value adjustment and the tax report all need the same
+ * rows within one batch.
+ */
+export function loadAccountSplits(userId: string): Promise<SplitEvent[]> {
+  return memoizeRequest(`splits:${userId}`, () => readSplits(db, userId));
+}
+
+/**
  * The account ledger in today's share units (see `adjustForSplits`), which
  * is what every valuation, snapshot and dividend entitlement reads.
  */
@@ -209,7 +230,7 @@ async function loadTransactionsUncached(
       .from(transactions)
       .where(eq(transactions.userId, userId))
       .orderBy(asc(transactions.tradedAt), asc(transactions.createdAt)),
-    readSplits(db, userId),
+    loadAccountSplits(userId),
   ]);
 
   return adjustForSplits(
