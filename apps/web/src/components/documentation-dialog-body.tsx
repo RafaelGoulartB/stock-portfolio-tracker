@@ -465,6 +465,22 @@ function PerformanceDocumentation() {
           </Trans>
         </Definition>
         <Definition
+          term={
+            <Trans id="documentation.performance.moneyWeightedReturn">
+              Your money&apos;s return (XIRR)
+            </Trans>
+          }
+        >
+          <Trans id="documentation.performance.moneyWeightedReturnDescription">
+            The yearly rate at which the value at the start of the window and
+            every buy and sale, each compounded from its own day, add up to
+            today&apos;s value. Unlike the time-weighted return it includes the
+            timing and size of each contribution: a large deposit right before a
+            fall lowers it. The gap between the two is the effect of timing. Not
+            shown for windows shorter than 6 months.
+          </Trans>
+        </Definition>
+        <Definition
           term={<Trans id="documentation.performance.drawdown">Drawdown</Trans>}
         >
           <Trans id="documentation.performance.drawdownDescription">

@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { toDecimal } from "../lib/decimal";
 import {
   buildPerformanceHistory,
   createSeriesLookup,
   liveFixedIncome,
+  moneyWeightedReturn,
   type PerformanceBuildInput,
   performanceSnapshots,
   withLiveBalances,
@@ -380,6 +382,99 @@ describe("buildPerformanceHistory", () => {
     const short = build(holding, prices, { months: 2 });
 
     expect(short.summary.annualizedReturn).toBeNull();
+    expect(short.summary.moneyWeightedReturn).toBeNull();
+  });
+
+  it("matches the time-weighted return without contributions", () => {
+    const year = build(
+      [
+        tx({
+          side: "buy",
+          quantity: "100",
+          price: "10",
+          tradedAt: "2025-06-01",
+        }),
+      ],
+      { ACME: { "2025-12-31": "10", "2026-12-31": "12" } },
+      { months: 12, now: "2026-12-31" },
+    );
+
+    expect(year.summary.moneyWeightedReturn).toBe("0.200000");
+  });
+
+  it("penalizes a contribution made before a fall", () => {
+    const history = build(
+      [
+        tx({
+          side: "buy",
+          quantity: "100",
+          price: "10",
+          tradedAt: "2025-06-01",
+        }),
+        tx({
+          side: "buy",
+          quantity: "100",
+          price: "12",
+          tradedAt: "2026-07-01",
+        }),
+      ],
+      { ACME: { "2025-12-31": "10", "2026-12-31": "9" } },
+      { months: 12, now: "2026-12-31" },
+    );
+
+    // 1,000 held and 1,200 added mid-year end at 1,800.
+    expect(history.summary.moneyWeightedReturn).toBe("-0.243397");
+  });
+});
+
+describe("moneyWeightedReturn", () => {
+  const flow = (day: string, amount: string) => ({
+    day,
+    amount: toDecimal(amount),
+  });
+
+  it("solves the yearly rate that grows every flow into the end value", () => {
+    // Up 20% in the first half, then a large contribution right before a
+    // 10% fall: the assets gained 8%, the money lost.
+    expect(
+      moneyWeightedReturn(
+        [flow("2025-01-01", "10000"), flow("2025-07-02", "50000")],
+        "2026-01-01",
+        toDecimal("55800"),
+      ),
+    ).toBe("-0.117164");
+  });
+
+  it("treats a sale as money taken out", () => {
+    expect(
+      moneyWeightedReturn(
+        [flow("2025-01-01", "1000"), flow("2025-06-01", "-500")],
+        "2026-01-01",
+        toDecimal("600"),
+      ),
+    ).toBe("0.139896");
+  });
+
+  it("refuses spans shorter than six months", () => {
+    expect(
+      moneyWeightedReturn(
+        [flow("2025-10-01", "1000")],
+        "2026-01-01",
+        toDecimal("1100"),
+      ),
+    ).toBeNull();
+  });
+
+  it("has no rate without money invested or without a solution", () => {
+    expect(moneyWeightedReturn([], "2026-01-01", toDecimal("0"))).toBeNull();
+    // Money only ever added, yet the end value is negative: no rate fits.
+    expect(
+      moneyWeightedReturn(
+        [flow("2025-01-01", "1000")],
+        "2026-01-01",
+        toDecimal("-1"),
+      ),
+    ).toBeNull();
   });
 });
 

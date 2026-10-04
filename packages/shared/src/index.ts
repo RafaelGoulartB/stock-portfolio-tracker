@@ -11,6 +11,7 @@ export * from "./decimal";
 export * from "./deep-finder";
 export * from "./dividends";
 export * from "./fx";
+export * from "./goals";
 export * from "./holdings-import";
 export * from "./income-tax";
 export * from "./performance";

@@ -50,6 +50,8 @@ production deployment.
 - **allocation asset** — a held or watch-only ticker with allocation metadata;
 - **review** — a ticker's quarterly grade, notes, optional fair value, and whether to watch the next quarter;
 - **contribution score** — the domain recommendation used to rank new capital;
+- **goal** — the account's target income or value, planned monthly
+  contribution and real-return scenarios, projected in today's money;
 - **provider** — a replaceable source of market quotes, income events, or FX;
 - **broker note** — an imported nota de corretagem or trade confirmation that
   owns the transactions read from it;

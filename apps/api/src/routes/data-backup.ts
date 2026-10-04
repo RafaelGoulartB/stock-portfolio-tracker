@@ -14,6 +14,7 @@ import {
   categories,
   corporateActions,
   darfPayments,
+  financialGoals,
   foreignCashBalances,
   incomeTaxSettings,
   transactions,
@@ -136,6 +137,7 @@ const BACKUP_TABLES: Record<BackupEntity, string> = {
   darfPayments: "darf_payments",
   assetTaxProfiles: "asset_tax_profiles",
   foreignCashBalances: "foreign_cash_balances",
+  financialGoals: "financial_goals",
 };
 
 async function* exportBackup(userId: string): AsyncGenerator<string> {
@@ -421,6 +423,24 @@ async function* exportBackup(userId: string): AsyncGenerator<string> {
       }
     }
 
+    for await (const rows of connection`
+      select currency, monthly_contribution as "monthlyContribution",
+        target_kind as "targetKind", target_amount as "targetAmount",
+        withdrawal_rate as "withdrawalRate",
+        conservative_return as "conservativeReturn",
+        base_return as "baseReturn", optimistic_return as "optimisticReturn",
+        target_month as "targetMonth", updated_at as "updatedAt"
+      from financial_goals where user_id = ${userId} order by user_id
+    `.cursor(BATCH_SIZE)) {
+      for (const data of rows) {
+        yield emit({
+          type: "record",
+          entity: "financialGoals",
+          data: serializeRow(data),
+        });
+      }
+    }
+
     yield encodeBackupLine({
       type: "checksum",
       algorithm: "sha256",
@@ -459,6 +479,7 @@ type ParsedBackup = {
   darfPayments: RecordData<"darfPayments">[];
   assetTaxProfiles: RecordData<"assetTaxProfiles">[];
   foreignCashBalances: RecordData<"foreignCashBalances">[];
+  financialGoals: RecordData<"financialGoals">[];
 };
 
 /**
@@ -509,6 +530,7 @@ async function parseBackup(
     darfPayments: [],
     assetTaxProfiles: [],
     foreignCashBalances: [],
+    financialGoals: [],
   };
   let lastEntityIndex = 0;
   let totalRecords = 0;
@@ -604,6 +626,9 @@ async function parseBackup(
       case "foreignCashBalances":
         parsed.foreignCashBalances.push(record.data);
         break;
+      case "financialGoals":
+        parsed.financialGoals.push(record.data);
+        break;
     }
   }
 
@@ -619,6 +644,9 @@ async function parseBackup(
   }
   if (parsed.incomeTaxSettings.length > 1) {
     throw new Error("Backup contains more than one set of income tax balances");
+  }
+  if (parsed.financialGoals.length > 1) {
+    throw new Error("Backup contains more than one goal");
   }
   const unique = (values: readonly (string | number)[], what: string) => {
     if (new Set(values).size !== values.length) {
@@ -687,6 +715,7 @@ async function replaceAccountData(parsed: ParsedBackup, userId: string) {
     await tx
       .delete(foreignCashBalances)
       .where(eq(foreignCashBalances.userId, userId));
+    await tx.delete(financialGoals).where(eq(financialGoals.userId, userId));
 
     const categoryIdByRef = new Map<string, string>();
     for (let index = 0; index < parsed.categories.length; index += BATCH_SIZE) {
@@ -863,6 +892,12 @@ async function replaceAccountData(parsed: ParsedBackup, userId: string) {
       await tx
         .insert(foreignCashBalances)
         .values(parsed.foreignCashBalances.map((row) => ({ ...row, userId })));
+    }
+
+    if (parsed.financialGoals.length > 0) {
+      await tx
+        .insert(financialGoals)
+        .values(parsed.financialGoals.map((row) => ({ ...row, userId })));
     }
   });
 }

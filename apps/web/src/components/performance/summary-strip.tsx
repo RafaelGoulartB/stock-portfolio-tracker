@@ -76,7 +76,7 @@ export function SummaryStrip({
 
   return (
     <StatStrip
-      className="sm:grid-cols-2 lg:grid-cols-5"
+      className="sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6"
       footer={meta.join(" · ")}
     >
       <Stat
@@ -122,6 +122,38 @@ export function SummaryStrip({
               )}
             </span>
           </span>
+        }
+      />
+      <Stat
+        label={
+          <Trans id="performance.moneyWeightedReturn">
+            Your money&apos;s return
+          </Trans>
+        }
+        value={
+          summary.moneyWeightedReturn == null ? (
+            "—"
+          ) : (
+            <Trans id="performance.perYearValue">
+              {formatSignedPercent(summary.moneyWeightedReturn)}/yr
+            </Trans>
+          )
+        }
+        valueClassName={
+          summary.moneyWeightedReturn == null
+            ? undefined
+            : pnlClassName(summary.moneyWeightedReturn)
+        }
+        hint={
+          summary.moneyWeightedReturn == null ? (
+            <Trans id="performance.moneyWeightedShort">
+              Needs a window of 6 months or more.
+            </Trans>
+          ) : (
+            <Trans id="performance.moneyWeightedHint">
+              XIRR: timing of each contribution included.
+            </Trans>
+          )
         }
       />
       <Stat

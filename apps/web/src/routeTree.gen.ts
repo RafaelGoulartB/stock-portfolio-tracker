@@ -18,6 +18,7 @@ import { Route as AppDailyRouteImport } from './routes/_app/daily'
 import { Route as AppDeepFinderRouteImport } from './routes/_app/deep-finder'
 import { Route as AppDetailedPositionsRouteImport } from './routes/_app/detailed-positions'
 import { Route as AppDividendsRouteImport } from './routes/_app/dividends'
+import { Route as AppGoalsRouteImport } from './routes/_app/goals'
 import { Route as AppIncomeTaxRouteImport } from './routes/_app/income-tax'
 import { Route as AppPerformanceRouteImport } from './routes/_app/performance'
 import { Route as AppPositionsRouteImport } from './routes/_app/positions'
@@ -70,6 +71,11 @@ const AppDividendsRoute = AppDividendsRouteImport.update({
   path: '/dividends',
   getParentRoute: () => AppRoute,
 } as any)
+const AppGoalsRoute = AppGoalsRouteImport.update({
+  id: '/goals',
+  path: '/goals',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppIncomeTaxRoute = AppIncomeTaxRouteImport.update({
   id: '/income-tax',
   path: '/income-tax',
@@ -115,6 +121,7 @@ export interface FileRoutesByFullPath {
   '/deep-finder': typeof AppDeepFinderRoute
   '/detailed-positions': typeof AppDetailedPositionsRoute
   '/dividends': typeof AppDividendsRoute
+  '/goals': typeof AppGoalsRoute
   '/income-tax': typeof AppIncomeTaxRoute
   '/performance': typeof AppPerformanceRoute
   '/positions': typeof AppPositionsRoute
@@ -131,6 +138,7 @@ export interface FileRoutesByTo {
   '/deep-finder': typeof AppDeepFinderRoute
   '/detailed-positions': typeof AppDetailedPositionsRoute
   '/dividends': typeof AppDividendsRoute
+  '/goals': typeof AppGoalsRoute
   '/income-tax': typeof AppIncomeTaxRoute
   '/performance': typeof AppPerformanceRoute
   '/positions': typeof AppPositionsRoute
@@ -150,6 +158,7 @@ export interface FileRoutesById {
   '/_app/deep-finder': typeof AppDeepFinderRoute
   '/_app/detailed-positions': typeof AppDetailedPositionsRoute
   '/_app/dividends': typeof AppDividendsRoute
+  '/_app/goals': typeof AppGoalsRoute
   '/_app/income-tax': typeof AppIncomeTaxRoute
   '/_app/performance': typeof AppPerformanceRoute
   '/_app/positions': typeof AppPositionsRoute
@@ -169,6 +178,7 @@ export interface FileRouteTypes {
     | '/deep-finder'
     | '/detailed-positions'
     | '/dividends'
+    | '/goals'
     | '/income-tax'
     | '/performance'
     | '/positions'
@@ -185,6 +195,7 @@ export interface FileRouteTypes {
     | '/deep-finder'
     | '/detailed-positions'
     | '/dividends'
+    | '/goals'
     | '/income-tax'
     | '/performance'
     | '/positions'
@@ -203,6 +214,7 @@ export interface FileRouteTypes {
     | '/_app/deep-finder'
     | '/_app/detailed-positions'
     | '/_app/dividends'
+    | '/_app/goals'
     | '/_app/income-tax'
     | '/_app/performance'
     | '/_app/positions'
@@ -283,6 +295,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDividendsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/goals': {
+      id: '/_app/goals'
+      path: '/goals'
+      fullPath: '/goals'
+      preLoaderRoute: typeof AppGoalsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/income-tax': {
       id: '/_app/income-tax'
       path: '/income-tax'
@@ -356,6 +375,7 @@ interface AppRouteChildren {
   AppDeepFinderRoute: typeof AppDeepFinderRoute
   AppDetailedPositionsRoute: typeof AppDetailedPositionsRoute
   AppDividendsRoute: typeof AppDividendsRoute
+  AppGoalsRoute: typeof AppGoalsRoute
   AppIncomeTaxRoute: typeof AppIncomeTaxRoute
   AppPerformanceRoute: typeof AppPerformanceRoute
   AppPositionsRoute: typeof AppPositionsRoute
@@ -370,6 +390,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDeepFinderRoute: AppDeepFinderRoute,
   AppDetailedPositionsRoute: AppDetailedPositionsRoute,
   AppDividendsRoute: AppDividendsRoute,
+  AppGoalsRoute: AppGoalsRoute,
   AppIncomeTaxRoute: AppIncomeTaxRoute,
   AppPerformanceRoute: AppPerformanceRoute,
   AppPositionsRoute: AppPositionsRoute,

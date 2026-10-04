@@ -222,6 +222,12 @@ export type PerformanceSummary = {
   cumulativeReturn: string | null;
   /** `cumulativeReturn` restated per year, `null` for windows under 6 months. */
   annualizedReturn: string | null;
+  /**
+   * Money-weighted yearly return (XIRR) over the same flows and values as
+   * the time-weighted one: what the money earned, timing of every
+   * contribution included. `null` under 6 months or without a solution.
+   */
+  moneyWeightedReturn: string | null;
   bestMonth: PerformanceMonthMark | null;
   worstMonth: PerformanceMonthMark | null;
   positiveMonths: number;
@@ -426,7 +432,10 @@ function tradeCash(entry: ConsolidationInput): Decimal {
   return entry.side === "buy" ? add(gross, fees) : -sub(gross, fees);
 }
 
-type MonthFlows = { total: Decimal; weighted: Decimal };
+/** Money put into the portfolio (positive) or taken out (negative) on a day. */
+export type DatedFlow = { day: string; amount: Decimal };
+
+type MonthFlows = { total: Decimal; weighted: Decimal; entries: DatedFlow[] };
 
 /**
  * Cash flows inside `(previous, current]`, converted to the display currency
@@ -470,6 +479,7 @@ function accumulateFlow(
 
   flows.total = add(flows.total, amount);
   flows.weighted = add(flows.weighted, mul(amount, weight));
+  flows.entries.push({ day: entry.tradedAt, amount });
 }
 
 /**
@@ -490,6 +500,7 @@ function monthFlowsByMonth(
   const flows = boundaries.map<MonthFlows>(() => ({
     total: ZERO,
     weighted: ZERO,
+    entries: [],
   }));
   let index = 0;
 
@@ -557,6 +568,92 @@ function annualize(cumulative: Decimal, months: number): string | null {
   }
 
   return formatDecimal(toDecimal(annualized.toFixed(RATE_PLACES)), RATE_PLACES);
+}
+
+/** Shortest span worth a yearly rate: the 6 months of {@link annualize}. */
+const MIN_MONEY_WEIGHTED_DAYS = 182;
+const DAYS_PER_YEAR = 365;
+
+/**
+ * Money-weighted return (XIRR): the yearly rate `r` at which every flow,
+ * compounded from its own day until `endDay`, grows into `endValue`:
+ * `sum(flow * (1 + r)^(days / 365)) = endValue`.
+ *
+ * Unlike the time-weighted return it rewards or penalizes the timing and size
+ * of each contribution, so the two side by side show the effect of timing.
+ * The flows stay decimal; only the root search runs on floats, because the
+ * fractional powers have no exact decimal form. The result is a display
+ * ratio and is never stored.
+ *
+ * `null` when the span is shorter than 6 months, when there is nothing
+ * invested, or when no rate between -99% and +1000% a year solves it.
+ */
+export function moneyWeightedReturn(
+  flows: readonly DatedFlow[],
+  endDay: string,
+  endValue: Decimal,
+): string | null {
+  const end = dayNumber(endDay);
+  const terms = flows
+    .filter((flow) => !isZero(flow.amount) && flow.day <= endDay)
+    .map((flow) => ({
+      years: (end - dayNumber(flow.day)) / DAYS_PER_YEAR,
+      amount: Number(formatDecimal(flow.amount, MONEY_PLACES)),
+    }));
+
+  if (terms.length === 0) {
+    return null;
+  }
+
+  const spanDays = Math.max(...terms.map((term) => term.years)) * DAYS_PER_YEAR;
+
+  if (spanDays < MIN_MONEY_WEIGHTED_DAYS) {
+    return null;
+  }
+
+  const target = Number(formatDecimal(endValue, MONEY_PLACES));
+  const gap = (rate: number) =>
+    terms.reduce(
+      (sum, term) => sum + term.amount * (1 + rate) ** term.years,
+      0,
+    ) - target;
+
+  let low = -0.99;
+  let high = 10;
+  let gapLow = gap(low);
+  const gapHigh = gap(high);
+
+  if (
+    !Number.isFinite(gapLow) ||
+    !Number.isFinite(gapHigh) ||
+    Math.sign(gapLow) === Math.sign(gapHigh)
+  ) {
+    return null;
+  }
+
+  // Bisection: slower than Newton but it cannot diverge, and 200 halvings of
+  // an 11-wide bracket are far below the 6 places that are reported.
+  for (let step = 0; step < 200 && high - low > 1e-12; step += 1) {
+    const middle = (low + high) / 2;
+    const gapMiddle = gap(middle);
+
+    if (gapMiddle === 0) {
+      low = middle;
+      high = middle;
+      break;
+    }
+
+    if (Math.sign(gapMiddle) === Math.sign(gapLow)) {
+      low = middle;
+      gapLow = gapMiddle;
+    } else {
+      high = middle;
+    }
+  }
+
+  const rate = (low + high) / 2;
+
+  return formatDecimal(toDecimal(rate.toFixed(RATE_PLACES)), RATE_PLACES);
 }
 
 function ratio(numerator: Decimal, denominator: Decimal): string | null {
@@ -817,6 +914,12 @@ export function buildPerformanceHistory(
 
   const first = window[0];
   const lastMonth = window[window.length - 1];
+  // The baseline value enters as if contributed on the baseline day, so a
+  // window that starts with holdings is measured exactly like the TWR.
+  const moneyFlows: DatedFlow[] = [
+    { day: baseline.asOf, amount: baselineValuation.marketValue },
+    ...flowsByMonth.flatMap((flows) => flows.entries),
+  ];
 
   return {
     months,
@@ -846,6 +949,11 @@ export function buildPerformanceHistory(
         monthsWithReturn === 0
           ? null
           : annualize(sub(wealthIndex, ONE), monthsWithReturn),
+      moneyWeightedReturn: moneyWeightedReturn(
+        moneyFlows,
+        lastMonth.asOf,
+        last.marketValue,
+      ),
       bestMonth: best,
       worstMonth: worst,
       positiveMonths,

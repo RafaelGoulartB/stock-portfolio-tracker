@@ -7,6 +7,8 @@ import {
   CURRENCIES,
   DEFAULT_CONTRIBUTION_PLAN_CONFIG,
   DEFAULT_SCORE_CONFIG,
+  GOAL_TARGET_KINDS,
+  goalSettingsInput,
   normalizeCnpj,
   scoreConfigUpdateSchema,
   TRANSACTION_SIDES,
@@ -15,7 +17,7 @@ import { z } from "zod";
 import { formatDecimal, sub, toDecimal, ZERO } from "./decimal";
 
 export const BACKUP_FORMAT = "portifolio-tracker-backup";
-export const BACKUP_VERSION = 13;
+export const BACKUP_VERSION = 14;
 export const BACKUP_MEDIA_TYPE = "application/x-portifolio-backup+gzip";
 
 /**
@@ -52,6 +54,7 @@ export const BACKUP_ENTITIES = [
   "darfPayments",
   "assetTaxProfiles",
   "foreignCashBalances",
+  "financialGoals",
 ] as const;
 
 export type BackupEntity = (typeof BACKUP_ENTITIES)[number];
@@ -97,6 +100,7 @@ const backupCountsSchema = z.strictObject({
   darfPayments: z.number().int().nonnegative().default(0),
   assetTaxProfiles: z.number().int().nonnegative().default(0),
   foreignCashBalances: z.number().int().nonnegative().default(0),
+  financialGoals: z.number().int().nonnegative().default(0),
 });
 
 export const manifestSchema = z.object({
@@ -116,6 +120,7 @@ export const manifestSchema = z.object({
     z.literal(11),
     z.literal(12),
     z.literal(13),
+    z.literal(14),
   ]),
   exportedAt: timestamp,
   counts: backupCountsSchema,
@@ -513,6 +518,31 @@ const foreignCashBalanceRecord = z.strictObject({
   }),
 });
 
+/** Added in v14; older backups restore without a goal. */
+const financialGoalRecord = z.strictObject({
+  type: z.literal("record"),
+  entity: z.literal("financialGoals"),
+  data: z
+    .strictObject({
+      currency: z.enum(CURRENCIES),
+      monthlyContribution: decimal,
+      targetKind: z.enum(GOAL_TARGET_KINDS),
+      targetAmount: positiveDecimal,
+      withdrawalRate: positiveDecimal,
+      conservativeReturn: decimal,
+      baseReturn: decimal,
+      optimisticReturn: decimal,
+      targetMonth: monthKey.nullable(),
+      updatedAt: databaseTimestamp,
+    })
+    .refine(
+      // Restoring must not smuggle in a goal the live form would refuse.
+      ({ updatedAt: _updatedAt, ...goal }) =>
+        goalSettingsInput.safeParse(goal).success,
+      { message: "Invalid goal" },
+    ),
+});
+
 export const backupRecordSchema = z.discriminatedUnion("entity", [
   categoryRecord,
   allocationAssetRecord,
@@ -529,6 +559,7 @@ export const backupRecordSchema = z.discriminatedUnion("entity", [
   darfPaymentRecord,
   assetTaxProfileRecord,
   foreignCashBalanceRecord,
+  financialGoalRecord,
 ]);
 
 export type BackupRecord = z.infer<typeof backupRecordSchema>;
@@ -564,6 +595,7 @@ export function emptyBackupCounts(): BackupCounts {
     darfPayments: 0,
     assetTaxProfiles: 0,
     foreignCashBalances: 0,
+    financialGoals: 0,
   };
 }
 

@@ -54,7 +54,7 @@ describe("portable data backups", () => {
       },
     });
 
-    expect(manifest.version).toBe(13);
+    expect(manifest.version).toBe(14);
     if (record.entity !== "transactions") {
       throw new Error("expected transaction record");
     }
@@ -171,6 +171,34 @@ describe("portable data backups", () => {
         updatedAt: stamps.updatedAt,
       }).entity,
     ).toBe("foreignCashBalances");
+  });
+
+  it("accepts a v14 goal and rejects one the live form would refuse", () => {
+    const goal = (data: Record<string, unknown>) =>
+      backupRecordSchema.parse({
+        type: "record",
+        entity: "financialGoals",
+        data: {
+          currency: "BRL",
+          monthlyContribution: "3000.00000000",
+          targetKind: "income",
+          targetAmount: "10000.00000000",
+          withdrawalRate: "0.04000000",
+          conservativeReturn: "0.02000000",
+          baseReturn: "0.04000000",
+          optimisticReturn: "0.06000000",
+          targetMonth: "2045-12",
+          updatedAt: "2026-10-04T12:00:00.000Z",
+          ...data,
+        },
+      });
+
+    expect(goal({}).entity).toBe("financialGoals");
+    expect(goal({ targetMonth: null }).entity).toBe("financialGoals");
+    expect(() => goal({ targetKind: "dream" })).toThrow();
+    expect(() => goal({ targetAmount: "0" })).toThrow();
+    // Scenarios out of order.
+    expect(() => goal({ baseReturn: "0.01000000" })).toThrow();
   });
 
   it("requires added shares and a unit cost on a bonus, and none on a split", () => {

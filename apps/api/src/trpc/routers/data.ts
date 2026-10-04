@@ -12,6 +12,7 @@ import {
   categories,
   corporateActions,
   darfPayments,
+  financialGoals,
   foreignCashBalances,
   incomeTaxSettings,
   transactions,
@@ -36,7 +37,8 @@ async function countForUser(
     | typeof incomeTaxSettings
     | typeof darfPayments
     | typeof assetTaxProfiles
-    | typeof foreignCashBalances,
+    | typeof foreignCashBalances
+    | typeof financialGoals,
   userId: string,
 ) {
   const [row] = await db
@@ -64,6 +66,7 @@ export const dataRouter = router({
       darfPaymentCount,
       assetTaxProfileCount,
       foreignCashBalanceCount,
+      financialGoalCount,
     ] = await Promise.all([
       countForUser(transactions, ctx.user.id),
       countForUser(allocationAssets, ctx.user.id),
@@ -80,6 +83,7 @@ export const dataRouter = router({
       countForUser(darfPayments, ctx.user.id),
       countForUser(assetTaxProfiles, ctx.user.id),
       countForUser(foreignCashBalances, ctx.user.id),
+      countForUser(financialGoals, ctx.user.id),
     ]);
 
     return {
@@ -98,6 +102,7 @@ export const dataRouter = router({
       darfPayments: darfPaymentCount,
       assetTaxProfiles: assetTaxProfileCount,
       foreignCashBalances: foreignCashBalanceCount,
+      financialGoals: financialGoalCount,
     };
   }),
 
@@ -146,6 +151,9 @@ export const dataRouter = router({
         await tx
           .delete(foreignCashBalances)
           .where(eq(foreignCashBalances.userId, ctx.user.id));
+        await tx
+          .delete(financialGoals)
+          .where(eq(financialGoals.userId, ctx.user.id));
       });
 
       return { ok: true as const };

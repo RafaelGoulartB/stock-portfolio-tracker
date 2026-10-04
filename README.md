@@ -18,6 +18,7 @@ Portfolio Tracker records investment transactions and turns them into positions,
 - **Positions:** review market value, average cost, open results, and the mix of Brazilian and US assets.
 - **Allocation:** compare target weights with current holdings, review quarterly grades and fair values, and see which assets are taking contributions.
 - **Contribution planning:** rank eligible assets and split a proposed contribution into suggested trade amounts. Nothing is recorded until you register the trades.
+- **Goals:** set a monthly income or portfolio value to reach, see when your planned contribution gets there under conservative, base and optimistic real returns, and review how much new money you have added each month.
 
 ### Allocation targets and quarterly reviews
 

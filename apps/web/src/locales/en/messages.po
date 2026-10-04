@@ -826,6 +826,12 @@ msgid "allocation.sales.weightsV2"
 msgstr "{0} → {1} (sale target {2})"
 
 #. js-lingui-explicit-id
+#. placeholder {0}: formatPercentAxis(Number(entry.annualReturn))
+#: src/components/goals/projection-card.tsx:343
+msgid "goals.perYear"
+msgstr "{0} a year"
+
+#. js-lingui-explicit-id
 #. placeholder {0}: data.sides.buy
 #. placeholder {1}: data.sides.sell
 #: src/components/transactions/transaction-history.tsx:214
@@ -843,7 +849,7 @@ msgstr "{0} buys · {1} sells · {2} bought · {3} sold"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: formatMoney(month.pendingAfter, "BRL")
-#: src/components/income-tax/report-sections.tsx:641
+#: src/components/income-tax/report-sections.tsx:643
 msgid "incomeTax.monthly.pending"
 msgstr "{0} carried"
 
@@ -895,11 +901,24 @@ msgid "allocation.added"
 msgstr "{0} is now on the table"
 
 #. js-lingui-explicit-id
+#. placeholder {0}: recent.monthsWithContribution
+#. placeholder {1}: recent.months
+#: src/components/goals/contributions-card.tsx:209
+msgid "goals.monthsOf"
+msgstr "{0} of {1}"
+
+#. js-lingui-explicit-id
 #. placeholder {0}: totals.comparable
 #. placeholder {1}: totals.openPositions
 #: src/components/deep-finder/summary.tsx:77
 msgid "deepFinder.comparableCount"
 msgstr "{0} of {1} compared"
+
+#. js-lingui-explicit-id
+#. placeholder {0}: formatWeight(projection.progress)
+#: src/components/goals/goal-summary.tsx:63
+msgid "goals.progressHint"
+msgstr "{0} of the goal."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: formatSignedPercent(asset.contribution)
@@ -937,7 +956,7 @@ msgstr "{0} ready · {1} need attention · {2} already imported · {3} repeated"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: signedOrZero(summary.realizedPnl, currency)
-#: src/components/performance/summary-strip.tsx:145
+#: src/components/performance/summary-strip.tsx:177
 msgid "performance.realizedInWindow"
 msgstr "{0} realized."
 
@@ -991,6 +1010,18 @@ msgid "allocation.detailTrendValue"
 msgstr "{0}{1} σ"
 
 #. js-lingui-explicit-id
+#. placeholder {0}: formatMoney(projection.sustainableMonthlyIncome, currency)
+#: src/components/goals/goal-summary.tsx:87
+msgid "goals.perMonthValue"
+msgstr "{0}/mo"
+
+#. js-lingui-explicit-id
+#. placeholder {0}: formatSignedPercent(summary.moneyWeightedReturn)
+#: src/components/performance/summary-strip.tsx:137
+msgid "performance.perYearValue"
+msgstr "{0}/yr"
+
+#. js-lingui-explicit-id
 #: src/components/analysis/primitives.tsx:122
 msgid "analysis.rising"
 msgstr "{advancing} rising"
@@ -1001,12 +1032,12 @@ msgid "analysis.breadthLabel"
 msgstr "{advancing} rising, {declining} falling, {unchanged} flat"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1027
+#: src/components/income-tax/report-sections.tsx:1029
 msgid "incomeTax.holdings.descCash"
 msgstr "{amount} in a non-remunerated account abroad."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1023
+#: src/components/income-tax/report-sections.tsx:1025
 msgid "incomeTax.holdings.descCashAt"
 msgstr "{amount} in a non-remunerated account at {institution}."
 
@@ -1027,6 +1058,11 @@ msgid "daily.assetsCompared"
 msgstr "{count, plural, one {# asset compared} other {# assets compared}}"
 
 #. js-lingui-explicit-id
+#: src/components/goals/goal-summary.tsx:35
+msgid "goals.unquoted"
+msgstr "{count, plural, one {# asset without a quote is left out of today's value.} other {# assets without a quote are left out of today's value.}}"
+
+#. js-lingui-explicit-id
 #: src/components/positions/allocation-card.tsx:377
 msgid "positions.allocGroupCount"
 msgstr "{count, plural, one {# asset} other {# assets}}"
@@ -1037,7 +1073,7 @@ msgid "positions.allocDonutTotal"
 msgstr "{count, plural, one {# asset} other {# assets}}"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1167
+#: src/components/income-tax/report-sections.tsx:1169
 msgid "incomeTax.holdings.count"
 msgstr "{count, plural, one {# asset} other {# assets}}"
 
@@ -1050,6 +1086,16 @@ msgstr "{count, plural, one {# closed position} other {# closed positions}}"
 #: src/components/transactions/broker-note-import.tsx:694
 msgid "brokerNotes.sendFailed"
 msgstr "{count, plural, one {# file could not be sent to the server.} other {# files could not be sent to the server.}}"
+
+#. js-lingui-explicit-id
+#: src/components/goals/contributions-card.tsx:134
+msgid "goals.contributionsUnconverted"
+msgstr "{count, plural, one {# foreign trade is left out: no USD/BRL rate is available.} other {# foreign trades are left out: no USD/BRL rate is available.}}"
+
+#. js-lingui-explicit-id
+#: src/components/goals/contributions-card.tsx:119
+msgid "goals.contributionsApproximated"
+msgstr "{count, plural, one {# foreign trade without its own rate is converted at today's rate.} other {# foreign trades without their own rate are converted at today's rate.}}"
 
 #. js-lingui-explicit-id
 #: src/components/performance/summary-strip.tsx:31
@@ -1163,6 +1209,11 @@ msgid "dividends.summaryFooter"
 msgstr "{eventCount} events in the window, {total} in total · native: {nativeTotals}"
 
 #. js-lingui-explicit-id
+#: src/components/goals/types.ts:32
+msgid "goals.durationMonths"
+msgstr "{months, plural, one {# month} other {# months}}"
+
+#. js-lingui-explicit-id
 #: src/components/transactions/broker-note-import.tsx:360
 msgid "brokerNotes.fileTooLargeToast"
 msgstr "{name} is larger than 5 MB."
@@ -1178,27 +1229,32 @@ msgid "documentation.score.overweightBadge"
 msgstr "{overweightLimit} of target"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:996
+#: src/components/goals/projection-card.tsx:163
+msgid "goals.projectionDescription"
+msgstr "{planned} a month on top of today's portfolio. Returns are real (above inflation), so every amount is in today's money."
+
+#. js-lingui-explicit-id
+#: src/components/income-tax/report-sections.tsx:998
 msgid "incomeTax.holdings.descBdrs"
 msgstr "{quantity} BDRs of {ticker}, traded on B3. Average cost per BDR {average}."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:989
+#: src/components/income-tax/report-sections.tsx:991
 msgid "incomeTax.holdings.descQuotas"
 msgstr "{quantity} quotas of {ticker}, traded on B3. Average cost per quota {average}."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:973
+#: src/components/income-tax/report-sections.tsx:975
 msgid "incomeTax.holdings.descForeign"
 msgstr "{quantity} shares of {ticker}, traded in the United States. Acquisition cost {cost}."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1010
+#: src/components/income-tax/report-sections.tsx:1012
 msgid "incomeTax.holdings.descShares"
 msgstr "{quantity} shares of {ticker}, traded on B3. Average cost per share {average}."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1003
+#: src/components/income-tax/report-sections.tsx:1005
 msgid "incomeTax.holdings.descUnits"
 msgstr "{quantity} units of {ticker}, traded on B3. Average cost per unit {average}."
 
@@ -1280,6 +1336,16 @@ msgid "dividends.windowShort"
 msgstr "{window}Y"
 
 #. js-lingui-explicit-id
+#: src/components/goals/types.ts:26
+msgid "goals.durationYears"
+msgstr "{years, plural, one {# year} other {# years}}"
+
+#. js-lingui-explicit-id
+#: src/components/goals/types.ts:47
+msgid "goals.durationYearsAndMonths"
+msgstr "{yearsText} and {monthsText}"
+
+#. js-lingui-explicit-id
 #. placeholder {0}: preview.ungradedMultiplier
 #: src/components/score-documentation.tsx:1066
 msgid "documentation.score.ungradedBadge"
@@ -1339,7 +1405,7 @@ msgid "deepFinder.window1y"
 msgstr "1 year"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1405
+#: src/components/income-tax/report-sections.tsx:1407
 msgid "incomeTax.holdings.brazil"
 msgstr "105 – Brazil"
 
@@ -1384,7 +1450,7 @@ msgid "deepFinder.short.1y"
 msgstr "1Y"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1417
+#: src/components/income-tax/report-sections.tsx:1419
 msgid "incomeTax.holdings.usa"
 msgstr "249 – United States"
 
@@ -1396,12 +1462,12 @@ msgid "deepFinder.window3m"
 msgstr "3 months"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1199
+#: src/components/income-tax/report-sections.tsx:1201
 msgid "incomeTax.holdings.before"
 msgstr "31/12/{previousYear}"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1204
+#: src/components/income-tax/report-sections.tsx:1206
 msgid "incomeTax.holdings.after"
 msgstr "31/12/{year}"
 
@@ -1447,9 +1513,19 @@ msgid "documentation.score.noQuoteDescription"
 msgstr "A held asset that no live or manual price can value has an unknown weight, not a zero one. It is blocked instead of looking like the largest gap in the portfolio; set a manual value to score it again."
 
 #. js-lingui-explicit-id
+#: src/components/goals/goal-dialog.tsx:196
+msgid "goals.kindIncome"
+msgstr "A monthly income"
+
+#. js-lingui-explicit-id
 #: src/components/income-tax/record-dialogs.tsx:378
 msgid "incomeTax.cash.dialogDescription"
 msgstr "A non-remunerated balance at your foreign broker (Bens e Direitos, group 06, code 01). Its exchange variation is not taxed. Enter the value in reais the way your declaration states it."
+
+#. js-lingui-explicit-id
+#: src/components/goals/goal-dialog.tsx:202
+msgid "goals.kindValue"
+msgstr "A portfolio value"
 
 #. js-lingui-explicit-id
 #: src/components/score-documentation.tsx:697
@@ -1492,7 +1568,7 @@ msgid "documentation.contribution.exampleStarterDescription"
 msgstr "A watch-only asset with a 5% target on a R$ 1,000,000 book receiving R$ 100,000 gets at most {starterShare} of 5% of R$ 1,100,000 in this cheque; the rest of its target waits for later contributions."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1415
+#: src/components/income-tax/report-sections.tsx:1417
 msgid "incomeTax.holdings.groupAbroad"
 msgstr "Abroad"
 
@@ -1517,7 +1593,7 @@ msgid "brokerNotes.account"
 msgstr "Account"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1280
+#: src/components/income-tax/report-sections.tsx:1282
 msgid "incomeTax.holdings.cashKind"
 msgstr "Account abroad"
 
@@ -1537,7 +1613,7 @@ msgid "transactions.colActions"
 msgstr "Actions"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1208
+#: src/components/income-tax/report-sections.tsx:1210
 msgid "incomeTax.holdings.actions"
 msgstr "Actions"
 
@@ -1589,7 +1665,7 @@ msgid "documentation.score.addPoint"
 msgstr "Add grade point"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1506
+#: src/components/income-tax/report-sections.tsx:1508
 msgid "incomeTax.exempt.bonusCnpjMissing"
 msgstr "Add it in Bens e Direitos"
 
@@ -1691,7 +1767,7 @@ msgid "allocation.title"
 msgstr "Allocation"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:223
+#: src/components/app-nav.tsx:229
 msgid "nav.allocation"
 msgstr "Allocation"
 
@@ -1746,12 +1822,12 @@ msgid "incomeTax.darf.amount"
 msgstr "Amount paid (R$)"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog-body.tsx:649
+#: src/components/documentation-dialog-body.tsx:665
 msgid "documentation.comparisons.dividendStatus"
 msgstr "Amounts are gross estimates: withholding, broker adjustments, and confirmed settlement are not modeled. Future ex-dates are announced; a past ex-date with a future payment date is scheduled; otherwise the event is labeled estimated paid. That last status is an inference, not payment confirmation."
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:75
+#: src/components/app-nav.tsx:76
 msgid "nav.analysis"
 msgstr "Analysis"
 
@@ -1792,7 +1868,7 @@ msgid "documentation.score.field.ungradedHint"
 msgstr "Applied when the asset has no graded quarter yet. Neutral is 1."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:817
+#: src/components/income-tax/report-sections.tsx:819
 msgid "incomeTax.foreign.description"
 msgstr "Assessed once a year in the declaration at 15%. Each sale is converted at the BCB PTAX sell rate of its date and the cost at the rates of the purchases. Dividends and interest received abroad also enter this base and are not included here."
 
@@ -1862,6 +1938,11 @@ msgstr "At or above its valuation-adjusted target of {0}."
 #: src/components/allocation/contribution-planner.tsx:391
 msgid "allocation.plannerCappedTarget"
 msgstr "At target"
+
+#. js-lingui-explicit-id
+#: src/components/goals/goal-summary.tsx:92
+msgid "goals.incomeTodayHint"
+msgstr "At the same {withdrawal} withdrawal, of {income} wanted."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: plan.selectedCount || plan.targetCount
@@ -1973,6 +2054,23 @@ msgid "incomeTax.cash.saved"
 msgstr "Balance abroad saved"
 
 #. js-lingui-explicit-id
+#: src/components/goals/goal-dialog.tsx:59
+#: src/components/goals/projection-card.tsx:63
+#: src/components/goals/projection-card.tsx:147
+msgid "goals.scenario.base"
+msgstr "Base"
+
+#. js-lingui-explicit-id
+#: src/components/goals/projection-card.tsx:173
+msgid "goals.legendBase"
+msgstr "Base scenario"
+
+#. js-lingui-explicit-id
+#: src/components/goals/goal-summary.tsx:98
+msgid "goals.baseReach"
+msgstr "Base scenario reaches it"
+
+#. js-lingui-explicit-id
 #: src/lib/display-labels.ts:26
 msgid "fxSource.bcbPtax"
 msgstr "BCB PTAX (Banco Central do Brasil)"
@@ -1991,7 +2089,7 @@ msgid "assetClass.bdr"
 msgstr "BDR"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:710
+#: src/components/income-tax/report-sections.tsx:712
 msgid "incomeTax.kind.bdr"
 msgstr "BDR"
 
@@ -2006,6 +2104,11 @@ msgid "positions.effectivePositions"
 msgstr "Behaves like <0>{effective}</0> equal-weight positions out of {positionCount}."
 
 #. js-lingui-explicit-id
+#: src/components/goals/goal-summary.tsx:134
+msgid "goals.behind"
+msgstr "Behind the {targetMonth} target."
+
+#. js-lingui-explicit-id
 #: src/components/score-documentation.tsx:711
 msgid "documentation.score.field.sellConfidenceHint"
 msgstr "Below it, sale suggestions are shown for information only."
@@ -2016,7 +2119,7 @@ msgid "incomeTax.nav.holdings"
 msgstr "Bens e Direitos"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1382
+#: src/components/income-tax/report-sections.tsx:1384
 msgid "incomeTax.holdings.title"
 msgstr "Bens e Direitos"
 
@@ -2024,6 +2127,12 @@ msgstr "Bens e Direitos"
 #: src/components/deep-finder/summary.tsx:90
 msgid "deepFinder.best"
 msgstr "Best performer"
+
+#. js-lingui-explicit-id
+#: src/components/goals/goal-summary.tsx:105
+#: src/components/goals/projection-card.tsx:359
+msgid "goals.notReached"
+msgstr "Beyond 60 years"
 
 #. js-lingui-explicit-id
 #: src/components/daily/breakdown.tsx:177
@@ -2099,7 +2208,7 @@ msgid "allocation.reasonCooldownV2"
 msgstr "Bought recently: priority {0} until {1}. {2} of its valuation-adjusted target is still missing."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1403
+#: src/components/income-tax/report-sections.tsx:1405
 msgid "incomeTax.holdings.groupBrazil"
 msgstr "Brazil"
 
@@ -2166,7 +2275,7 @@ msgid "transactions.notesDescription"
 msgstr "Broker, strategy or anything worth remembering."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:955
+#: src/components/income-tax/report-sections.tsx:957
 msgid "incomeTax.holdings.descBroker"
 msgstr "Broker: {broker}."
 
@@ -2260,6 +2369,11 @@ msgstr "Cancel"
 #. js-lingui-explicit-id
 #: src/components/income-tax/record-dialogs.tsx:73
 msgid "incomeTax.dialog.cancel"
+msgstr "Cancel"
+
+#. js-lingui-explicit-id
+#: src/components/goals/goal-dialog.tsx:355
+msgid "goals.cancel"
 msgstr "Cancel"
 
 #. js-lingui-explicit-id
@@ -2410,7 +2524,7 @@ msgid "daily.assetsHint"
 msgstr "Change from the previous close in the display currency, including FX, and each asset's impact on yesterday's portfolio value."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog-body.tsx:595
+#: src/components/documentation-dialog-body.tsx:611
 msgid "documentation.comparisons.costViewDescription"
 msgstr "Change is the open position's market value minus moving-average cost."
 
@@ -2550,7 +2664,7 @@ msgid "incomeTax.profile.cnpj"
 msgstr "CNPJ"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1484
+#: src/components/income-tax/report-sections.tsx:1486
 msgid "incomeTax.exempt.bonusCnpj"
 msgstr "CNPJ"
 
@@ -2616,7 +2730,7 @@ msgid "documentation.section.comparisons"
 msgstr "Comparisons and income"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog-body.tsx:540
+#: src/components/documentation-dialog-body.tsx:556
 msgid "documentation.comparisons.missingDataTitle"
 msgstr "Comparisons preserve missing data"
 
@@ -2666,6 +2780,25 @@ msgstr "Configurable thresholds"
 #: src/components/score-documentation.tsx:432
 msgid "documentation.score.thresholdsTitle"
 msgstr "Configurable thresholds"
+
+#. js-lingui-explicit-id
+#: src/components/goals/goal-dialog.tsx:57
+#: src/components/goals/projection-card.tsx:61
+msgid "goals.scenario.conservative"
+msgstr "Conservative"
+
+#. js-lingui-explicit-id
+#: src/components/goals/projection-card.tsx:151
+#: src/components/goals/projection-card.tsx:177
+msgid "goals.range"
+msgstr "Conservative to optimistic"
+
+#. js-lingui-explicit-id
+#: src/components/goals/contributions-card.tsx:110
+#: src/components/goals/contributions-card.tsx:290
+#: src/components/goals/contributions-card.tsx:332
+msgid "goals.contributed"
+msgstr "Contributed"
 
 #. js-lingui-explicit-id
 #: src/components/performance/category-table.tsx:70
@@ -2768,17 +2901,22 @@ msgid "performance.netFlow"
 msgstr "Contributions"
 
 #. js-lingui-explicit-id
+#: src/components/goals/contributions-card.tsx:153
+msgid "goals.contributionsTitle"
+msgstr "Contributions"
+
+#. js-lingui-explicit-id
 #: src/components/income-tax/record-dialogs.tsx:429
 msgid "incomeTax.cash.convert"
 msgstr "Convert"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1249
+#: src/components/income-tax/report-sections.tsx:1251
 msgid "incomeTax.holdings.copyLabel"
 msgstr "Copy the description of {ticker}"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1294
+#: src/components/income-tax/report-sections.tsx:1296
 msgid "incomeTax.holdings.copyCashLabel"
 msgstr "Copy the description of the dollar balance"
 
@@ -2798,7 +2936,7 @@ msgid "deepFinder.short.cost"
 msgstr "Cost"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:848
+#: src/components/income-tax/report-sections.tsx:850
 msgid "incomeTax.foreign.cost"
 msgstr "Cost (R$)"
 
@@ -2834,7 +2972,7 @@ msgid "allocation.detailInvestedHint"
 msgstr "Cost still held at the average price."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog-body.tsx:592
+#: src/components/documentation-dialog-body.tsx:608
 msgid "documentation.comparisons.costView"
 msgstr "Cost view"
 
@@ -2867,7 +3005,7 @@ msgid "splits.suggestionsUnavailable"
 msgstr "Could not check Yahoo for published splits right now. You can still record one below."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1072
+#: src/components/income-tax/report-sections.tsx:1074
 msgid "incomeTax.copy.failed"
 msgstr "Could not copy. Select the text instead."
 
@@ -3013,6 +3151,11 @@ msgid "positions.allocByCurrency"
 msgstr "Currency"
 
 #. js-lingui-explicit-id
+#: src/components/goals/goal-dialog.tsx:227
+msgid "goals.currency"
+msgstr "Currency"
+
+#. js-lingui-explicit-id
 #: src/components/detailed-positions/columns.ts:88
 msgid "detailedPositions.colCurrency"
 msgstr "Currency"
@@ -3070,17 +3213,17 @@ msgid "allocation.cycleMark"
 msgstr "Cycle highlight color for {0}"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:80
+#: src/components/app-nav.tsx:81
 msgid "nav.daily"
 msgstr "Daily"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog-body.tsx:571
+#: src/components/documentation-dialog-body.tsx:587
 msgid "documentation.formula.dailyChange"
 msgstr "daily change = today (fx today) - previous close (fx yesterday)"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog-body.tsx:560
+#: src/components/documentation-dialog-body.tsx:576
 msgid "documentation.comparisons.dailyDescription"
 msgstr "Daily change is today's converted wealth minus yesterday's converted wealth. The previous close is converted at the previous weekday's USD/BRL rate, and today uses the live rate, so a foreign-currency holding includes both the asset move and the dollar. Switching the display currency inverts that conversion. Cash has no market previous close; in USD it still moves with the rate. A manual FX rate has no history, so both days share it."
 
@@ -3105,7 +3248,7 @@ msgid "document.daily"
 msgstr "Daily performance"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog-body.tsx:554
+#: src/components/documentation-dialog-body.tsx:570
 msgid "documentation.comparisons.dailyTitle"
 msgstr "Daily performance"
 
@@ -3115,7 +3258,7 @@ msgid "settings.data.dangerTitle"
 msgstr "Danger zone"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:576
+#: src/components/income-tax/report-sections.tsx:578
 msgid "incomeTax.monthly.darf"
 msgstr "DARF"
 
@@ -3160,7 +3303,7 @@ msgid "transactions.colDate"
 msgstr "Date"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:758
+#: src/components/income-tax/report-sections.tsx:760
 msgid "incomeTax.sales.date"
 msgstr "Date"
 
@@ -3186,7 +3329,7 @@ msgid "incomeTax.monthly.dayTrade"
 msgstr "Day trade"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:700
+#: src/components/income-tax/report-sections.tsx:702
 msgid "incomeTax.kind.dayTrade"
 msgstr "Day trade"
 
@@ -3227,17 +3370,17 @@ msgid "deepFinder.title"
 msgstr "Deep Finder"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:90
+#: src/components/app-nav.tsx:91
 msgid "nav.deepFinder"
 msgstr "Deep Finder"
 
 #. js-lingui-explicit-id
-#: src/components/document-title.tsx:68
+#: src/components/document-title.tsx:71
 msgid "document.deepFinder"
 msgstr "Deep Finder"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog-body.tsx:587
+#: src/components/documentation-dialog-body.tsx:603
 msgid "documentation.comparisons.deepFinder"
 msgstr "Deep Finder"
 
@@ -3247,7 +3390,7 @@ msgid "allocation.finderOpen"
 msgstr "Deep Finder"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog-body.tsx:545
+#: src/components/documentation-dialog-body.tsx:561
 msgid "documentation.comparisons.missingDataDescription"
 msgstr "Deep Finder and income estimates report unavailable observations explicitly. A missing quote, baseline, FX rate, or provider event is never silently converted to zero."
 
@@ -3341,7 +3484,7 @@ msgid "transactions.removing"
 msgstr "Deleting…"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1194
+#: src/components/income-tax/report-sections.tsx:1196
 msgid "incomeTax.holdings.descriptionColumn"
 msgstr "Description"
 
@@ -3351,7 +3494,7 @@ msgid "detailedPositions.title"
 msgstr "Detailed positions"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:58
+#: src/components/app-nav.tsx:59
 msgid "nav.detailedPositions"
 msgstr "Detailed positions"
 
@@ -3404,7 +3547,7 @@ msgid "documentation.contribution.field.maxAssetsHint"
 msgstr "Diversification ceiling for a relatively large contribution."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog-body.tsx:631
+#: src/components/documentation-dialog-body.tsx:647
 msgid "documentation.comparisons.dividendTitle"
 msgstr "Dividend entitlement"
 
@@ -3459,7 +3602,7 @@ msgid "allocation.freeOrderHelp"
 msgstr "Drag rows into your own order. Column sorting is paused while it is on."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog-body.tsx:468
+#: src/components/documentation-dialog-body.tsx:484
 msgid "documentation.performance.drawdown"
 msgstr "Drawdown"
 
@@ -3516,6 +3659,16 @@ msgid "transactions.editLabel"
 msgstr "Edit {ticker} trade from {date}"
 
 #. js-lingui-explicit-id
+#: src/routes/_app/goals.tsx:93
+msgid "goals.edit"
+msgstr "Edit goal"
+
+#. js-lingui-explicit-id
+#: src/components/goals/goal-dialog.tsx:166
+msgid "goals.editTitle"
+msgstr "Edit goal"
+
+#. js-lingui-explicit-id
 #: src/components/income-tax/opening-balances.tsx:205
 msgid "incomeTax.opening.dialogTitle"
 msgstr "Edit opening balances"
@@ -3526,12 +3679,12 @@ msgid "incomeTax.darf.editLabel"
 msgstr "Edit the DARF payment"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1322
+#: src/components/income-tax/report-sections.tsx:1324
 msgid "incomeTax.holdings.cashEditLabel"
 msgstr "Edit the dollar balance of 31/12/{year}"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1265
+#: src/components/income-tax/report-sections.tsx:1267
 msgid "incomeTax.holdings.editLabel"
 msgstr "Edit the tax details of {ticker}"
 
@@ -3630,7 +3783,7 @@ msgid "allocation.plannerDescription"
 msgstr "Enter how much you are contributing and the amount is split so each slice can still move portfolio weight. Suggestion only — nothing is saved until you register the trade."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1308
+#: src/components/income-tax/report-sections.tsx:1310
 msgid "incomeTax.holdings.cashAdd"
 msgstr "Enter the dollar balance"
 
@@ -3656,12 +3809,12 @@ msgid "dividends.subtitle"
 msgstr "Estimated dividends based on the shares held before each ex-date. Payment dates appear when the provider publishes them."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog-body.tsx:637
+#: src/components/documentation-dialog-body.tsx:653
 msgid "documentation.comparisons.dividendDescription"
 msgstr "Estimated eligible quantity is the consolidated position from trades strictly before the ex-date. Trades on the ex-date are excluded because that session no longer carries the entitlement."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog-body.tsx:644
+#: src/components/documentation-dialog-body.tsx:660
 msgid "documentation.formula.estimatedIncome"
 msgstr "estimated gross income = eligible quantity × amount per share"
 
@@ -3692,7 +3845,7 @@ msgid "assetClass.etf"
 msgstr "ETF"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:708
+#: src/components/income-tax/report-sections.tsx:710
 msgid "incomeTax.kind.etf"
 msgstr "ETF"
 
@@ -3717,7 +3870,7 @@ msgid "transactions.openingDateHint"
 msgstr "Every row is booked as a buy on this date."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:741
+#: src/components/income-tax/report-sections.tsx:743
 msgid "incomeTax.sales.description"
 msgstr "Every sale behind the figures above, to check against your broker notes. Results include fees; foreign results are in reais at each trade's PTAX."
 
@@ -3732,7 +3885,7 @@ msgid "positions.restShort"
 msgstr "Everything else"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1487
+#: src/components/income-tax/report-sections.tsx:1489
 msgid "incomeTax.exempt.bonusDate"
 msgstr "Ex-date"
 
@@ -3761,7 +3914,7 @@ msgstr "execution USD/BRL = spot × (1 + {fxSpread} spread) × (1 + {fxIof} IOF)
 
 #. js-lingui-explicit-id
 #. placeholder {0}: formatMoney(month.exemptGain, "BRL")
-#: src/components/income-tax/report-sections.tsx:604
+#: src/components/income-tax/report-sections.tsx:606
 msgid "incomeTax.monthly.exempt"
 msgstr "Exempt {0}"
 
@@ -3771,7 +3924,7 @@ msgid "incomeTax.nav.exempt"
 msgstr "Exempt income"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1454
+#: src/components/income-tax/report-sections.tsx:1456
 msgid "incomeTax.exempt.title"
 msgstr "Exempt income"
 
@@ -3900,7 +4053,7 @@ msgid "incomeTax.monthly.fii"
 msgstr "FII"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:712
+#: src/components/income-tax/report-sections.tsx:714
 msgid "incomeTax.kind.fii"
 msgstr "FII"
 
@@ -4034,7 +4187,7 @@ msgid "allocation.sales.infoTitle"
 msgstr "For information only"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:714
+#: src/components/income-tax/report-sections.tsx:716
 msgid "incomeTax.kind.foreign"
 msgstr "Foreign"
 
@@ -4044,7 +4197,7 @@ msgid "incomeTax.nav.foreign"
 msgstr "Foreign assets"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:812
+#: src/components/income-tax/report-sections.tsx:814
 msgid "incomeTax.foreign.title"
 msgstr "Foreign assets (Lei 14.754)"
 
@@ -4117,6 +4270,42 @@ msgid "categories.nameRequired"
 msgstr "Give the category a name."
 
 #. js-lingui-explicit-id
+#: src/components/goals/goal-summary.tsx:51
+msgid "goals.target"
+msgstr "Goal"
+
+#. js-lingui-explicit-id
+#: src/components/goals/projection-card.tsx:181
+#: src/components/goals/projection-card.tsx:295
+msgid "goals.legendGoal"
+msgstr "Goal"
+
+#. js-lingui-explicit-id
+#: src/components/goals/goal-dialog.tsx:122
+msgid "goals.removed"
+msgstr "Goal removed"
+
+#. js-lingui-explicit-id
+#: src/components/goals/goal-dialog.tsx:114
+msgid "goals.saved"
+msgstr "Goal saved"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/goals.tsx:65
+msgid "goals.title"
+msgstr "Goals"
+
+#. js-lingui-explicit-id
+#: src/components/app-nav.tsx:96
+msgid "nav.goals"
+msgstr "Goals"
+
+#. js-lingui-explicit-id
+#: src/components/document-title.tsx:68
+msgid "document.goals"
+msgstr "Goals"
+
+#. js-lingui-explicit-id
 #: src/components/allocation/asset-detail-page.tsx:388
 #: src/components/allocation/asset-reviews.tsx:307
 #: src/components/allocation/table/columns.ts:52
@@ -4181,7 +4370,7 @@ msgid "dividends.historyDescription"
 msgstr "Gross estimates. Confirm net credits against your broker statement."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1191
+#: src/components/income-tax/report-sections.tsx:1193
 msgid "incomeTax.holdings.code"
 msgstr "Group / code"
 
@@ -4217,7 +4406,7 @@ msgid "allocation.markColor"
 msgstr "Highlight"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog-body.tsx:479
+#: src/components/documentation-dialog-body.tsx:495
 msgid "documentation.performance.historyTitle"
 msgstr "Historical prices, FX, and gaps"
 
@@ -4247,7 +4436,7 @@ msgid "deepFinder.matrixTitle"
 msgstr "Holdings across windows"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1385
+#: src/components/income-tax/report-sections.tsx:1387
 msgid "incomeTax.holdings.description"
 msgstr "Holdings at cost on 31 December of {previousYear} and {year}, as declared. Foreign assets are in reais at the rates of their purchases. Group and code are suggested only where they are unambiguous."
 
@@ -4329,7 +4518,7 @@ msgid "documentation.score.field.icReference"
 msgstr "IC for full strength"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog-body.tsx:504
+#: src/components/documentation-dialog-body.tsx:520
 msgid "documentation.performance.fallbackDescription"
 msgstr "If a position has no historical price, it is carried at its remaining cost basis to keep the portfolio curve continuous. The page counts and discloses these cost-fallback positions. A month with a non-positive return base has no calculated return."
 
@@ -4384,6 +4573,12 @@ msgid "settings.data.importDescription"
 msgstr "Importing replaces all current portfolio data with this backup. The operation is atomic: an invalid or incomplete file leaves current data unchanged."
 
 #. js-lingui-explicit-id
+#. placeholder {0}: durationLabel(base.monthsToTarget, i18n)
+#: src/components/goals/goal-summary.tsx:112
+msgid "goals.reachIn"
+msgstr "In {0}, at {baseReturn} real a year."
+
+#. js-lingui-explicit-id
 #: src/components/settings-data.tsx:174
 msgid "settings.data.scopeDescription"
 msgstr "Includes transactions, imported broker notes and their ticker mappings, allocation assets, cash balance, reviews, categories, assignments, contribution-score settings, and contribution-planner settings. Passwords and active sessions are excluded."
@@ -4394,17 +4589,17 @@ msgid "dividends.title"
 msgstr "Income"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:102
+#: src/components/app-nav.tsx:108
 msgid "nav.dividends"
 msgstr "Income"
 
 #. js-lingui-explicit-id
-#: src/components/document-title.tsx:71
+#: src/components/document-title.tsx:74
 msgid "document.income"
 msgstr "Income"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:97
+#: src/components/app-nav.tsx:103
 msgid "nav.incomeAndTax"
 msgstr "Income & tax"
 
@@ -4439,6 +4634,11 @@ msgid "dividends.historyTitle"
 msgstr "Income history"
 
 #. js-lingui-explicit-id
+#: src/components/goals/goal-summary.tsx:85
+msgid "goals.incomeToday"
+msgstr "Income it pays today"
+
+#. js-lingui-explicit-id
 #: src/routes/_app/dividends.tsx:103
 msgid "dividends.sourceLabel"
 msgstr "Income source"
@@ -4449,12 +4649,12 @@ msgid "incomeTax.title"
 msgstr "Income tax"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:107
+#: src/components/app-nav.tsx:113
 msgid "nav.incomeTax"
 msgstr "Income tax"
 
 #. js-lingui-explicit-id
-#: src/components/document-title.tsx:74
+#: src/components/document-title.tsx:77
 msgid "document.incomeTax"
 msgstr "Income tax"
 
@@ -4530,7 +4730,7 @@ msgid "allocation.findInvestorRelations"
 msgstr "Investor relations website"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:569
+#: src/components/income-tax/report-sections.tsx:571
 msgid "incomeTax.monthly.withheldSales"
 msgstr "IRRF"
 
@@ -4545,7 +4745,7 @@ msgid "incomeTax.summary.withheldLeft"
 msgstr "IRRF to claim"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:573
+#: src/components/income-tax/report-sections.tsx:575
 msgid "incomeTax.monthly.withheldUsed"
 msgstr "IRRF used"
 
@@ -4555,22 +4755,22 @@ msgid "brokerNotes.withheldTax"
 msgstr "IRRF withheld"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:946
+#: src/components/income-tax/report-sections.tsx:948
 msgid "incomeTax.holdings.descIssuerCnpj"
 msgstr "Issuer CNPJ {cnpj}."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:932
+#: src/components/income-tax/report-sections.tsx:934
 msgid "incomeTax.holdings.descIssuer"
 msgstr "Issuer: {name}, CNPJ {cnpj}."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:939
+#: src/components/income-tax/report-sections.tsx:941
 msgid "incomeTax.holdings.descIssuerName"
 msgstr "Issuer: {name}."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:764
+#: src/components/income-tax/report-sections.tsx:766
 msgid "incomeTax.sales.kind"
 msgstr "Kind"
 
@@ -4610,6 +4810,12 @@ msgstr "Largest multiplier a cheap price may apply to a target (at least 1)."
 #: src/components/score-documentation.tsx:668
 msgid "documentation.score.field.momentumZCapHint"
 msgstr "Largest trend z-score counted, so one huge rally cannot dominate."
+
+#. js-lingui-explicit-id
+#. placeholder {0}: recent.months
+#: src/components/goals/contributions-card.tsx:181
+msgid "goals.recentTotal"
+msgstr "Last {0} full months"
 
 #. js-lingui-explicit-id
 #: src/components/dividends/summary.tsx:35
@@ -4691,12 +4897,12 @@ msgid "transactions.tradeFxLoading"
 msgstr "Looking up the BCB PTAX…"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:887
+#: src/components/income-tax/report-sections.tsx:889
 msgid "incomeTax.foreign.lossBefore"
 msgstr "Loss carried in"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:911
+#: src/components/income-tax/report-sections.tsx:913
 msgid "incomeTax.foreign.lossAfter"
 msgstr "Loss carried out"
 
@@ -4868,7 +5074,7 @@ msgid "positions.quoteSource"
 msgstr "Market-quote source"
 
 #. js-lingui-explicit-id
-#: src/components/performance/summary-strip.tsx:151
+#: src/components/performance/summary-strip.tsx:183
 msgid "performance.maxDrawdown"
 msgstr "Max drawdown"
 
@@ -4923,7 +5129,7 @@ msgid "documentation.contribution.missingPrices"
 msgstr "Missing prices"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog-body.tsx:658
+#: src/components/documentation-dialog-body.tsx:674
 msgid "documentation.comparisons.dividendFx"
 msgstr "Mixed-currency totals use the currently selected USD/BRL rate, not a historical payment-date rate. When no conversion rate is available, the native amount remains visible and the event is excluded from the converted total."
 
@@ -4943,7 +5149,7 @@ msgid "dividends.tabMonth"
 msgstr "Month"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog-body.tsx:485
+#: src/components/documentation-dialog-body.tsx:501
 msgid "documentation.performance.historyTradeFx"
 msgstr "Month ends use the last available market close on or before the snapshot day. Market values are converted with the USD/BRL rate of that snapshot; cost basis and transaction flows use the rate of their own trade day. A manual FX rate has no history, so the same manual rate is applied to every month."
 
@@ -4958,6 +5164,11 @@ msgid "performance.subtitle"
 msgstr "Month-end history of what the portfolio was worth, how much of it is result, and where that result comes from."
 
 #. js-lingui-explicit-id
+#: src/components/goals/contributions-card.tsx:188
+msgid "goals.monthlyAverage"
+msgstr "Monthly average"
+
+#. js-lingui-explicit-id
 #: src/components/dividends/summary.tsx:59
 msgid "dividends.monthlyAverage"
 msgstr "Monthly average"
@@ -4966,6 +5177,11 @@ msgstr "Monthly average"
 #: src/components/allocation/sell-planner.tsx:186
 msgid "allocation.sales.limit"
 msgstr "Monthly exemption"
+
+#. js-lingui-explicit-id
+#: src/components/goals/goal-dialog.tsx:211
+msgid "goals.targetIncome"
+msgstr "Monthly income wanted"
 
 #. js-lingui-explicit-id
 #: src/components/performance/monthly-returns-card.tsx:69
@@ -4987,6 +5203,11 @@ msgstr "monthly return = (end value - start value - net flows) / (start value + 
 #: src/components/documentation-dialog-body.tsx:397
 msgid "documentation.performance.monthlyTitle"
 msgstr "Monthly time-weighted performance"
+
+#. js-lingui-explicit-id
+#: src/components/goals/contributions-card.tsx:204
+msgid "goals.monthsWithContribution"
+msgstr "Months with new money"
 
 #. js-lingui-explicit-id
 #: src/components/transactions/transaction-history.tsx:131
@@ -5065,12 +5286,12 @@ msgid "categories.title"
 msgstr "My categories"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:68
+#: src/components/app-nav.tsx:69
 msgid "nav.categories"
 msgstr "My categories"
 
 #. js-lingui-explicit-id
-#: src/components/document-title.tsx:77
+#: src/components/document-title.tsx:80
 msgid "document.categories"
 msgstr "My categories"
 
@@ -5121,6 +5342,16 @@ msgid "documentation.formula.postNeed"
 msgstr "need = adjusted target × (V + C) - held value"
 
 #. js-lingui-explicit-id
+#: src/components/goals/projection-card.tsx:328
+msgid "goals.table.needed"
+msgstr "Needed per month for {targetMonth}"
+
+#. js-lingui-explicit-id
+#: src/components/performance/summary-strip.tsx:149
+msgid "performance.moneyWeightedShort"
+msgstr "Needs a window of 6 months or more."
+
+#. js-lingui-explicit-id
 #: src/components/transactions/broker-note-labels.tsx:38
 msgid "brokerNotes.statusBlocked"
 msgstr "Needs attention"
@@ -5133,14 +5364,24 @@ msgid "brokerNotes.net"
 msgstr "Net"
 
 #. js-lingui-explicit-id
-#: src/components/performance/summary-strip.tsx:142
+#: src/components/goals/contributions-card.tsx:225
+msgid "goals.contributionsChartLabel"
+msgstr "Net contribution per month; the yearly table below lists the same totals"
+
+#. js-lingui-explicit-id
+#: src/components/performance/summary-strip.tsx:174
 msgid "performance.netInvested"
 msgstr "Net contributions"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:879
+#: src/components/income-tax/report-sections.tsx:881
 msgid "incomeTax.foreign.net"
 msgstr "Net result"
+
+#. js-lingui-explicit-id
+#: src/components/goals/contributions-card.tsx:156
+msgid "goals.contributionsDescription"
+msgstr "New money per month, from your transactions: buys with fees minus sale proceeds."
 
 #. js-lingui-explicit-id
 #: src/components/allocation/asset-splits.tsx:401
@@ -5239,9 +5480,14 @@ msgid "positions.teaserEmptyDown"
 msgstr "No falling holdings this month."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:828
+#: src/components/income-tax/report-sections.tsx:830
 msgid "incomeTax.foreign.empty"
 msgstr "No foreign sales in this year."
+
+#. js-lingui-explicit-id
+#: src/routes/_app/goals.tsx:142
+msgid "goals.emptyTitle"
+msgstr "No goal yet"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/asset-detail-page.tsx:452
@@ -5362,7 +5608,7 @@ msgid "positions.teaserEmptyUp"
 msgstr "No rising holdings this month."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:751
+#: src/components/income-tax/report-sections.tsx:753
 msgid "incomeTax.sales.empty"
 msgstr "No sales in this year."
 
@@ -5412,6 +5658,11 @@ msgid "transactions.emptyFilters"
 msgstr "No trades match these filters."
 
 #. js-lingui-explicit-id
+#: src/components/goals/contributions-card.tsx:165
+msgid "goals.noContributions"
+msgstr "No transactions yet, so there is no contribution history."
+
+#. js-lingui-explicit-id
 #. placeholder {0}: note.noteNumber
 #: src/components/transactions/broker-note-import.tsx:1054
 msgid "brokerNotes.noteNumber"
@@ -5438,7 +5689,7 @@ msgid "allocation.skill.wrong"
 msgstr "Not anticipating returns"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:716
+#: src/components/income-tax/report-sections.tsx:718
 msgid "incomeTax.kind.uncovered"
 msgstr "Not covered"
 
@@ -5493,7 +5744,7 @@ msgid "dividends.noneAnnounced"
 msgstr "Nothing announced yet."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1396
+#: src/components/income-tax/report-sections.tsx:1398
 msgid "incomeTax.holdings.empty"
 msgstr "Nothing held at the end of either year."
 
@@ -5526,6 +5777,11 @@ msgstr "on {paidOn}"
 #: src/components/allocation/allocation-filters.tsx:93
 msgid "allocation.statusRadar"
 msgstr "On radar"
+
+#. js-lingui-explicit-id
+#: src/components/goals/goal-summary.tsx:132
+msgid "goals.onTrack"
+msgstr "On track for {targetMonth}."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: filter.label
@@ -5576,7 +5832,7 @@ msgid "performance.colOpenResult"
 msgstr "Open result"
 
 #. js-lingui-explicit-id
-#: src/components/performance/summary-strip.tsx:128
+#: src/components/performance/summary-strip.tsx:160
 #: src/components/performance/value-card.tsx:98
 msgid "performance.openResult"
 msgstr "Open result"
@@ -5617,6 +5873,12 @@ msgid "transactions.openingDate"
 msgstr "Opening date"
 
 #. js-lingui-explicit-id
+#: src/components/goals/goal-dialog.tsx:61
+#: src/components/goals/projection-card.tsx:65
+msgid "goals.scenario.optimistic"
+msgstr "Optimistic"
+
+#. js-lingui-explicit-id
 #: src/routes/_app/transactions.tsx:846
 msgid "transactions.notesHint"
 msgstr "Optional"
@@ -5648,12 +5910,12 @@ msgid "allocation.sales.taxableTitle"
 msgstr "Outside the exemption (taxed if sold)"
 
 #. js-lingui-explicit-id
-#: src/components/performance/summary-strip.tsx:133
+#: src/components/performance/summary-strip.tsx:165
 msgid "performance.overCost"
 msgstr "Over the cost basis."
 
 #. js-lingui-explicit-id
-#: src/components/performance/summary-strip.tsx:169
+#: src/components/performance/summary-strip.tsx:201
 msgid "performance.lastMonths"
 msgstr "Over the last {months} months."
 
@@ -5669,7 +5931,7 @@ msgid "dividends.pageCount"
 msgstr "Page {0} of {pageCount}"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:579
+#: src/components/income-tax/report-sections.tsx:581
 msgid "incomeTax.monthly.darfPaid"
 msgstr "Paid"
 
@@ -5726,6 +5988,11 @@ msgid "dividends.calendarDescription"
 msgstr "Payment dates when known; otherwise, the ex-date."
 
 #. js-lingui-explicit-id
+#: src/components/goals/goal-summary.tsx:54
+msgid "goals.targetHint"
+msgstr "Pays {income} a month at a {withdrawal} yearly withdrawal."
+
+#. js-lingui-explicit-id
 #: src/components/dividends/details-dialog.tsx:62
 #: src/components/dividends/history-table.tsx:82
 msgid "dividends.perShare"
@@ -5742,7 +6009,7 @@ msgid "performance.title"
 msgstr "Performance"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:85
+#: src/components/app-nav.tsx:86
 msgid "nav.performance"
 msgstr "Performance"
 
@@ -5757,7 +6024,7 @@ msgid "documentation.section.performance"
 msgstr "Performance"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog-body.tsx:615
+#: src/components/documentation-dialog-body.tsx:631
 msgid "documentation.formula.periodChange"
 msgstr "period change = current quantity × (current price - baseline price)"
 
@@ -5767,7 +6034,7 @@ msgid "deepFinder.periodMove"
 msgstr "Period move"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog-body.tsx:602
+#: src/components/documentation-dialog-body.tsx:618
 msgid "documentation.comparisons.periodViews"
 msgstr "Period views"
 
@@ -5782,9 +6049,26 @@ msgid "settings.data.dangerDescription"
 msgstr "Permanently delete every portfolio row in this account. Your login account remains available."
 
 #. js-lingui-explicit-id
+#: src/components/goals/contributions-card.tsx:259
+#: src/components/goals/contributions-card.tsx:301
+msgid "goals.planLine"
+msgstr "Plan"
+
+#. js-lingui-explicit-id
 #: src/components/allocation/contribution-planner.tsx:242
 msgid "allocation.plannerOpen"
 msgstr "Plan contribution"
+
+#. js-lingui-explicit-id
+#: src/components/goals/goal-dialog.tsx:250
+msgid "goals.monthlyContribution"
+msgstr "Planned monthly contribution"
+
+#. js-lingui-explicit-id
+#. placeholder {0}: formatMoney(planned, currency)
+#: src/components/goals/contributions-card.tsx:196
+msgid "goals.plannedHint"
+msgstr "Planned: {0}"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: policy.data.config.version
@@ -5804,7 +6088,7 @@ msgid "settings.data.description"
 msgstr "Portable backups, restores, test fixtures, and data removal."
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:48
+#: src/components/app-nav.tsx:49
 msgid "nav.portfolio"
 msgstr "Portfolio"
 
@@ -5834,6 +6118,11 @@ msgid "detailedPositions.colWeight"
 msgstr "Portfolio share"
 
 #. js-lingui-explicit-id
+#: src/components/goals/goal-summary.tsx:60
+msgid "goals.today"
+msgstr "Portfolio today"
+
+#. js-lingui-explicit-id
 #: src/components/daily/daily-table.tsx:209
 msgid "daily.total"
 msgstr "Portfolio total"
@@ -5861,6 +6150,11 @@ msgid "daily.portfolioValue"
 msgstr "Portfolio value"
 
 #. js-lingui-explicit-id
+#: src/components/goals/goal-dialog.tsx:213
+msgid "goals.targetValue"
+msgstr "Portfolio value wanted"
+
+#. js-lingui-explicit-id
 #: src/components/allocation/allocation-filters.tsx:152
 msgid "allocation.filterStatus"
 msgstr "Position"
@@ -5871,7 +6165,7 @@ msgid "positions.title"
 msgstr "Positions"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:53
+#: src/components/app-nav.tsx:54
 msgid "nav.positions"
 msgstr "Positions"
 
@@ -5979,9 +6273,24 @@ msgid "documentation.score.field.cooldownFloor"
 msgstr "Priority right after a buy"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:843
+#: src/components/income-tax/report-sections.tsx:845
 msgid "incomeTax.foreign.proceedsBrl"
 msgstr "Proceeds (R$)"
+
+#. js-lingui-explicit-id
+#: src/components/goals/goal-summary.tsx:74
+msgid "goals.progressLabel"
+msgstr "Progress to the goal"
+
+#. js-lingui-explicit-id
+#: src/components/goals/projection-card.tsx:190
+msgid "goals.chartLabel"
+msgstr "Projected portfolio value per year under three real-return scenarios, with the goal as a horizontal line"
+
+#. js-lingui-explicit-id
+#: src/components/goals/projection-card.tsx:160
+msgid "goals.projectionTitle"
+msgstr "Projection"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/valuation-skill-card.tsx:70
@@ -6031,7 +6340,7 @@ msgid "positions.colQuantity"
 msgstr "Quantity"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:767
+#: src/components/income-tax/report-sections.tsx:769
 msgid "incomeTax.sales.quantity"
 msgstr "Quantity"
 
@@ -6125,6 +6434,22 @@ msgid "documentation.contribution.exampleSmallTitle"
 msgstr "R$ 2,000 into a R$ 50,000 book"
 
 #. js-lingui-explicit-id
+#: src/components/goals/goal-dialog.tsx:265
+msgid "goals.targetMonth"
+msgstr "Reach it by (optional)"
+
+#. js-lingui-explicit-id
+#: src/components/goals/goal-summary.tsx:101
+#: src/components/goals/projection-card.tsx:349
+msgid "goals.reached"
+msgstr "Reached"
+
+#. js-lingui-explicit-id
+#: src/components/goals/projection-card.tsx:318
+msgid "goals.table.reaches"
+msgstr "Reaches the goal"
+
+#. js-lingui-explicit-id
 #: src/components/transactions/broker-note-import.tsx:613
 msgid "brokerNotes.readingProgress"
 msgstr "Reading {done} of {total} files…"
@@ -6133,6 +6458,16 @@ msgstr "Reading {done} of {total} files…"
 #: src/components/transactions/broker-note-labels.tsx:36
 msgid "brokerNotes.statusReady"
 msgstr "Ready"
+
+#. js-lingui-explicit-id
+#: src/components/goals/projection-card.tsx:315
+msgid "goals.table.return"
+msgstr "Real return"
+
+#. js-lingui-explicit-id
+#: src/components/goals/goal-dialog.tsx:307
+msgid "goals.returns"
+msgstr "Real yearly return (%)"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/asset-movements.tsx:185
@@ -6206,6 +6541,11 @@ msgid "dividends.refresh"
 msgstr "Refresh"
 
 #. js-lingui-explicit-id
+#: src/routes/_app/goals.tsx:86
+msgid "goals.refresh"
+msgstr "Refresh"
+
+#. js-lingui-explicit-id
 #: src/routes/_app/performance.tsx:188
 msgid "performance.refresh"
 msgstr "Refresh"
@@ -6248,6 +6588,7 @@ msgid "positions.registerTrade"
 msgstr "Register a trade"
 
 #. js-lingui-explicit-id
+#: src/components/goals/contributions-card.tsx:172
 #: src/components/performance/performance-primitives.tsx:31
 msgid "performance.registerTrade"
 msgstr "Register a trade"
@@ -6334,6 +6675,11 @@ msgid "allocation.removeFilter"
 msgstr "Remove filter: {label}"
 
 #. js-lingui-explicit-id
+#: src/components/goals/goal-dialog.tsx:348
+msgid "goals.remove"
+msgstr "Remove goal"
+
+#. js-lingui-explicit-id
 #: src/components/score-documentation.tsx:902
 msgid "documentation.score.removePoint"
 msgstr "Remove grade point"
@@ -6395,7 +6741,7 @@ msgid "incomeTax.monthly.description"
 msgstr "Renda Variável sheet: ordinary operations 15%, day trade 20%, FIIs 20%. Each loss pool only offsets its own kind; withheld tax offsets the month and later months of the same year."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1457
+#: src/components/income-tax/report-sections.tsx:1459
 msgid "incomeTax.exempt.description"
 msgstr "Rendimentos Isentos e Não Tributáveis sheet. Dividends and other income are not included here."
 
@@ -6462,12 +6808,12 @@ msgid "performance.monthResult"
 msgstr "Result"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:773
+#: src/components/income-tax/report-sections.tsx:775
 msgid "incomeTax.sales.result"
 msgstr "Result (R$)"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:851
+#: src/components/income-tax/report-sections.tsx:853
 msgid "incomeTax.foreign.result"
 msgstr "Result (R$)"
 
@@ -6478,7 +6824,7 @@ msgid "positions.realizedPnlHint"
 msgstr "Result already locked in by your sells."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog-body.tsx:515
+#: src/components/documentation-dialog-body.tsx:531
 msgid "documentation.performance.contributionTitle"
 msgstr "Result contribution"
 
@@ -6586,7 +6932,7 @@ msgid "allocation.sales.title"
 msgstr "Sale suggestions"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:770
+#: src/components/income-tax/report-sections.tsx:772
 msgid "incomeTax.sales.gross"
 msgstr "Sale value"
 
@@ -6602,7 +6948,7 @@ msgid "brokerNotes.sales"
 msgstr "Sales"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:840
+#: src/components/income-tax/report-sections.tsx:842
 msgid "incomeTax.foreign.proceedsUsd"
 msgstr "Sales (US$)"
 
@@ -6617,7 +6963,7 @@ msgid "incomeTax.warning.uncovered.title"
 msgstr "Sales not assessed here"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:738
+#: src/components/income-tax/report-sections.tsx:740
 msgid "incomeTax.sales.title"
 msgstr "Sales of the year"
 
@@ -6662,6 +7008,11 @@ msgid "transactions.saveEdit"
 msgstr "Save changes"
 
 #. js-lingui-explicit-id
+#: src/components/goals/goal-dialog.tsx:361
+msgid "goals.save"
+msgstr "Save goal"
+
+#. js-lingui-explicit-id
 #: src/components/positions/manual-prices-card.tsx:133
 msgid "positions.savePrices"
 msgstr "Save prices"
@@ -6675,6 +7026,16 @@ msgstr "Save theme"
 #: src/components/transactions/broker-note-import.tsx:782
 msgid "brokerNotes.savedMapping"
 msgstr "Saved from an earlier note"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/goals.tsx:145
+msgid "goals.emptyDescription"
+msgstr "Say what the portfolio should pay you each month, or the value you want to reach, and how much you plan to add monthly. The projection shows when you get there."
+
+#. js-lingui-explicit-id
+#: src/components/goals/projection-card.tsx:312
+msgid "goals.table.scenario"
+msgstr "Scenario"
 
 #. js-lingui-explicit-id
 #: src/components/dividends/badges.tsx:32
@@ -6788,6 +7149,22 @@ msgid "allocation.discountEmptyTooltip"
 msgstr "Set a fair value on a quarterly review"
 
 #. js-lingui-explicit-id
+#: src/routes/_app/goals.tsx:98
+#: src/routes/_app/goals.tsx:154
+msgid "goals.create"
+msgstr "Set a goal"
+
+#. js-lingui-explicit-id
+#: src/components/goals/goal-dialog.tsx:168
+msgid "goals.createTitle"
+msgstr "Set a goal"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/goals.tsx:110
+msgid "goals.manualRateMissing"
+msgstr "Set a manual USD/BRL rate in the settings to consolidate the portfolio."
+
+#. js-lingui-explicit-id
 #: src/routes/_app/performance.tsx:197
 msgid "performance.manualRateMissing"
 msgstr "Set a manual USD/BRL rate in the settings to consolidate this history."
@@ -6844,7 +7221,12 @@ msgid "documentation.contribution.field.starterFractionHint"
 msgstr "Share of its target a not-yet-held asset may reach in one contribution, so new positions are built over several cheques."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1490
+#: src/components/goals/goal-dialog.tsx:298
+msgid "goals.withdrawalHint"
+msgstr "Share of the portfolio you would live on each year. 4% is a common rule of thumb for decades of withdrawals."
+
+#. js-lingui-explicit-id
+#: src/components/income-tax/report-sections.tsx:1492
 msgid "incomeTax.exempt.bonusShares"
 msgstr "Shares"
 
@@ -7032,7 +7414,7 @@ msgid "dividends.sold"
 msgstr "sold"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1238
+#: src/components/income-tax/report-sections.tsx:1240
 msgid "incomeTax.holdings.sold"
 msgstr "Sold during the year."
 
@@ -7167,6 +7549,11 @@ msgid "allocation.finderBaseline"
 msgstr "Starting price"
 
 #. js-lingui-explicit-id
+#: src/components/goals/goal-dialog.tsx:172
+msgid "goals.dialogDescription"
+msgstr "State the goal in today's money. Returns are real (above inflation), so the projection needs no inflation guess."
+
+#. js-lingui-explicit-id
 #: src/components/performance/monthly-returns-card.tsx:84
 msgid "performance.tabStatement"
 msgstr "Statement"
@@ -7183,7 +7570,7 @@ msgid "allocation.sales.remaining"
 msgstr "Still exempt"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:704
+#: src/components/income-tax/report-sections.tsx:706
 msgid "incomeTax.kind.stock"
 msgstr "Stock"
 
@@ -7204,7 +7591,7 @@ msgid "allocation.unfocusQuarter"
 msgstr "Stop marking {0} as the quarter you are working on"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1335
+#: src/components/income-tax/report-sections.tsx:1337
 msgid "incomeTax.holdings.subtotal"
 msgstr "Subtotal"
 
@@ -7310,7 +7697,7 @@ msgid "allocation.subtitle"
 msgstr "Targets, quarterly grades and the contribution score in one place. Edit any cell in the table; the score reranks on save."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:903
+#: src/components/income-tax/report-sections.tsx:905
 msgid "incomeTax.foreign.tax"
 msgstr "Tax at 15%"
 
@@ -7335,7 +7722,7 @@ msgid "incomeTax.monthly.taxDue"
 msgstr "Tax due"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:895
+#: src/components/income-tax/report-sections.tsx:897
 msgid "incomeTax.foreign.base"
 msgstr "Taxable base"
 
@@ -7360,7 +7747,7 @@ msgid "incomeTax.cash.rateUnavailable"
 msgstr "The 31 December rate is not available yet."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog-body.tsx:607
+#: src/components/documentation-dialog-body.tsx:623
 msgid "documentation.comparisons.periodViewsDescription"
 msgstr "The app compares today's open quantity at today's price with that same quantity at the baseline close. This isolates price movement and is not the realized performance of trades made during the period."
 
@@ -7370,12 +7757,12 @@ msgid "daily.moversHint"
 msgstr "The assets that moved the portfolio most today, in money."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog-body.tsx:620
+#: src/components/documentation-dialog-body.tsx:636
 msgid "documentation.comparisons.baselineDescription"
 msgstr "The baseline is the last available close on or before the nominal window start. Year to date starts from December 31 of the prior year. The summary percentage is value-weighted: total change divided by total baseline value, not an average of ticker percentages."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog-body.tsx:521
+#: src/components/documentation-dialog-body.tsx:537
 msgid "documentation.performance.contributionDescription"
 msgstr "The contribution shown for an asset or class is its unrealized P&L divided by the entire portfolio's invested cost. It answers how many percentage points that item adds to the portfolio's open result; it is not the item's own return percentage."
 
@@ -7388,6 +7775,11 @@ msgstr "The dollar move is what USD/BRL alone did to foreign assets and cash; th
 #: src/components/performance/evolution-card.tsx:44
 msgid "performance.valueHint"
 msgstr "The gap between the two lines is the open result: value above cost is gain, below is loss. In {currency}."
+
+#. js-lingui-explicit-id
+#: src/components/goals/goal-dialog.tsx:181
+msgid "goals.targetKind"
+msgstr "The goal is"
 
 #. js-lingui-explicit-id
 #: src/components/score-documentation.tsx:409
@@ -7420,7 +7812,7 @@ msgid "documentation.positions.fxResult"
 msgstr "The open result in the display currency therefore includes the FX move since each purchase. FX result isolates that part: cost at today's rate minus cost at the trade-date rates. Trades still without a trade-date rate convert at today's rate until you fill them from Transactions."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog-body.tsx:470
+#: src/components/documentation-dialog-body.tsx:486
 msgid "documentation.performance.drawdownDescription"
 msgstr "The percentage distance of the compounded return index from its previous peak. Maximum drawdown is the deepest such decline."
 
@@ -7435,7 +7827,7 @@ msgid "documentation.contribution.intro"
 msgstr "The planner turns a contribution amount into suggested slices. The score still ranks who deserves capital; this method decides how many names that cheque can meaningfully move, and how much any one of them may take. Nothing is recorded until you register the trade."
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog-body.tsx:576
+#: src/components/documentation-dialog-body.tsx:592
 msgid "documentation.comparisons.dailyPercent"
 msgstr "The portfolio percentage is that change divided by yesterday's comparable value, including cash. It is not the same as each ticker's native-currency return, and it is not the open result against moving-average cost."
 
@@ -7479,9 +7871,19 @@ msgid "documentation.contribution.waterFillingDescription"
 msgstr "The split minimizes the priority-weighted squared distance to target, relative to each target. The solution raises the emptiest assets first until all funded names share the same priority-weighted fill level, like water filling containers of different heights. A higher priority ends closer to its target. The level is solved exactly, not by iteration."
 
 #. js-lingui-explicit-id
+#: src/components/goals/projection-card.tsx:393
+msgid "goals.targetPast"
+msgstr "The target month {targetMonth} has passed; set a new one to see what it takes to get there."
+
+#. js-lingui-explicit-id
 #: src/components/transactions/broker-note-labels.tsx:159
 msgid "brokerNotes.fileReconciliation"
 msgstr "The totals of this note do not match its trades, so nothing was read from it."
+
+#. js-lingui-explicit-id
+#: src/components/documentation-dialog-body.tsx:474
+msgid "documentation.performance.moneyWeightedReturnDescription"
+msgstr "The yearly rate at which the value at the start of the window and every buy and sale, each compounded from its own day, add up to today's value. Unlike the time-weighted return it includes the timing and size of each contribution: a large deposit right before a fall lowers it. The gap between the two is the effect of timing. Not shown for windows shorter than 6 months."
 
 #. js-lingui-explicit-id
 #: src/components/theme-switcher.tsx:34
@@ -7499,6 +7901,11 @@ msgstr "Theme name"
 #: src/components/settings-appearance.tsx:170
 msgid "settings.appearance.themes"
 msgstr "Themes"
+
+#. js-lingui-explicit-id
+#: src/components/goals/contributions-card.tsx:354
+msgid "goals.contributionsCaveat"
+msgstr "There is no cash ledger, so a sale reinvested in a later month shows as money taken out and then put back, and reinvested dividends count as new money. Cash balance changes are not trades and do not count."
 
 #. js-lingui-explicit-id
 #: src/lib/trpcErrors.ts:232
@@ -7569,6 +7976,11 @@ msgstr "This fixed-income balance already exists. Update its value from Allocati
 #: src/components/transactions/broker-note-labels.tsx:135
 msgid "brokerNotes.fileUnknown"
 msgstr "This is not a supported broker note. Supported: Inter DTVM (B3), Apex Clearing and DriveWealth (US)."
+
+#. js-lingui-explicit-id
+#: src/components/goals/contributions-card.tsx:215
+msgid "goals.thisMonth"
+msgstr "This month so far"
 
 #. js-lingui-explicit-id
 #: src/components/transactions/broker-note-labels.tsx:143
@@ -7656,17 +8068,17 @@ msgid "positions.colTicker"
 msgstr "Ticker"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:761
+#: src/components/income-tax/report-sections.tsx:763
 msgid "incomeTax.sales.ticker"
 msgstr "Ticker"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:837
+#: src/components/income-tax/report-sections.tsx:839
 msgid "incomeTax.foreign.ticker"
 msgstr "Ticker"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1188
+#: src/components/income-tax/report-sections.tsx:1190
 msgid "incomeTax.holdings.ticker"
 msgstr "Ticker"
 
@@ -7760,7 +8172,7 @@ msgid "performance.tabToday"
 msgstr "Today"
 
 #. js-lingui-explicit-id
-#: src/components/documentation-dialog-body.tsx:494
+#: src/components/documentation-dialog-body.tsx:510
 msgid "documentation.performance.liveBalancesDescription"
 msgstr "Today's portfolio value, cost basis and open-result percent include the current cash balance, matching the Positions screen. Fixed-income balances count in today's value only, never in a calculated return. Monthly values, flows, returns and drawdown exclude both, because only their current balance is stored and past month ends cannot be valued."
 
@@ -7885,12 +8297,12 @@ msgid "transactions.title"
 msgstr "Transactions"
 
 #. js-lingui-explicit-id
-#: src/components/app-nav.tsx:63
+#: src/components/app-nav.tsx:64
 msgid "nav.transactions"
 msgstr "Transactions"
 
 #. js-lingui-explicit-id
-#: src/components/document-title.tsx:81
+#: src/components/document-title.tsx:84
 msgid "document.transactions"
 msgstr "Transactions"
 
@@ -7951,12 +8363,12 @@ msgid "settings.showLogosHint"
 msgstr "Turn this off to use ticker initials and make no Logo.dev image requests."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1479
+#: src/components/income-tax/report-sections.tsx:1481
 msgid "incomeTax.exempt.bonusSource"
 msgstr "Type 18 – bonus shares: paying source"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1466
+#: src/components/income-tax/report-sections.tsx:1468
 msgid "incomeTax.exempt.stockGain"
 msgstr "Type 20 – stock sales up to R$ 20,000 a month"
 
@@ -8001,7 +8413,7 @@ msgid "documentation.score.field.ungraded"
 msgstr "Ungraded multiplier"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:706
+#: src/components/income-tax/report-sections.tsx:708
 msgid "incomeTax.kind.unit"
 msgstr "Unit"
 
@@ -8175,6 +8587,11 @@ msgid "allocation.addTickerInvalid"
 msgstr "Use letters, digits, dots or hyphens."
 
 #. js-lingui-explicit-id
+#: src/components/goals/goal-dialog.tsx:330
+msgid "goals.returnsInvalid"
+msgstr "Use returns from 0% to 20%, ordered from conservative to optimistic."
+
+#. js-lingui-explicit-id
 #: src/components/allocation/asset-splits.tsx:379
 msgid "splits.bonusHint"
 msgstr "Use the shares your broker credited and the cost per share the company announced. Shares held the day before the ex-date receive them. Fractions sold at auction are a sale."
@@ -8260,7 +8677,7 @@ msgid "performance.tabValue"
 msgstr "Value"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1493
+#: src/components/income-tax/report-sections.tsx:1495
 msgid "incomeTax.exempt.bonusValue"
 msgstr "Value"
 
@@ -8289,6 +8706,11 @@ msgstr "Value and cost basis"
 #: src/components/performance/monthly-returns-card.tsx:236
 msgid "performance.colEndValue"
 msgstr "Value at month end"
+
+#. js-lingui-explicit-id
+#: src/components/goals/projection-card.tsx:323
+msgid "goals.table.valueAt"
+msgstr "Value in {targetMonth}"
 
 #. js-lingui-explicit-id
 #: src/lib/validation-messages.ts:84
@@ -8463,6 +8885,11 @@ msgid "documentation.score.pipelineDescriptionV2"
 msgstr "Where to go, how much is missing, and how urgently are computed separately, so each input has one job."
 
 #. js-lingui-explicit-id
+#: src/routes/_app/goals.tsx:68
+msgid "goals.subtitle"
+msgstr "Where your contributions are taking the portfolio, in today's money, and how steadily you have been making them."
+
+#. js-lingui-explicit-id
 #: src/components/dividends/by-asset-table.tsx:109
 msgid "dividends.byAssetHint"
 msgstr "Who pays your income. Yield on cost is each asset's own 12-month income over what you paid for it, in its native currency."
@@ -8504,7 +8931,7 @@ msgstr "Worked examples"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: formatSignedPercent(summary.worstMonth.returnPercent)
-#: src/components/performance/summary-strip.tsx:164
+#: src/components/performance/summary-strip.tsx:196
 msgid "performance.worstMonth"
 msgstr "Worst month {0}."
 
@@ -8512,6 +8939,11 @@ msgstr "Worst month {0}."
 #: src/components/deep-finder/summary.tsx:95
 msgid "deepFinder.worst"
 msgstr "Worst performer"
+
+#. js-lingui-explicit-id
+#: src/components/performance/summary-strip.tsx:153
+msgid "performance.moneyWeightedHint"
+msgstr "XIRR: timing of each contribution included."
 
 #. js-lingui-explicit-id
 #: src/components/allocation/table/score-reason.ts:128
@@ -8549,8 +8981,13 @@ msgid "performance.colYearTotal"
 msgstr "Year"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:659
+#: src/components/income-tax/report-sections.tsx:661
 msgid "incomeTax.monthly.total"
+msgstr "Year"
+
+#. js-lingui-explicit-id
+#: src/components/goals/contributions-card.tsx:329
+msgid "goals.table.year"
 msgstr "Year"
 
 #. js-lingui-explicit-id
@@ -8562,6 +8999,11 @@ msgstr "Year"
 #: src/components/income-tax/report-sections.tsx:226
 msgid "incomeTax.warning.beforeStart.title"
 msgstr "Year before the assessment"
+
+#. js-lingui-explicit-id
+#: src/components/goals/goal-dialog.tsx:279
+msgid "goals.withdrawalRate"
+msgstr "Yearly withdrawal rate (%)"
 
 #. js-lingui-explicit-id
 #: src/components/dividends/by-asset-table.tsx:137
@@ -8580,6 +9022,16 @@ msgstr "You do not hold enough of this ticker to sell."
 #: src/components/allocation/sell-planner.tsx:154
 msgid "allocation.sales.recommendedText"
 msgstr "Your fair values reached {0} confidence (bar: {1}), the level at which selling expensive positions paid off in the simulation."
+
+#. js-lingui-explicit-id
+#: src/components/performance/summary-strip.tsx:129
+msgid "performance.moneyWeightedReturn"
+msgstr "Your money's return"
+
+#. js-lingui-explicit-id
+#: src/components/documentation-dialog-body.tsx:469
+msgid "documentation.performance.moneyWeightedReturn"
+msgstr "Your money's return (XIRR)"
 
 #. js-lingui-explicit-id
 #: src/lib/trpcErrors.ts:29

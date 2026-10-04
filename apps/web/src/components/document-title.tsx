@@ -64,6 +64,9 @@ function titleForPath(
   if (pathname === "/daily") {
     return i18n._(msg({ id: "document.daily", message: "Daily performance" }));
   }
+  if (pathname === "/goals") {
+    return i18n._(msg({ id: "document.goals", message: "Goals" }));
+  }
   if (pathname === "/deep-finder") {
     return i18n._(msg({ id: "document.deepFinder", message: "Deep Finder" }));
   }

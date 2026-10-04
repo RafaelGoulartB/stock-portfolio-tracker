@@ -547,6 +547,31 @@ export const userContributionPlanConfigs = pgTable(
   },
 );
 
+/**
+ * The account's long-term goal: planned monthly contribution, target (as a
+ * monthly income or a portfolio value) and real-return scenarios. One row
+ * per account; absence means no goal yet. Projections are derived on read.
+ */
+export const financialGoals = pgTable("financial_goals", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  currency: currencyEnum("currency").notNull(),
+  monthlyContribution: numeric("monthly_contribution", DECIMAL).notNull(),
+  /** `income` or `value`, see `GOAL_TARGET_KINDS`. */
+  targetKind: text("target_kind").notNull(),
+  targetAmount: numeric("target_amount", DECIMAL).notNull(),
+  withdrawalRate: numeric("withdrawal_rate", DECIMAL).notNull(),
+  conservativeReturn: numeric("conservative_return", DECIMAL).notNull(),
+  baseReturn: numeric("base_return", DECIMAL).notNull(),
+  optimisticReturn: numeric("optimistic_return", DECIMAL).notNull(),
+  /** `YYYY-MM` the goal should be reached by, optional. */
+  targetMonth: text("target_month"),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export type UserRow = typeof users.$inferSelect;
 export type SessionRow = typeof sessions.$inferSelect;
 export type TransactionRow = typeof transactions.$inferSelect;
@@ -565,3 +590,4 @@ export type AssetCategoryRow = typeof assetCategories.$inferSelect;
 export type UserScoreConfigRow = typeof userScoreConfigs.$inferSelect;
 export type UserContributionPlanConfigRow =
   typeof userContributionPlanConfigs.$inferSelect;
+export type FinancialGoalRow = typeof financialGoals.$inferSelect;
