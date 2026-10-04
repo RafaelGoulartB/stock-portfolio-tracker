@@ -20,7 +20,12 @@ import { toast } from "sonner";
 import type { z } from "zod";
 import { AssetClassLabel, SideLabel } from "@/components/asset-labels";
 import { BookHoldingsPanel } from "@/components/transactions/book-holdings-panel";
-import { TransactionHistory } from "@/components/transactions/transaction-history";
+import { BrokerNoteImport } from "@/components/transactions/broker-note-import";
+import { BrokerNoteList } from "@/components/transactions/broker-note-list";
+import {
+  type HistoryFilters,
+  TransactionHistory,
+} from "@/components/transactions/transaction-history";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -49,6 +54,7 @@ import {
 import { trpc } from "@/lib/api";
 import { currencyText } from "@/lib/display-labels";
 import { formatQuantity, formatTradeDate } from "@/lib/format";
+import { trpcQueryUtils } from "@/lib/route-prefetch";
 import { useSettings } from "@/lib/settings";
 import {
   bookHoldingsErrorMessage,
@@ -59,12 +65,24 @@ import {
 } from "@/lib/trpcErrors";
 import { cn } from "@/lib/utils";
 
+const PAGE_SIZE = 100;
+
 export const Route = createFileRoute("/_app/transactions")({
+  // The first, unfiltered page is what the screen opens with.
+  loader: ({ preload }) => {
+    if (preload) return;
+    void trpcQueryUtils.transactions.list
+      .prefetch({ page: 0, pageSize: PAGE_SIZE, ticker: undefined })
+      .catch(() => undefined);
+    void trpcQueryUtils.transactions.tradeFxStatus
+      .prefetch()
+      .catch(() => undefined);
+  },
   component: TransactionsPage,
 });
 
 type FormValues = z.input<typeof createTransactionInput>;
-type EntryMode = "trade" | "book";
+type EntryMode = "trade" | "book" | "notes";
 
 function today(): string {
   const now = new Date();
@@ -129,9 +147,15 @@ function TransactionsPage() {
   const { displayCurrency } = useSettings();
   const [page, setPage] = useState(0);
   const [tickerFilter, setTickerFilter] = useState("");
+  const [historyFilters, setHistoryFilters] = useState<HistoryFilters>({});
   const tickerQuery = useDebounced(tickerFilter.trim(), 250);
   const list = trpc.transactions.list.useQuery(
-    { page, pageSize: 100, ticker: tickerQuery || undefined },
+    {
+      page,
+      pageSize: PAGE_SIZE,
+      ticker: tickerQuery || undefined,
+      ...historyFilters,
+    },
     { placeholderData: keepPreviousData },
   );
   const fxStatus = trpc.transactions.tradeFxStatus.useQuery();
@@ -182,10 +206,20 @@ function TransactionsPage() {
       utils.positions.list.invalidate(),
       utils.positions.daily.invalidate(),
       utils.positions.finder.invalidate(),
+      utils.positions.finderWindows.invalidate(),
       utils.allocation.list.invalidate(),
+      // Asset detail shows the newest trade; watch-only finder rows and the
+      // categories screen both depend on which tickers are held.
+      utils.allocation.history.invalidate(),
+      utils.allocation.finder.invalidate(),
+      utils.categories.list.invalidate(),
       utils.performance.history.invalidate(),
       utils.dividends.history.invalidate(),
       utils.transactions.forTicker.invalidate(),
+      utils.brokerNotes.list.invalidate(),
+      utils.brokerNotes.get.invalidate(),
+      utils.data.summary.invalidate(),
+      utils.incomeTax.invalidate(),
     ]);
   }
 
@@ -359,6 +393,11 @@ function TransactionsPage() {
           setTickerFilter(value);
           setPage(0);
         }}
+        filters={historyFilters}
+        onFiltersChange={(next) => {
+          setHistoryFilters(next);
+          setPage(0);
+        }}
         onPageChange={setPage}
         onEdit={startEditing}
         onRemove={(id) => remove.mutateAsync({ id }).then(() => undefined)}
@@ -416,6 +455,20 @@ function TransactionsPage() {
           >
             <Trans id="transactions.modeBook">Book holdings</Trans>
           </Button>
+          <Button
+            type="button"
+            size="sm"
+            role="tab"
+            aria-selected={mode === "notes"}
+            variant={mode === "notes" ? "default" : "ghost"}
+            className={cn(mode !== "notes" && "text-muted-foreground")}
+            onClick={() => {
+              if (editing) stopEditing();
+              setMode("notes");
+            }}
+          >
+            <Trans id="transactions.modeNotes">Broker notes</Trans>
+          </Button>
         </div>
       </header>
 
@@ -423,7 +476,12 @@ function TransactionsPage() {
         <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
           <Card
             ref={formCardRef}
-            className={cn("h-fit scroll-mt-4", editing && "border-primary/60")}
+            // Sticky below the app header, so the form stays at hand while
+            // the history scrolls.
+            className={cn(
+              "h-fit scroll-mt-20 lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto",
+              editing && "border-primary/60",
+            )}
           >
             <CardHeader>
               <CardTitle>
@@ -841,6 +899,17 @@ function TransactionsPage() {
             </CardContent>
           </Card>
 
+          {history}
+        </div>
+      ) : mode === "notes" ? (
+        <div className="space-y-6">
+          <BrokerNoteImport
+            onImported={async () => {
+              setPage(0);
+              await refresh();
+            }}
+          />
+          <BrokerNoteList onRemoved={refresh} />
           {history}
         </div>
       ) : (

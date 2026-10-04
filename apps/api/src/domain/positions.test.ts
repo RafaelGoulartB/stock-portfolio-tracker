@@ -15,11 +15,13 @@ import {
   oversellAfterReplacement,
   pendingSplitSuggestions,
   portfolioReturnContribution,
+  positionConcentration,
   type SplitEvent,
   summarizePositions,
   type TickerLedgerEntry,
   tickerCurrencies,
   tradeCashTotal,
+  unitsHeldBefore,
   valuePositions,
   withCashPosition,
 } from "./positions";
@@ -721,6 +723,71 @@ describe("valuePositions", () => {
   });
 });
 
+describe("positionConcentration", () => {
+  function book(values: Record<string, string>, cash = "0") {
+    const native = consolidatePositions(
+      Object.keys(values).map((ticker) =>
+        tx({ ticker, side: "buy", quantity: "1", price: "1" }),
+      ),
+    );
+    const valued = valuePositions(
+      convertPositions(native, "BRL", null),
+      new Map(
+        Object.entries(values).map(([ticker, price]) => [
+          ticker,
+          { ticker, price, asOf: "2024-06-28" },
+        ]),
+      ),
+      "BRL",
+      null,
+    );
+
+    return withCashPosition(valued, cash, "BRL", null);
+  }
+
+  it("counts equal weights as that many effective positions", () => {
+    const result = positionConcentration(
+      book({ AAAA3: "25", BBBB3: "25", CCCC3: "25", DDDD3: "25" }),
+    );
+
+    expect(result).toMatchObject({
+      positions: 4,
+      top5Weight: "1.00000000",
+      effectivePositions: "4.00",
+      halfOfValueIn: 2,
+    });
+  });
+
+  it("shrinks the effective count when one position dominates", () => {
+    const result = positionConcentration(
+      book({ AAAA3: "70", BBBB3: "10", CCCC3: "10", DDDD3: "10" }),
+    );
+
+    // 1 / (0.49 + 3 × 0.01) = 1.923…
+    expect(result).toMatchObject({
+      largest: { ticker: "AAAA3", weight: "0.70000000" },
+      effectivePositions: "1.92",
+      halfOfValueIn: 1,
+    });
+  });
+
+  it("leaves cash out of the invested weights", () => {
+    const result = positionConcentration(
+      book({ AAAA3: "50", BBBB3: "50" }, "900"),
+    );
+
+    expect(result).toMatchObject({
+      positions: 2,
+      largest: { weight: "0.50000000" },
+      effectivePositions: "2.00",
+    });
+  });
+
+  it("has nothing to measure without an invested position", () => {
+    expect(positionConcentration(book({}, "100"))).toBeNull();
+  });
+});
+
 describe("portfolio return contribution", () => {
   it("expresses one asset's open result over the portfolio cost basis", () => {
     expect(portfolioReturnContribution("500.00", "10000.00")).toBe("0.050000");
@@ -926,6 +993,43 @@ describe("splits", () => {
     fromQuantity: string,
     toQuantity: string,
   ): SplitEvent => ({ ticker: "PETR4", effectiveAt, fromQuantity, toQuantity });
+
+  it("counts units held the day before a date, in that date's units", () => {
+    const ledger = [
+      tx({ side: "buy", quantity: "100", tradedAt: "2026-01-05" }),
+      tx({ side: "sell", quantity: "30", tradedAt: "2026-02-05" }),
+      tx({ side: "buy", quantity: "10", tradedAt: "2026-04-05" }),
+      tx({ side: "buy", quantity: "999", tradedAt: "2026-05-05" }),
+    ];
+    const splits = [split("2026-03-01", "1", "2")];
+
+    // (100 - 30) × 2 + 10, before the bonus date; same-day trades excluded.
+    expect(unitsHeldBefore(ledger, splits, "PETR4", "2026-05-05")).toBe(
+      15_000_000_000n,
+    );
+    expect(unitsHeldBefore(ledger, splits, "PETR4", "2026-01-05")).toBe(0n);
+    expect(unitsHeldBefore(ledger, splits, "VALE3", "2026-12-31")).toBe(0n);
+  });
+
+  it("scales units for a bonus like a split and leaves cash cost alone", () => {
+    const [position] = consolidatePositions(
+      adjustForSplits(
+        [tx({ side: "buy", quantity: "100", price: "40" })],
+        [
+          {
+            ...split("2026-03-01", "100", "110"),
+            kind: "bonus",
+            unitCost: "18",
+          },
+        ],
+      ),
+    );
+
+    expect(position).toMatchObject({
+      quantity: "110.00000000",
+      investedCost: "4000.00",
+    });
+  });
 
   it("restates earlier units without changing the cost basis", () => {
     const ledger = adjustForSplits(

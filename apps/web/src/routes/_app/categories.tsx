@@ -10,16 +10,17 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Pencil, Plus, Tags, Trash2 } from "lucide-react";
 import { type FormEvent, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { AssetClassLabel, CurrencyBadge } from "@/components/asset-labels";
+import { AssetClassLabel } from "@/components/asset-labels";
 import { AssetLink } from "@/components/asset-link";
 import { AssetLogo } from "@/components/asset-logo";
+import { sumDecimalStrings } from "@/components/detailed-positions/decimal-sum";
+import { ShareBar } from "@/components/positions/shared";
 import {
   TableFilterChip,
   TableFilterTrigger,
   TableSearch,
   TableToolbar,
 } from "@/components/table-toolbar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -61,17 +62,31 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { usePortfolioQueryInput } from "@/lib/allocation-query";
 import { type RouterOutputs, trpc } from "@/lib/api";
 import {
   CATEGORY_ALL as ALL,
   CATEGORY_NONE as NONE,
 } from "@/lib/category-filter";
+import { formatMoney, formatWeight } from "@/lib/format";
+import { prefetchPortfolio, trpcQueryUtils } from "@/lib/route-prefetch";
 import { categoryErrorMessage, queryErrorMessage } from "@/lib/trpcErrors";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/categories")({
+  // The live holdings are the Positions query, so a visit from there
+  // reuses its cache for the values and shares below.
+  loader: ({ preload }) =>
+    prefetchPortfolio(preload, (input) => [
+      trpcQueryUtils.categories.list.prefetch(),
+      trpcQueryUtils.positions.list.prefetch({ ...input, asOf: undefined }),
+    ]),
   component: CategoriesPage,
 });
+
+/** An open position; fixed income and unquoted ones carry no value. */
+type Holding = { value: string | null; weight: string | null };
+type BucketStats = { value: string; weight: string; held: number };
 
 type CategoryList = RouterOutputs["categories"]["list"];
 type CategoryRow = CategoryList["categories"][number];
@@ -85,6 +100,11 @@ function CategoriesPage() {
   const { i18n } = useLingui();
   const utils = trpc.useUtils();
   const list = trpc.categories.list.useQuery();
+  const portfolioInput = usePortfolioQueryInput();
+  const positions = trpc.positions.list.useQuery({
+    ...portfolioInput,
+    asOf: undefined,
+  });
 
   const [name, setName] = useState("");
   const [query, setQuery] = useState("");
@@ -97,6 +117,8 @@ function CategoriesPage() {
 
   function sync(data: CategoryList) {
     utils.categories.list.setData(undefined, data);
+    // The allocation watchlist finder filters by category on the server.
+    void utils.allocation.finder.invalidate();
   }
 
   const create = trpc.categories.create.useMutation({
@@ -161,25 +183,87 @@ function CategoriesPage() {
   const categories = list.data?.categories ?? [];
   const assets = list.data?.assets ?? [];
 
+  /** Live value and share of every open holding, by ticker. */
+  const holdings = useMemo(() => {
+    const map = new Map<string, Holding>();
+
+    for (const position of positions.data?.positions ?? []) {
+      if (position.assetClass !== "cash" && Number(position.quantity) > 0) {
+        map.set(position.ticker, {
+          value: position.convertedMarketValue,
+          weight: position.weight,
+        });
+      }
+    }
+
+    return map;
+  }, [positions.data]);
+  const displayCurrency = positions.data?.summary.displayCurrency;
+
+  /** Display-only totals per bucket; `NONE` collects the uncategorized. */
+  const bucketStats = useMemo(() => {
+    const members = new Map<string, Holding[]>();
+
+    for (const asset of assets) {
+      const key = asset.categoryId ?? NONE;
+      const holding = holdings.get(asset.ticker);
+      const list = members.get(key) ?? [];
+
+      if (holding?.value != null) {
+        list.push(holding);
+      }
+
+      members.set(key, list);
+    }
+
+    return new Map<string, BucketStats>(
+      [...members].map(([key, list]) => [
+        key,
+        {
+          value: sumDecimalStrings(list.map((entry) => entry.value)),
+          weight: sumDecimalStrings(
+            list.map((entry) => entry.weight),
+            8,
+          ),
+          held: list.length,
+        },
+      ]),
+    );
+  }, [assets, holdings]);
+  const categorizedCount = assets.filter(
+    (asset) => asset.categoryId !== null,
+  ).length;
+  const uncategorizedCount = assets.length - categorizedCount;
+
   const filtered = useMemo(() => {
     const needle = query.trim().toUpperCase();
 
-    return assets.filter((asset) => {
-      if (needle && !asset.ticker.includes(needle)) {
-        return false;
-      }
+    return assets
+      .filter((asset) => {
+        if (needle && !asset.ticker.includes(needle)) {
+          return false;
+        }
 
-      if (filter === ALL) {
-        return true;
-      }
+        if (filter === ALL) {
+          return true;
+        }
 
-      if (filter === NONE) {
-        return asset.categoryId === null;
-      }
+        if (filter === NONE) {
+          return asset.categoryId === null;
+        }
 
-      return asset.categoryId === filter;
-    });
-  }, [assets, filter, query]);
+        return asset.categoryId === filter;
+      })
+      .sort((a, b) => {
+        // Held tickers first, largest first; watch-only ones alphabetically.
+        const left = Number(holdings.get(a.ticker)?.value ?? -1);
+        const right = Number(holdings.get(b.ticker)?.value ?? -1);
+
+        return left === right
+          ? a.ticker.localeCompare(b.ticker, i18n.locale)
+          : right - left;
+      });
+  }, [assets, filter, query, holdings, i18n.locale]);
 
   const visibleTickers = filtered.map((asset) => asset.ticker);
   const selectedVisibleCount = visibleTickers.filter((ticker) =>
@@ -274,6 +358,19 @@ function CategoriesPage() {
               uncategorized.
             </Trans>
           </CardDescription>
+          {assets.length > 0 && categories.length > 0 ? (
+            <div className="space-y-1.5 pt-1">
+              <p className="text-xs text-muted-foreground tabular-nums">
+                <Trans id="categories.coverage">
+                  {categorizedCount} of {assets.length} tickers categorized
+                </Trans>
+              </p>
+              <ShareBar
+                className="h-1.5 max-w-sm"
+                fraction={categorizedCount / assets.length}
+              />
+            </div>
+          ) : null}
         </CardHeader>
         <CardContent className="space-y-4">
           <form
@@ -314,63 +411,143 @@ function CategoriesPage() {
             </p>
           ) : (
             <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-              {categories.map((category) => (
-                <li
-                  key={category.id}
-                  className="flex items-center gap-3 rounded-lg border bg-background px-3 py-2"
-                >
-                  <ColorSwatch
-                    color={category.color}
-                    label={i18n._(
-                      msg({
-                        id: "categories.changeColor",
-                        message: "Change color",
-                      }),
+              {categories.map((category) => {
+                const stats = bucketStats.get(category.id);
+
+                return (
+                  <li
+                    key={category.id}
+                    className={cn(
+                      "flex items-start gap-3 rounded-lg border bg-background px-3 py-2.5 transition-colors",
+                      filter === category.id && "border-primary/60 bg-muted/40",
                     )}
-                    disabled={update.isPending}
-                    onPick={(color) =>
-                      update.mutate({ id: category.id, color })
+                  >
+                    <ColorSwatch
+                      color={category.color}
+                      label={i18n._(
+                        msg({
+                          id: "categories.changeColor",
+                          message: "Change color",
+                        }),
+                      )}
+                      disabled={update.isPending}
+                      onPick={(color) =>
+                        update.mutate({ id: category.id, color })
+                      }
+                    />
+                    <button
+                      type="button"
+                      className="min-w-0 flex-1 cursor-pointer rounded-sm text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      aria-pressed={filter === category.id}
+                      title={i18n._(
+                        msg({
+                          id: "categories.showOnly",
+                          message: "Show only these tickers",
+                        }),
+                      )}
+                      onClick={() =>
+                        setFilter((current) =>
+                          current === category.id ? ALL : category.id,
+                        )
+                      }
+                    >
+                      <span className="flex items-baseline justify-between gap-2">
+                        <span className="truncate font-medium">
+                          {category.name}
+                        </span>
+                        {stats && stats.held > 0 ? (
+                          <span className="shrink-0 text-sm font-medium tabular-nums">
+                            {formatWeight(stats.weight)}
+                          </span>
+                        ) : null}
+                      </span>
+                      <span className="mt-0.5 flex items-baseline justify-between gap-2 text-xs text-muted-foreground">
+                        <span>
+                          {t({
+                            id: "categories.assetCount",
+                            message: plural(
+                              { count: category.assetCount },
+                              { one: "# ticker", other: "# tickers" },
+                            ),
+                          })}
+                        </span>
+                        {stats && stats.held > 0 && displayCurrency ? (
+                          <span className="tabular-nums">
+                            {formatMoney(stats.value, displayCurrency)}
+                          </span>
+                        ) : null}
+                      </span>
+                      <ShareBar
+                        className="mt-2 h-1.5"
+                        color={`var(--${category.color})`}
+                        fraction={Number(stats?.weight ?? 0)}
+                      />
+                    </button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      aria-label={i18n._(
+                        msg({ id: "categories.rename", message: "Rename" }),
+                      )}
+                      onClick={() => {
+                        setRename(category);
+                        setRenameName(category.name);
+                      }}
+                    >
+                      <Pencil className="size-3.5" aria-hidden="true" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon-xs"
+                      aria-label={i18n._(
+                        msg({ id: "categories.delete", message: "Delete" }),
+                      )}
+                      onClick={() => setRemove(category)}
+                    >
+                      <Trash2 className="size-3.5" aria-hidden="true" />
+                    </Button>
+                  </li>
+                );
+              })}
+              {uncategorizedCount > 0 ? (
+                <li>
+                  <button
+                    type="button"
+                    className={cn(
+                      "h-full w-full cursor-pointer rounded-lg border border-dashed px-3 py-2.5 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      filter === NONE && "border-primary/60 bg-muted/40",
+                    )}
+                    aria-pressed={filter === NONE}
+                    onClick={() =>
+                      setFilter((current) => (current === NONE ? ALL : NONE))
                     }
-                  />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">{category.name}</p>
-                    <p className="text-xs text-muted-foreground">
+                  >
+                    <span className="flex items-baseline justify-between gap-2">
+                      <span className="font-medium text-muted-foreground">
+                        <Trans id="categories.uncategorized">
+                          Uncategorized
+                        </Trans>
+                      </span>
+                      {(bucketStats.get(NONE)?.held ?? 0) > 0 ? (
+                        <span className="text-sm font-medium text-muted-foreground tabular-nums">
+                          {formatWeight(bucketStats.get(NONE)?.weight ?? "0")}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">
                       {t({
                         id: "categories.assetCount",
                         message: plural(
-                          { count: category.assetCount },
+                          { count: uncategorizedCount },
                           { one: "# ticker", other: "# tickers" },
                         ),
                       })}
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-xs"
-                    aria-label={i18n._(
-                      msg({ id: "categories.rename", message: "Rename" }),
-                    )}
-                    onClick={() => {
-                      setRename(category);
-                      setRenameName(category.name);
-                    }}
-                  >
-                    <Pencil className="size-3.5" aria-hidden="true" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-xs"
-                    aria-label={i18n._(
-                      msg({ id: "categories.delete", message: "Delete" }),
-                    )}
-                    onClick={() => setRemove(category)}
-                  >
-                    <Trash2 className="size-3.5" aria-hidden="true" />
-                  </Button>
+                    </span>
+                  </button>
                 </li>
-              ))}
+              ) : null}
             </ul>
           )}
         </CardContent>
@@ -533,11 +710,11 @@ function CategoriesPage() {
                   <TableHead>
                     <Trans id="categories.colTicker">Ticker</Trans>
                   </TableHead>
-                  <TableHead className="hidden sm:table-cell">
-                    <Trans id="categories.colClass">Class</Trans>
+                  <TableHead className="hidden text-right md:table-cell">
+                    <Trans id="categories.colValue">Value</Trans>
                   </TableHead>
-                  <TableHead className="hidden md:table-cell">
-                    <Trans id="categories.colCurrency">Ccy</Trans>
+                  <TableHead className="hidden text-right sm:table-cell">
+                    <Trans id="categories.colShare">Share</Trans>
                   </TableHead>
                   <TableHead>
                     <Trans id="categories.colCategory">Category</Trans>
@@ -551,6 +728,8 @@ function CategoriesPage() {
                     asset={asset}
                     categories={categories}
                     selected={selected.has(asset.ticker)}
+                    holding={holdings.get(asset.ticker)}
+                    currency={displayCurrency}
                     assigning={assign.isPending}
                     onToggle={(checked) => toggleOne(asset.ticker, checked)}
                     onAssign={(categoryId) =>
@@ -753,6 +932,8 @@ function AssetTableRow({
   asset,
   categories,
   selected,
+  holding,
+  currency,
   assigning,
   onToggle,
   onAssign,
@@ -760,12 +941,13 @@ function AssetTableRow({
   asset: AssetRow;
   categories: CategoryRow[];
   selected: boolean;
+  /** Live value of the held position; absent for watch-only tickers. */
+  holding: Holding | undefined;
+  currency: "BRL" | "USD" | undefined;
   assigning: boolean;
   onToggle: (checked: boolean) => void;
   onAssign: (categoryId: string | null) => void;
 }) {
-  const category = categories.find((row) => row.id === asset.categoryId);
-
   return (
     <TableRow data-state={selected ? "selected" : undefined}>
       <TableCell>
@@ -778,33 +960,39 @@ function AssetTableRow({
           })}
         />
       </TableCell>
-      <TableCell className="font-medium">
-        <div className="flex flex-wrap items-center gap-2">
-          <AssetLink ticker={asset.ticker} className="flex items-center gap-2">
-            <AssetLogo
-              ticker={asset.ticker}
-              assetClass={asset.assetClass}
-              currency={asset.currency}
-            />
-            {asset.ticker}
-          </AssetLink>
-          {category ? (
-            <Badge variant="outline" className="gap-1.5 font-normal">
-              <span
-                className="size-2 rounded-full"
-                style={swatchStyle(category.color)}
-                aria-hidden="true"
-              />
-              {category.name}
-            </Badge>
-          ) : null}
+      <TableCell>
+        <div className="flex items-center gap-2.5">
+          <AssetLogo
+            ticker={asset.ticker}
+            assetClass={asset.assetClass}
+            currency={asset.currency}
+          />
+          <div className="min-w-0 leading-tight">
+            <AssetLink ticker={asset.ticker} className="font-medium">
+              {asset.ticker}
+            </AssetLink>
+            <p className="text-xs text-muted-foreground">
+              <AssetClassLabel assetClass={asset.assetClass} /> ·{" "}
+              {asset.currency}
+              {holding ? null : (
+                <>
+                  {" · "}
+                  <Trans id="categories.watchOnly">watch-only</Trans>
+                </>
+              )}
+            </p>
+          </div>
         </div>
       </TableCell>
-      <TableCell className="hidden sm:table-cell">
-        <AssetClassLabel assetClass={asset.assetClass} />
+      <TableCell className="hidden text-right tabular-nums md:table-cell">
+        {holding?.value != null && currency ? (
+          formatMoney(holding.value, currency)
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
       </TableCell>
-      <TableCell className="hidden md:table-cell">
-        <CurrencyBadge currency={asset.currency} />
+      <TableCell className="hidden text-right text-muted-foreground tabular-nums sm:table-cell">
+        {holding?.weight ? formatWeight(holding.weight) : "—"}
       </TableCell>
       <TableCell>
         <Select
@@ -814,7 +1002,7 @@ function AssetTableRow({
         >
           <SelectTrigger
             size="sm"
-            className="w-full min-w-40"
+            className="w-full min-w-32 sm:min-w-40"
             aria-label={t({
               id: "categories.assignTicker",
               message: `Category for ${asset.ticker}`,

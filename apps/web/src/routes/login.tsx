@@ -39,7 +39,7 @@ export const Route = createFileRoute("/login")({
     const user = await context.queryClient.ensureQueryData(sessionQueryOptions);
 
     if (user) {
-      throw redirect({ to: "/positions" });
+      throw redirect({ to: "/allocation" });
     }
   },
   component: LoginPage,
@@ -61,7 +61,7 @@ function LoginPage() {
 
   async function onAuthenticated(user: { id: string; email: string }) {
     setSession(user);
-    await navigate({ to: "/positions" });
+    await navigate({ to: "/allocation" });
   }
 
   const login = trpc.auth.login.useMutation({

@@ -350,4 +350,50 @@ describeIntegration("transactions router (Postgres integration)", () => {
       expect(wildcard.total).toBe(0);
     });
   });
+
+  it("filters the history by side and class and counts both sides", async () => {
+    await withUser(async (userId) => {
+      const caller = callerFor(userId);
+      const trade = {
+        currency: "BRL" as const,
+        quantity: "2",
+        price: "10",
+        fees: "0",
+      };
+
+      await caller.create({
+        ...trade,
+        ticker: "PETR4",
+        assetClass: "stock_br",
+        side: "buy",
+        tradedAt: "2026-01-05",
+      });
+      await caller.create({
+        ...trade,
+        ticker: "PETR4",
+        assetClass: "stock_br",
+        side: "sell",
+        quantity: "1",
+        tradedAt: "2026-01-06",
+      });
+      await caller.create({
+        ...trade,
+        ticker: "HGLG11",
+        assetClass: "reit",
+        side: "buy",
+        tradedAt: "2026-01-07",
+      });
+
+      const all = await caller.list({});
+      expect(all.total).toBe(3);
+      expect(all.sides).toEqual({ buy: 2, sell: 1 });
+
+      const sells = await caller.list({ side: "sell" });
+      expect(sells.items.map((item) => item.side)).toEqual(["sell"]);
+      expect(sells.sides).toEqual({ buy: 0, sell: 1 });
+
+      const reits = await caller.list({ assetClass: "reit" });
+      expect(reits.items.map((item) => item.ticker)).toEqual(["HGLG11"]);
+    });
+  });
 });

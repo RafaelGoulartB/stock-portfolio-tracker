@@ -1,88 +1,35 @@
-import { plural, t } from "@lingui/core/macro";
-import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
-import { positiveDecimal } from "@portifolio-tracker/shared";
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
-  RefreshCw,
-  TriangleAlert,
-} from "lucide-react";
-import { type ReactNode, useMemo, useState } from "react";
+import { RefreshCw } from "lucide-react";
+import { type ReactNode, useState } from "react";
 import { toast } from "sonner";
-import { AssetLink } from "@/components/asset-link";
-import { AssetLogo } from "@/components/asset-logo";
+import { BiggestMovers, ClassBreakdown } from "@/components/daily/breakdown";
+import { DailyTable } from "@/components/daily/daily-table";
+import { MarketMap } from "@/components/daily/market-map";
+import { DailySummary } from "@/components/daily/summary";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { type RouterOutputs, trpc } from "@/lib/api";
-import {
-  formatMoney,
-  formatSignedMoney,
-  formatSignedPercentPrecise,
-  formatSignedWeightPrecise,
-  formatTradeDate,
-  pnlClassName,
-} from "@/lib/format";
-import { useFxQuote, useFxRequest } from "@/lib/fx";
-import { useSettings } from "@/lib/settings";
+import { usePortfolioQueryInput } from "@/lib/allocation-query";
+import { trpc } from "@/lib/api";
+import { useFxQuote } from "@/lib/fx";
+import { prefetchPortfolio, trpcQueryUtils } from "@/lib/route-prefetch";
 import { isFxRateRequired, queryErrorMessage } from "@/lib/trpcErrors";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/daily")({
+  loader: ({ preload }) =>
+    prefetchPortfolio(preload, (input) => [
+      trpcQueryUtils.positions.daily.prefetch(input),
+    ]),
   component: DailyPage,
 });
 
-type DailyData = RouterOutputs["positions"]["daily"];
-type DailyPosition = DailyData["positions"][number];
-type SortKey = "ticker" | "value" | "change" | "impact";
-type SortDirection = "asc" | "desc";
-
 function DailyPage() {
-  const { i18n } = useLingui();
-  const { displayCurrency, quoteSource, manualPrices } = useSettings();
   const fx = useFxQuote();
-  const fxRequest = useFxRequest();
   const utils = trpc.useUtils();
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const sanitizedManualPrices = useMemo(
-    () =>
-      Object.fromEntries(
-        Object.entries(manualPrices).filter(
-          ([, price]) => positiveDecimal.safeParse(price).success,
-        ),
-      ),
-    [manualPrices],
-  );
-  const queryInput = useMemo(
-    () => ({
-      displayCurrency,
-      ...fxRequest,
-      quoteSource,
-      manualPrices:
-        quoteSource === "manual" &&
-        Object.keys(sanitizedManualPrices).length > 0
-          ? sanitizedManualPrices
-          : undefined,
-    }),
-    [displayCurrency, fxRequest, quoteSource, sanitizedManualPrices],
-  );
+  const queryInput = usePortfolioQueryInput();
   const daily = trpc.positions.daily.useQuery(queryInput);
 
   async function refreshQuotes() {
@@ -105,6 +52,7 @@ function DailyPage() {
     isFxRateRequired(daily.error) &&
     fx.fxSource !== "manual" &&
     !!fx.error;
+  const busy = daily.isFetching || isRefreshing;
 
   return (
     <div className="space-y-5">
@@ -114,10 +62,9 @@ function DailyPage() {
             <Trans id="daily.title">Daily performance</Trans>
           </h1>
           <p className="max-w-xl text-sm text-muted-foreground">
-            <Trans id="daily.subtitle">
-              Follow the portfolio's latest daily movement in the display
-              currency, including the USD/BRL move on foreign-currency assets
-              and cash.
+            <Trans id="daily.subtitleShort">
+              How the portfolio moved in the latest session, which holdings
+              drove it and how much came from the dollar.
             </Trans>
           </p>
         </div>
@@ -126,10 +73,10 @@ function DailyPage() {
           variant="outline"
           size="sm"
           onClick={() => void refreshQuotes()}
-          disabled={daily.isFetching || isRefreshing}
+          disabled={busy}
         >
           <RefreshCw
-            className={`size-4 ${daily.isFetching || isRefreshing ? "animate-spin" : ""}`}
+            className={`size-4 ${busy ? "animate-spin" : ""}`}
             aria-hidden="true"
           />
           <Trans id="quotes.refresh">Refresh quotes</Trans>
@@ -152,7 +99,12 @@ function DailyPage() {
       ) : null}
 
       {daily.data ? (
-        <>
+        <div
+          className={cn(
+            "space-y-5 transition-opacity",
+            isRefreshing && "opacity-60",
+          )}
+        >
           <DailySummary data={daily.data} />
           {daily.data.positions.length === 0 ? (
             <Card>
@@ -163,9 +115,18 @@ function DailyPage() {
               </CardContent>
             </Card>
           ) : (
-            <DailyTable data={daily.data} locale={i18n.locale} />
+            <>
+              <div className="grid gap-5 lg:grid-cols-3">
+                <MarketMap data={daily.data} className="lg:col-span-2" />
+                <div className="space-y-5">
+                  <ClassBreakdown data={daily.data} />
+                  <BiggestMovers data={daily.data} />
+                </div>
+              </div>
+              <DailyTable data={daily.data} />
+            </>
           )}
-        </>
+        </div>
       ) : null}
     </div>
   );
@@ -181,411 +142,13 @@ function ErrorCard({ children }: { children: ReactNode }) {
   );
 }
 
-function DailySummary({ data }: { data: DailyData }) {
-  useLingui();
-  const { summary } = data;
-  const dailyChange = summary.dailyChange;
-  const compared = summary.comparablePositions;
-  const partialCoverage =
-    summary.openPositions > 0 &&
-    summary.comparablePositions < summary.openPositions;
-  const asOf = summary.asOf ? formatTradeDate(summary.asOf) : null;
-
-  return (
-    <Card className="gap-0 overflow-hidden py-0">
-      <div className="grid divide-y sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-        <Metric
-          label={<Trans id="daily.portfolioValue">Portfolio value</Trans>}
-          value={formatMoney(summary.marketValue, summary.displayCurrency)}
-          hint={
-            asOf ? (
-              <Trans id="daily.quotedAt">Latest quotes from {asOf}.</Trans>
-            ) : (
-              <Trans id="daily.noQuoteDate">No live quotes available.</Trans>
-            )
-          }
-        />
-        <Metric
-          label={<Trans id="daily.dayChange">Day change</Trans>}
-          value={
-            dailyChange === null
-              ? "—"
-              : signedOrZero(dailyChange, summary.displayCurrency)
-          }
-          valueClassName={
-            dailyChange === null ? undefined : pnlClassName(dailyChange)
-          }
-          hint={
-            dailyChange === null ? (
-              <Trans id="daily.insufficientData">
-                Not enough data: no asset has a previous close to compare.
-              </Trans>
-            ) : summary.dailyChangePercent ? (
-              <span className={pnlClassName(dailyChange)}>
-                {formatSignedPercentPrecise(summary.dailyChangePercent)}
-              </span>
-            ) : (
-              <Trans id="daily.previousCloseComparison">
-                Compared with the previous close, converted at that day's
-                USD/BRL rate.
-              </Trans>
-            )
-          }
-        />
-        <Metric
-          label={<Trans id="daily.marketBreadth">Market breadth</Trans>}
-          value={`${summary.advancing} ↑  ${summary.declining} ↓`}
-          hint={t({
-            id: "daily.marketBreadthCount",
-            message: plural(
-              { count: summary.comparablePositions },
-              {
-                one: "# asset with daily comparison.",
-                other: "# assets with daily comparison.",
-              },
-            ),
-          })}
-        />
-      </div>
-      <div
-        className={`flex items-start gap-2 border-t px-5 py-2.5 text-xs ${
-          partialCoverage
-            ? "bg-caution/10 text-foreground"
-            : "bg-muted/30 text-muted-foreground"
-        }`}
-      >
-        {partialCoverage ? (
-          <TriangleAlert
-            className="mt-px size-3.5 shrink-0 text-caution"
-            aria-hidden="true"
-          />
-        ) : null}
-        <p>
-          {t({
-            id: "daily.comparisonCoverageCount",
-            message: plural(
-              { count: summary.openPositions },
-              {
-                one: `Daily change covers ${compared} of # open asset; cash is included in the value.`,
-                other: `Daily change covers ${compared} of # open assets; cash is included in the value.`,
-              },
-            ),
-          })}{" "}
-          <Trans id="daily.comparisonConsolidation">
-            Values are consolidated in {summary.displayCurrency}, with yesterday
-            converted at that session's USD/BRL rate.
-          </Trans>
-        </p>
-      </div>
-    </Card>
-  );
-}
-
-function Metric({
-  label,
-  value,
-  valueClassName,
-  hint,
-}: {
-  label: ReactNode;
-  value: string;
-  valueClassName?: string;
-  hint: ReactNode;
-}) {
-  return (
-    <div className="px-5 py-4">
-      <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <p
-        className={`mt-1.5 text-xl font-semibold tabular-nums ${valueClassName ?? ""}`}
-      >
-        {value}
-      </p>
-      <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
-        {hint}
-      </p>
-    </div>
-  );
-}
-
-function DailyTable({ data, locale }: { data: DailyData; locale: string }) {
-  const [sortKey, setSortKey] = useState<SortKey>("change");
-  const [sortDir, setSortDir] = useState<SortDirection>("desc");
-  const rows = useMemo(() => {
-    const direction = sortDir === "asc" ? 1 : -1;
-
-    return [...data.positions].sort((a, b) => {
-      if (sortKey === "ticker") {
-        return direction * a.ticker.localeCompare(b.ticker, locale);
-      }
-
-      const left = Number(
-        sortKey === "value" ? a.convertedMarketValue : a.dailyChange,
-      );
-      const right = Number(
-        sortKey === "value" ? b.convertedMarketValue : b.dailyChange,
-      );
-      const leftMissing =
-        sortKey === "value"
-          ? a.convertedMarketValue == null
-          : a.dailyChange == null;
-      const rightMissing =
-        sortKey === "value"
-          ? b.convertedMarketValue == null
-          : b.dailyChange == null;
-
-      if (leftMissing || rightMissing) {
-        if (leftMissing && rightMissing) {
-          return a.ticker.localeCompare(b.ticker, locale);
-        }
-        return leftMissing ? 1 : -1;
-      }
-
-      return left === right
-        ? a.ticker.localeCompare(b.ticker, locale)
-        : direction * (left - right);
-    });
-  }, [data.positions, locale, sortDir, sortKey]);
-
-  function toggleSort(key: SortKey) {
-    if (sortKey === key) {
-      setSortDir((current) => (current === "asc" ? "desc" : "asc"));
-      return;
-    }
-    setSortKey(key);
-    setSortDir(key === "ticker" ? "asc" : "desc");
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          {data.summary.asOf ? (
-            <Trans id="daily.assetsAsOf">
-              Assets · {formatTradeDate(data.summary.asOf)}
-            </Trans>
-          ) : (
-            <Trans id="daily.assets">Assets</Trans>
-          )}
-        </CardTitle>
-        <CardDescription>
-          <Trans id="daily.assetsHint">
-            Change from the previous close in the display currency, including
-            FX, and each asset's impact on yesterday's portfolio value.
-          </Trans>
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Table className="[&_tbody_td]:h-11 [&_tfoot_td]:h-11">
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
-              <SortableHead
-                label={<Trans id="daily.colTicker">Ticker</Trans>}
-                active={sortKey === "ticker"}
-                direction={sortDir}
-                onToggle={() => toggleSort("ticker")}
-              />
-              <TableHead className="text-right text-muted-foreground">
-                <Trans id="daily.colPreviousClose">Previous close</Trans>
-              </TableHead>
-              <TableHead className="text-right text-muted-foreground">
-                <Trans id="daily.colLastPrice">Last price</Trans>
-              </TableHead>
-              <SortableHead
-                label={<Trans id="daily.colMarketValue">Market value</Trans>}
-                active={sortKey === "value"}
-                direction={sortDir}
-                align="right"
-                onToggle={() => toggleSort("value")}
-              />
-              <SortableHead
-                label={<Trans id="daily.colDayChange">Day change</Trans>}
-                active={sortKey === "change"}
-                direction={sortDir}
-                align="right"
-                onToggle={() => toggleSort("change")}
-              />
-              <SortableHead
-                label={
-                  <Trans id="daily.colPortfolioImpact">Portfolio impact</Trans>
-                }
-                active={sortKey === "impact"}
-                direction={sortDir}
-                align="right"
-                onToggle={() => toggleSort("impact")}
-              />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.map((position) => (
-              <DailyRow
-                key={`${position.ticker}|${position.currency}`}
-                position={position}
-                previousPortfolioValue={data.summary.previousComparableValue}
-              />
-            ))}
-          </TableBody>
-          <TableFooter>
-            <TableRow>
-              <TableCell colSpan={3} className="font-medium">
-                <Trans id="daily.total">Portfolio total</Trans>
-              </TableCell>
-              <TableCell className="text-right font-medium tabular-nums">
-                {formatMoney(
-                  data.summary.marketValue,
-                  data.summary.displayCurrency,
-                )}
-              </TableCell>
-              <TableCell
-                className={`text-right font-semibold tabular-nums ${pnlClassName(data.summary.dailyChange ?? "0")}`}
-              >
-                {data.summary.dailyChange === null
-                  ? "—"
-                  : signedOrZero(
-                      data.summary.dailyChange,
-                      data.summary.displayCurrency,
-                    )}
-              </TableCell>
-              <TableCell
-                className={`text-right font-semibold tabular-nums ${pnlClassName(data.summary.dailyChange ?? "0")}`}
-              >
-                {data.summary.dailyChangePercent
-                  ? formatSignedPercentPrecise(data.summary.dailyChangePercent)
-                  : "—"}
-              </TableCell>
-            </TableRow>
-          </TableFooter>
-        </Table>
-      </CardContent>
-    </Card>
-  );
-}
-
-function DailyRow({
-  position,
-  previousPortfolioValue,
-}: {
-  position: DailyPosition;
-  previousPortfolioValue: string;
-}) {
-  const portfolioImpact =
-    position.dailyChange != null && Number(previousPortfolioValue) !== 0
-      ? Number(position.dailyChange) / Number(previousPortfolioValue)
-      : null;
-
-  return (
-    <TableRow>
-      <TableCell className="font-medium">
-        <AssetLink ticker={position.ticker} className="flex items-center gap-2">
-          <AssetLogo
-            ticker={position.ticker}
-            assetClass={position.assetClass}
-            currency={position.currency}
-          />
-          {position.ticker}
-        </AssetLink>
-      </TableCell>
-      <TableCell className="text-right text-muted-foreground tabular-nums">
-        {position.previousClose == null
-          ? "—"
-          : formatMoney(position.previousClose, position.currency)}
-      </TableCell>
-      <TableCell className="text-right tabular-nums">
-        {position.marketPrice == null
-          ? "—"
-          : formatMoney(position.marketPrice, position.currency)}
-      </TableCell>
-      <TableCell className="text-right font-medium tabular-nums">
-        {position.convertedMarketValue == null
-          ? "—"
-          : formatMoney(
-              position.convertedMarketValue,
-              position.displayCurrency,
-            )}
-      </TableCell>
-      <TableCell className="text-right tabular-nums">
-        {position.dailyChange == null ? (
-          <span className="text-muted-foreground">—</span>
-        ) : (
-          <span
-            className={`flex items-center justify-end gap-2 ${pnlClassName(position.dailyChange)}`}
-          >
-            {signedOrZero(position.dailyChange, position.displayCurrency)}
-            {position.dailyChangePercent ? (
-              <span className="text-xs opacity-80">
-                {formatSignedPercentPrecise(position.dailyChangePercent)}
-              </span>
-            ) : null}
-          </span>
-        )}
-      </TableCell>
-      <TableCell className="text-right tabular-nums">
-        {portfolioImpact == null ? (
-          <span className="text-muted-foreground">—</span>
-        ) : (
-          <span className={pnlClassName(position.dailyChange ?? "0")}>
-            {formatSignedWeightPrecise(String(portfolioImpact))}
-          </span>
-        )}
-      </TableCell>
-    </TableRow>
-  );
-}
-
-function SortableHead({
-  label,
-  active,
-  direction,
-  align = "left",
-  onToggle,
-}: {
-  label: ReactNode;
-  active: boolean;
-  direction: SortDirection;
-  align?: "left" | "right";
-  onToggle: () => void;
-}) {
-  const ariaLabel = useLingui().i18n._(
-    t({ id: "daily.sortColumn", message: "Sort this column" }),
-  );
-  const Icon = active
-    ? direction === "asc"
-      ? ArrowUp
-      : ArrowDown
-    : ArrowUpDown;
-
-  return (
-    <TableHead
-      className={`${align === "right" ? "text-right" : ""} text-muted-foreground`}
-      aria-sort={
-        active ? (direction === "asc" ? "ascending" : "descending") : "none"
-      }
-    >
-      <button
-        type="button"
-        className={`inline-flex w-full items-center gap-1.5 hover:text-foreground ${align === "right" ? "justify-end" : ""}`}
-        onClick={onToggle}
-        aria-label={ariaLabel}
-      >
-        {label}
-        <Icon className="size-3.5" aria-hidden="true" />
-      </button>
-    </TableHead>
-  );
-}
-
-function signedOrZero(value: string, currency: "BRL" | "USD"): string {
-  return Number(value) === 0
-    ? formatMoney(value, currency)
-    : formatSignedMoney(value, currency);
-}
-
 function DailySkeleton() {
   return (
     <div className="space-y-5" aria-hidden="true">
       <Card className="gap-0 overflow-hidden py-0">
-        <div className="grid divide-y sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-          {[0, 1, 2].map((item) => (
-            <div key={item} className="space-y-2 px-5 py-4">
+        <div className="grid gap-px bg-border sm:grid-cols-2 lg:grid-cols-4">
+          {[0, 1, 2, 3].map((item) => (
+            <div key={item} className="space-y-2 bg-card px-5 py-4">
               <Skeleton className="h-3 w-24" />
               <Skeleton className="h-7 w-36" />
               <Skeleton className="h-3 w-28" />
@@ -593,17 +156,27 @@ function DailySkeleton() {
           ))}
         </div>
       </Card>
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-5 w-32" />
-          <Skeleton className="h-4 w-80 max-w-full" />
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {[0, 1, 2, 3, 4].map((item) => (
-            <Skeleton key={item} className="h-11 w-full" />
-          ))}
-        </CardContent>
-      </Card>
+      <div className="grid gap-5 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-4 w-80 max-w-full" />
+          </CardHeader>
+          <CardContent>
+            <Skeleton className="h-[340px] w-full" />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-5 w-28" />
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {[0, 1, 2, 3].map((item) => (
+              <Skeleton key={item} className="h-8 w-full" />
+            ))}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

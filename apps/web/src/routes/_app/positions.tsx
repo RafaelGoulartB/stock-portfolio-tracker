@@ -1,13 +1,18 @@
 import { t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
-import { positiveDecimal } from "@portifolio-tracker/shared";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Plus, RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { AllocationCard } from "@/components/positions/allocation-card";
-import { DeepFinderTeaser } from "@/components/positions/deep-finder-teaser";
+import {
+  AllocationCard,
+  type AllocationFilter,
+} from "@/components/positions/allocation-card";
+import {
+  DeepFinderTeaser,
+  useMonthMovers,
+} from "@/components/positions/deep-finder-teaser";
 import { HoldingsCard } from "@/components/positions/holdings-card";
 import { ManualPricesCard } from "@/components/positions/manual-prices-card";
 import { MonthSelector } from "@/components/positions/month-selector";
@@ -15,14 +20,26 @@ import { EmptyState, PositionsSkeleton } from "@/components/positions/states";
 import { SummaryStrip } from "@/components/positions/summary-strip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  monthMoversInput,
+  usePortfolioQueryInput,
+} from "@/lib/allocation-query";
 import { trpc } from "@/lib/api";
 import { formatTradeDate } from "@/lib/format";
-import { useFxQuote, useFxRequest } from "@/lib/fx";
+import { useFxQuote } from "@/lib/fx";
 import { lastTwelveMonths } from "@/lib/months";
+import { prefetchPortfolio, trpcQueryUtils } from "@/lib/route-prefetch";
 import { useSettings } from "@/lib/settings";
 import { isFxRateRequired, queryErrorMessage } from "@/lib/trpcErrors";
 
 export const Route = createFileRoute("/_app/positions")({
+  // The live month is the default selection, hence no `asOf`.
+  loader: ({ preload }) =>
+    prefetchPortfolio(preload, (input) => [
+      trpcQueryUtils.positions.list.prefetch({ ...input, asOf: undefined }),
+      trpcQueryUtils.positions.finder.prefetch(monthMoversInput(input)),
+      trpcQueryUtils.categories.list.prefetch(),
+    ]),
   component: PositionsPage,
 });
 
@@ -30,46 +47,26 @@ function PositionsPage() {
   // Subscribes this page to locale changes; amounts and dates below are
   // rendered with `Intl` using the active locale.
   const { i18n } = useLingui();
-  const { displayCurrency, quoteSource, manualPrices } = useSettings();
+  const { quoteSource } = useSettings();
   const months = useMemo(() => lastTwelveMonths(), []);
   const [monthKey, setMonthKey] = useState(months[0]?.key ?? "");
+  const [filter, setFilter] = useState<AllocationFilter | null>(null);
   const selected = months.find((month) => month.key === monthKey) ?? months[0];
 
   const fx = useFxQuote(selected?.asOf);
-  const fxRequest = useFxRequest();
   const utils = trpc.useUtils();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Manual prices are raw user input; only valid decimals travel to the API.
-  const sanitizedManualPrices = useMemo(() => {
-    const entries = Object.entries(manualPrices).filter(
-      ([, price]) => positiveDecimal.safeParse(price).success,
-    );
-
-    return Object.fromEntries(entries);
-  }, [manualPrices]);
-
+  const portfolioInput = usePortfolioQueryInput();
   const queryInput = useMemo(
-    () => ({
-      displayCurrency,
-      ...fxRequest,
-      asOf: selected?.asOf ?? undefined,
-      quoteSource,
-      manualPrices:
-        quoteSource === "manual" &&
-        Object.keys(sanitizedManualPrices).length > 0
-          ? sanitizedManualPrices
-          : undefined,
-    }),
-    [
-      displayCurrency,
-      fxRequest,
-      quoteSource,
-      sanitizedManualPrices,
-      selected?.asOf,
-    ],
+    () => ({ ...portfolioInput, asOf: selected?.asOf ?? undefined }),
+    [portfolioInput, selected?.asOf],
   );
   const positions = trpc.positions.list.useQuery(queryInput);
+  // Started here, not in the cards that render them, so they share the
+  // holdings' request instead of a second round trip after it.
+  useMonthMovers();
+  trpc.categories.list.useQuery();
 
   async function refreshQuotes() {
     const forcedInput = { ...queryInput, forceRefresh: true };
@@ -78,7 +75,10 @@ function PositionsPage() {
       await utils.positions.list.invalidate(forcedInput);
       const refreshed = await utils.positions.list.fetch(forcedInput);
       utils.positions.list.setData(queryInput, refreshed);
-      await utils.positions.finder.invalidate();
+      await Promise.all([
+        utils.positions.finder.invalidate(),
+        utils.positions.finderWindows.invalidate(),
+      ]);
     } catch (error) {
       toast.error(queryErrorMessage(error));
     } finally {
@@ -130,7 +130,10 @@ function PositionsPage() {
           <MonthSelector
             months={months}
             selectedKey={selected?.key ?? ""}
-            onSelect={setMonthKey}
+            onSelect={(key) => {
+              setMonthKey(key);
+              setFilter(null);
+            }}
             locale={i18n.locale}
           />
           <Button
@@ -196,18 +199,27 @@ function PositionsPage() {
           ) : (
             <>
               <AllocationCard
+                // A new snapshot rebuilds the buckets, so a filter on the old
+                // ones is dropped with it.
+                key={selected?.key}
                 positions={open}
                 summary={data.summary}
                 snapshotLabel={snapshotLabel}
+                concentration={data.concentration}
+                filter={filter}
+                onFilterChange={setFilter}
               />
 
-              <DeepFinderTeaser positions={open} summary={data.summary} />
-
               <HoldingsCard
+                key={`holdings-${selected?.key}`}
                 positions={open}
                 summary={data.summary}
                 missing={data.quotes.missing}
+                filter={filter}
+                onClearFilter={() => setFilter(null)}
               />
+
+              <DeepFinderTeaser positions={open} summary={data.summary} />
             </>
           )}
 

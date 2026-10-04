@@ -71,10 +71,16 @@ import {
   shiftQuarter,
   toQuarter,
 } from "@/lib/quarters";
+import { prefetchPortfolio, trpcQueryUtils } from "@/lib/route-prefetch";
 import { useSettings } from "@/lib/settings";
 import { isFxRateRequired, queryErrorMessage } from "@/lib/trpcErrors";
 
 export const Route = createFileRoute("/_app/allocation/")({
+  loader: ({ preload }) =>
+    prefetchPortfolio(preload, (input) => [
+      trpcQueryUtils.allocation.list.prefetch(input),
+      trpcQueryUtils.categories.list.prefetch(),
+    ]),
   component: AllocationPage,
 });
 
@@ -242,6 +248,8 @@ function AllocationPage() {
       refresh(),
       utils.positions.list.invalidate(),
       utils.positions.daily.invalidate(),
+      utils.positions.finder.invalidate(),
+      utils.positions.finderWindows.invalidate(),
       utils.performance.history.invalidate(),
     ]);
   }
@@ -266,10 +274,9 @@ function AllocationPage() {
 
   const upsertAsset = trpc.allocation.upsertAsset.useMutation({
     onSuccess: async (_result, input) => {
-      await refresh();
-      if (input.categoryId !== undefined) {
-        await utils.categories.list.invalidate();
-      }
+      // Categories also lists watched tickers, so a new row belongs there
+      // even without a category.
+      await Promise.all([refresh(), utils.categories.list.invalidate()]);
       if (input.assetClass !== undefined) {
         await utils.allocation.nextResults.invalidate();
       }
@@ -326,7 +333,11 @@ function AllocationPage() {
           }),
         ),
       );
-      await Promise.all([refresh(), utils.allocation.nextResults.invalidate()]);
+      await Promise.all([
+        refresh(),
+        utils.allocation.nextResults.invalidate(),
+        utils.categories.list.invalidate(),
+      ]);
 
       return result;
     },

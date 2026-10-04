@@ -1,83 +1,92 @@
 import { Trans } from "@lingui/react/macro";
+import { Stat, StatStrip } from "@/components/analysis/primitives";
 import {
-  CalendarDays,
-  CircleDollarSign,
-  Clock3,
-  WalletCards,
-} from "lucide-react";
-import type { ReactNode } from "react";
-import { Card } from "@/components/ui/card";
-import { formatMoney, formatTradeDate } from "@/lib/format";
+  formatMoney,
+  formatSignedPercent,
+  formatTradeDate,
+  formatWeight,
+  pnlClassName,
+} from "@/lib/format";
+import { cn } from "@/lib/utils";
 import type { DividendData } from "./types";
 
 export function Summary({ data }: { data: DividendData }) {
-  const { summary } = data;
-  return (
-    <Card className="gap-0 overflow-hidden py-0">
-      <div className="grid divide-y sm:grid-cols-2 sm:divide-x sm:divide-y-0 lg:grid-cols-4">
-        <Metric
-          icon={WalletCards}
-          label={<Trans id="dividends.total">Estimated income</Trans>}
-          value={formatMoney(summary.convertedTotal, summary.displayCurrency)}
-          hint={<Trans id="dividends.selectedPeriod">Selected period</Trans>}
-        />
-        <Metric
-          icon={Clock3}
-          label={<Trans id="dividends.upcoming">Upcoming</Trans>}
-          value={formatMoney(
-            summary.convertedUpcoming,
-            summary.displayCurrency,
-          )}
-          hint={
-            <Trans id="dividends.eventCount">
-              {summary.upcomingCount} events
-            </Trans>
-          }
-        />
-        <Metric
-          icon={CalendarDays}
-          label={<Trans id="dividends.nextDate">Next relevant date</Trans>}
-          value={
-            summary.nextPaymentDate
-              ? formatTradeDate(summary.nextPaymentDate)
-              : "—"
-          }
-          hint={
-            <Trans id="dividends.paymentOrExDate">Payment or ex-date</Trans>
-          }
-        />
-        <Metric
-          icon={CircleDollarSign}
-          label={<Trans id="dividends.events">Income events</Trans>}
-          value={String(summary.eventCount)}
-          hint={summary.nativeTotals
-            .map((item) => formatMoney(item.amount, item.currency))
-            .join(" · ")}
-        />
-      </div>
-    </Card>
-  );
-}
+  const { summary, income } = data;
+  const currency = summary.displayCurrency;
+  const nativeTotals = summary.nativeTotals
+    .map((item) => formatMoney(item.amount, item.currency))
+    .join(" + ");
+  const hasPrevious =
+    income.previous12m != null && Number(income.previous12m) > 0;
+  const total = formatMoney(summary.convertedTotal, currency);
+  const eventCount = summary.eventCount;
 
-function Metric({
-  icon: Icon,
-  label,
-  value,
-  hint,
-}: {
-  icon: typeof CalendarDays;
-  label: ReactNode;
-  value: string;
-  hint: ReactNode;
-}) {
   return (
-    <div className="px-5 py-4">
-      <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-        <Icon className="size-3.5" />
-        {label}
-      </div>
-      <p className="mt-1.5 text-xl font-semibold tabular-nums">{value}</p>
-      <p className="mt-0.5 truncate text-xs text-muted-foreground">{hint}</p>
-    </div>
+    <StatStrip
+      className="sm:grid-cols-2 lg:grid-cols-4"
+      footer={
+        <Trans id="dividends.summaryFooter">
+          {eventCount} events in the window, {total} in total · native:{" "}
+          {nativeTotals}
+        </Trans>
+      }
+    >
+      <Stat
+        label={<Trans id="dividends.trailing12m">Last 12 months</Trans>}
+        value={formatMoney(income.trailing12m, currency)}
+        valueClassName="text-2xl"
+        hint={
+          hasPrevious && income.trailing12mChange ? (
+            <span>
+              <span
+                className={cn(
+                  "font-medium",
+                  pnlClassName(income.trailing12mChange),
+                )}
+              >
+                {formatSignedPercent(income.trailing12mChange)}
+              </span>{" "}
+              <Trans id="dividends.vsPrevious">vs the 12 months before</Trans>
+            </span>
+          ) : (
+            <Trans id="dividends.receivedHint">
+              Estimated gross income already paid.
+            </Trans>
+          )
+        }
+      />
+      <Stat
+        label={<Trans id="dividends.monthlyAverage">Monthly average</Trans>}
+        value={formatMoney(income.monthlyAverage, currency)}
+        hint={
+          <Trans id="dividends.monthlyAverageHint">
+            The last 12 months divided by 12.
+          </Trans>
+        }
+      />
+      <Stat
+        label={<Trans id="dividends.yieldOnCost">Yield on cost</Trans>}
+        value={income.yieldOnCost ? formatWeight(income.yieldOnCost) : "—"}
+        hint={
+          <Trans id="dividends.yieldOnCostHint">
+            12-month income over the cost of what you hold.
+          </Trans>
+        }
+      />
+      <Stat
+        label={<Trans id="dividends.upcoming">Upcoming</Trans>}
+        value={formatMoney(summary.convertedUpcoming, currency)}
+        hint={
+          summary.nextPaymentDate ? (
+            <Trans id="dividends.upcomingNext">
+              {summary.upcomingCount} events · next on{" "}
+              {formatTradeDate(summary.nextPaymentDate)}
+            </Trans>
+          ) : (
+            <Trans id="dividends.noneAnnounced">Nothing announced yet.</Trans>
+          )
+        }
+      />
+    </StatStrip>
   );
 }

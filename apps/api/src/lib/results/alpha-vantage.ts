@@ -1,10 +1,19 @@
 import type { NextResult } from "@portifolio-tracker/shared";
 import { parse } from "csv-parse/sync";
+import {
+  alphaVantageBlocked,
+  noteAlphaVantageRefusal,
+} from "../alpha-vantage-quota";
 import type { ResultDateAsset, ResultDateProvider } from "./provider";
 
 const BASE_URL = "https://www.alphavantage.co/query";
 const CACHE_TTL_MS = 24 * 60 * 60 * 1_000;
 const MAX_RESPONSE_BYTES = 5 * 1024 * 1024;
+/**
+ * After a failed calendar download every US ticker in the same worker queue
+ * would otherwise trigger its own retry; the failure is remembered instead.
+ */
+const FAILURE_TTL_MS = 60 * 60 * 1_000;
 
 type CalendarCache = {
   events: Map<string, string[]>;
@@ -66,9 +75,19 @@ export function parseAlphaVantageCalendar(csv: string): Map<string, string[]> {
   );
 }
 
+function refusalMessage(text: string): string | null {
+  try {
+    const body = JSON.parse(text) as { Information?: string; Note?: string };
+    return body.Information ?? body.Note ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export class AlphaVantageResultProvider implements ResultDateProvider {
   readonly id = "alpha_vantage" as const;
   private cache: CalendarCache | null = null;
+  private failure: { error: Error; expiresAt: number } | null = null;
   private pending: Promise<Map<string, string[]>> | null = null;
 
   constructor(
@@ -100,6 +119,7 @@ export class AlphaVantageResultProvider implements ResultDateProvider {
 
   clearCache() {
     this.cache = null;
+    this.failure = null;
     this.pending = null;
   }
 
@@ -108,13 +128,30 @@ export class AlphaVantageResultProvider implements ResultDateProvider {
       return this.cache.events;
     }
     if (this.pending) return this.pending;
+    if (this.failure && this.failure.expiresAt > this.now()) {
+      throw this.failure.error;
+    }
+    const refusal = alphaVantageBlocked(this.now());
+    if (refusal) {
+      throw new Error(refusal);
+    }
 
     this.pending = this.fetchCalendar();
 
     try {
       const events = await this.pending;
       this.cache = { events, expiresAt: this.now() + CACHE_TTL_MS };
+      this.failure = null;
       return events;
+    } catch (error) {
+      this.failure = {
+        error:
+          error instanceof Error
+            ? error
+            : new Error("Alpha Vantage request failed"),
+        expiresAt: this.now() + FAILURE_TTL_MS,
+      };
+      throw error;
     } finally {
       this.pending = null;
     }
@@ -145,6 +182,10 @@ export class AlphaVantageResultProvider implements ResultDateProvider {
       throw new Error("Alpha Vantage response is too large");
     }
     if (contentType?.includes("json") || /^\s*[{[]/.test(text)) {
+      const refusal = refusalMessage(text);
+      if (refusal) {
+        noteAlphaVantageRefusal(refusal, this.now());
+      }
       throw new Error("Alpha Vantage did not return an earnings calendar");
     }
 

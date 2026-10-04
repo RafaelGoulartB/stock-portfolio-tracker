@@ -1,5 +1,6 @@
 import {
   type AssetClass,
+  type BrokerNoteFormat,
   bookHoldingsInput,
   createTransactionInput,
   deleteTransactionInput,
@@ -25,6 +26,7 @@ import {
 import { db } from "../../db";
 import {
   allocationAssets,
+  brokerNotes,
   corporateActions,
   transactions,
 } from "../../db/schema";
@@ -55,6 +57,8 @@ type DbExecutor =
  * both validate against the same available quantity. Locks are taken in a
  * stable sorted order and deduplicated so two transactions touching the same
  * set of tickers can never deadlock by acquiring them in opposite orders.
+ * The lock key (`hashtext` of `userId:ticker`) must stay stable: concurrent
+ * API versions have to agree on it.
  * Must run inside a transaction: `pg_advisory_xact_lock` releases on commit.
  */
 export async function lockTickers(
@@ -64,11 +68,21 @@ export async function lockTickers(
 ): Promise<void> {
   const ordered = [...new Set(tickers)].sort();
 
-  for (const ticker of ordered) {
-    await tx.execute(
-      sql`SELECT pg_advisory_xact_lock(hashtext(${`${userId}:${ticker}`}))`,
-    );
+  if (ordered.length === 0) {
+    return;
   }
+
+  // One round trip for the whole set. `OFFSET 0` keeps the ordered subquery
+  // from being flattened, so the locks are still acquired in sorted order.
+  const keys = sql.join(
+    ordered.map(
+      (ticker, index) => sql`(${index}::int, ${`${userId}:${ticker}`}::text)`,
+    ),
+    sql`, `,
+  );
+  await tx.execute(
+    sql`SELECT count(pg_advisory_xact_lock(hashtext(ordered.key))) FROM (SELECT key FROM (VALUES ${keys}) AS input(position, key) ORDER BY position OFFSET 0) AS ordered`,
+  );
 }
 
 /**
@@ -114,7 +128,11 @@ const displayColumns = {
   usdBrlRate: transactions.usdBrlRate,
   notes: transactions.notes,
   createdAt: transactions.createdAt,
+  brokerNoteId: transactions.brokerNoteId,
 };
+
+const IMPORTED_TRADE_LOCKED =
+  "This trade was imported from a broker note. Delete the note to remove its trades.";
 
 /** Position calculations never read a row id or user-entered note. */
 const calculationColumns = {
@@ -149,6 +167,8 @@ const splitColumns = {
   effectiveAt: corporateActions.effectiveAt,
   fromQuantity: corporateActions.fromQuantity,
   toQuantity: corporateActions.toQuantity,
+  kind: corporateActions.kind,
+  unitCost: corporateActions.unitCost,
 };
 
 /**
@@ -181,6 +201,15 @@ export async function readSplits(
 }
 
 /**
+ * Every split for the account, read once per request: the ledger loader,
+ * Allocation's fair-value adjustment and the tax report all need the same
+ * rows within one batch.
+ */
+export function loadAccountSplits(userId: string): Promise<SplitEvent[]> {
+  return memoizeRequest(`splits:${userId}`, () => readSplits(db, userId));
+}
+
+/**
  * The account ledger in today's share units (see `adjustForSplits`), which
  * is what every valuation, snapshot and dividend entitlement reads.
  */
@@ -201,7 +230,7 @@ async function loadTransactionsUncached(
       .from(transactions)
       .where(eq(transactions.userId, userId))
       .orderBy(asc(transactions.tradedAt), asc(transactions.createdAt)),
-    readSplits(db, userId),
+    loadAccountSplits(userId),
   ]);
 
   return adjustForSplits(
@@ -273,7 +302,14 @@ export async function loadTransactionsForTickers(
   );
 }
 
-function toDto(row: ConsolidationInput & { id: string; notes: string | null }) {
+function toDto(
+  row: ConsolidationInput & {
+    id: string;
+    notes: string | null;
+    brokerNoteId: string | null;
+  },
+  note: { format: string; noteNumber: string | null } | null = null,
+) {
   // Rows written before the BR/US stock split read back as `stock`.
   const rawClass: string = row.assetClass;
   const assetClass: AssetClass =
@@ -292,6 +328,14 @@ function toDto(row: ConsolidationInput & { id: string; notes: string | null }) {
     usdBrlRate: row.usdBrlRate ?? null,
     notes: row.notes,
     total: tradeCashTotal(row),
+    brokerNote:
+      row.brokerNoteId && note
+        ? {
+            id: row.brokerNoteId,
+            format: note.format as BrokerNoteFormat,
+            noteNumber: note.noteNumber,
+          }
+        : null,
   } satisfies Transaction;
 }
 
@@ -310,11 +354,24 @@ export const transactionsRouter = router({
         filters.push(ilike(transactions.ticker, likeContains(input.ticker)));
       }
 
+      if (input.side) {
+        filters.push(eq(transactions.side, input.side));
+      }
+
+      if (input.assetClass) {
+        filters.push(eq(transactions.assetClass, input.assetClass));
+      }
+
       const where = and(...filters);
       const [rows, totals] = await Promise.all([
         db
-          .select(displayColumns)
+          .select({
+            ...displayColumns,
+            brokerNoteFormat: brokerNotes.format,
+            brokerNoteNumber: brokerNotes.noteNumber,
+          })
           .from(transactions)
+          .leftJoin(brokerNotes, eq(brokerNotes.id, transactions.brokerNoteId))
           .where(where)
           .orderBy(
             desc(transactions.tradedAt),
@@ -323,12 +380,29 @@ export const transactionsRouter = router({
           )
           .limit(input.pageSize)
           .offset(input.page * input.pageSize),
-        db.select({ value: count() }).from(transactions).where(where),
+        db
+          .select({ side: transactions.side, value: count() })
+          .from(transactions)
+          .where(where)
+          .groupBy(transactions.side),
       ]);
+      const sides = { buy: 0, sell: 0 };
+
+      for (const entry of totals) {
+        sides[entry.side] = Number(entry.value);
+      }
 
       return {
-        items: rows.map(toDto),
-        total: Number(totals[0]?.value ?? 0),
+        items: rows.map(({ brokerNoteFormat, brokerNoteNumber, ...row }) =>
+          toDto(
+            row,
+            brokerNoteFormat
+              ? { format: brokerNoteFormat, noteNumber: brokerNoteNumber }
+              : null,
+          ),
+        ),
+        total: sides.buy + sides.sell,
+        sides,
         page: input.page,
         pageSize: input.pageSize,
       };
@@ -544,7 +618,7 @@ export const transactionsRouter = router({
         return rows;
       });
 
-      return inserted.map(toDto);
+      return inserted.map((row) => toDto(row));
     }),
 
   /**
@@ -569,7 +643,10 @@ export const transactionsRouter = router({
         trade.usdBrlRate ?? (await tradeDateRateOrNull(trade.tradedAt));
       const row = await db.transaction(async (tx) => {
         const [target] = await tx
-          .select({ ticker: transactions.ticker })
+          .select({
+            ticker: transactions.ticker,
+            brokerNoteId: transactions.brokerNoteId,
+          })
           .from(transactions)
           .where(
             and(
@@ -583,6 +660,14 @@ export const transactionsRouter = router({
           throw new TRPCError({
             code: "NOT_FOUND",
             message: "Transaction not found",
+          });
+        }
+
+        // An imported trade is the document's; only its note can remove it.
+        if (target.brokerNoteId !== null) {
+          throw new TRPCError({
+            code: "UNPROCESSABLE_CONTENT",
+            message: IMPORTED_TRADE_LOCKED,
           });
         }
 
@@ -767,6 +852,7 @@ export const transactionsRouter = router({
             id: transactions.id,
             ticker: transactions.ticker,
             assetClass: transactions.assetClass,
+            brokerNoteId: transactions.brokerNoteId,
           })
           .from(transactions)
           .where(
@@ -781,6 +867,13 @@ export const transactionsRouter = router({
           throw new TRPCError({
             code: "NOT_FOUND",
             message: "Transaction not found",
+          });
+        }
+
+        if (target.brokerNoteId !== null) {
+          throw new TRPCError({
+            code: "UNPROCESSABLE_CONTENT",
+            message: IMPORTED_TRADE_LOCKED,
           });
         }
 

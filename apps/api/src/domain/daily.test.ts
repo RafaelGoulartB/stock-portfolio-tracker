@@ -210,6 +210,110 @@ describe("buildDailyTracking", () => {
     });
   });
 
+  it("splits a foreign asset's day into price and FX effects", () => {
+    const uber = valued({
+      ticker: "UBER",
+      assetClass: "stock_us",
+      currency: "USD",
+      quantity: "10",
+      cost: "100",
+      price: "110",
+      display: "BRL",
+      rate: "5.5",
+    });
+    const petr = valued({
+      ticker: "PETR4",
+      quantity: "100",
+      cost: "10",
+      price: "11",
+      display: "BRL",
+      rate: "5.5",
+    });
+    const result = buildDailyTracking({
+      positions: [uber, petr],
+      quotes: new Map([
+        ["UBER", quote("UBER", "110", "100")],
+        ["PETR4", quote("PETR4", "11", "10")],
+      ]),
+      displayCurrency: "BRL",
+      usdBrlRate: "5.5",
+      previousUsdBrlRate: "5",
+    });
+    const [uberRow, petrRow] = result.positions;
+
+    // Price: 10×10 USD at yesterday's 5 = 500; FX: 1100 USD × 0.5 = 550.
+    expect(uberRow).toMatchObject({
+      dailyChange: "1050.00",
+      dailyFxChange: "550.00",
+    });
+    expect(petrRow.dailyFxChange).toBeNull();
+    expect(result.summary).toMatchObject({
+      dailyChange: "1150.00",
+      dailyFxChange: "550.00",
+      dailyPriceChange: "600.00",
+      usdBrlChangePercent: "0.10000000",
+    });
+  });
+
+  it("breaks the day down by asset class", () => {
+    const uber = valued({
+      ticker: "UBER",
+      assetClass: "stock_us",
+      currency: "USD",
+      quantity: "10",
+      cost: "100",
+      price: "110",
+      display: "BRL",
+      rate: "5",
+    });
+    const petr = valued({
+      ticker: "PETR4",
+      quantity: "100",
+      cost: "10",
+      price: "9",
+      display: "BRL",
+      rate: "5",
+    });
+    const vale = valued({
+      ticker: "VALE3",
+      quantity: "100",
+      cost: "10",
+      price: "11",
+      display: "BRL",
+      rate: "5",
+    });
+    const result = buildDailyTracking({
+      positions: [uber, petr, vale],
+      quotes: new Map([
+        ["UBER", quote("UBER", "110", "100")],
+        ["PETR4", quote("PETR4", "9", "10")],
+        ["VALE3", quote("VALE3", "11", "10")],
+      ]),
+      displayCurrency: "BRL",
+      usdBrlRate: "5",
+      previousUsdBrlRate: "5",
+    });
+
+    expect(result.summary.byAssetClass).toEqual([
+      {
+        assetClass: "stock_us",
+        marketValue: "5500.00",
+        dailyChange: "500.00",
+        dailyChangePercent: "0.10000000",
+        comparablePositions: 1,
+      },
+      {
+        assetClass: "stock_br",
+        marketValue: "2000.00",
+        dailyChange: "0.00",
+        dailyChangePercent: "0.00000000",
+        comparablePositions: 2,
+      },
+    ]);
+    // Same rate on both days: the dollar did not move the book.
+    expect(result.summary.dailyFxChange).toBe("0.00");
+  });
+
   it("ignores FX for a BRL asset shown in BRL", () => {
     const petr = valued({
       ticker: "PETR4",

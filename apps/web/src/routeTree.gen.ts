@@ -18,6 +18,7 @@ import { Route as AppDailyRouteImport } from './routes/_app/daily'
 import { Route as AppDeepFinderRouteImport } from './routes/_app/deep-finder'
 import { Route as AppDetailedPositionsRouteImport } from './routes/_app/detailed-positions'
 import { Route as AppDividendsRouteImport } from './routes/_app/dividends'
+import { Route as AppIncomeTaxRouteImport } from './routes/_app/income-tax'
 import { Route as AppPerformanceRouteImport } from './routes/_app/performance'
 import { Route as AppPositionsRouteImport } from './routes/_app/positions'
 import { Route as AppTransactionsRouteImport } from './routes/_app/transactions'
@@ -69,6 +70,11 @@ const AppDividendsRoute = AppDividendsRouteImport.update({
   path: '/dividends',
   getParentRoute: () => AppRoute,
 } as any)
+const AppIncomeTaxRoute = AppIncomeTaxRouteImport.update({
+  id: '/income-tax',
+  path: '/income-tax',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppPerformanceRoute = AppPerformanceRouteImport.update({
   id: '/performance',
   path: '/performance',
@@ -109,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/deep-finder': typeof AppDeepFinderRoute
   '/detailed-positions': typeof AppDetailedPositionsRoute
   '/dividends': typeof AppDividendsRoute
+  '/income-tax': typeof AppIncomeTaxRoute
   '/performance': typeof AppPerformanceRoute
   '/positions': typeof AppPositionsRoute
   '/transactions': typeof AppTransactionsRoute
@@ -124,6 +131,7 @@ export interface FileRoutesByTo {
   '/deep-finder': typeof AppDeepFinderRoute
   '/detailed-positions': typeof AppDetailedPositionsRoute
   '/dividends': typeof AppDividendsRoute
+  '/income-tax': typeof AppIncomeTaxRoute
   '/performance': typeof AppPerformanceRoute
   '/positions': typeof AppPositionsRoute
   '/transactions': typeof AppTransactionsRoute
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/_app/deep-finder': typeof AppDeepFinderRoute
   '/_app/detailed-positions': typeof AppDetailedPositionsRoute
   '/_app/dividends': typeof AppDividendsRoute
+  '/_app/income-tax': typeof AppIncomeTaxRoute
   '/_app/performance': typeof AppPerformanceRoute
   '/_app/positions': typeof AppPositionsRoute
   '/_app/transactions': typeof AppTransactionsRoute
@@ -160,6 +169,7 @@ export interface FileRouteTypes {
     | '/deep-finder'
     | '/detailed-positions'
     | '/dividends'
+    | '/income-tax'
     | '/performance'
     | '/positions'
     | '/transactions'
@@ -175,6 +185,7 @@ export interface FileRouteTypes {
     | '/deep-finder'
     | '/detailed-positions'
     | '/dividends'
+    | '/income-tax'
     | '/performance'
     | '/positions'
     | '/transactions'
@@ -192,6 +203,7 @@ export interface FileRouteTypes {
     | '/_app/deep-finder'
     | '/_app/detailed-positions'
     | '/_app/dividends'
+    | '/_app/income-tax'
     | '/_app/performance'
     | '/_app/positions'
     | '/_app/transactions'
@@ -271,6 +283,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppDividendsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/income-tax': {
+      id: '/_app/income-tax'
+      path: '/income-tax'
+      fullPath: '/income-tax'
+      preLoaderRoute: typeof AppIncomeTaxRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/performance': {
       id: '/_app/performance'
       path: '/performance'
@@ -337,6 +356,7 @@ interface AppRouteChildren {
   AppDeepFinderRoute: typeof AppDeepFinderRoute
   AppDetailedPositionsRoute: typeof AppDetailedPositionsRoute
   AppDividendsRoute: typeof AppDividendsRoute
+  AppIncomeTaxRoute: typeof AppIncomeTaxRoute
   AppPerformanceRoute: typeof AppPerformanceRoute
   AppPositionsRoute: typeof AppPositionsRoute
   AppTransactionsRoute: typeof AppTransactionsRoute
@@ -350,6 +370,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDeepFinderRoute: AppDeepFinderRoute,
   AppDetailedPositionsRoute: AppDetailedPositionsRoute,
   AppDividendsRoute: AppDividendsRoute,
+  AppIncomeTaxRoute: AppIncomeTaxRoute,
   AppPerformanceRoute: AppPerformanceRoute,
   AppPositionsRoute: AppPositionsRoute,
   AppTransactionsRoute: AppTransactionsRoute,

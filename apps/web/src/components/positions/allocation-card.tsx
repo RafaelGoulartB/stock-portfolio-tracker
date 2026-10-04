@@ -9,46 +9,38 @@ import type {
   PortfolioSummary,
   ValuedPosition,
 } from "@portifolio-tracker/shared";
-import { ChevronDown, ChevronUp } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
+import { Cell, Pie, PieChart } from "recharts";
 import { assetClassText } from "@/components/asset-labels";
 import { AssetLink } from "@/components/asset-link";
-import { AssetLogo } from "@/components/asset-logo";
-import { Button } from "@/components/ui/button";
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { trpc } from "@/lib/api";
-import { formatCompactMoney, formatMoney, formatWeight } from "@/lib/format";
+import { ChartContainer } from "@/components/ui/chart";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { type RouterOutputs, trpc } from "@/lib/api";
+import { ASSET_CLASS_COLORS } from "@/lib/asset-class-colors";
+import {
+  formatCompactMoney,
+  formatMoney,
+  formatQuantity,
+  formatWeight,
+} from "@/lib/format";
 import { cn } from "@/lib/utils";
-import { ShareBar } from "./shared";
+
+type PortfolioConcentration = NonNullable<
+  RouterOutputs["positions"]["list"]["concentration"]
+>;
 
 /** How the composition panel buckets the portfolio. */
 type AllocationGroupBy = "class" | "currency" | "category";
 
-/** Assets listed before the panel asks to be expanded. */
-const COLLAPSED_ASSET_ROWS = 24;
-
 /** Bucket holding every asset the user has not filed under a category. */
 const UNCATEGORIZED = "uncategorized";
-
-/** Stable theme colors keep each built-in bucket recognizable across views. */
-const CLASS_GROUP_COLORS: Record<AssetClass, string> = {
-  stock_br: "var(--chart-1)",
-  stock_us: "var(--chart-2)",
-  reit: "var(--chart-3)",
-  etf: "var(--chart-4)",
-  bdr: "var(--chart-5)",
-  crypto: "var(--chart-6)",
-  fixed_income: "var(--chart-7)",
-  cash: "var(--chart-8)",
-  other: "var(--chart-9)",
-};
 
 const CURRENCY_GROUP_COLORS: Record<Currency, string> = {
   BRL: "var(--chart-1)",
@@ -69,25 +61,13 @@ type GroupRow = {
   assetIds: Set<string>;
 };
 
-type AssetRow = {
-  /** Ticker and currency, matching the holdings table row identity. */
-  id: string;
-  ticker: string;
-  assetClass: AssetClass;
-  currency: Currency;
-  /** Share of quoted equity, `0`–`1`. */
-  share: number;
-  shareLabel: string;
-  display: string;
-};
-
 /** Color used by a non-category bucket in the allocation panel. */
 function builtInGroupColor(
   groupBy: Exclude<AllocationGroupBy, "category">,
   key: string,
 ): string {
   return groupBy === "class"
-    ? CLASS_GROUP_COLORS[key as AssetClass]
+    ? ASSET_CLASS_COLORS[key as AssetClass]
     : CURRENCY_GROUP_COLORS[key as Currency];
 }
 
@@ -117,37 +97,35 @@ function assetRowId(position: ValuedPosition): string {
   return `${position.ticker}|${position.currency}`;
 }
 
-/** Heading and scale caption shared by both allocation sections. */
-function PanelHeading({
-  title,
-  caption,
-}: {
-  title: ReactNode;
-  caption: ReactNode;
-}) {
-  return (
-    <div>
-      <h3 className="text-xs font-medium text-muted-foreground">{title}</h3>
-      <p className="mt-0.5 text-xs text-muted-foreground/70">{caption}</p>
-    </div>
-  );
-}
+export type AllocationFilter = {
+  /** Bucket key within the grouping that produced it. */
+  key: string;
+  label: string;
+  /** Holdings-table row ids (`ticker|currency`) inside the bucket. */
+  ids: Set<string>;
+};
 
 export function AllocationCard({
   positions,
   summary,
   snapshotLabel,
+  concentration,
+  filter,
+  onFilterChange,
 }: {
   positions: ValuedPosition[];
   summary: PortfolioSummary;
   snapshotLabel: string;
+  concentration: PortfolioConcentration | null;
+  filter: AllocationFilter | null;
+  /** Selecting a bucket narrows the holdings table to it. */
+  onFilterChange: (filter: AllocationFilter | null) => void;
 }) {
   const { i18n } = useLingui();
   const [groupBy, setGroupBy] = useState<AllocationGroupBy>("class");
-  // `hovered` previews a bucket, `pinned` keeps it after the pointer leaves.
+  // `hovered` previews a bucket; the pinned one filters the holdings.
   const [hovered, setHovered] = useState<string | undefined>(undefined);
-  const [pinned, setPinned] = useState<string | undefined>(undefined);
-  const [expanded, setExpanded] = useState(false);
+  const pinned = filter?.key;
   const activeGroup = hovered ?? pinned;
 
   // Categories are the user's own buckets; the tab only shows up once at
@@ -171,7 +149,12 @@ export function AllocationCard({
     groupBy === "category" && categories.length === 0 ? "class" : groupBy;
 
   const quoted = useMemo(
-    () => positions.filter((position) => position.convertedMarketValue != null),
+    () =>
+      positions.filter(
+        (position) =>
+          position.convertedMarketValue != null &&
+          Number(position.convertedMarketValue) !== 0,
+      ),
     [positions],
   );
 
@@ -182,32 +165,6 @@ export function AllocationCard({
         0,
       ),
     [quoted],
-  );
-
-  const assets: AssetRow[] = useMemo(
-    () =>
-      quoted
-        .map((position) => {
-          const value = Number(position.convertedMarketValue ?? 0);
-          const share =
-            position.weight != null
-              ? Number(position.weight)
-              : total > 0
-                ? value / total
-                : 0;
-
-          return {
-            id: assetRowId(position),
-            ticker: position.ticker,
-            assetClass: position.assetClass,
-            currency: position.currency,
-            share,
-            shareLabel: formatWeight(String(share)),
-            display: formatCompactMoney(value, summary.displayCurrency),
-          };
-        })
-        .sort((a, b) => b.share - a.share),
-    [quoted, total, summary.displayCurrency],
   );
 
   const groups: GroupRow[] = useMemo(() => {
@@ -294,51 +251,6 @@ export function AllocationCard({
     i18n,
   ]);
 
-  // Clicking a bucket filters the list; hovering one only previews it, so the
-  // rows never reflow under the pointer.
-  const pinnedGroup = groups.find((group) => group.key === pinned);
-  const previewedIds =
-    !pinnedGroup && hovered
-      ? groups.find((group) => group.key === hovered)?.assetIds
-      : undefined;
-
-  const listedAssets = pinnedGroup
-    ? assets.filter((asset) => pinnedGroup.assetIds.has(asset.id))
-    : assets;
-
-  // Bars in the asset list are relative to the largest holding of the whole
-  // portfolio: shares of the total are too small to compare at this scale, and
-  // a fixed reference keeps a bar the same length whatever the filter is.
-  const largestShare = assets[0]?.share ?? 0;
-  const visibleAssets = expanded
-    ? listedAssets
-    : listedAssets.slice(0, COLLAPSED_ASSET_ROWS);
-
-  // Keep the visual association between a group bar and every asset in it.
-  const groupByAssetId = useMemo(() => {
-    const result = new Map<string, Pick<GroupRow, "color">>();
-
-    for (const group of groups) {
-      for (const assetId of group.assetIds) {
-        result.set(assetId, group);
-      }
-    }
-
-    return result;
-  }, [groups]);
-
-  // CSS grid normally fills rows (left, right, left, right). Split the list
-  // explicitly so descending values run down the left column, then continue
-  // at the top of the right column.
-  const assetColumns = useMemo(() => {
-    const splitAt = Math.ceil(visibleAssets.length / 2);
-
-    return [
-      { key: "first", assets: visibleAssets.slice(0, splitAt) },
-      { key: "second", assets: visibleAssets.slice(splitAt) },
-    ];
-  }, [visibleAssets]);
-
   const groupings: { id: AllocationGroupBy; label: ReactNode }[] = [
     { id: "class", label: <Trans id="positions.allocByClass">Class</Trans> },
     {
@@ -355,47 +267,62 @@ export function AllocationCard({
       : []),
   ];
 
+  function pin(key: string | undefined) {
+    const group = groups.find((entry) => entry.key === key);
+
+    onFilterChange(
+      group
+        ? { key: group.key, label: group.label, ids: group.assetIds }
+        : null,
+    );
+  }
+
   function toggleGroup(key: string) {
-    setPinned((current) => (current === key ? undefined : key));
+    pin(pinned === key ? undefined : key);
   }
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>
-          <Trans id="positions.allocation">Allocation</Trans>
-        </CardTitle>
-        <CardDescription>
-          <Trans id="positions.allocationHint">
-            Market value at {snapshotLabel} and share of quoted equity.
-          </Trans>
-        </CardDescription>
+      <CardHeader className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+        <div className="min-w-0 flex-1 basis-64 space-y-1.5">
+          <CardTitle>
+            <Trans id="positions.allocation">Allocation</Trans>
+          </CardTitle>
+          <CardDescription>
+            <Trans id="positions.allocationFilterHint">
+              Market value at {snapshotLabel}. Select a slice to show only its
+              assets in the holdings table.
+            </Trans>
+          </CardDescription>
+        </div>
         {quoted.length > 0 ? (
-          <CardAction>
-            <fieldset className="inline-flex rounded-lg border bg-muted/40 p-1">
-              <legend className="sr-only">
-                <Trans id="positions.allocGroupBy">Group by</Trans>
-              </legend>
-              {groupings.map((grouping) => (
-                <Button
-                  key={grouping.id}
-                  type="button"
-                  size="sm"
-                  aria-pressed={activeGroupBy === grouping.id}
-                  variant={activeGroupBy === grouping.id ? "default" : "ghost"}
-                  className={cn(
-                    activeGroupBy !== grouping.id && "text-muted-foreground",
-                  )}
-                  onClick={() => {
-                    setGroupBy(grouping.id);
-                    setPinned(undefined);
-                  }}
-                >
-                  {grouping.label}
-                </Button>
-              ))}
-            </fieldset>
-          </CardAction>
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            size="sm"
+            value={activeGroupBy}
+            onValueChange={(value) => {
+              if (!value) {
+                return;
+              }
+
+              setGroupBy(value as AllocationGroupBy);
+              onFilterChange(null);
+            }}
+            aria-label={i18n._(
+              t({ id: "positions.allocGroupBy", message: "Group by" }),
+            )}
+          >
+            {groupings.map((grouping) => (
+              <ToggleGroupItem
+                key={grouping.id}
+                value={grouping.id}
+                className="px-3"
+              >
+                {grouping.label}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
         ) : null}
       </CardHeader>
       <CardContent>
@@ -406,41 +333,27 @@ export function AllocationCard({
             </Trans>
           </p>
         ) : (
-          <div className="space-y-7">
-            <section className="space-y-3">
-              <PanelHeading
-                title={
-                  activeGroupBy === "class" ? (
-                    <Trans id="positions.allocGroupsClass">By class</Trans>
-                  ) : activeGroupBy === "currency" ? (
-                    <Trans id="positions.allocGroupsCurrency">
-                      By currency
-                    </Trans>
-                  ) : (
-                    <Trans id="positions.allocGroupsCategory">
-                      By category
-                    </Trans>
-                  )
-                }
-                caption={
-                  <Trans id="positions.allocGroupsCaption">
-                    Share of quoted equity.
-                  </Trans>
-                }
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
+            <section className="grid items-center gap-6 sm:grid-cols-[180px_minmax(0,1fr)]">
+              <AllocationDonut
+                groups={groups}
+                activeGroup={activeGroup}
+                total={total}
+                currency={summary.displayCurrency}
+                count={quoted.length}
+                onHover={setHovered}
+                onToggle={toggleGroup}
               />
-              {/* Auto-fit keeps the row full whatever the bucket count is. The
-                  negative margin lets the hover surface bleed out so labels
-                  still line up with the heading. */}
-              <ul className="-mx-2 grid grid-cols-[repeat(auto-fit,minmax(210px,1fr))] gap-x-10 gap-y-2">
+              <ul className="-mx-2 space-y-0.5">
                 {groups.map((group) => (
                   <li key={group.key}>
                     <button
                       type="button"
                       className={cn(
-                        "w-full cursor-pointer rounded-md px-2 py-1.5 text-left transition-colors hover:bg-muted/60",
+                        "w-full cursor-pointer rounded-md px-2 py-1.5 text-left transition-[opacity,background-color] hover:bg-muted/60",
                         pinned === group.key && "bg-muted/60",
                         activeGroup && activeGroup !== group.key
-                          ? "opacity-40"
+                          ? "opacity-45"
                           : "",
                       )}
                       aria-pressed={pinned === group.key}
@@ -450,21 +363,16 @@ export function AllocationCard({
                       onFocus={() => setHovered(group.key)}
                       onBlur={() => setHovered(undefined)}
                     >
-                      <span className="flex items-baseline justify-between gap-3 text-sm">
-                        <span className="truncate font-medium">
+                      <span className="flex items-center gap-2.5 text-sm">
+                        <span
+                          className="size-2.5 shrink-0 rounded-full"
+                          style={{ backgroundColor: group.color }}
+                          aria-hidden="true"
+                        />
+                        <span className="min-w-0 truncate font-medium">
                           {group.label}
                         </span>
-                        <span className="shrink-0 font-medium tabular-nums">
-                          {group.shareLabel}
-                        </span>
-                      </span>
-                      <ShareBar
-                        className="mt-1.5"
-                        color={group.color}
-                        fraction={group.share}
-                      />
-                      <span className="mt-1 flex items-baseline justify-between gap-3 text-xs text-muted-foreground">
-                        <span className="tabular-nums">
+                        <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
                           {i18n._(
                             t({
                               id: "positions.allocGroupCount",
@@ -475,8 +383,11 @@ export function AllocationCard({
                             }),
                           )}
                         </span>
-                        <span className="shrink-0 tabular-nums">
+                        <span className="ml-auto hidden shrink-0 text-muted-foreground tabular-nums sm:inline">
                           {group.display}
+                        </span>
+                        <span className="ml-auto w-12 shrink-0 text-right font-medium tabular-nums sm:ml-0">
+                          {group.shareLabel}
                         </span>
                       </span>
                     </button>
@@ -485,99 +396,223 @@ export function AllocationCard({
               </ul>
             </section>
 
-            <section className="space-y-3 border-t pt-6">
-              <PanelHeading
-                title={
-                  <Trans id="positions.allocAssets">
-                    By asset · {listedAssets.length}
-                  </Trans>
-                }
-                caption={
-                  <Trans id="positions.allocAssetsCaption">
-                    Bars relative to the largest position.
-                  </Trans>
-                }
-              />
-              {/* Two columns at most: a third one starves the bars. */}
-              <div className="-mx-2 grid gap-x-8 md:grid-cols-2">
-                {assetColumns.map((column) => (
-                  <ul key={column.key} className="space-y-0.5">
-                    {column.assets.map((asset) => {
-                      const group = groupByAssetId.get(asset.id);
-
-                      return (
-                        <li
-                          key={asset.id}
-                          className={cn(
-                            "flex items-center gap-2.5 rounded-md px-2 py-1 text-sm transition-opacity",
-                            previewedIds && !previewedIds.has(asset.id)
-                              ? "opacity-30"
-                              : "",
-                          )}
-                        >
-                          <AssetLogo
-                            ticker={asset.ticker}
-                            assetClass={asset.assetClass}
-                            currency={asset.currency}
-                            className="size-6 shrink-0 rounded-sm"
-                          />
-                          <div className="w-[76px] shrink-0">
-                            <AssetLink
-                              ticker={asset.ticker}
-                              className="block truncate font-medium"
-                              title={asset.ticker}
-                            >
-                              {asset.ticker}
-                            </AssetLink>
-                          </div>
-                          <ShareBar
-                            className="min-w-8 flex-1"
-                            color={group?.color}
-                            fraction={
-                              largestShare > 0 ? asset.share / largestShare : 0
-                            }
-                          />
-                          <span className="w-11 shrink-0 text-right tabular-nums">
-                            {asset.shareLabel}
-                          </span>
-                          {/* The amount is a bonus: it only shows where the bar can
-                              spare the width, and the holdings table always has it. */}
-                          <span className="hidden w-20 shrink-0 text-right text-muted-foreground tabular-nums xl:block">
-                            {asset.display}
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                ))}
-              </div>
-              {listedAssets.length > COLLAPSED_ASSET_ROWS ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="w-full text-muted-foreground"
-                  onClick={() => setExpanded((current) => !current)}
-                >
-                  {expanded ? (
-                    <>
-                      <ChevronUp className="size-4" aria-hidden="true" />
-                      <Trans id="positions.allocShowLess">Show fewer</Trans>
-                    </>
-                  ) : (
-                    <>
-                      <ChevronDown className="size-4" aria-hidden="true" />
-                      <Trans id="positions.allocShowAll">
-                        Show all {listedAssets.length}
-                      </Trans>
-                    </>
-                  )}
-                </Button>
-              ) : null}
-            </section>
+            {concentration ? (
+              <section className="border-t pt-6 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-8">
+                <ConcentrationPanel concentration={concentration} />
+              </section>
+            ) : null}
           </div>
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function AllocationDonut({
+  groups,
+  activeGroup,
+  total,
+  currency,
+  count,
+  onHover,
+  onToggle,
+}: {
+  groups: GroupRow[];
+  activeGroup: string | undefined;
+  total: number;
+  currency: Currency;
+  count: number;
+  onHover: (key: string | undefined) => void;
+  onToggle: (key: string) => void;
+}) {
+  const { i18n } = useLingui();
+  const active = groups.find((group) => group.key === activeGroup);
+
+  return (
+    <div className="relative mx-auto size-[180px]">
+      <ChartContainer config={{}} className="aspect-square size-full">
+        <PieChart>
+          <Pie
+            data={groups}
+            dataKey="share"
+            nameKey="label"
+            innerRadius={62}
+            outerRadius={88}
+            paddingAngle={groups.length > 1 ? 1.5 : 0}
+            stroke="var(--card)"
+            strokeWidth={2}
+            isAnimationActive={false}
+            onMouseEnter={(_, index) => onHover(groups[index]?.key)}
+            onMouseLeave={() => onHover(undefined)}
+            onClick={(_, index) => {
+              const key = groups[index]?.key;
+
+              if (key) {
+                onToggle(key);
+              }
+            }}
+          >
+            {groups.map((group) => (
+              <Cell
+                key={group.key}
+                fill={group.color}
+                className="cursor-pointer outline-none"
+                opacity={activeGroup && activeGroup !== group.key ? 0.3 : 1}
+              />
+            ))}
+          </Pie>
+        </PieChart>
+      </ChartContainer>
+      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+        <span className="max-w-28 truncate text-xs text-muted-foreground">
+          {active
+            ? active.label
+            : i18n._(
+                t({
+                  id: "positions.allocDonutTotal",
+                  message: plural(
+                    { count },
+                    { one: "# asset", other: "# assets" },
+                  ),
+                }),
+              )}
+        </span>
+        <span className="text-base font-semibold">
+          {active ? active.shareLabel : formatCompactMoney(total, currency)}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+function ConcentrationPanel({
+  concentration,
+}: {
+  concentration: PortfolioConcentration;
+}) {
+  const { i18n } = useLingui();
+  const top5 = Number(concentration.top5Weight);
+  const top10 = Number(concentration.top10Weight);
+  const segments = [
+    { key: "top5", share: top5, color: "var(--chart-primary)" },
+    {
+      key: "next5",
+      share: Math.max(top10 - top5, 0),
+      color: "color-mix(in oklab, var(--chart-primary) 55%, var(--card))",
+    },
+    {
+      key: "rest",
+      share: Math.max(1 - top10, 0),
+      color: "var(--muted)",
+    },
+  ].filter((segment) => segment.share > 0);
+  const effective = formatQuantity(concentration.effectivePositions);
+  const positionCount = concentration.positions;
+  const half = concentration.halfOfValueIn;
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h3 className="text-sm font-medium">
+          <Trans id="positions.concentration">Concentration</Trans>
+        </h3>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          <Trans id="positions.concentrationHint">
+            How much of the invested value depends on a few positions. Cash is
+            left out.
+          </Trans>
+        </p>
+      </div>
+
+      <dl className="grid grid-cols-3 gap-3">
+        <ConcentrationStat
+          label={<Trans id="positions.largestPosition">Largest</Trans>}
+          value={formatWeight(concentration.largest.weight)}
+          hint={
+            <AssetLink ticker={concentration.largest.ticker}>
+              {concentration.largest.ticker}
+            </AssetLink>
+          }
+        />
+        <ConcentrationStat
+          label={<Trans id="positions.top5">Top 5</Trans>}
+          value={formatWeight(concentration.top5Weight)}
+        />
+        <ConcentrationStat
+          label={<Trans id="positions.top10">Top 10</Trans>}
+          value={formatWeight(concentration.top10Weight)}
+        />
+      </dl>
+
+      <div className="space-y-1.5">
+        <div
+          className="flex h-2.5 gap-0.5 overflow-hidden rounded-full"
+          aria-hidden="true"
+        >
+          {segments.map((segment) => (
+            <span
+              key={segment.key}
+              className="h-full first:rounded-l-full last:rounded-r-full"
+              style={{
+                width: `${segment.share * 100}%`,
+                backgroundColor: segment.color,
+              }}
+            />
+          ))}
+        </div>
+        <p className="flex justify-between text-[11px] text-muted-foreground">
+          <span>
+            <Trans id="positions.top5Short">Top 5</Trans>
+          </span>
+          <span>
+            <Trans id="positions.restShort">Everything else</Trans>
+          </span>
+        </p>
+      </div>
+
+      <div className="space-y-1.5 rounded-lg bg-muted/40 px-3 py-2.5 text-sm">
+        <p>
+          <Trans id="positions.effectivePositions">
+            Behaves like <strong>{effective}</strong> equal-weight positions out
+            of {positionCount}.
+          </Trans>
+        </p>
+        <p className="text-muted-foreground">
+          {i18n._(
+            t({
+              id: "positions.halfOfValue",
+              message: plural(
+                { count: half },
+                {
+                  one: "Half of the invested value is in the largest position.",
+                  other:
+                    "Half of the invested value is in the # largest positions.",
+                },
+              ),
+            }),
+          )}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function ConcentrationStat({
+  label,
+  value,
+  hint,
+}: {
+  label: ReactNode;
+  value: string;
+  hint?: ReactNode;
+}) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="mt-0.5 text-lg font-semibold">{value}</dd>
+      {hint ? (
+        <dd className="truncate text-xs text-muted-foreground">{hint}</dd>
+      ) : null}
+    </div>
   );
 }

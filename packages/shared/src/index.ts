@@ -1,6 +1,9 @@
 export * from "./allocation";
 export * from "./auth";
+export * from "./broker-note-formats";
+export * from "./broker-notes";
 export * from "./categories";
+export * from "./cnpj";
 export * from "./contribution-plan";
 export * from "./corporate-actions";
 export * from "./currency";
@@ -9,6 +12,7 @@ export * from "./deep-finder";
 export * from "./dividends";
 export * from "./fx";
 export * from "./holdings-import";
+export * from "./income-tax";
 export * from "./performance";
 export * from "./quotes";
 export * from "./results";

@@ -338,15 +338,30 @@ six hours. Live screens expose an explicit "Refresh quotes" action so a
 longer freshness window does not trap the user on a dead tape.
 
 Mutation invalidation in `routes/_app/transactions.tsx` already covers
-`positions.list`, `positions.daily`, `positions.finder`, `allocation.list`,
+`positions.list`, `positions.daily`, `positions.finder`,
+`positions.finderWindows`, `allocation.list`,
 `performance.history`, `dividends.history`, and `transactions.forTicker`.
 Preserve `lib/session.ts` clearing all queries on account changes. Do not
 persist private portfolio query caches.
 
 The API also memoizes `loadTransactions` / `loadValuedPortfolio` inside one
-HTTP batch via `runWithRequestMemo`, and Yahoo spot quotes batch into a
-single upstream request. Provider cache hits still do not persist to
-PostgreSQL.
+HTTP batch via `runWithRequestMemo`, together with the account splits,
+allocation metadata, score policy and cash balance, and Yahoo spot quotes
+batch into a single upstream request. Provider cache hits still do not
+persist to PostgreSQL.
+
+The session lookup that authenticates every HTTP request is cached in the
+process for 60 seconds, never past the session's own expiry, and logout
+removes the entry immediately. Without it each page batch began with a serial
+database round trip and could wake a suspended Neon compute. With several API
+instances, a session deleted elsewhere stays valid here for at most that
+minute.
+
+Route loaders for Positions, Daily and Allocation start the page's main
+queries while its code chunk downloads, using the same pure input builder
+(`portfolioQueryInput`) as the page hooks so both hit one cache entry. Hover
+preloads deliberately do not prefetch data, so pointing at a link spends no
+database or provider quota.
 
 Acceptance: navigating back within 15 minutes performs no new request for the
 same live query key; an explicit refresh bypasses that window; mutations
@@ -509,15 +524,34 @@ review. No such cache is needed for the initial improvements above.
 ## Other bounded opportunities
 
 - External providers: Yahoo quotes/series, dividends, and Frankfurter use
-  process-local Maps and cache successful responses after the fetch completes.
-  Concurrent misses for one key can therefore issue duplicate upstream calls.
-  Share in-flight promises by the full provider identity, remove them on both
-  success and failure, and bound/prune completed caches. TTL checks alone do
-  not remove expired keys that are never visited again. Keep manual fallback
-  values out of shared public quote entries and retain failure distinctions.
-  This saves provider traffic and memory, not PostgreSQL storage; replicas and
-  restarts still have separate cold caches. No Redis or database cache is
-  justified by the current evidence.
+  process-local Maps, share in-flight promises per key and prune expired
+  entries. Replicas and restarts still have separate cold caches. No Redis or
+  database cache is justified by the current evidence. Freshness and quota
+  rules (2026-10-02):
+  - Yahoo's `v7/finance/quote` now requires the cookie/crumb pair, shared with
+    the result-date provider (`lib/yahoo-session.ts`, one handshake per
+    hour). One call prices up to 40 symbols. If it is refused even with a
+    renewed crumb, spot quotes use a per-symbol five-session chart (about 2 KB)
+    for 15 minutes before the batch is tried again. Spot prices are never read
+    from the multi-year history cache, which can be up to 12 hours old.
+  - Spot TTL is 15 minutes while a market is open and for 45 minutes after
+    its close (the delayed tape and closing auction settle late); only then
+    is a quote held until the next session. A dated close whose chart was
+    downloaded on or before that (UTC) day may be a session in progress: it
+    and the series behind it are re-read after 30 minutes. A close downloaded
+    on a later day is final and kept for seven days.
+  - "Refresh quotes" forces spot quotes (and Deep Finder baselines, whose 1d
+    window depends on yesterday's close) but not the allocation market-signal
+    histories: 12-1 momentum skips the latest month and fair-value reference
+    closes are in the past.
+  - Frankfurter is called at `api.frankfurter.dev/v1` (the old host answers
+    every call with a 301). Dated quotes and ranges ending before yesterday,
+    and PTAX ranges ending before today in São Paulo, are kept for seven days;
+    the live rate keeps six hours. The PTAX year-end buy rate is cached too.
+  - Alpha Vantage refusals arrive as HTTP 200 JSON. A daily-quota message
+    pauses every Alpha Vantage call until the next UTC day, other refusals for
+    a minute; a failed ticker or earnings calendar is not retried for an hour.
+    Yahoo keeps answering in the meantime.
 - `/health` performs `SELECT 1` on each request (`apps/api/src/index.ts`). If
   external monitoring polls every 30 seconds, that alone would issue 86,400
   database queries in 30 days per monitor. This is a hypothetical load, not a

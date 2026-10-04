@@ -54,13 +54,207 @@ describe("portable data backups", () => {
       },
     });
 
-    expect(manifest.version).toBe(10);
+    expect(manifest.version).toBe(13);
     if (record.entity !== "transactions") {
       throw new Error("expected transaction record");
     }
     expect(record.data.createdAt).toBeInstanceOf(Date);
     // A pre-v7 trade restores with its trade-date rate still unresolved.
     expect(record.data.usdBrlRate).toBeNull();
+    // A pre-v11 trade was never imported from a broker note.
+    expect(record.data.brokerNoteRef).toBeNull();
+  });
+
+  it("accepts a v11 broker note and defaults note counts for older manifests", () => {
+    const record = backupRecordSchema.parse({
+      type: "record",
+      entity: "brokerNotes",
+      data: {
+        ref: "4f1f8a5e-7d0c-4f43-9a55-2c6a0e1d9b10",
+        format: "inter-dtvm-sinacor",
+        fingerprint: "a".repeat(64),
+        fileName: "nota.pdf",
+        fileSha256: "b".repeat(64),
+        noteNumber: null,
+        account: "999",
+        tradeDate: "2026-09-01",
+        settlementDate: "2026-09-03",
+        currency: "BRL",
+        purchasesTotal: "2645.20000000",
+        salesTotal: "0.00000000",
+        feesTotal: "0.78000000",
+        withheldTax: "0.00000000",
+        netAmount: "-2645.98000000",
+        details: { version: 1, fees: [], withheldTaxBase: null, lines: [] },
+        createdAt: "2026-09-02T12:00:00.000Z",
+      },
+    });
+
+    expect(record.entity).toBe("brokerNotes");
+    if (record.entity !== "brokerNotes") {
+      throw new Error("expected broker note record");
+    }
+    // A pre-v12 note counts all of its IRRF as the 0.005% on sales.
+    expect(record.data.dayTradeWithheldTax).toBe("0");
+    expect(
+      manifestSchema.parse({
+        type: "manifest",
+        format: BACKUP_FORMAT,
+        version: 10,
+        exportedAt: "2026-09-06T20:00:00.000Z",
+        counts: {
+          categories: 0,
+          allocationAssets: 0,
+          assetReviews: 0,
+          transactions: 0,
+          assetCategories: 0,
+        },
+      }).counts,
+    ).toMatchObject({
+      brokerNotes: 0,
+      brokerSecurityAliases: 0,
+      incomeTaxSettings: 0,
+      darfPayments: 0,
+      assetTaxProfiles: 0,
+      foreignCashBalances: 0,
+    });
+  });
+
+  it("accepts v13 tax records and rejects malformed ones", () => {
+    const parse = (entity: string, data: Record<string, unknown>) =>
+      backupRecordSchema.parse({ type: "record", entity, data });
+    const stamps = {
+      createdAt: "2026-10-01T12:00:00.000Z",
+      updatedAt: "2026-10-01T12:00:00.000Z",
+    };
+
+    expect(
+      parse("darfPayments", {
+        month: "2026-03",
+        paidOn: "2026-04-29",
+        amount: "147.95000000",
+        ...stamps,
+      }).entity,
+    ).toBe("darfPayments");
+    expect(() =>
+      parse("darfPayments", {
+        month: "2026-13",
+        paidOn: "2026-04-29",
+        amount: "1",
+        ...stamps,
+      }),
+    ).toThrow();
+    expect(
+      parse("assetTaxProfiles", {
+        ticker: "TTEN3",
+        legalName: "TRÊS TENTOS AGROINDUSTRIAL S/A",
+        cnpj: "94.813.102/0001-70",
+        broker: null,
+        ...stamps,
+      }).entity,
+    ).toBe("assetTaxProfiles");
+    expect(() =>
+      parse("assetTaxProfiles", {
+        ticker: "TTEN3",
+        legalName: null,
+        cnpj: "94.813.102/0001-71",
+        broker: null,
+        ...stamps,
+      }),
+    ).toThrow();
+    expect(
+      parse("foreignCashBalances", {
+        year: 2025,
+        amountUsd: "12.34000000",
+        valueBrl: "67.89000000",
+        institution: "Inter&Co",
+        updatedAt: stamps.updatedAt,
+      }).entity,
+    ).toBe("foreignCashBalances");
+  });
+
+  it("requires added shares and a unit cost on a bonus, and none on a split", () => {
+    const action = (data: Record<string, unknown>) =>
+      backupRecordSchema.parse({
+        type: "record",
+        entity: "corporateActions",
+        data: {
+          ticker: "ITUB3",
+          effectiveAt: "2026-03-20",
+          notes: null,
+          createdAt: "2026-03-20T12:00:00.000Z",
+          ...data,
+        },
+      });
+
+    expect(
+      action({
+        kind: "bonus",
+        fromQuantity: "298",
+        toQuantity: "327.8",
+        unitCost: "18",
+      }).entity,
+    ).toBe("corporateActions");
+    expect(() =>
+      action({ kind: "bonus", fromQuantity: "298", toQuantity: "327.8" }),
+    ).toThrow();
+    expect(() =>
+      action({
+        kind: "bonus",
+        fromQuantity: "10",
+        toQuantity: "1",
+        unitCost: "18",
+      }),
+    ).toThrow();
+    expect(() =>
+      action({
+        kind: "split",
+        fromQuantity: "1",
+        toQuantity: "2",
+        unitCost: "18",
+      }),
+    ).toThrow();
+    // A pre-v13 split restores without a unit cost.
+    expect(
+      action({ kind: "split", fromQuantity: "1", toQuantity: "2" }).entity,
+    ).toBe("corporateActions");
+  });
+
+  it("accepts v12 income tax opening balances within numeric(22, 8)", () => {
+    const data = {
+      startYear: 2026,
+      ordinaryLoss: "4571.99000000",
+      dayTradeLoss: "0.00000000",
+      fiiLoss: "2287.57000000",
+      foreignLoss: "0.00000000",
+      pendingDarf: "0.00000000",
+      updatedAt: "2026-10-01T12:00:00.000Z",
+    };
+    const record = backupRecordSchema.parse({
+      type: "record",
+      entity: "incomeTaxSettings",
+      data,
+    });
+
+    if (record.entity !== "incomeTaxSettings") {
+      throw new Error("expected income tax settings record");
+    }
+    expect(record.data.ordinaryLoss).toBe("4571.99000000");
+    expect(record.data.updatedAt).toBeInstanceOf(Date);
+    expect(() =>
+      backupRecordSchema.parse({
+        type: "record",
+        entity: "incomeTaxSettings",
+        data: { ...data, fiiLoss: "-1" },
+      }),
+    ).toThrow();
+    expect(() =>
+      backupRecordSchema.parse({
+        type: "record",
+        entity: "incomeTaxSettings",
+        data: { ...data, startYear: 1999 },
+      }),
+    ).toThrow();
   });
 
   it("accepts a v8 split record and defaults its count for older manifests", () => {

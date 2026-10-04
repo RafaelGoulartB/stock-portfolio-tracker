@@ -10,6 +10,11 @@ export type PerformanceData = RouterOutputs["performance"]["history"];
 export type PerformanceSummary = PerformanceData["summary"];
 export type ClassBreakdown = PerformanceData["byAssetClass"][number];
 export type AssetBreakdown = PerformanceData["byAsset"][number];
+export type PerformanceMonth = PerformanceData["months"][number];
+export type PerformanceYear = PerformanceData["years"][number];
+
+/** A monthly return this large saturates the calendar color scale. */
+export const MONTH_HEAT_CAP = 0.06;
 
 export type MonthRow = {
   key: string;
@@ -22,8 +27,12 @@ export type MonthRow = {
   netFlow: number;
   cumulativeNetFlow: number;
   unrealizedPnl: number;
+  /** Money earned in the month, net of contributions. */
+  result: number | null;
   monthlyReturn: number | null;
   cumulativeReturn: number | null;
+  /** Distance from the peak of the compounded curve, `0` or negative. */
+  drawdown: number | null;
 } & Partial<Record<AssetClass, number>>;
 
 export type Category = { assetClass: AssetClass; color: string };
@@ -46,6 +55,14 @@ function monthDate(key: string): Date {
   const [year, month] = key.split("-").map(Number);
 
   return new Date(Date.UTC(year, month - 1, 1));
+}
+
+/** Short month name, e.g. `Jan`, for a calendar column. */
+export function shortMonthName(month: number, locale: string): string {
+  return new Intl.DateTimeFormat(locale, {
+    month: "short",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(2024, month, 1)));
 }
 
 export function fullMonthLabel(key: string, locale: string): string {

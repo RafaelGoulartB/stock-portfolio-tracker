@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { resetAlphaVantageQuota } from "../alpha-vantage-quota";
 import {
   AlphaVantageResultProvider,
   parseAlphaVantageCalendar,
@@ -16,6 +17,10 @@ function csvResponse(csv: string): Response {
     headers: { "content-type": "text/csv" },
   });
 }
+
+beforeEach(() => {
+  resetAlphaVantageQuota();
+});
 
 describe("parseAlphaVantageCalendar", () => {
   it("normalizes headers, ignores invalid dates and deduplicates rows", () => {
@@ -83,6 +88,34 @@ MSFT,2026-11-01
     await expect(provider.getNextResult(asset, "2026-09-08")).rejects.toThrow(
       "did not return an earnings calendar",
     );
+  });
+
+  it("remembers a failed calendar instead of refetching per ticker", async () => {
+    let now = 1_000;
+    const fetchMock = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response("", { status: 503 }))
+      .mockResolvedValue(csvResponse("symbol,reportDate\nAAPL,2026-10-30\n"));
+    const provider = new AlphaVantageResultProvider(
+      "key",
+      fetchMock,
+      () => now,
+    );
+    const msft = {
+      ticker: "MSFT",
+      assetClass: "stock_us",
+      currency: "USD",
+    } as const;
+
+    await expect(provider.getNextResult(asset, "2026-09-08")).rejects.toThrow();
+    await expect(provider.getNextResult(msft, "2026-09-08")).rejects.toThrow();
+    expect(fetchMock).toHaveBeenCalledOnce();
+
+    now += 61 * 60 * 1_000;
+    await expect(
+      provider.getNextResult(asset, "2026-09-08"),
+    ).resolves.toMatchObject({ date: "2026-10-30" });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("does not call the provider when no API key is configured", async () => {

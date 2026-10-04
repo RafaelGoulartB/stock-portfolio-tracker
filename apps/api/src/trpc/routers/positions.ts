@@ -10,12 +10,13 @@ import {
 import {
   isOpenQuantity,
   portfolioReturnContribution,
+  positionConcentration,
   summarizePositions,
 } from "../../domain/positions";
 import { resolvePreviousUsdBrlRate } from "../fx-rate";
 import { protectedProcedure, router } from "../trpc";
 import { loadValuedPortfolio } from "../valuation";
-import { finder } from "./deep-finder";
+import { finder, finderWindows } from "./deep-finder";
 
 export const positionsRouter = router({
   list: protectedProcedure
@@ -51,6 +52,7 @@ export const positionsRouter = router({
           };
         }),
         summary,
+        concentration: positionConcentration(positions),
         fx: {
           displayCurrency: input.displayCurrency,
           usdBrlRate,
@@ -122,4 +124,5 @@ export const positionsRouter = router({
    * The crowded bar chart on Positions lives here so every ticker has room.
    */
   finder,
+  finderWindows,
 });

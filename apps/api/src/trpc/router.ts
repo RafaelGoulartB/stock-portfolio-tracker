@@ -1,5 +1,6 @@
 import { allocationRouter } from "./routers/allocation";
 import { authRouter } from "./routers/auth";
+import { brokerNotesRouter } from "./routers/broker-notes";
 import { categoriesRouter } from "./routers/categories";
 import { contributionPlanConfigRouter } from "./routers/contribution-plan-config";
 import { corporateActionsRouter } from "./routers/corporate-actions";
@@ -7,6 +8,7 @@ import { dataRouter } from "./routers/data";
 import { devSeedRouter } from "./routers/dev-seed";
 import { dividendsRouter } from "./routers/dividends";
 import { fxRouter } from "./routers/fx";
+import { incomeTaxRouter } from "./routers/income-tax";
 import { performanceRouter } from "./routers/performance";
 import { positionsRouter } from "./routers/positions";
 import { quotesRouter } from "./routers/quotes";
@@ -17,6 +19,7 @@ import { publicProcedure, router } from "./trpc";
 export const appRouter = router({
   health: publicProcedure.query(() => ({ ok: true as const })),
   auth: authRouter,
+  brokerNotes: brokerNotesRouter,
   allocation: allocationRouter,
   categories: categoriesRouter,
   contributionPlanConfig: contributionPlanConfigRouter,
@@ -24,6 +27,7 @@ export const appRouter = router({
   data: dataRouter,
   dividends: dividendsRouter,
   fx: fxRouter,
+  incomeTax: incomeTaxRouter,
   quotes: quotesRouter,
   scoreConfig: scoreConfigRouter,
   transactions: transactionsRouter,

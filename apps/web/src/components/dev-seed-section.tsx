@@ -28,6 +28,11 @@ export function DevSeedSection() {
         utils.allocation.invalidate(),
         utils.dividends.invalidate(),
         utils.performance.invalidate(),
+        utils.incomeTax.invalidate(),
+        utils.categories.invalidate(),
+        utils.corporateActions.invalidate(),
+        utils.brokerNotes.invalidate(),
+        utils.data.summary.invalidate(),
       ]);
 
       const base = i18n._(

@@ -66,6 +66,24 @@ export function windowStartDay(
   }
 }
 
+/**
+ * Baseline day of one holding. `1d` steps back from the day of the holding's
+ * current quote, not from the calendar: on a weekend or before the open the
+ * latest quote is the previous session's close, and comparing it with the
+ * close of the calendar day before would read every holding as flat.
+ */
+export function holdingBaselineDay(
+  window: DeepFinderWindow,
+  today: string,
+  quoteDay: string | null,
+): string | null {
+  if (window === "1d" && quoteDay !== null && quoteDay <= today) {
+    return windowStartDay("1d", quoteDay);
+  }
+
+  return windowStartDay(window, today);
+}
+
 /** Extra calendar days before the window start so a weekend still has a close. */
 export function seriesLookbackStart(start: string): string {
   return shiftIsoDate(start, -10);

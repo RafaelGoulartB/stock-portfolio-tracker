@@ -3,26 +3,27 @@
 
 @custom-variant dark (&:is(.dark *));
 
-:root {
+:root,
+[data-theme-palette="default"] {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --background: oklch(0.982 0.002 264);
+  --foreground: oklch(0.2 0.007 264);
+  --card: oklch(0.998 0 264);
+  --card-foreground: oklch(0.2 0.007 264);
+  --popover: oklch(0.998 0 264);
+  --popover-foreground: oklch(0.2 0.007 264);
+  --primary: oklch(0.22 0.008 264);
+  --primary-foreground: oklch(0.985 0.002 264);
+  --secondary: oklch(0.952 0.004 264);
+  --secondary-foreground: oklch(0.24 0.008 264);
+  --muted: oklch(0.958 0.003 264);
+  --muted-foreground: oklch(0.5 0.008 264);
+  --accent: oklch(0.942 0.007 264);
+  --accent-foreground: oklch(0.26 0.015 264);
+  --destructive: oklch(0.577 0.215 27);
+  --border: oklch(0.912 0.003 264);
+  --input: oklch(0.882 0.004 264);
+  --ring: oklch(0.6 0.012 264);
   --gain: oklch(0.627 0.194 149.214);
   --loss: oklch(0.577 0.245 27.325);
   /* Mid-band for grades 4–6: yellow, distinct from `--gain` / `--loss` and
@@ -40,27 +41,31 @@
   --chart-8: oklch(0.62 0.19 340);
   --chart-9: oklch(0.65 0.14 95);
   --chart-10: oklch(0.62 0.03 264);
+  /* Single-series charts follow the palette; the default keeps the first
+     categorical hue. */
+  --chart-primary: var(--chart-1);
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+.dark,
+[data-theme-palette="default"][data-scheme="dark"] {
+  --background: oklch(0.165 0.004 264);
+  --foreground: oklch(0.965 0.002 264);
+  --card: oklch(0.198 0.005 264);
+  --card-foreground: oklch(0.965 0.002 264);
+  --popover: oklch(0.222 0.005 264);
+  --popover-foreground: oklch(0.965 0.002 264);
+  --primary: oklch(0.93 0.004 264);
+  --primary-foreground: oklch(0.2 0.006 264);
+  --secondary: oklch(0.27 0.006 264);
+  --secondary-foreground: oklch(0.965 0.002 264);
+  --muted: oklch(0.255 0.005 264);
+  --muted-foreground: oklch(0.72 0.006 264);
+  --accent: oklch(0.285 0.011 264);
+  --accent-foreground: oklch(0.965 0.002 264);
+  --destructive: oklch(0.68 0.19 24);
+  --border: oklch(0.29 0.006 264);
+  --input: oklch(0.33 0.007 264);
+  --ring: oklch(0.62 0.012 264);
   --gain: oklch(0.723 0.191 150.813);
   --loss: oklch(0.704 0.191 22.216);
   --caution: oklch(0.85 0.15 95);
@@ -74,6 +79,7 @@
   --chart-8: oklch(0.72 0.18 340);
   --chart-9: oklch(0.79 0.14 95);
   --chart-10: oklch(0.7 0.03 264);
+  --chart-primary: var(--chart-1);
 }
 
 @theme inline {
@@ -112,6 +118,7 @@
   --color-chart-8: var(--chart-8);
   --color-chart-9: var(--chart-9);
   --color-chart-10: var(--chart-10);
+  --color-chart-primary: var(--chart-primary);
 }
 
 @layer base {
@@ -124,19 +131,9 @@
   }
 }
 
-/* Inset fields inside dialogs only, so inputs read as a layer below the panel. */
+/* Inset fields inside dialogs only: the panel is the raised popover surface,
+   so fields sink back toward the page background in both color schemes. */
 [data-slot="dialog-content"]
 :is([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"]) {
-  background-color: color-mix(in oklch, var(--muted) 72%, transparent);
-}
-
-html.dark
-  [data-slot="dialog-content"]
-  :is(
-    [data-slot="input"],
-    [data-slot="textarea"],
-    [data-slot="select-trigger"]
-  ) {
-  background-color: color-mix(in oklch, black 30%, var(--card));
-  border-color: oklch(1 0 0 / 14%);
+  background-color: color-mix(in oklch, var(--background) 60%, var(--popover));
 }

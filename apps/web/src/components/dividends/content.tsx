@@ -4,6 +4,7 @@ import { CircleDollarSign, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { IncomeByAssetTable } from "./by-asset-table";
 import { IncomeCalendar } from "./calendar";
 import { IncomeChart, UpcomingCard } from "./charts";
 import { HistoryTable } from "./history-table";
@@ -40,13 +41,23 @@ export function DividendsContent({ data }: { data: DividendData }) {
     );
   }
 
+  // The side card only earns its column when something is announced.
+  const hasUpcoming = data.events.some(
+    (event) => event.status !== "estimated_paid",
+  );
+
   return (
     <>
       <Summary data={data} />
-      <div className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
+      {hasUpcoming ? (
+        <div className="grid gap-5 lg:grid-cols-[1.4fr_0.9fr]">
+          <IncomeChart data={data} className="min-w-0" />
+          <UpcomingCard data={data} />
+        </div>
+      ) : (
         <IncomeChart data={data} />
-        <UpcomingCard data={data} />
-      </div>
+      )}
+      <IncomeByAssetTable data={data} />
       <IncomeCalendar events={data.events} />
       <HistoryTable
         key={`${data.provider.requested}|${data.range.start}|${data.range.end}`}

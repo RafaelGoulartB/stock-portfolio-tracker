@@ -12,6 +12,8 @@ type SeriesCacheEntry = { points: FxSeriesPoint[]; expiresAt: number };
 
 /** PTAX closes are final once published; today's may still be pending. */
 const CACHE_TTL_MS = 6 * 60 * 60 * 1_000;
+/** A range that ends before today in São Paulo can no longer change. */
+const SETTLED_TTL_MS = 7 * 24 * 60 * 60 * 1_000;
 /** Long enough to cross Carnival or a year-end holiday run. */
 const LOOKBACK_DAYS = 10;
 const ENDPOINT =
@@ -19,6 +21,15 @@ const ENDPOINT =
 
 const seriesCache = new Map<string, SeriesCacheEntry>();
 const pendingSeries = new Map<string, Promise<FxSeriesPoint[]>>();
+const buyRateCache = new Map<
+  string,
+  { point: FxSeriesPoint | null; expiresAt: number }
+>();
+const pendingBuyRates = new Map<string, Promise<FxSeriesPoint | null>>();
+
+function ttlFor(lastDay: string): number {
+  return lastDay < saoPauloToday() ? SETTLED_TTL_MS : CACHE_TTL_MS;
+}
 
 /** Today in São Paulo, where PTAX is published, `YYYY-MM-DD`. */
 export function saoPauloToday(): string {
@@ -138,7 +149,7 @@ export class BcbPtaxProvider implements FxProvider {
       const points = parsePtaxSeries(await response.json());
 
       pruneExpired(seriesCache);
-      seriesCache.set(key, { points, expiresAt: Date.now() + CACHE_TTL_MS });
+      seriesCache.set(key, { points, expiresAt: Date.now() + ttlFor(end) });
       return points;
     });
   }
@@ -149,7 +160,10 @@ export class BcbPtaxProvider implements FxProvider {
  * rather than turned into a rate; a body with no usable row is an error, so
  * an empty range never reads as a valid quote.
  */
-export function parsePtaxSeries(body: unknown): FxSeriesPoint[] {
+export function parsePtaxSeries(
+  body: unknown,
+  field: PtaxField = "cotacaoVenda",
+): FxSeriesPoint[] {
   const rows =
     typeof body === "object" && body !== null && "value" in body
       ? (body as { value: unknown }).value
@@ -162,15 +176,14 @@ export function parsePtaxSeries(body: unknown): FxSeriesPoint[] {
   const byDay = new Map<string, string>();
 
   for (const row of rows) {
-    const { cotacaoVenda, dataHoraCotacao } = (row ?? {}) as {
-      cotacaoVenda?: unknown;
-      dataHoraCotacao?: unknown;
-    };
+    const record = (row ?? {}) as Record<string, unknown>;
+    const quote = record[field];
+    const { dataHoraCotacao } = record;
 
     if (
-      typeof cotacaoVenda !== "number" ||
-      !Number.isFinite(cotacaoVenda) ||
-      cotacaoVenda <= 0 ||
+      typeof quote !== "number" ||
+      !Number.isFinite(quote) ||
+      quote <= 0 ||
       typeof dataHoraCotacao !== "string" ||
       !/^\d{4}-\d{2}-\d{2}/.test(dataHoraCotacao)
     ) {
@@ -180,7 +193,7 @@ export function parsePtaxSeries(body: unknown): FxSeriesPoint[] {
     // Later bulletins of the same day replace earlier ones.
     byDay.set(
       dataHoraCotacao.slice(0, 10),
-      formatDecimal(toDecimal(String(cotacaoVenda)), 8),
+      formatDecimal(toDecimal(String(quote)), 8),
     );
   }
 
@@ -193,8 +206,57 @@ export function parsePtaxSeries(body: unknown): FxSeriesPoint[] {
     .sort((a, b) => a.asOf.localeCompare(b.asOf));
 }
 
+type PtaxField = "cotacaoVenda" | "cotacaoCompra";
+
+/**
+ * The PTAX *buy* rate of `day` or the last business day before it. The IRPF
+ * converts foreign balances held on 31 December at this rate; trades keep
+ * using the sell rate.
+ */
+export async function ptaxBuyRateOnOrBefore(
+  day: string,
+): Promise<FxSeriesPoint | null> {
+  const hit = buyRateCache.get(day);
+
+  if (hit && hit.expiresAt > Date.now()) {
+    return hit.point;
+  }
+
+  return coalesce(pendingBuyRates, day, async () => {
+    const point = await fetchBuyRateOnOrBefore(day);
+    pruneExpired(buyRateCache);
+    buyRateCache.set(day, { point, expiresAt: Date.now() + ttlFor(day) });
+    return point;
+  });
+}
+
+async function fetchBuyRateOnOrBefore(
+  day: string,
+): Promise<FxSeriesPoint | null> {
+  const query = new URLSearchParams({
+    "@dataInicial": odataDay(shiftDays(day, -LOOKBACK_DAYS)),
+    "@dataFinalCotacao": odataDay(day),
+    $format: "json",
+    $select: "cotacaoCompra,dataHoraCotacao",
+  });
+  const response = await fetch(`${ENDPOINT}?${query}`, {
+    signal: AbortSignal.timeout(10_000),
+  });
+
+  if (!response.ok) {
+    throw new Error(`BCB PTAX request failed (${response.status})`);
+  }
+
+  return ptaxOnOrBefore(
+    parsePtaxSeries(await response.json(), "cotacaoCompra"),
+    day,
+  );
+}
+
 /** Clears cached series. Exported for tests. */
 export function clearPtaxCache(): void {
   seriesCache.clear();
   pendingSeries.clear();
+  buyRateCache.clear();
+  pendingBuyRates.clear();
 }

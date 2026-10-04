@@ -1,5 +1,6 @@
 import type {
   AssetClass,
+  CorporateActionKind,
   Currency,
   CurrencyTotal,
   PortfolioSummary,
@@ -43,13 +44,19 @@ export type ConsolidationInput = {
   unitScale?: { to: string; from: string };
 };
 
-/** A recorded split: `fromQuantity` old shares become `toQuantity` new ones. */
+/**
+ * A recorded split or bonus issue: `fromQuantity` old shares become
+ * `toQuantity` new ones. Units scale the same way for both; only the income
+ * tax ledger reads `unitCost`, the cost a bonus share was attributed.
+ */
 export type SplitEvent = {
   ticker: string;
   /** First trading day in the new units. */
   effectiveAt: string;
   fromQuantity: string;
   toQuantity: string;
+  kind?: CorporateActionKind;
+  unitCost?: string | null;
 };
 
 /** Share units a trade represents today, after every later split. */
@@ -117,6 +124,45 @@ export function adjustForSplits<T extends ConsolidationInput>(
       },
     };
   });
+}
+
+/**
+ * Units of `ticker` held at the end of the day before `day`, in the units of
+ * that date: trades as traded, with every split before `day` applied when it
+ * happened. `entries` must not be adjusted with {@link adjustForSplits}.
+ */
+export function unitsHeldBefore(
+  entries: readonly ConsolidationInput[],
+  splits: readonly SplitEvent[],
+  ticker: string,
+  day: string,
+): Decimal {
+  const events = [
+    ...entries
+      .filter((entry) => entry.ticker === ticker && entry.tradedAt < day)
+      .map((entry) => ({ at: entry.tradedAt, order: 1, entry })),
+    ...splits
+      .filter((split) => split.ticker === ticker && split.effectiveAt < day)
+      .map((split) => ({ at: split.effectiveAt, order: 0, split })),
+  ].sort((a, b) => (a.at === b.at ? a.order - b.order : a.at < b.at ? -1 : 1));
+  let units = ZERO;
+
+  for (const event of events) {
+    if ("split" in event) {
+      units = div(
+        mul(units, toDecimal(event.split.toQuantity)),
+        toDecimal(event.split.fromQuantity),
+      );
+    } else {
+      const quantity = toDecimal(event.entry.quantity);
+      units =
+        event.entry.side === "buy"
+          ? add(units, quantity)
+          : sub(units, quantity);
+    }
+  }
+
+  return units;
 }
 
 /**
@@ -1119,6 +1165,92 @@ export function valuePositions(
   }
 
   return valued;
+}
+
+/**
+ * How concentrated the invested book is. Cash is left out: it is a balance
+ * waiting to be invested, not a position that can dominate the result.
+ * Weights here are shares of the invested (non-cash, quoted) value.
+ */
+export type PortfolioConcentration = {
+  positions: number;
+  largest: { ticker: string; weight: string };
+  /** Combined weight of the five and ten largest positions. */
+  top5Weight: string;
+  top10Weight: string;
+  /**
+   * `1 / Σ w²`: the number of equal-weight positions with the same
+   * concentration. 20 holdings with an effective count of 8 behave like 8.
+   */
+  effectivePositions: string;
+  /** Fewest largest positions that together hold at least half the value. */
+  halfOfValueIn: number;
+};
+
+export function positionConcentration(
+  positions: readonly ValuedPosition[],
+): PortfolioConcentration | null {
+  const invested = positions
+    .filter(
+      (position) =>
+        position.assetClass !== "cash" &&
+        position.convertedMarketValue != null &&
+        toDecimal(position.convertedMarketValue) > ZERO,
+    )
+    .map((position) => ({
+      ticker: position.ticker,
+      value: toDecimal(position.convertedMarketValue ?? "0"),
+    }))
+    .sort((a, b) => (a.value === b.value ? 0 : a.value > b.value ? -1 : 1));
+
+  let total = ZERO;
+
+  for (const entry of invested) {
+    total = add(total, entry.value);
+  }
+
+  const [first] = invested;
+
+  if (!first || isZero(total)) {
+    return null;
+  }
+
+  const weights = invested.map((entry) => div(entry.value, total));
+  const half = toDecimal("0.5");
+  let squares = ZERO;
+  let cumulative = ZERO;
+  let halfOfValueIn = 0;
+  let top5 = ZERO;
+  let top10 = ZERO;
+
+  for (const [index, weight] of weights.entries()) {
+    squares = add(squares, mul(weight, weight));
+    cumulative = add(cumulative, weight);
+
+    if (index < 5) {
+      top5 = cumulative;
+    }
+
+    if (index < 10) {
+      top10 = cumulative;
+    }
+
+    if (halfOfValueIn === 0 && cumulative >= half) {
+      halfOfValueIn = index + 1;
+    }
+  }
+
+  return {
+    positions: invested.length,
+    largest: {
+      ticker: first.ticker,
+      weight: formatDecimal(weights[0], WEIGHT_PLACES),
+    },
+    top5Weight: formatDecimal(top5, WEIGHT_PLACES),
+    top10Weight: formatDecimal(top10, WEIGHT_PLACES),
+    effectivePositions: formatDecimal(div(toDecimal("1"), squares), 2),
+    halfOfValueIn,
+  };
 }
 
 /** Quantity available to sell for a ticker, as a decimal string. */

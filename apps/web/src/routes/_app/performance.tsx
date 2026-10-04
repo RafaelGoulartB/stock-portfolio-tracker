@@ -1,27 +1,23 @@
+import { plural, t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import {
   type AssetClass,
+  PERFORMANCE_WINDOWS,
   type PerformanceWindow,
-  positiveDecimal,
 } from "@portifolio-tracker/shared";
 import { createFileRoute } from "@tanstack/react-router";
 import { RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
-import { CategoryReturnCard } from "@/components/performance/category-return-card";
-import { CategoryTable } from "@/components/performance/category-table";
-import { CompositionCard } from "@/components/performance/composition-card";
+import { CategoriesCard } from "@/components/performance/categories-card";
 import { ContributorsCard } from "@/components/performance/contributors-card";
+import { EvolutionCard } from "@/components/performance/evolution-card";
+import { MonthlyReturnsCard } from "@/components/performance/monthly-returns-card";
 import {
   EmptyState,
   ErrorCard,
   PerformanceSkeleton,
-  WindowSelector,
 } from "@/components/performance/performance-primitives";
-import {
-  CumulativeReturnCard,
-  MonthlyReturnCard,
-} from "@/components/performance/return-cards";
 import { SummaryStrip } from "@/components/performance/summary-strip";
 import {
   axisMonthLabel,
@@ -30,48 +26,42 @@ import {
   fullMonthLabel,
   type MonthRow,
 } from "@/components/performance/types";
-import { ValueCard } from "@/components/performance/value-card";
 import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { usePortfolioQueryInput } from "@/lib/allocation-query";
 import { trpc } from "@/lib/api";
-import { useSettings } from "@/lib/settings";
+import { prefetchPortfolio, trpcQueryUtils } from "@/lib/route-prefetch";
 import { isFxRateRequired, queryErrorMessage } from "@/lib/trpcErrors";
+import { cn } from "@/lib/utils";
+
+/** A month-end history only changes when a new close lands. */
+const HISTORY_FRESH_MS = 30 * 60 * 1_000;
+const DEFAULT_MONTHS: PerformanceWindow = 12;
 
 export const Route = createFileRoute("/_app/performance")({
+  loader: ({ preload }) =>
+    prefetchPortfolio(preload, (input) => [
+      trpcQueryUtils.performance.history.prefetch(
+        { ...input, months: DEFAULT_MONTHS },
+        { staleTime: HISTORY_FRESH_MS, gcTime: HISTORY_FRESH_MS },
+      ),
+    ]),
   component: PerformancePage,
 });
 
 function PerformancePage() {
   const { i18n } = useLingui();
-  const { displayCurrency, quoteSource, manualPrices, fxSource, manualRate } =
-    useSettings();
-  const [months, setMonths] = useState<PerformanceWindow>(12);
-
-  const sanitizedManualPrices = useMemo(
-    () =>
-      Object.fromEntries(
-        Object.entries(manualPrices).filter(
-          ([, price]) => positiveDecimal.safeParse(price).success,
-        ),
-      ),
-    [manualPrices],
-  );
-  const manualRateValid = positiveDecimal.safeParse(manualRate).success;
+  const [months, setMonths] = useState<PerformanceWindow>(DEFAULT_MONTHS);
+  const portfolioInput = usePortfolioQueryInput();
 
   const history = trpc.performance.history.useQuery(
+    { ...portfolioInput, months },
     {
-      displayCurrency,
-      months,
-      quoteSource,
-      manualPrices:
-        quoteSource === "manual" &&
-        Object.keys(sanitizedManualPrices).length > 0
-          ? sanitizedManualPrices
-          : undefined,
-      fxSource,
-      manualRate: manualRateValid ? manualRate : undefined,
+      staleTime: HISTORY_FRESH_MS,
+      gcTime: HISTORY_FRESH_MS,
+      // Changing the window keeps the last history on screen, dimmed.
+      placeholderData: (previous) => previous,
     },
-    // A month-end history only changes when a new close lands.
-    { staleTime: 30 * 60 * 1_000, gcTime: 30 * 60 * 1_000 },
   );
 
   const data = history.data;
@@ -87,12 +77,14 @@ function PerformancePage() {
         netFlow: Number(month.netFlow),
         cumulativeNetFlow: Number(month.cumulativeNetFlow),
         unrealizedPnl: Number(month.unrealizedPnl),
+        result: month.result == null ? null : Number(month.result),
         monthlyReturn:
           month.monthlyReturn == null ? null : Number(month.monthlyReturn),
         cumulativeReturn:
           month.cumulativeReturn == null
             ? null
             : Number(month.cumulativeReturn),
+        drawdown: month.drawdown == null ? null : Number(month.drawdown),
         ...Object.fromEntries(
           month.byAssetClass.map((entry) => [
             entry.assetClass,
@@ -133,8 +125,8 @@ function PerformancePage() {
   const missingManualRate =
     !!history.error &&
     isFxRateRequired(history.error) &&
-    fxSource === "manual" &&
-    !manualRateValid;
+    portfolioInput.fxSource === "manual" &&
+    !portfolioInput.manualRate;
 
   return (
     <div className="space-y-5">
@@ -151,7 +143,37 @@ function PerformancePage() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <WindowSelector months={months} onSelect={setMonths} />
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            size="sm"
+            value={String(months)}
+            onValueChange={(value) =>
+              value && setMonths(Number(value) as PerformanceWindow)
+            }
+            aria-label={i18n._(
+              t({ id: "performance.window", message: "History window" }),
+            )}
+          >
+            {PERFORMANCE_WINDOWS.map((option) => (
+              <ToggleGroupItem
+                key={option}
+                value={String(option)}
+                className="px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+                aria-label={i18n._(
+                  t({
+                    id: "performance.windowMonths",
+                    message: plural(
+                      { count: option },
+                      { one: "Last # month", other: "Last # months" },
+                    ),
+                  }),
+                )}
+              >
+                <Trans id="performance.windowShort">{option}M</Trans>
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
           <Button
             type="button"
             variant="outline"
@@ -186,30 +208,24 @@ function PerformancePage() {
       {data && empty ? <EmptyState /> : null}
 
       {data && !empty ? (
-        <>
+        <div
+          className={cn(
+            "space-y-5 transition-opacity",
+            history.isFetching && history.isPlaceholderData && "opacity-60",
+          )}
+        >
           <SummaryStrip summary={data.summary} months={months} />
 
-          <ValueCard rows={rows} currency={data.summary.displayCurrency} />
+          <EvolutionCard rows={rows} currency={data.summary.displayCurrency} />
 
-          <div className="grid gap-5 lg:grid-cols-2">
-            <CumulativeReturnCard rows={rows} />
-            <MonthlyReturnCard rows={rows} />
-          </div>
+          <MonthlyReturnsCard
+            rows={rows}
+            years={data.years}
+            summary={data.summary}
+          />
 
-          <div className="grid gap-5 lg:grid-cols-2">
-            <CompositionCard
-              rows={rows}
-              categories={categories}
-              currency={data.summary.displayCurrency}
-            />
-            <CategoryReturnCard
-              breakdown={data.byAssetClass}
-              categories={categories}
-              currency={data.summary.displayCurrency}
-            />
-          </div>
-
-          <CategoryTable
+          <CategoriesCard
+            rows={rows}
             breakdown={data.byAssetClass}
             summary={data.summary}
             categories={categories}
@@ -229,7 +245,7 @@ function PerformancePage() {
               </Trans>
             </p>
           ) : null}
-        </>
+        </div>
       ) : null}
     </div>
   );

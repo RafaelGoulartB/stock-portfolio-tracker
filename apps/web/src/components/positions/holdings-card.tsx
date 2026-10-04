@@ -1,14 +1,17 @@
+import { t } from "@lingui/core/macro";
 import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import type {
   PortfolioSummary,
   ValuedPosition,
 } from "@portifolio-tracker/shared";
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, X } from "lucide-react";
 import { type ReactNode, useMemo, useState } from "react";
 import { AssetClassLabel } from "@/components/asset-labels";
 import { AssetLink } from "@/components/asset-link";
 import { AssetLogo } from "@/components/asset-logo";
+import { sumDecimalStrings } from "@/components/detailed-positions/decimal-sum";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -32,6 +35,7 @@ import {
   formatWeight,
   pnlClassName,
 } from "@/lib/format";
+import type { AllocationFilter } from "./allocation-card";
 import { ShareBar, signedOrZero } from "./shared";
 
 type SortKey = "ticker" | "value" | "share" | "pnl";
@@ -87,17 +91,63 @@ function ariaSort(
 }
 
 export function HoldingsCard({
-  positions,
+  positions: allPositions,
   summary,
   missing,
+  filter,
+  onClearFilter,
 }: {
   positions: ValuedPosition[];
   summary: PortfolioSummary;
   missing: string[];
+  /** Allocation bucket the table is narrowed to, if any. */
+  filter: AllocationFilter | null;
+  onClearFilter: () => void;
 }) {
   const { i18n } = useLingui();
   const [sortKey, setSortKey] = useState<SortKey>("value");
   const [sortDir, setSortDir] = useState<SortDirection>("desc");
+  // An empty cash balance only adds a row of zeros.
+  const positions = useMemo(
+    () =>
+      allPositions.filter(
+        (position) =>
+          (position.assetClass !== "cash" ||
+            Number(position.convertedMarketValue ?? 0) !== 0) &&
+          (!filter ||
+            filter.ids.has(`${position.ticker}|${position.currency}`)),
+      ),
+    [allPositions, filter],
+  );
+  const missingSet = useMemo(() => new Set(missing), [missing]);
+  const totals = useMemo(
+    () =>
+      filter
+        ? {
+            value: sumDecimalStrings(
+              positions.map((position) => position.convertedMarketValue),
+            ),
+            pnl: sumDecimalStrings(
+              positions.map((position) =>
+                position.assetClass === "fixed_income"
+                  ? null
+                  : position.convertedUnrealizedPnl,
+              ),
+            ),
+            // Weights are ratios; the default two places would round 37.8%
+            // up to 38%.
+            weight: sumDecimalStrings(
+              positions.map((position) => position.weight),
+              8,
+            ),
+          }
+        : {
+            value: summary.totalMarketValue,
+            pnl: summary.totalUnrealizedPnl,
+            weight: summary.quotedPositions > 0 ? "1" : null,
+          },
+    [filter, positions, summary],
+  );
 
   const rows = useMemo(() => {
     const direction = sortDir === "asc" ? 1 : -1;
@@ -165,23 +215,42 @@ export function HoldingsCard({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>
-          <Trans id="positions.holdings">Holdings</Trans>
-        </CardTitle>
-        <CardDescription>
-          <Trans id="positions.holdingsHint">
-            Average cost and prices stay in the native currency of each asset;
-            market value and result are consolidated.
-          </Trans>
-        </CardDescription>
+      <CardHeader className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
+        <div className="min-w-0 flex-1 basis-64 space-y-1.5">
+          <CardTitle>
+            <Trans id="positions.holdings">Holdings</Trans>
+          </CardTitle>
+          <CardDescription>
+            <Trans id="positions.holdingsHint">
+              Average cost and prices stay in the native currency of each asset;
+              market value and result are consolidated.
+            </Trans>
+          </CardDescription>
+        </div>
+        {filter ? (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={onClearFilter}
+            aria-label={i18n._(
+              t({
+                id: "positions.clearFilter",
+                message: `Show every holding, not only ${filter.label}`,
+              }),
+            )}
+          >
+            <Trans id="positions.filteredBy">Only {filter.label}</Trans>
+            <X aria-hidden="true" />
+          </Button>
+        ) : null}
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-0 sm:px-6">
         <Table className="[&_tbody_td]:h-11 [&_tfoot_td]:h-11">
           <TableHeader>
             <TableRow className="hover:bg-transparent">
               <TableHead
-                className="text-muted-foreground"
+                className="pl-4 text-muted-foreground sm:pl-2"
                 aria-sort={ariaSort(sortKey === "ticker", sortDir)}
               >
                 <SortHeaderButton
@@ -191,16 +260,13 @@ export function HoldingsCard({
                   onToggle={() => toggleSort("ticker")}
                 />
               </TableHead>
-              <TableHead className="text-muted-foreground">
-                <Trans id="positions.colClass">Class</Trans>
-              </TableHead>
-              <TableHead className="text-right text-muted-foreground">
+              <TableHead className="hidden text-right text-muted-foreground md:table-cell">
                 <Trans id="positions.colQuantity">Quantity</Trans>
               </TableHead>
-              <TableHead className="text-right text-muted-foreground">
+              <TableHead className="hidden text-right text-muted-foreground md:table-cell">
                 <Trans id="positions.colAvgCost">Avg. cost</Trans>
               </TableHead>
-              <TableHead className="text-right text-muted-foreground">
+              <TableHead className="hidden text-right text-muted-foreground sm:table-cell">
                 <Trans id="positions.colPrice">Price</Trans>
               </TableHead>
               <TableHead
@@ -232,7 +298,7 @@ export function HoldingsCard({
                 />
               </TableHead>
               <TableHead
-                className="w-[132px] text-right text-muted-foreground"
+                className="hidden w-[132px] pr-4 text-right text-muted-foreground sm:table-cell sm:pr-2"
                 aria-sort={ariaSort(sortKey === "share", sortDir)}
               >
                 <SortHeaderButton
@@ -248,23 +314,38 @@ export function HoldingsCard({
           <TableBody>
             {rows.map((position) => (
               <TableRow key={`${position.ticker}|${position.currency}`}>
-                <TableCell className="font-medium">
-                  <AssetLink
-                    ticker={position.ticker}
-                    className="flex items-center gap-2"
-                  >
+                <TableCell className="pl-4 sm:pl-2">
+                  <div className="flex items-center gap-2.5">
                     <AssetLogo
                       ticker={position.ticker}
                       assetClass={position.assetClass}
                       currency={position.currency}
                     />
-                    {position.ticker}
-                  </AssetLink>
+                    <div className="min-w-0 leading-tight">
+                      <AssetLink
+                        ticker={position.ticker}
+                        className="font-medium"
+                      >
+                        {position.ticker}
+                      </AssetLink>
+                      <p className="truncate text-xs text-muted-foreground">
+                        <AssetClassLabel assetClass={position.assetClass} />
+                        {missingSet.has(position.ticker) &&
+                        position.assetClass !== "fixed_income" ? (
+                          <>
+                            {" · "}
+                            <span className="text-caution">
+                              <Trans id="positions.noQuoteShort">
+                                No quote
+                              </Trans>
+                            </span>
+                          </>
+                        ) : null}
+                      </p>
+                    </div>
+                  </div>
                 </TableCell>
-                <TableCell className="text-muted-foreground">
-                  <AssetClassLabel assetClass={position.assetClass} />
-                </TableCell>
-                <TableCell className="text-right tabular-nums">
+                <TableCell className="hidden text-right tabular-nums md:table-cell">
                   {position.assetClass === "fixed_income" ||
                   position.assetClass === "cash" ? (
                     <Dash />
@@ -272,14 +353,14 @@ export function HoldingsCard({
                     formatQuantity(position.quantity)
                   )}
                 </TableCell>
-                <TableCell className="text-right text-muted-foreground tabular-nums">
+                <TableCell className="hidden text-right text-muted-foreground tabular-nums md:table-cell">
                   {position.assetClass === "fixed_income" ? (
                     <Dash />
                   ) : (
                     formatMoney(position.averagePrice, position.currency)
                   )}
                 </TableCell>
-                <TableCell className="text-right tabular-nums">
+                <TableCell className="hidden text-right tabular-nums sm:table-cell">
                   {position.assetClass === "fixed_income" ||
                   position.marketPrice == null ? (
                     <Dash />
@@ -302,22 +383,22 @@ export function HoldingsCard({
                   position.convertedUnrealizedPnl == null ? (
                     <Dash />
                   ) : (
-                    <span
-                      className={`flex items-center justify-end gap-2 ${pnlClassName(position.convertedUnrealizedPnl)}`}
+                    <div
+                      className={`leading-tight ${pnlClassName(position.convertedUnrealizedPnl)}`}
                     >
                       {signedOrZero(
                         position.convertedUnrealizedPnl,
                         position.displayCurrency,
                       )}
                       {position.unrealizedPnlPercent ? (
-                        <span className="text-xs opacity-80">
+                        <p className="text-xs opacity-80">
                           {formatSignedPercent(position.unrealizedPnlPercent)}
-                        </span>
+                        </p>
                       ) : null}
-                    </span>
+                    </div>
                   )}
                 </TableCell>
-                <TableCell className="text-right tabular-nums">
+                <TableCell className="hidden pr-4 text-right tabular-nums sm:table-cell sm:pr-2">
                   {position.weight == null ? (
                     <Dash />
                   ) : (
@@ -337,22 +418,28 @@ export function HoldingsCard({
           </TableBody>
           <TableFooter>
             <TableRow className="hover:bg-transparent">
-              <TableCell colSpan={5} className="font-medium">
-                <Trans id="positions.total">Total</Trans>
-              </TableCell>
-              <TableCell className="text-right font-medium tabular-nums">
-                {formatMoney(summary.totalMarketValue, summary.displayCurrency)}
-              </TableCell>
-              <TableCell
-                className={`text-right font-medium tabular-nums ${pnlClassName(summary.totalUnrealizedPnl)}`}
-              >
-                {signedOrZero(
-                  summary.totalUnrealizedPnl,
-                  summary.displayCurrency,
+              <TableCell className="pl-4 font-medium sm:pl-2">
+                {filter ? (
+                  <Trans id="positions.selectionTotal">
+                    {filter.label} · {positions.length}
+                  </Trans>
+                ) : (
+                  <Trans id="positions.total">Total</Trans>
                 )}
               </TableCell>
+              <TableCell className="hidden md:table-cell" />
+              <TableCell className="hidden md:table-cell" />
+              <TableCell className="hidden sm:table-cell" />
               <TableCell className="text-right font-medium tabular-nums">
-                {summary.quotedPositions > 0 ? formatWeight("1") : <Dash />}
+                {formatMoney(totals.value, summary.displayCurrency)}
+              </TableCell>
+              <TableCell
+                className={`text-right font-medium tabular-nums ${pnlClassName(totals.pnl)}`}
+              >
+                {signedOrZero(totals.pnl, summary.displayCurrency)}
+              </TableCell>
+              <TableCell className="hidden pr-4 text-right font-medium tabular-nums sm:table-cell sm:pr-2">
+                {totals.weight == null ? <Dash /> : formatWeight(totals.weight)}
               </TableCell>
             </TableRow>
           </TableFooter>

@@ -5,7 +5,7 @@ import {
   httpBatchStreamLink,
   splitLink,
 } from "@trpc/client";
-import { createTRPCReact } from "@trpc/react-query";
+import { createTRPCQueryUtils, createTRPCReact } from "@trpc/react-query";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "../../../api/src/trpc/router";
 
@@ -44,4 +44,13 @@ export const trpcClient = createTRPCClient<AppRouter>({
       false: httpBatchLink({ url: "/trpc" }),
     }),
   ],
+});
+
+/**
+ * Query helpers usable outside React. Route loaders prefetch through these so
+ * a page's data shares the cache entries (and keys) of its `useQuery` hooks.
+ */
+export const trpcQueryUtils = createTRPCQueryUtils({
+  queryClient,
+  client: trpcClient,
 });

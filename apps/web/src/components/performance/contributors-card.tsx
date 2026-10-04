@@ -1,7 +1,9 @@
 import { Trans } from "@lingui/react/macro";
 import type { ReactNode } from "react";
+import { DivergingBar } from "@/components/analysis/primitives";
 import { AssetClassLabel } from "@/components/asset-labels";
 import { AssetLink } from "@/components/asset-link";
+import { AssetLogo } from "@/components/asset-logo";
 import {
   Card,
   CardContent,
@@ -33,6 +35,13 @@ export function ContributorsCard({
     .slice(-CONTRIBUTOR_LIMIT)
     .reverse();
 
+  const largest = Math.max(
+    0,
+    ...[...winners, ...losers].map((asset) =>
+      Math.abs(Number(asset.contribution ?? 0)),
+    ),
+  );
+
   if (winners.length === 0 && losers.length === 0) {
     return null;
   }
@@ -52,16 +61,18 @@ export function ContributorsCard({
           </Trans>
         </CardDescription>
       </CardHeader>
-      <CardContent className="grid gap-6 sm:grid-cols-2">
+      <CardContent className="grid gap-6 md:grid-cols-2">
         <ContributorList
           title={<Trans id="performance.topGains">Top gains</Trans>}
           assets={winners}
           currency={currency}
+          largest={largest}
         />
         <ContributorList
           title={<Trans id="performance.topLosses">Top losses</Trans>}
           assets={losers}
           currency={currency}
+          largest={largest}
         />
       </CardContent>
     </Card>
@@ -72,10 +83,12 @@ function ContributorList({
   title,
   assets,
   currency,
+  largest,
 }: {
   title: ReactNode;
   assets: AssetBreakdown[];
   currency: CurrencyCode;
+  largest: number;
 }) {
   return (
     <div className="space-y-2">
@@ -85,30 +98,55 @@ function ContributorList({
           <Trans id="performance.noneYet">None yet.</Trans>
         </p>
       ) : (
-        <ul className="space-y-1.5">
+        <ul className="space-y-2.5">
           {assets.map((asset) => (
-            <li
-              key={asset.ticker}
-              className="flex items-baseline gap-3 text-sm"
-            >
-              <AssetLink ticker={asset.ticker} className="font-medium">
-                {asset.ticker}
-              </AssetLink>
-              <span className="text-xs text-muted-foreground">
-                <AssetClassLabel assetClass={asset.assetClass} />
-              </span>
-              <span
-                className={`ml-auto tabular-nums ${pnlClassName(asset.unrealizedPnl)}`}
-              >
-                {signedOrZero(asset.unrealizedPnl, currency)}
-              </span>
-              <span
-                className={`w-16 text-right text-xs tabular-nums ${asset.unrealizedPnlPercent == null ? "text-muted-foreground" : pnlClassName(asset.unrealizedPnlPercent)}`}
-              >
-                {asset.unrealizedPnlPercent == null
-                  ? "—"
-                  : formatSignedPercent(asset.unrealizedPnlPercent)}
-              </span>
+            <li key={asset.ticker} className="space-y-1">
+              <div className="flex items-center gap-2.5 text-sm">
+                <AssetLogo
+                  ticker={asset.ticker}
+                  assetClass={asset.assetClass}
+                  currency={asset.currency}
+                />
+                <div className="min-w-0 leading-tight">
+                  <AssetLink ticker={asset.ticker} className="font-medium">
+                    {asset.ticker}
+                  </AssetLink>
+                  <p className="truncate text-xs text-muted-foreground">
+                    <AssetClassLabel assetClass={asset.assetClass} />
+                  </p>
+                </div>
+                <span
+                  className={`ml-auto tabular-nums ${pnlClassName(asset.unrealizedPnl)}`}
+                >
+                  {signedOrZero(asset.unrealizedPnl, currency)}
+                </span>
+                <span
+                  className={`w-14 text-right text-xs tabular-nums ${asset.unrealizedPnlPercent == null ? "text-muted-foreground" : pnlClassName(asset.unrealizedPnlPercent)}`}
+                >
+                  {asset.unrealizedPnlPercent == null
+                    ? "—"
+                    : formatSignedPercent(asset.unrealizedPnlPercent)}
+                </span>
+              </div>
+              <div className="flex items-center gap-2.5 pl-9">
+                <DivergingBar
+                  value={
+                    asset.contribution == null
+                      ? null
+                      : Number(asset.contribution)
+                  }
+                  max={largest}
+                />
+                <span className="w-32 shrink-0 text-right text-[11px] text-muted-foreground tabular-nums">
+                  {asset.contribution == null ? (
+                    "—"
+                  ) : (
+                    <Trans id="performance.contributionShort">
+                      {formatSignedPercent(asset.contribution)} of the return
+                    </Trans>
+                  )}
+                </span>
+              </div>
             </li>
           ))}
         </ul>

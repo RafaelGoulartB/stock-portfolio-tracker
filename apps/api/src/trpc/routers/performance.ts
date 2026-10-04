@@ -5,9 +5,6 @@ import {
   performanceHistoryInput,
 } from "@portifolio-tracker/shared";
 import { TRPCError } from "@trpc/server";
-import { eq } from "drizzle-orm";
-import { db } from "../../db";
-import { cashBalances } from "../../db/schema";
 import {
   buildPerformanceHistory,
   createSeriesLookup,
@@ -29,7 +26,7 @@ import {
   QuoteUnavailableError,
 } from "../../lib/quotes";
 import { protectedProcedure, router } from "../trpc";
-import { loadStoredManualPrices } from "../valuation";
+import { loadCashAmount, loadStoredManualPrices } from "../valuation";
 import { loadTransactions } from "./transactions";
 
 /**
@@ -99,16 +96,12 @@ export const performanceRouter = router({
   history: protectedProcedure
     .input(performanceHistoryInput)
     .query(async ({ ctx, input }) => {
-      const [history, storedManualPrices, cashRows] = await Promise.all([
+      const [history, storedManualPrices, cashAmount] = await Promise.all([
         loadTransactions(ctx.user.id),
         loadStoredManualPrices(ctx.user.id),
-        db
-          .select({ amount: cashBalances.amount })
-          .from(cashBalances)
-          .where(eq(cashBalances.userId, ctx.user.id))
-          .limit(1),
+        loadCashAmount(ctx.user.id),
       ]);
-      const cashBrl = cashRows[0]?.amount ?? "0";
+      const cashBrl = cashAmount ?? "0";
       const hasCash = Number(cashBrl) !== 0;
       const snapshots = performanceSnapshots(input.months);
       const baseline = snapshots[0];
@@ -135,54 +128,60 @@ export const performanceRouter = router({
         ) ||
         (hasCash && input.displayCurrency !== "BRL");
 
-      let rateAt: PerformanceRateLookup = () => null;
-
-      if (needsFx) {
-        if (input.fxSource === "manual") {
-          if (!input.manualRate) {
-            throw new TRPCError({
-              code: "BAD_REQUEST",
-              message: "Provide a manual USD/BRL rate",
-            });
-          }
-
-          // A manual rate has no history, so it applies to every month.
-          const manualRate = input.manualRate;
-          rateAt = () => manualRate;
-        } else {
-          const provider = getFxProvider(input.fxSource);
-
-          if (!provider) {
-            throw new TRPCError({
-              code: "NOT_FOUND",
-              message: `Unknown FX source: ${input.fxSource}`,
-            });
-          }
-
-          try {
-            const points = await provider.getSeries({
-              from: "USD",
-              to: "BRL",
-              start,
-              end,
-            });
-            const lookup = createSeriesLookup(points);
-            const first = points[0] ?? null;
-
-            // Days before the first published rate fall back to it, so a
-            // long holiday at the window start never blanks a month.
-            rateAt = (day) => (lookup(day) ?? first)?.rate ?? null;
-          } catch (error) {
-            throw new TRPCError({
-              code: "BAD_GATEWAY",
-              message:
-                error instanceof Error
-                  ? `Quote from ${FX_SOURCE_LABELS[input.fxSource]} failed: ${error.message}`
-                  : "Quote provider failed",
-            });
-          }
-        }
+      // Checked before any price history is requested, so a missing manual
+      // rate does not spend provider calls whose results would be discarded.
+      if (needsFx && input.fxSource === "manual" && !input.manualRate) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Provide a manual USD/BRL rate",
+        });
       }
+
+      // The FX history and the price histories are independent upstream
+      // calls, so they are requested together rather than one after another.
+      const resolveRateAt = async (): Promise<PerformanceRateLookup> => {
+        if (!needsFx) {
+          return () => null;
+        }
+
+        if (input.fxSource === "manual") {
+          // A manual rate has no history, so it applies to every month.
+          const manualRate = input.manualRate ?? null;
+          return () => manualRate;
+        }
+
+        const fxProvider = getFxProvider(input.fxSource);
+
+        if (!fxProvider) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: `Unknown FX source: ${input.fxSource}`,
+          });
+        }
+
+        try {
+          const points = await fxProvider.getSeries({
+            from: "USD",
+            to: "BRL",
+            start,
+            end,
+          });
+          const lookup = createSeriesLookup(points);
+          const first = points[0] ?? null;
+
+          // Days before the first published rate fall back to it, so a
+          // long holiday at the window start never blanks a month.
+          return (day) => (lookup(day) ?? first)?.rate ?? null;
+        } catch (error) {
+          throw new TRPCError({
+            code: "BAD_GATEWAY",
+            message:
+              error instanceof Error
+                ? `Quote from ${FX_SOURCE_LABELS[input.fxSource]} failed: ${error.message}`
+                : "Quote provider failed",
+          });
+        }
+      };
 
       const provider = getQuoteProvider(input.quoteSource);
       const lookups = new Map<string, (day: string) => string | null>();
@@ -190,8 +189,9 @@ export const performanceRouter = router({
       let providerFailures = 0;
       let lastProviderError: string | null = null;
 
-      await Promise.all(
-        assets.map(async (asset) => {
+      const [rateAt] = await Promise.all([
+        resolveRateAt(),
+        ...assets.map(async (asset) => {
           try {
             const { points } = await getSeriesWithManualFallback(provider, {
               ticker: asset.ticker,
@@ -216,7 +216,7 @@ export const performanceRouter = router({
             }
           }
         }),
-      );
+      ]);
 
       if (lookups.size === 0 && providerFailures > 0) {
         throw new TRPCError({

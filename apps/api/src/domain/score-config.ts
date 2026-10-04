@@ -9,6 +9,7 @@ import {
 import { eq } from "drizzle-orm";
 import { db } from "../db";
 import { type UserScoreConfigRow, userScoreConfigs } from "../db/schema";
+import { memoizeRequest } from "../lib/request-memo";
 
 function rowToConfig(row: UserScoreConfigRow): ScoreConfig {
   const { userId: _userId, updatedAt: _updatedAt, ...config } = row;
@@ -24,8 +25,20 @@ function configValues(config: ScoreConfig) {
   };
 }
 
-/** Loads the user's score policy, falling back to the built-in defaults. */
-export async function loadScoreConfig(userId: string): Promise<{
+/**
+ * Loads the user's score policy, falling back to the built-in defaults. Read
+ * once per request: Allocation and the score settings can share a batch.
+ */
+export function loadScoreConfig(userId: string): Promise<{
+  config: ScoreConfig;
+  isCustom: boolean;
+}> {
+  return memoizeRequest(`score-config:${userId}`, () =>
+    loadScoreConfigUncached(userId),
+  );
+}
+
+async function loadScoreConfigUncached(userId: string): Promise<{
   config: ScoreConfig;
   isCustom: boolean;
 }> {

@@ -42,7 +42,11 @@ type Totals = {
   fx: string;
   portfolioReturn: string | null;
   realized: string;
+  weight: string;
 };
+
+/** Columns holding words, aligned left; every other column is a number. */
+const TEXT_COLUMNS = new Set<ColumnId>(["ticker", "assetClass", "currency"]);
 
 /**
  * Totals reflect the *filtered* rows currently on screen, not the whole
@@ -51,7 +55,8 @@ type Totals = {
  * float drift. Open-position money (invested, market value, open result) sums
  * only rows with a live quantity; realized P&L includes closed rows too. The
  * portfolio return percentage stays the authoritative value the API computed
- * for the selection, and the weight column always totals 100%.
+ * for the selection. The weight column sums the visible rows, so a filtered
+ * view shows the share of the portfolio it covers.
  */
 function computeTotals(
   rows: DetailedPosition[],
@@ -69,6 +74,10 @@ function computeTotals(
     fx: sumDecimalStrings(openRows.map((row) => row.convertedFxPnl)),
     portfolioReturn,
     realized: sumDecimalStrings(rows.map((row) => row.convertedRealizedPnl)),
+    weight: sumDecimalStrings(
+      openRows.map((row) => row.weight),
+      8,
+    ),
   };
 }
 
@@ -105,11 +114,18 @@ export function PositionsTable({
                 <TableHead
                   key={id}
                   className={`${id === "ticker" ? "sticky left-0 z-10 bg-muted" : ""} h-10 px-3`}
+                  aria-sort={
+                    sort.id === id
+                      ? sort.direction === "asc"
+                        ? "ascending"
+                        : "descending"
+                      : "none"
+                  }
                 >
                   <button
                     type="button"
                     onClick={() => onSort(id)}
-                    className="flex w-full items-center gap-1 text-left font-medium"
+                    className={`flex w-full items-center gap-1 font-medium ${TEXT_COLUMNS.has(id) ? "text-left" : "flex-row-reverse text-right"}`}
                     aria-label={i18n._(
                       t({
                         id: "detailedPositions.sortBy",
@@ -357,7 +373,7 @@ function PositionCell({
   }
   return (
     <TableCell
-      className={`${id === "ticker" ? "sticky left-0 z-10 bg-card text-left" : "text-right"} px-3 py-2 tabular-nums`}
+      className={`${id === "ticker" ? "sticky left-0 z-10 bg-card" : ""} ${TEXT_COLUMNS.has(id) ? "text-left" : "text-right"} px-3 py-2 tabular-nums`}
     >
       {content}
     </TableCell>
@@ -368,9 +384,7 @@ export function Dash({ missing = false }: { missing?: boolean }) {
   const { i18n } = useLingui();
   return (
     <span
-      className={
-        missing ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"
-      }
+      className={missing ? "text-caution" : "text-muted-foreground"}
       title={
         missing
           ? i18n._(
@@ -418,6 +432,6 @@ function totalForColumn(id: ColumnId, totals: Totals, currency: "BRL" | "USD") {
         {formatSignedMoney(totals.realized, currency)}
       </span>
     );
-  if (id === "weight") return formatWeight("1");
+  if (id === "weight") return formatWeight(totals.weight);
   return null;
 }
