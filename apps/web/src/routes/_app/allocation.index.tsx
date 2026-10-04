@@ -249,6 +249,7 @@ function AllocationPage() {
       utils.positions.list.invalidate(),
       utils.positions.daily.invalidate(),
       utils.positions.finder.invalidate(),
+      utils.positions.finderWindows.invalidate(),
       utils.performance.history.invalidate(),
     ]);
   }

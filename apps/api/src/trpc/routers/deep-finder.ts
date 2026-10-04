@@ -1,11 +1,15 @@
 import {
+  DEEP_FINDER_WINDOWS,
   type DeepFinderRow,
+  type DeepFinderWindow,
+  dailyTrackingInput,
   deepFinderInput,
   type ParsedDeepFinderInput,
 } from "@portifolio-tracker/shared";
 import { TRPCError } from "@trpc/server";
 import {
   finderSeriesStart,
+  holdingBaselineDay,
   seriesLookbackStart,
   windowStartDay,
 } from "../../domain/deep-finder";
@@ -38,6 +42,8 @@ export type FinderPosition = {
   convertedMarketValue: string | null;
   convertedUnrealizedPnl: string | null;
   convertedUnrealizedPnlPercent: string | null;
+  /** Day of {@link marketPrice}; anchors the `1d` baseline. */
+  quoteAsOf?: string | null;
 };
 
 const API_TIME_ZONE = "America/Sao_Paulo";
@@ -104,7 +110,13 @@ export async function buildFinderResult({
   forceSeriesRefresh?: boolean;
 }) {
   const asOf = today();
-  const start = windowStartDay(input.window, asOf);
+  const latestQuoteDay =
+    positions
+      .map((position) => position.quoteAsOf ?? null)
+      .filter((day): day is string => day !== null && day <= asOf)
+      .sort()
+      .at(-1) ?? null;
+  const start = holdingBaselineDay(input.window, asOf, latestQuoteDay);
   const seriesStart = reuseSeriesAcrossWindows
     ? (finderSeriesStart(input.window, asOf, true) ?? undefined)
     : undefined;
@@ -114,6 +126,7 @@ export async function buildFinderResult({
       ? costRows(positions, input.displayCurrency)
       : await periodRows({
           positions,
+          window: input.window,
           start,
           asOf,
           displayCurrency: input.displayCurrency,
@@ -223,6 +236,7 @@ function costRows(
 
 async function periodRows({
   positions,
+  window,
   start,
   asOf,
   displayCurrency,
@@ -234,6 +248,7 @@ async function periodRows({
   forceSeriesRefresh,
 }: {
   positions: FinderPosition[];
+  window: DeepFinderWindow;
   start: string;
   asOf: string;
   displayCurrency: DeepFinderRow["displayCurrency"];
@@ -287,8 +302,15 @@ async function periodRows({
           forceRefresh: forceSeriesRefresh,
         });
         const lookup = createSeriesLookup(series);
-        const baseline = lookup(start);
-        const latest = deriveCurrentFromSeries ? lookup(asOf) : null;
+        const newest = lookup(asOf);
+        const baseline = lookup(
+          holdingBaselineDay(
+            window,
+            asOf,
+            position.quoteAsOf ?? newest?.asOf ?? null,
+          ) ?? start,
+        );
+        const latest = deriveCurrentFromSeries ? newest : null;
         const marketPrice = position.marketPrice ?? latest?.close ?? null;
         const marketValue =
           position.convertedMarketValue ??
@@ -350,3 +372,101 @@ async function periodRows({
     }),
   );
 }
+
+type WindowMove = Pick<DeepFinderRow, "change" | "changePercent">;
+
+/**
+ * Every Deep Finder window for the open book in one response, so switching
+ * windows is instant and the holdings matrix can compare them side by side.
+ * The portfolio is valued once and all windows share one cached one-year
+ * series per ticker. Cash never moves against itself, so it is left out.
+ */
+export const finderWindows = protectedProcedure
+  .input(dailyTrackingInput)
+  .query(async ({ ctx, input }) => {
+    const portfolio = await loadValuedPortfolio({
+      userId: ctx.user.id,
+      displayCurrency: input.displayCurrency,
+      usdBrlRate: input.usdBrlRate,
+      fxSource: input.fxSource,
+      manualRate: input.manualRate,
+      quoteSource: input.quoteSource,
+      manualPrices: input.manualPrices,
+      forceRefresh: input.forceRefresh,
+    });
+    const open = portfolio.positions.filter(
+      (position) =>
+        position.assetClass !== "cash" && isOpenQuantity(position.quantity),
+    );
+    const parsed = {
+      ...input,
+      usdBrlRate: portfolio.usdBrlRate ?? undefined,
+    };
+    const run = (window: DeepFinderWindow, forceSeriesRefresh = false) =>
+      buildFinderResult({
+        positions: open,
+        missing: portfolio.missing,
+        input: { ...parsed, window },
+        reuseSeriesAcrossWindows: true,
+        forceSeriesRefresh,
+      });
+    // Every period window reads the same one-year series key, so a forced
+    // refresh replaces it once before the other windows read the cache.
+    const forced = input.forceRefresh ? await run("1y", true) : null;
+    const results = await Promise.all(
+      DEEP_FINDER_WINDOWS.map((window) =>
+        forced && window === "1y" ? forced : run(window),
+      ),
+    );
+    const moves = new Map<
+      string,
+      Partial<Record<DeepFinderWindow, WindowMove>>
+    >();
+
+    for (const result of results) {
+      for (const row of result.positions) {
+        const entry = moves.get(row.ticker) ?? {};
+        entry[result.window] = {
+          change: row.change,
+          changePercent: row.changePercent,
+        };
+        moves.set(row.ticker, entry);
+      }
+    }
+
+    const empty: WindowMove = { change: null, changePercent: null };
+
+    return {
+      asOf: results[0]?.asOf ?? today(),
+      windows: results.map((result) => ({
+        window: result.window,
+        windowStart: result.windowStart,
+        summary: result.summary,
+      })),
+      positions: open.map((position) => {
+        const entry = moves.get(position.ticker) ?? {};
+
+        return {
+          ticker: position.ticker,
+          assetClass: position.assetClass,
+          currency: position.currency,
+          displayCurrency: input.displayCurrency,
+          marketValue: position.convertedMarketValue,
+          weight: position.weight,
+          marketPrice: position.marketPrice,
+          moves: Object.fromEntries(
+            DEEP_FINDER_WINDOWS.map((window) => [
+              window,
+              entry[window] ?? empty,
+            ]),
+          ) as Record<DeepFinderWindow, WindowMove>,
+        };
+      }),
+      quotes: {
+        source: input.quoteSource,
+        missing: [
+          ...new Set(results.flatMap((result) => result.quotes.missing)),
+        ].sort(),
+      },
+    };
+  });

@@ -197,6 +197,7 @@ function TransactionsPage() {
       utils.positions.list.invalidate(),
       utils.positions.daily.invalidate(),
       utils.positions.finder.invalidate(),
+      utils.positions.finderWindows.invalidate(),
       utils.allocation.list.invalidate(),
       // Asset detail shows the newest trade; watch-only finder rows and the
       // categories screen both depend on which tickers are held.

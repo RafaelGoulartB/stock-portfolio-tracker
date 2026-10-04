@@ -1,4 +1,8 @@
-import type { Currency, ValuedPosition } from "@portifolio-tracker/shared";
+import type {
+  AssetClass,
+  Currency,
+  ValuedPosition,
+} from "@portifolio-tracker/shared";
 import {
   add,
   type Decimal,
@@ -23,6 +27,23 @@ export type DailyTrackedPosition = ValuedPosition & {
   convertedPreviousMarketValue: string | null;
   dailyChange: string | null;
   dailyChangePercent: string | null;
+  /**
+   * Part of {@link dailyChange} caused by USD/BRL alone: today's native
+   * value at today's rate minus the same value at the previous rate. The
+   * rest is the price move. `null` for same-currency assets or without a
+   * comparison.
+   */
+  dailyFxChange: string | null;
+};
+
+/** Day move of one asset class, quoted assets and cash only. */
+export type DailyClassChange = {
+  assetClass: AssetClass;
+  marketValue: string;
+  /** `null` when no asset of the class has a previous close. */
+  dailyChange: string | null;
+  dailyChangePercent: string | null;
+  comparablePositions: number;
 };
 
 export type DailyTrackingSummary = {
@@ -36,6 +57,17 @@ export type DailyTrackingSummary = {
    */
   dailyChange: string | null;
   dailyChangePercent: string | null;
+  /**
+   * Sum of every comparable position's {@link DailyTrackedPosition.dailyFxChange}.
+   * `null` when no foreign-currency amount was compared.
+   */
+  dailyFxChange: string | null;
+  /** `dailyChange - dailyFxChange`: the move of prices alone. */
+  dailyPriceChange: string | null;
+  /** USD/BRL move between the two sessions, `null` without both rates. */
+  usdBrlChangePercent: string | null;
+  /** Largest class first. */
+  byAssetClass: DailyClassChange[];
   /** Breadth and coverage count quoted assets only; cash is excluded. */
   advancing: number;
   declining: number;
@@ -168,11 +200,86 @@ export function buildDailyTracking(input: DailyTrackingInput): DailyTracking {
   let declining = 0;
   let unchanged = 0;
   let totalMarketValue = ZERO;
+  let fxChange = ZERO;
+  let comparedForeign = false;
+  const classes = new Map<
+    AssetClass,
+    {
+      marketValue: Decimal;
+      previous: Decimal;
+      change: Decimal;
+      comparable: number;
+    }
+  >();
+
+  const classTotals = (assetClass: AssetClass) => {
+    const existing = classes.get(assetClass);
+
+    if (existing) {
+      return existing;
+    }
+
+    const created = {
+      marketValue: ZERO,
+      previous: ZERO,
+      change: ZERO,
+      comparable: 0,
+    };
+    classes.set(assetClass, created);
+
+    return created;
+  };
+
+  /** FX share of a compared position, accumulated into the summary. */
+  const fxPart = (
+    position: ValuedPosition,
+    nativeValue: string,
+  ): string | null => {
+    if (
+      position.currency === input.displayCurrency ||
+      position.convertedMarketValue == null
+    ) {
+      return null;
+    }
+
+    const atPreviousRate = toDisplay(
+      nativeValue,
+      position.currency,
+      input.displayCurrency,
+      previousRate,
+    );
+    const part = sub(
+      toDecimal(position.convertedMarketValue),
+      toDecimal(atPreviousRate),
+    );
+
+    comparedForeign = true;
+    fxChange = add(fxChange, part);
+
+    return formatDecimal(part, MONEY_PLACES);
+  };
+
+  const compare = (
+    position: ValuedPosition,
+    previousValue: Decimal,
+    change: Decimal,
+  ) => {
+    const totals = classTotals(position.assetClass);
+
+    totals.previous = add(totals.previous, previousValue);
+    totals.change = add(totals.change, change);
+    totals.comparable += 1;
+  };
 
   const positions = open.map((position): DailyTrackedPosition => {
     if (position.convertedMarketValue != null) {
       totalMarketValue = add(
         totalMarketValue,
+        toDecimal(position.convertedMarketValue),
+      );
+      const totals = classTotals(position.assetClass);
+      totals.marketValue = add(
+        totals.marketValue,
         toDecimal(position.convertedMarketValue),
       );
     }
@@ -196,6 +303,7 @@ export function buildDailyTracking(input: DailyTrackingInput): DailyTracking {
         currentComparableValue,
         toDecimal(position.convertedMarketValue),
       );
+      compare(position, previousValue, change);
 
       return {
         ...position,
@@ -204,6 +312,7 @@ export function buildDailyTracking(input: DailyTrackingInput): DailyTracking {
         convertedPreviousMarketValue,
         dailyChange: formatDecimal(change, MONEY_PLACES),
         dailyChangePercent: ratio(change, previousValue),
+        dailyFxChange: fxPart(position, nativeValue),
       };
     }
 
@@ -217,6 +326,7 @@ export function buildDailyTracking(input: DailyTrackingInput): DailyTracking {
         convertedPreviousMarketValue: null,
         dailyChange: null,
         dailyChangePercent: null,
+        dailyFxChange: null,
       };
     }
 
@@ -242,6 +352,8 @@ export function buildDailyTracking(input: DailyTrackingInput): DailyTracking {
       toDecimal(position.convertedMarketValue),
     );
 
+    compare(position, previousValue, change);
+
     if (change > ZERO) {
       advancing += 1;
     } else if (change < ZERO) {
@@ -257,6 +369,7 @@ export function buildDailyTracking(input: DailyTrackingInput): DailyTracking {
       convertedPreviousMarketValue,
       dailyChange: formatDecimal(change, MONEY_PLACES),
       dailyChangePercent: ratio(change, previousValue),
+      dailyFxChange: fxPart(position, position.marketValue ?? "0"),
     };
   });
 
@@ -286,6 +399,41 @@ export function buildDailyTracking(input: DailyTrackingInput): DailyTracking {
       dailyChangePercent: hasComparison
         ? ratio(dailyChange, previousComparableValue)
         : null,
+      dailyFxChange:
+        hasComparison && comparedForeign
+          ? formatDecimal(fxChange, MONEY_PLACES)
+          : null,
+      dailyPriceChange: hasComparison
+        ? formatDecimal(
+            comparedForeign ? sub(dailyChange, fxChange) : dailyChange,
+            MONEY_PLACES,
+          )
+        : null,
+      usdBrlChangePercent:
+        input.usdBrlRate && previousRate
+          ? ratio(
+              sub(toDecimal(input.usdBrlRate), toDecimal(previousRate)),
+              toDecimal(previousRate),
+            )
+          : null,
+      byAssetClass: [...classes.entries()]
+        .filter(
+          ([, totals]) => !isZero(totals.marketValue) || totals.comparable > 0,
+        )
+        .map(([assetClass, totals]) => ({
+          assetClass,
+          marketValue: formatDecimal(totals.marketValue, MONEY_PLACES),
+          dailyChange:
+            totals.comparable > 0
+              ? formatDecimal(totals.change, MONEY_PLACES)
+              : null,
+          dailyChangePercent:
+            totals.comparable > 0
+              ? ratio(totals.change, totals.previous)
+              : null,
+          comparablePositions: totals.comparable,
+        }))
+        .sort((a, b) => Number(b.marketValue) - Number(a.marketValue)),
       advancing,
       declining,
       unchanged,

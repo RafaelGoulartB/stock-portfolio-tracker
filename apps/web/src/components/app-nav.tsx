@@ -75,14 +75,14 @@ const NAV_GROUPS: NavGroup[] = [
     label: <Trans id="nav.analysis">Analysis</Trans>,
     items: [
       {
-        to: "/performance",
-        icon: TrendingUp,
-        label: <Trans id="nav.performance">Performance</Trans>,
-      },
-      {
         to: "/daily",
         icon: Activity,
         label: <Trans id="nav.daily">Daily</Trans>,
+      },
+      {
+        to: "/performance",
+        icon: TrendingUp,
+        label: <Trans id="nav.performance">Performance</Trans>,
       },
       {
         to: "/deep-finder",

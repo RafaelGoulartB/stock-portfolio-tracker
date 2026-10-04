@@ -338,7 +338,8 @@ six hours. Live screens expose an explicit "Refresh quotes" action so a
 longer freshness window does not trap the user on a dead tape.
 
 Mutation invalidation in `routes/_app/transactions.tsx` already covers
-`positions.list`, `positions.daily`, `positions.finder`, `allocation.list`,
+`positions.list`, `positions.daily`, `positions.finder`,
+`positions.finderWindows`, `allocation.list`,
 `performance.history`, `dividends.history`, and `transactions.forTicker`.
 Preserve `lib/session.ts` clearing all queries on account changes. Do not
 persist private portfolio query caches.

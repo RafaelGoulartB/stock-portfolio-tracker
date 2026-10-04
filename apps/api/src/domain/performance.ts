@@ -131,6 +131,11 @@ export type PerformanceMonth = {
   realizedPnl: string;
   /** Open result at this snapshot (`marketValue - investedCost`). */
   unrealizedPnl: string;
+  /**
+   * Money earned in the month: `end - start - netFlow`, the numerator of the
+   * monthly return. `null` exactly when {@link monthlyReturn} is.
+   */
+  result: string | null;
   /** Modified Dietz return for the month, `null` when there is no base. */
   monthlyReturn: string | null;
   /** Compounded return since the start of the window. */
@@ -183,6 +188,17 @@ export type PerformanceMonthMark = {
   returnPercent: string;
 };
 
+/** Calendar year inside the window, built from its months with a return. */
+export type PerformanceYear = {
+  year: number;
+  /** Months of this year that have a return; under 12 for a partial year. */
+  months: number;
+  /** Monthly returns compounded over those months. */
+  return: string;
+  /** Sum of those months' results, in the display currency. */
+  result: string;
+};
+
 export type PerformanceSummary = {
   displayCurrency: Currency;
   /** First and last month of the window, `YYYY-MM`. */
@@ -200,6 +216,8 @@ export type PerformanceSummary = {
   unrealizedPnlPercent: string | null;
   /** Realized result booked inside the window. */
   realizedPnl: string;
+  /** Money earned over the months with a return: the sum of their results. */
+  windowResult: string | null;
   /** Time-weighted return over the window, immune to contribution timing. */
   cumulativeReturn: string | null;
   /** `cumulativeReturn` restated per year, `null` for windows under 6 months. */
@@ -224,6 +242,7 @@ export type PerformanceSummary = {
 
 export type PerformanceHistory = {
   months: PerformanceMonth[];
+  years: PerformanceYear[];
   summary: PerformanceSummary;
   byAssetClass: PerformanceClassBreakdown[];
   byAsset: PerformanceAssetBreakdown[];
@@ -547,6 +566,40 @@ function ratio(numerator: Decimal, denominator: Decimal): string | null {
 }
 
 /**
+ * Groups the months that have a return by calendar year, compounding their
+ * returns and summing their results. Years without any return are omitted.
+ */
+function yearsOf(months: readonly PerformanceMonth[]): PerformanceYear[] {
+  const years = new Map<
+    number,
+    { months: number; growth: Decimal; result: Decimal }
+  >();
+
+  for (const month of months) {
+    if (month.monthlyReturn == null || month.result == null) {
+      continue;
+    }
+
+    const year = Number(month.key.slice(0, 4));
+    const entry = years.get(year) ?? { months: 0, growth: ONE, result: ZERO };
+
+    entry.months += 1;
+    entry.growth = mul(entry.growth, add(ONE, toDecimal(month.monthlyReturn)));
+    entry.result = add(entry.result, toDecimal(month.result));
+    years.set(year, entry);
+  }
+
+  return [...years.entries()]
+    .sort(([left], [right]) => left - right)
+    .map(([year, entry]) => ({
+      year,
+      months: entry.months,
+      return: formatDecimal(sub(entry.growth, ONE), RATE_PLACES),
+      result: formatDecimal(entry.result, MONEY_PLACES),
+    }));
+}
+
+/**
  * Turns a transaction log into a monthly performance history: portfolio
  * value, contributions, open and realized results, per-month time-weighted
  * returns, the compounded curve with its drawdown, and the current
@@ -584,6 +637,7 @@ export function buildPerformanceHistory(
   let wealthIndex = ONE;
   let peakIndex = ONE;
   let maxDrawdown: Decimal | null = null;
+  let windowResult = ZERO;
   let monthsWithReturn = 0;
   let positiveMonths = 0;
   let negativeMonths = 0;
@@ -608,9 +662,15 @@ export function buildPerformanceHistory(
 
     let cumulativeReturn: string | null = null;
     let drawdown: string | null = null;
+    let result: Decimal | null = null;
 
     if (monthlyReturn != null) {
       monthsWithReturn += 1;
+      result = sub(
+        sub(valuation.marketValue, previous.marketValue),
+        flows.total,
+      );
+      windowResult = add(windowResult, result);
       wealthIndex = mul(wealthIndex, add(ONE, monthlyReturn));
 
       if (wealthIndex > peakIndex) {
@@ -667,6 +727,7 @@ export function buildPerformanceHistory(
         sub(valuation.marketValue, valuation.investedCost),
         MONEY_PLACES,
       ),
+      result: result == null ? null : formatDecimal(result, MONEY_PLACES),
       monthlyReturn:
         monthlyReturn == null
           ? null
@@ -759,6 +820,7 @@ export function buildPerformanceHistory(
 
   return {
     months,
+    years: yearsOf(months),
     summary: {
       displayCurrency: input.displayCurrency,
       from: first.key,
@@ -772,6 +834,10 @@ export function buildPerformanceHistory(
       unrealizedPnl: formatDecimal(unrealized, MONEY_PLACES),
       unrealizedPnlPercent: ratio(unrealized, last.investedCost),
       realizedPnl: formatDecimal(windowRealized, MONEY_PLACES),
+      windowResult:
+        monthsWithReturn === 0
+          ? null
+          : formatDecimal(windowResult, MONEY_PLACES),
       cumulativeReturn:
         monthsWithReturn === 0
           ? null

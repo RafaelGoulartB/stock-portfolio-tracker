@@ -143,6 +143,76 @@ describe("buildPerformanceHistory", () => {
     expect(february.monthlyReturn).toBe("0.193548");
   });
 
+  it("states each month's result in money, net of contributions", () => {
+    const history = build(
+      [
+        tx({ side: "buy", quantity: "100", price: "10" }),
+        tx({
+          side: "buy",
+          quantity: "100",
+          price: "11",
+          tradedAt: "2026-02-14",
+        }),
+      ],
+      { ACME: { "2026-01-31": "10", "2026-02-28": "12", "2026-03-31": "12" } },
+      { months: 2, now: "2026-03-31" },
+    );
+
+    // February: 2400 - 1000 - 1100 contributed; March: flat.
+    expect(history.months.map((month) => month.result)).toEqual([
+      "300.00",
+      "0.00",
+    ]);
+    expect(history.summary.windowResult).toBe("300.00");
+  });
+
+  it("has no result for a month without a return base", () => {
+    const history = build(
+      [
+        tx({
+          side: "buy",
+          quantity: "100",
+          price: "10",
+          tradedAt: "2026-02-28",
+        }),
+      ],
+      { ACME: { "2026-02-28": "11", "2026-03-31": "12" } },
+      { months: 2, now: "2026-03-31" },
+    );
+
+    expect(history.months[0].monthlyReturn).toBeNull();
+    expect(history.months[0].result).toBeNull();
+    expect(history.months[1].result).toBe("100.00");
+    expect(history.summary.windowResult).toBe("100.00");
+  });
+
+  it("compounds the months of each calendar year", () => {
+    const history = build(
+      [
+        tx({
+          side: "buy",
+          quantity: "100",
+          price: "10",
+          tradedAt: "2025-11-10",
+        }),
+      ],
+      {
+        ACME: {
+          "2025-11-30": "10",
+          "2025-12-31": "11",
+          "2026-01-31": "11",
+          "2026-02-28": "12.1",
+        },
+      },
+      { months: 3, now: "2026-02-28" },
+    );
+
+    expect(history.years).toEqual([
+      { year: 2025, months: 1, return: "0.100000", result: "100.00" },
+      { year: 2026, months: 2, return: "0.100000", result: "110.00" },
+    ]);
+  });
+
   it("ignores contributions when measuring the return", () => {
     // Doubling the position at the same price must not create a return.
     const flat = build(

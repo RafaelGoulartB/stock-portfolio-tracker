@@ -4,7 +4,8 @@ import { type StoredQuerySettings, useSettings } from "@/lib/settings";
 
 /**
  * The settings part of every live portfolio query (`allocation.list`,
- * `positions.list`, `positions.daily`, `positions.finder`). A pure function so
+ * `positions.list`, `positions.daily`, `positions.finder`,
+ * `positions.finderWindows`). A pure function so
  * route loaders and components build byte-identical inputs and therefore hit
  * the same cache entry.
  *

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   finderSeriesStart,
+  holdingBaselineDay,
   seriesLookbackStart,
   shiftIsoDate,
   shiftIsoMonth,
@@ -32,6 +33,32 @@ describe("windowStartDay", () => {
 
   it("anchors YTD to last year's final calendar day", () => {
     expect(windowStartDay("ytd", today)).toBe("2025-12-31");
+  });
+});
+
+describe("holdingBaselineDay", () => {
+  it("compares a weekend quote with the session before it", () => {
+    // Sunday: the latest quote is Friday's close, so 1d starts on Thursday.
+    expect(holdingBaselineDay("1d", "2026-10-04", "2026-10-02")).toBe(
+      "2026-10-01",
+    );
+  });
+
+  it("keeps the calendar day for a live quote", () => {
+    expect(holdingBaselineDay("1d", "2026-10-05", "2026-10-05")).toBe(
+      "2026-10-04",
+    );
+  });
+
+  it("falls back to the calendar without a quote day", () => {
+    expect(holdingBaselineDay("1d", "2026-10-04", null)).toBe("2026-10-03");
+  });
+
+  it("leaves longer windows on the calendar", () => {
+    expect(holdingBaselineDay("1m", "2026-10-04", "2026-10-02")).toBe(
+      "2026-09-04",
+    );
+    expect(holdingBaselineDay("cost", "2026-10-04", "2026-10-02")).toBeNull();
   });
 });
 

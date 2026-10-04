@@ -71,7 +71,10 @@ function PositionsPage() {
       await utils.positions.list.invalidate(forcedInput);
       const refreshed = await utils.positions.list.fetch(forcedInput);
       utils.positions.list.setData(queryInput, refreshed);
-      await utils.positions.finder.invalidate();
+      await Promise.all([
+        utils.positions.finder.invalidate(),
+        utils.positions.finderWindows.invalidate(),
+      ]);
     } catch (error) {
       toast.error(queryErrorMessage(error));
     } finally {
