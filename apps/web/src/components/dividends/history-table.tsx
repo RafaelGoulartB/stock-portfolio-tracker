@@ -3,6 +3,7 @@ import { Trans } from "@lingui/react/macro";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AssetLink } from "@/components/asset-link";
+import { AssetLogo } from "@/components/asset-logo";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -38,6 +39,12 @@ export function HistoryTable({ data }: { data: DividendData }) {
   const safePage = Math.min(page, pageCount - 1);
   const firstRow = safePage * pageSize;
   const visibleEvents = data.events.slice(firstRow, firstRow + pageSize);
+  const classOf = new Map(
+    data.income.byAsset.map((asset) => [
+      `${asset.ticker}|${asset.currency}`,
+      asset.assetClass,
+    ]),
+  );
 
   useEffect(() => {
     setPage((current) => Math.min(current, pageCount - 1));
@@ -89,7 +96,20 @@ export function HistoryTable({ data }: { data: DividendData }) {
             {visibleEvents.map((event) => (
               <TableRow key={event.id}>
                 <TableCell className="font-medium">
-                  <AssetLink ticker={event.ticker}>{event.ticker}</AssetLink>
+                  <AssetLink
+                    ticker={event.ticker}
+                    className="flex items-center gap-2"
+                  >
+                    <AssetLogo
+                      ticker={event.ticker}
+                      assetClass={
+                        classOf.get(`${event.ticker}|${event.currency}`) ??
+                        "other"
+                      }
+                      currency={event.currency}
+                    />
+                    {event.ticker}
+                  </AssetLink>
                 </TableCell>
                 <TableCell>{formatTradeDate(event.exDate)}</TableCell>
                 <TableCell>

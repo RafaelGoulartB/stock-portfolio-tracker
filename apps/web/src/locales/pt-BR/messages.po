@@ -752,6 +752,57 @@ msgstr ""
 #~ msgid "positions.teaserTitle"
 #~ msgstr "Resumo"
 
+#. placeholder {0}: summary.upcomingCount
+#. js-lingui-explicit-id
+#: src/components/dividends/summary.tsx:32
+#~ msgid "dividends.eventCount"
+#~ msgstr "{0} eventos"
+
+#. js-lingui-explicit-id
+#: src/components/dividends/charts.tsx:34
+#~ msgid "dividends.chartDescription"
+#~ msgstr "Proventos brutos estimados na moeda de exibição da carteira."
+
+#. js-lingui-explicit-id
+#: src/components/dividends/summary.tsx:20
+#~ msgid "dividends.total"
+#~ msgstr "Proventos estimados"
+
+#. js-lingui-explicit-id
+#: src/components/dividends/summary.tsx:51
+#~ msgid "dividends.events"
+#~ msgstr "Eventos de proventos"
+
+#. js-lingui-explicit-id
+#: src/components/dividends/summary.tsx:39
+#~ msgid "dividends.nextDate"
+#~ msgstr "Próxima data relevante"
+
+#. js-lingui-explicit-id
+#: src/components/dividends/charts.tsx:95
+#~ msgid "dividends.noUpcoming"
+#~ msgstr "A fonte selecionada não publicou eventos futuros."
+
+#. js-lingui-explicit-id
+#: src/components/dividends/summary.tsx:46
+#~ msgid "dividends.paymentOrExDate"
+#~ msgstr "Pagamento ou data-ex"
+
+#. js-lingui-explicit-id
+#: src/components/dividends/summary.tsx:22
+#~ msgid "dividends.selectedPeriod"
+#~ msgstr "Período selecionado"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:76
+#~ msgid "dividends.year"
+#~ msgstr "ano"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:78
+#~ msgid "dividends.years"
+#~ msgstr "anos"
+
 #. js-lingui-explicit-id
 #. placeholder {0}: filter.label
 #. placeholder {1}: positions.length
@@ -792,19 +843,26 @@ msgstr "{0} compras · {1} vendas · {2} compradas · {3} vendidas"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: formatMoney(month.pendingAfter, "BRL")
-#: src/components/income-tax/report-sections.tsx:501
+#: src/components/income-tax/report-sections.tsx:641
 msgid "incomeTax.monthly.pending"
 msgstr "{0} acumulado"
 
 #. js-lingui-explicit-id
-#. placeholder {0}: summary.upcomingCount
-#: src/components/dividends/summary.tsx:32
-msgid "dividends.eventCount"
+#. placeholder {0}: asset.events
+#: src/components/dividends/by-asset-table.tsx:223
+msgid "dividends.eventsShort"
 msgstr "{0} eventos"
 
 #. js-lingui-explicit-id
+#. placeholder {0}: summary.upcomingCount
+#. placeholder {1}: formatTradeDate(summary.nextPaymentDate)
+#: src/components/dividends/summary.tsx:81
+msgid "dividends.upcomingNext"
+msgstr "{0} eventos · o próximo em {1}"
+
+#. js-lingui-explicit-id
 #. placeholder {0}: data.summary.unconvertedEvents
-#: src/components/dividends/content.tsx:97
+#: src/components/dividends/content.tsx:108
 msgid "dividends.unconverted"
 msgstr "Não foi possível converter {0} eventos."
 
@@ -943,12 +1001,12 @@ msgid "analysis.breadthLabel"
 msgstr "{advancing} em alta, {declining} em queda, {unchanged} estáveis"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:886
+#: src/components/income-tax/report-sections.tsx:1027
 msgid "incomeTax.holdings.descCash"
 msgstr "{amount} em conta corrente não remunerada no exterior."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:882
+#: src/components/income-tax/report-sections.tsx:1023
 msgid "incomeTax.holdings.descCashAt"
 msgstr "{amount} em conta corrente não remunerada na {institution}."
 
@@ -969,17 +1027,17 @@ msgid "daily.assetsCompared"
 msgstr "{count, plural, one {# ativo comparado} other {# ativos comparados}}"
 
 #. js-lingui-explicit-id
-#: src/components/positions/allocation-card.tsx:390
+#: src/components/positions/allocation-card.tsx:377
 msgid "positions.allocGroupCount"
 msgstr "{count, plural, one {# ativo} other {# ativos}}"
 
 #. js-lingui-explicit-id
-#: src/components/positions/allocation-card.tsx:484
+#: src/components/positions/allocation-card.tsx:471
 msgid "positions.allocDonutTotal"
 msgstr "{count, plural, one {# ativo} other {# ativos}}"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:982
+#: src/components/income-tax/report-sections.tsx:1167
 msgid "incomeTax.holdings.count"
 msgstr "{count, plural, one {# ativo} other {# ativos}}"
 
@@ -1060,7 +1118,7 @@ msgid "daily.comparisonCoverageCount"
 msgstr "{count, plural, one {A variação do dia cobre {compared} de # ativo em aberto; o caixa entra no valor.} other {A variação do dia cobre {compared} de # ativos em aberto; o caixa entra no valor.}}"
 
 #. js-lingui-explicit-id
-#: src/components/positions/allocation-card.tsx:595
+#: src/components/positions/allocation-card.tsx:582
 msgid "positions.halfOfValue"
 msgstr "{count, plural, one {Metade do valor investido está na maior posição.} other {Metade do valor investido está nas # maiores posições.}}"
 
@@ -1090,7 +1148,7 @@ msgid "transactions.booked"
 msgstr "{count} posições lançadas como compras"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:275
+#: src/components/income-tax/report-sections.tsx:297
 msgid "incomeTax.warning.dayTrades.body"
 msgstr "{count} pareamentos de compra e venda no mesmo dia foram apurados como day trade (20%), sem alterar o custo médio da posição que você já tinha."
 
@@ -1098,6 +1156,11 @@ msgstr "{count} pareamentos de compra e venda no mesmo dia foram apurados como d
 #: src/components/analysis/primitives.tsx:126
 msgid "analysis.falling"
 msgstr "{declining} em queda"
+
+#. js-lingui-explicit-id
+#: src/components/dividends/summary.tsx:28
+msgid "dividends.summaryFooter"
+msgstr "{eventCount} eventos na janela, {total} no total · nativo: {nativeTotals}"
 
 #. js-lingui-explicit-id
 #: src/components/transactions/broker-note-import.tsx:360
@@ -1115,29 +1178,39 @@ msgid "documentation.score.overweightBadge"
 msgstr "{overweightLimit} do alvo"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:855
+#: src/components/income-tax/report-sections.tsx:996
 msgid "incomeTax.holdings.descBdrs"
 msgstr "{quantity} BDRs de {ticker}, negociados na B3. Custo médio unitário de {average}."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:848
+#: src/components/income-tax/report-sections.tsx:989
 msgid "incomeTax.holdings.descQuotas"
 msgstr "{quantity} cotas de {ticker}, negociadas na B3. Custo médio unitário de {average}."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:832
+#: src/components/income-tax/report-sections.tsx:973
 msgid "incomeTax.holdings.descForeign"
 msgstr "{quantity} ações de {ticker}, negociadas nos Estados Unidos. Custo de aquisição de {cost}."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:869
+#: src/components/income-tax/report-sections.tsx:1010
 msgid "incomeTax.holdings.descShares"
 msgstr "{quantity} ações de {ticker}, negociadas na B3. Custo médio unitário de {average}."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:862
+#: src/components/income-tax/report-sections.tsx:1003
 msgid "incomeTax.holdings.descUnits"
 msgstr "{quantity} units de {ticker}, negociadas na B3. Custo médio unitário de {average}."
+
+#. js-lingui-explicit-id
+#: src/components/income-tax/report-sections.tsx:520
+msgid "incomeTax.monthly.showQuiet"
+msgstr "{quiet, plural, one {Mostrar o # mês sem movimento} other {Mostrar os # meses sem movimento}}"
+
+#. js-lingui-explicit-id
+#: src/components/income-tax/report-sections.tsx:335
+msgid "incomeTax.review.count"
+msgstr "{severe, plural, =0 {Nada impede os números abaixo; as notas explicam como foram apurados.} one {# item pode mudar os números abaixo.} other {# itens podem mudar os números abaixo.}}"
 
 #. js-lingui-explicit-id
 #: src/routes/_app/transactions.tsx:236
@@ -1172,17 +1245,17 @@ msgid "transactions.updated"
 msgstr "Operação de {ticker} atualizada"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:243
+#: src/components/income-tax/report-sections.tsx:265
 msgid "incomeTax.warning.uncovered.body"
 msgstr "{tickers}: cripto, renda fixa e outras classes seguem regras próprias e ficam fora deste relatório."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:226
+#: src/components/income-tax/report-sections.tsx:248
 msgid "incomeTax.warning.missingRates.body"
 msgstr "{tickers}: preencha a PTAX em Operações. Os resultados e custos no exterior ficam em branco em vez de usar outra cotação."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:260
+#: src/components/income-tax/report-sections.tsx:282
 msgid "incomeTax.warning.units.body"
 msgstr "{tickers}: tributados a 15% e nunca isentos. Se algum for fundo imobiliário, mude a classe para REIT para ser tributado como FII (20%)."
 
@@ -1200,6 +1273,11 @@ msgstr "{trimAbsolute} ou {trimRelative}"
 #: src/components/analysis/primitives.tsx:130
 msgid "analysis.flat"
 msgstr "{unchanged} estáveis"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:91
+msgid "dividends.windowShort"
+msgstr "{window}A"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: preview.ungradedMultiplier
@@ -1261,9 +1339,19 @@ msgid "deepFinder.window1y"
 msgstr "1 ano"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1198
+#: src/components/income-tax/report-sections.tsx:1405
 msgid "incomeTax.holdings.brazil"
 msgstr "105 – Brasil"
+
+#. js-lingui-explicit-id
+#: src/components/dividends/by-asset-table.tsx:127
+msgid "dividends.trailing12mShort"
+msgstr "12 meses"
+
+#. js-lingui-explicit-id
+#: src/components/dividends/summary.tsx:71
+msgid "dividends.yieldOnCostHint"
+msgstr "Proventos de 12 meses sobre o custo do que você tem."
 
 #. js-lingui-explicit-id
 #: src/components/allocation/asset-detail-page.tsx:331
@@ -1271,7 +1359,7 @@ msgid "allocation.detailTrend"
 msgstr "Tendência 12 meses"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:143
+#: src/components/income-tax/report-sections.tsx:162
 msgid "incomeTax.summary.foreignTaxHint"
 msgstr "15% do resultado das vendas no exterior no ano, sem contar proventos do exterior."
 
@@ -1296,7 +1384,7 @@ msgid "deepFinder.short.1y"
 msgstr "1A"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1210
+#: src/components/income-tax/report-sections.tsx:1417
 msgid "incomeTax.holdings.usa"
 msgstr "249 – Estados Unidos"
 
@@ -1308,12 +1396,12 @@ msgid "deepFinder.window3m"
 msgstr "3 meses"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1014
+#: src/components/income-tax/report-sections.tsx:1199
 msgid "incomeTax.holdings.before"
 msgstr "31/12/{previousYear}"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1019
+#: src/components/income-tax/report-sections.tsx:1204
 msgid "incomeTax.holdings.after"
 msgstr "31/12/{year}"
 
@@ -1404,7 +1492,7 @@ msgid "documentation.contribution.exampleStarterDescription"
 msgstr "Um ativo só observado com meta de 5%, numa carteira de R$ 1.000.000 que recebe R$ 100.000, leva no máximo {starterShare} de 5% de R$ 1.100.000 neste aporte; o resto da meta espera os próximos aportes."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1208
+#: src/components/income-tax/report-sections.tsx:1415
 msgid "incomeTax.holdings.groupAbroad"
 msgstr "Exterior"
 
@@ -1429,7 +1517,7 @@ msgid "brokerNotes.account"
 msgstr "Conta"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1084
+#: src/components/income-tax/report-sections.tsx:1280
 msgid "incomeTax.holdings.cashKind"
 msgstr "Conta no exterior"
 
@@ -1449,7 +1537,7 @@ msgid "transactions.colActions"
 msgstr "Ações"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1023
+#: src/components/income-tax/report-sections.tsx:1208
 msgid "incomeTax.holdings.actions"
 msgstr "Editar"
 
@@ -1501,7 +1589,7 @@ msgid "documentation.score.addPoint"
 msgstr "Adicionar ponto de nota"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1299
+#: src/components/income-tax/report-sections.tsx:1506
 msgid "incomeTax.exempt.bonusCnpjMissing"
 msgstr "Informe em Bens e Direitos"
 
@@ -1613,7 +1701,7 @@ msgid "document.allocation"
 msgstr "Alocação"
 
 #. js-lingui-explicit-id
-#: src/components/positions/allocation-card.tsx:302
+#: src/components/positions/allocation-card.tsx:289
 msgid "positions.allocation"
 msgstr "Alocação"
 
@@ -1633,7 +1721,7 @@ msgid "dividends.sourceAlpha"
 msgstr "Alpha Vantage (chave de API gratuita)"
 
 #. js-lingui-explicit-id
-#: src/components/dividends/content.tsx:82
+#: src/components/dividends/content.tsx:93
 msgid "dividends.alphaNotConfigured"
 msgstr "A Alpha Vantage não está configurada. Defina ALPHA_VANTAGE_API_KEY na API ou selecione Automático para usar o fallback do Yahoo."
 
@@ -1674,11 +1762,12 @@ msgstr "E mais {extra}…"
 
 #. js-lingui-explicit-id
 #: src/components/dividends/badges.tsx:26
+#: src/components/dividends/charts.tsx:285
 msgid "dividends.announced"
 msgstr "Anunciado"
 
 #. js-lingui-explicit-id
-#: src/components/dividends/charts.tsx:87
+#: src/components/dividends/charts.tsx:340
 msgid "dividends.upcomingDescription"
 msgstr "Eventos anunciados para posições que parecem elegíveis."
 
@@ -1703,12 +1792,12 @@ msgid "documentation.score.field.ungradedHint"
 msgstr "Aplicado quando o ativo ainda não tem trimestre com nota. Neutro é 1."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:676
+#: src/components/income-tax/report-sections.tsx:817
 msgid "incomeTax.foreign.description"
 msgstr "Apurado uma vez por ano, na declaração, a 15%. Cada venda é convertida pela PTAX de venda do BCB na data dela, e o custo pelas cotações das compras. Dividendos e juros recebidos no exterior também entram nessa base e não estão incluídos aqui."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:209
+#: src/components/income-tax/report-sections.tsx:231
 msgid "incomeTax.warning.beforeStart.body"
 msgstr "A apuração começa em {startYear}. Este ano mostra apenas a posição em 31 de dezembro."
 
@@ -1786,7 +1875,7 @@ msgid "dividends.sourceAuto"
 msgstr "Automático (Alpha Vantage + fallback do Yahoo)"
 
 #. js-lingui-explicit-id
-#: src/components/dividends/content.tsx:72
+#: src/components/dividends/content.tsx:83
 msgid "dividends.alphaHint"
 msgstr "O modo automático está usando apenas o Yahoo. Defina ALPHA_VANTAGE_API_KEY na API para complementar eventos dos EUA com datas de pagamento e anúncios futuros."
 
@@ -1839,7 +1928,7 @@ msgid "detailedPositions.colAvgPrice"
 msgstr "Preço médio"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:408
+#: src/components/income-tax/report-sections.tsx:500
 msgid "incomeTax.monthly.title"
 msgstr "Apuração mensal na B3"
 
@@ -1902,12 +1991,17 @@ msgid "assetClass.bdr"
 msgstr "BDR"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:569
+#: src/components/income-tax/report-sections.tsx:710
 msgid "incomeTax.kind.bdr"
 msgstr "BDR"
 
 #. js-lingui-explicit-id
-#: src/components/positions/allocation-card.tsx:588
+#: src/components/income-tax/report-sections.tsx:320
+msgid "incomeTax.review.label"
+msgstr "Antes de declarar"
+
+#. js-lingui-explicit-id
+#: src/components/positions/allocation-card.tsx:575
 msgid "positions.effectivePositions"
 msgstr "Equivale a <0>{effective}</0> posições de mesmo peso, de {positionCount}."
 
@@ -1917,7 +2011,12 @@ msgid "documentation.score.field.sellConfidenceHint"
 msgstr "Abaixo disso, as sugestões de venda aparecem só como informação."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1175
+#: src/routes/_app/income-tax.tsx:186
+msgid "incomeTax.nav.holdings"
+msgstr "Bens e Direitos"
+
+#. js-lingui-explicit-id
+#: src/components/income-tax/report-sections.tsx:1382
 msgid "incomeTax.holdings.title"
 msgstr "Bens e Direitos"
 
@@ -2000,7 +2099,7 @@ msgid "allocation.reasonCooldownV2"
 msgstr "Comprado recentemente: prioridade {0} até {1}. Ainda falta {2} da meta ajustada pelo valuation."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1196
+#: src/components/income-tax/report-sections.tsx:1403
 msgid "incomeTax.holdings.groupBrazil"
 msgstr "Brasil"
 
@@ -2067,7 +2166,7 @@ msgid "transactions.notesDescription"
 msgstr "Corretora, estratégia ou qualquer coisa que valha lembrar."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:814
+#: src/components/income-tax/report-sections.tsx:955
 msgid "incomeTax.holdings.descBroker"
 msgstr "Corretora: {broker}."
 
@@ -2231,7 +2330,7 @@ msgid "categories.filterCategory"
 msgstr "Categoria"
 
 #. js-lingui-explicit-id
-#: src/components/positions/allocation-card.tsx:277
+#: src/components/positions/allocation-card.tsx:264
 msgid "positions.allocByCategory"
 msgstr "Categoria"
 
@@ -2379,7 +2478,7 @@ msgid "transactions.classFilter"
 msgstr "Classe"
 
 #. js-lingui-explicit-id
-#: src/components/positions/allocation-card.tsx:268
+#: src/components/positions/allocation-card.tsx:255
 msgid "positions.allocByClass"
 msgstr "Classe"
 
@@ -2451,12 +2550,12 @@ msgid "incomeTax.profile.cnpj"
 msgstr "CNPJ"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1277
+#: src/components/income-tax/report-sections.tsx:1484
 msgid "incomeTax.exempt.bonusCnpj"
 msgstr "CNPJ"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:111
+#: src/components/income-tax/report-sections.tsx:123
 msgid "incomeTax.summary.darfHint"
 msgstr "Código 6015, com vencimento no último dia útil do mês seguinte. Registrado como pago: {darfPaid}."
 
@@ -2527,7 +2626,7 @@ msgid "documentation.performance.compoundingTitle"
 msgstr "Composição, anualização e drawdown"
 
 #. js-lingui-explicit-id
-#: src/components/positions/allocation-card.tsx:530
+#: src/components/positions/allocation-card.tsx:517
 msgid "positions.concentration"
 msgstr "Concentração"
 
@@ -2674,6 +2773,16 @@ msgid "incomeTax.cash.convert"
 msgstr "Converter"
 
 #. js-lingui-explicit-id
+#: src/components/income-tax/report-sections.tsx:1249
+msgid "incomeTax.holdings.copyLabel"
+msgstr "Copiar a discriminação de {ticker}"
+
+#. js-lingui-explicit-id
+#: src/components/income-tax/report-sections.tsx:1294
+msgid "incomeTax.holdings.copyCashLabel"
+msgstr "Copiar a discriminação do saldo em dólar"
+
+#. js-lingui-explicit-id
 #: src/components/income-tax/opening-balances.tsx:210
 msgid "incomeTax.opening.dialogDescription"
 msgstr "Copie da sua última declaração: os prejuízos a compensar da ficha Renda Variável (coluna de dezembro) e o imposto abaixo de R$ 10 ainda não pago. Valores em reais."
@@ -2689,7 +2798,7 @@ msgid "deepFinder.short.cost"
 msgstr "Custo"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:707
+#: src/components/income-tax/report-sections.tsx:848
 msgid "incomeTax.foreign.cost"
 msgstr "Custo (R$)"
 
@@ -2756,6 +2865,11 @@ msgstr "Não foi possível lançar essas posições. Verifique duplicados ou lin
 #: src/components/allocation/asset-splits.tsx:221
 msgid "splits.suggestionsUnavailable"
 msgstr "Não foi possível consultar o Yahoo sobre desdobramentos publicados agora. Você ainda pode registrar um abaixo."
+
+#. js-lingui-explicit-id
+#: src/components/income-tax/report-sections.tsx:1072
+msgid "incomeTax.copy.failed"
+msgstr "Não foi possível copiar. Selecione o texto."
 
 #. js-lingui-explicit-id
 #: src/components/settings-data.tsx:87
@@ -2894,7 +3008,7 @@ msgid "transactions.currency"
 msgstr "Moeda"
 
 #. js-lingui-explicit-id
-#: src/components/positions/allocation-card.tsx:271
+#: src/components/positions/allocation-card.tsx:258
 msgid "positions.allocByCurrency"
 msgstr "Moeda"
 
@@ -3001,7 +3115,7 @@ msgid "settings.data.dangerTitle"
 msgstr "Zona de perigo"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:452
+#: src/components/income-tax/report-sections.tsx:576
 msgid "incomeTax.monthly.darf"
 msgstr "DARF"
 
@@ -3011,7 +3125,7 @@ msgid "incomeTax.darf.dialogTitle"
 msgstr "DARF pago de {monthLabel}"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:324
+#: src/components/income-tax/report-sections.tsx:386
 msgid "incomeTax.darf.removed"
 msgstr "Pagamento do DARF removido"
 
@@ -3021,7 +3135,7 @@ msgid "incomeTax.darf.saved"
 msgstr "Pagamento do DARF salvo"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:108
+#: src/components/income-tax/report-sections.tsx:120
 msgid "incomeTax.summary.darf"
 msgstr "DARFs do ano"
 
@@ -3046,7 +3160,7 @@ msgid "transactions.colDate"
 msgstr "Data"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:617
+#: src/components/income-tax/report-sections.tsx:758
 msgid "incomeTax.sales.date"
 msgstr "Data"
 
@@ -3067,22 +3181,22 @@ msgid "daily.dayChange"
 msgstr "Variação no dia"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:432
+#: src/components/income-tax/report-sections.tsx:545
 msgid "incomeTax.monthly.dayTrade"
 msgstr "Day trade"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:559
+#: src/components/income-tax/report-sections.tsx:700
 msgid "incomeTax.kind.dayTrade"
 msgstr "Day trade"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:272
+#: src/components/income-tax/report-sections.tsx:294
 msgid "incomeTax.warning.dayTrades.title"
 msgstr "Day trades encontrados"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:158
+#: src/components/income-tax/report-sections.tsx:177
 msgid "incomeTax.summary.dayTradeLoss"
 msgstr "Prejuízo de day trade a compensar"
 
@@ -3227,7 +3341,7 @@ msgid "transactions.removing"
 msgstr "Excluindo…"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1009
+#: src/components/income-tax/report-sections.tsx:1194
 msgid "incomeTax.holdings.descriptionColumn"
 msgstr "Discriminação"
 
@@ -3407,17 +3521,17 @@ msgid "incomeTax.opening.dialogTitle"
 msgstr "Editar saldos iniciais"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:352
+#: src/components/income-tax/report-sections.tsx:414
 msgid "incomeTax.darf.editLabel"
 msgstr "Editar o pagamento do DARF"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1115
+#: src/components/income-tax/report-sections.tsx:1322
 msgid "incomeTax.holdings.cashEditLabel"
 msgstr "Editar o saldo em dólar de 31/12/{year}"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1069
+#: src/components/income-tax/report-sections.tsx:1265
 msgid "incomeTax.holdings.editLabel"
 msgstr "Editar os dados fiscais de {ticker}"
 
@@ -3516,7 +3630,7 @@ msgid "allocation.plannerDescription"
 msgstr "Informe quanto vai aportar e o valor é dividido para que cada fatia ainda consiga mover o peso da carteira. Apenas sugestão — nada é salvo até você registrar a operação."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1101
+#: src/components/income-tax/report-sections.tsx:1308
 msgid "incomeTax.holdings.cashAdd"
 msgstr "Informar saldo em dólar"
 
@@ -3527,7 +3641,7 @@ msgstr "Modo de lançamento"
 
 #. js-lingui-explicit-id
 #: src/components/dividends/details-dialog.tsx:49
-#: src/components/dividends/history-table.tsx:78
+#: src/components/dividends/history-table.tsx:85
 msgid "dividends.estimated"
 msgstr "Estimado"
 
@@ -3537,7 +3651,7 @@ msgid "allocation.resultEstimated"
 msgstr "Data estimada"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/dividends.tsx:57
+#: src/routes/_app/dividends.tsx:66
 msgid "dividends.subtitle"
 msgstr "Proventos estimados com base nas ações mantidas antes de cada data-ex. As datas de pagamento aparecem quando o provedor as publica."
 
@@ -3552,19 +3666,19 @@ msgid "documentation.formula.estimatedIncome"
 msgstr "provento bruto estimado = quantidade elegível × valor por ação"
 
 #. js-lingui-explicit-id
+#: src/components/dividends/summary.tsx:52
+msgid "dividends.receivedHint"
+msgstr "Proventos brutos estimados já pagos."
+
+#. js-lingui-explicit-id
 #: src/components/dividends/details-dialog.tsx:41
 msgid "dividends.detailsDescription"
 msgstr "Provento bruto estimado com base na posição mantida antes da data-ex."
 
 #. js-lingui-explicit-id
-#: src/components/dividends/charts.tsx:34
-msgid "dividends.chartDescription"
-msgstr "Proventos brutos estimados na moeda de exibição da carteira."
-
-#. js-lingui-explicit-id
-#: src/components/dividends/summary.tsx:20
-msgid "dividends.total"
-msgstr "Proventos estimados"
+#: src/components/dividends/charts.tsx:115
+msgid "dividends.chartStackedHint"
+msgstr "Proventos brutos estimados em {currency}, pela data de pagamento quando conhecida. Barras claras são anunciadas, ainda não pagas."
 
 #. js-lingui-explicit-id
 #: src/components/dividends/badges.tsx:37
@@ -3578,7 +3692,7 @@ msgid "assetClass.etf"
 msgstr "ETF"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:567
+#: src/components/income-tax/report-sections.tsx:708
 msgid "incomeTax.kind.etf"
 msgstr "ETF"
 
@@ -3603,7 +3717,7 @@ msgid "transactions.openingDateHint"
 msgstr "Todas as linhas são lançadas como compra nesta data."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:600
+#: src/components/income-tax/report-sections.tsx:741
 msgid "incomeTax.sales.description"
 msgstr "Todas as vendas por trás dos números acima, para conferir com suas notas de corretagem. Os resultados incluem custos; os do exterior estão em reais pela PTAX de cada operação."
 
@@ -3613,20 +3727,20 @@ msgid "documentation.positions.movingAverageDescription"
 msgstr "Cada ticker é consolidado cronologicamente pelo custo médio móvel. Transações no mesmo dia seguem a ordem de criação. Cada ticker pode usar apenas uma moeda nativa, e moedas diferentes nunca são combinadas em uma média."
 
 #. js-lingui-explicit-id
-#: src/components/positions/allocation-card.tsx:581
+#: src/components/positions/allocation-card.tsx:568
 msgid "positions.restShort"
 msgstr "Todo o resto"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1280
+#: src/components/income-tax/report-sections.tsx:1487
 msgid "incomeTax.exempt.bonusDate"
 msgstr "Data ex"
 
 #. js-lingui-explicit-id
 #: src/components/dividends/calendar.tsx:156
-#: src/components/dividends/charts.tsx:122
+#: src/components/dividends/charts.tsx:375
 #: src/components/dividends/details-dialog.tsx:72
-#: src/components/dividends/history-table.tsx:66
+#: src/components/dividends/history-table.tsx:73
 msgid "dividends.exDate"
 msgstr "Data-ex"
 
@@ -3647,22 +3761,27 @@ msgstr "USD/BRL de execução = câmbio à vista × (1 + spread de {fxSpread}) �
 
 #. js-lingui-explicit-id
 #. placeholder {0}: formatMoney(month.exemptGain, "BRL")
-#: src/components/income-tax/report-sections.tsx:469
+#: src/components/income-tax/report-sections.tsx:604
 msgid "incomeTax.monthly.exempt"
 msgstr "Isento {0}"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1247
+#: src/routes/_app/income-tax.tsx:172
+msgid "incomeTax.nav.exempt"
+msgstr "Rendimentos isentos"
+
+#. js-lingui-explicit-id
+#: src/components/income-tax/report-sections.tsx:1454
 msgid "incomeTax.exempt.title"
 msgstr "Rendimentos isentos"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:121
+#: src/components/income-tax/report-sections.tsx:136
 msgid "incomeTax.summary.exemptHint"
 msgstr "Rendimento isento, tipo 20: meses com vendas de ações até R$ 20.000."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:118
+#: src/components/income-tax/report-sections.tsx:132
 msgid "incomeTax.summary.exempt"
 msgstr "Ganhos isentos com ações"
 
@@ -3776,17 +3895,17 @@ msgid "transactions.feesHint"
 msgstr "Taxas somam em uma compra e subtraem em uma venda."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:435
+#: src/components/income-tax/report-sections.tsx:549
 msgid "incomeTax.monthly.fii"
 msgstr "FII"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:571
+#: src/components/income-tax/report-sections.tsx:712
 msgid "incomeTax.kind.fii"
 msgstr "FII"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:165
+#: src/components/income-tax/report-sections.tsx:184
 msgid "incomeTax.summary.fiiLoss"
 msgstr "Prejuízo de FII a compensar"
 
@@ -3915,17 +4034,22 @@ msgid "allocation.sales.infoTitle"
 msgstr "Apenas informativo"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:573
+#: src/components/income-tax/report-sections.tsx:714
 msgid "incomeTax.kind.foreign"
 msgstr "Exterior"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:671
+#: src/routes/_app/income-tax.tsx:176
+msgid "incomeTax.nav.foreign"
+msgstr "Bens no exterior"
+
+#. js-lingui-explicit-id
+#: src/components/income-tax/report-sections.tsx:812
 msgid "incomeTax.foreign.title"
 msgstr "Ativos no exterior (Lei 14.754)"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:170
+#: src/components/income-tax/report-sections.tsx:189
 msgid "incomeTax.summary.foreignLoss"
 msgstr "Prejuízo no exterior a compensar"
 
@@ -3935,7 +4059,7 @@ msgid "incomeTax.opening.foreignLoss"
 msgstr "Prejuízo no exterior a compensar"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:137
+#: src/components/income-tax/report-sections.tsx:156
 msgid "incomeTax.summary.foreignTax"
 msgstr "Imposto no exterior (estimativa)"
 
@@ -4052,17 +4176,17 @@ msgid "documentation.score.group.priority"
 msgstr "Notas e cooldown"
 
 #. js-lingui-explicit-id
-#: src/components/dividends/history-table.tsx:53
+#: src/components/dividends/history-table.tsx:60
 msgid "dividends.historyDescription"
 msgstr "Estimativas brutas. Confirme os créditos líquidos no extrato da corretora."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1006
+#: src/components/income-tax/report-sections.tsx:1191
 msgid "incomeTax.holdings.code"
 msgstr "Grupo / código"
 
 #. js-lingui-explicit-id
-#: src/components/positions/allocation-card.tsx:326
+#: src/components/positions/allocation-card.tsx:313
 msgid "positions.allocGroupBy"
 msgstr "Agrupar por"
 
@@ -4103,6 +4227,11 @@ msgid "transactions.history"
 msgstr "Histórico"
 
 #. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:82
+msgid "dividends.windowLabel"
+msgstr "Janela do histórico"
+
+#. js-lingui-explicit-id
 #: src/routes/_app/performance.tsx:155
 msgid "performance.window"
 msgstr "Janela do histórico"
@@ -4118,7 +4247,7 @@ msgid "deepFinder.matrixTitle"
 msgstr "Ativos em todas as janelas"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1178
+#: src/components/income-tax/report-sections.tsx:1385
 msgid "incomeTax.holdings.description"
 msgstr "Posições pelo custo em 31 de dezembro de {previousYear} e de {year}, como na declaração. Ativos no exterior em reais pelas cotações das compras. Grupo e código só são sugeridos quando não há ambiguidade."
 
@@ -4170,7 +4299,7 @@ msgid "documentation.score.relativeGapDescription"
 msgstr "Quanto da meta ajustada ainda falta. Uma meta de 2% vazia fica à frente de uma meta de 10% que já está em 8%, embora as duas estejam 2 pontos percentuais abaixo."
 
 #. js-lingui-explicit-id
-#: src/components/positions/allocation-card.tsx:533
+#: src/components/positions/allocation-card.tsx:520
 msgid "positions.concentrationHint"
 msgstr "Quanto do valor investido depende de poucas posições. O caixa fica de fora."
 
@@ -4260,7 +4389,7 @@ msgid "settings.data.scopeDescription"
 msgstr "Inclui operações, notas de corretagem importadas e seus mapeamentos de ticker, ativos de alocação, saldo de caixa, revisões, categorias, atribuições, configurações do score de aporte e do planejador de aporte. Senhas e sessões ativas não são incluídas."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/dividends.tsx:54
+#: src/routes/_app/dividends.tsx:63
 msgid "dividends.title"
 msgstr "Proventos"
 
@@ -4280,9 +4409,19 @@ msgid "nav.incomeAndTax"
 msgstr "Proventos e IR"
 
 #. js-lingui-explicit-id
-#: src/components/dividends/charts.tsx:31
+#: src/components/dividends/by-asset-table.tsx:106
+msgid "dividends.byAssetTitle"
+msgstr "Proventos por ativo"
+
+#. js-lingui-explicit-id
+#: src/components/dividends/charts.tsx:109
 msgid "dividends.chartTitle"
 msgstr "Proventos por mês"
+
+#. js-lingui-explicit-id
+#: src/components/dividends/charts.tsx:111
+msgid "dividends.chartYearTitle"
+msgstr "Proventos por ano"
 
 #. js-lingui-explicit-id
 #: src/components/dividends/calendar.tsx:50
@@ -4295,14 +4434,14 @@ msgid "dividends.details"
 msgstr "Detalhes do provento"
 
 #. js-lingui-explicit-id
-#: src/components/dividends/summary.tsx:51
-msgid "dividends.events"
-msgstr "Eventos de proventos"
-
-#. js-lingui-explicit-id
-#: src/components/dividends/history-table.tsx:50
+#: src/components/dividends/history-table.tsx:57
 msgid "dividends.historyTitle"
 msgstr "Histórico de proventos"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/dividends.tsx:103
+msgid "dividends.sourceLabel"
+msgstr "Fonte dos proventos"
 
 #. js-lingui-explicit-id
 #: src/routes/_app/income-tax.tsx:61
@@ -4391,17 +4530,22 @@ msgid "allocation.findInvestorRelations"
 msgstr "Site de RI"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:446
+#: src/components/income-tax/report-sections.tsx:569
+msgid "incomeTax.monthly.withheldSales"
+msgstr "IRRF"
+
+#. js-lingui-explicit-id
+#: src/components/income-tax/report-sections.tsx:567
 msgid "incomeTax.monthly.withheld"
 msgstr "IRRF (vendas / DT)"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:127
+#: src/components/income-tax/report-sections.tsx:144
 msgid "incomeTax.summary.withheldLeft"
 msgstr "IRRF a declarar"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:449
+#: src/components/income-tax/report-sections.tsx:573
 msgid "incomeTax.monthly.withheldUsed"
 msgstr "IRRF usado"
 
@@ -4411,22 +4555,22 @@ msgid "brokerNotes.withheldTax"
 msgstr "IRRF retido"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:805
+#: src/components/income-tax/report-sections.tsx:946
 msgid "incomeTax.holdings.descIssuerCnpj"
 msgstr "CNPJ da emissora {cnpj}."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:791
+#: src/components/income-tax/report-sections.tsx:932
 msgid "incomeTax.holdings.descIssuer"
 msgstr "Emissora: {name}, CNPJ {cnpj}."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:798
+#: src/components/income-tax/report-sections.tsx:939
 msgid "incomeTax.holdings.descIssuerName"
 msgstr "Emissora: {name}."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:623
+#: src/components/income-tax/report-sections.tsx:764
 msgid "incomeTax.sales.kind"
 msgstr "Tipo"
 
@@ -4443,7 +4587,7 @@ msgid "documentation.contribution.field.largeImpact"
 msgstr "Impacto de peso em carteira grande"
 
 #. js-lingui-explicit-id
-#: src/components/positions/allocation-card.tsx:542
+#: src/components/positions/allocation-card.tsx:529
 msgid "positions.largestPosition"
 msgstr "Maior"
 
@@ -4468,10 +4612,20 @@ msgid "documentation.score.field.momentumZCapHint"
 msgstr "Maior z-score de tendência considerado, para que uma alta enorme não domine."
 
 #. js-lingui-explicit-id
+#: src/components/dividends/summary.tsx:35
+msgid "dividends.trailing12m"
+msgstr "Últimos 12 meses"
+
+#. js-lingui-explicit-id
 #: src/components/allocation/asset-detail-page.tsx:403
 #: src/components/allocation/table/columns.ts:55
 msgid "allocation.colLastBuy"
 msgstr "Últ. aporte"
+
+#. js-lingui-explicit-id
+#: src/components/dividends/by-asset-table.tsx:152
+msgid "dividends.lastIncome"
+msgstr "Último provento"
 
 #. js-lingui-explicit-id
 #: src/components/positions/deep-finder-teaser.tsx:101
@@ -4537,24 +4691,29 @@ msgid "transactions.tradeFxLoading"
 msgstr "Buscando a PTAX do BCB…"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:746
+#: src/components/income-tax/report-sections.tsx:887
 msgid "incomeTax.foreign.lossBefore"
 msgstr "Prejuízo anterior"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:770
+#: src/components/income-tax/report-sections.tsx:911
 msgid "incomeTax.foreign.lossAfter"
 msgstr "Prejuízo a compensar"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:193
+#: src/components/income-tax/report-sections.tsx:215
 msgid "incomeTax.warning.notConfigured.body"
 msgstr "Os prejuízos acumulados antes da sua primeira operação são desconhecidos, então o imposto pode estar maior do que o real. Informe-os em Saldos iniciais."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:438
+#: src/components/income-tax/report-sections.tsx:553
 msgid "incomeTax.monthly.losses"
 msgstr "Prejuízo a compensar (comum / DT / FII)"
+
+#. js-lingui-explicit-id
+#: src/components/income-tax/report-sections.tsx:557
+msgid "incomeTax.monthly.lossesNoDayTrade"
+msgstr "Prejuízo a compensar (comum / FII)"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: row.score.cooldownUntil
@@ -4683,7 +4842,7 @@ msgid "positions.unrealizedPnlHint"
 msgstr "Valor de mercado contra o custo dos ativos cotados."
 
 #. js-lingui-explicit-id
-#: src/components/positions/allocation-card.tsx:305
+#: src/components/positions/allocation-card.tsx:292
 msgid "positions.allocationFilterHint"
 msgstr "Valor de mercado em {snapshotLabel}. Selecione uma fatia para mostrar só os ativos dela na tabela de posições."
 
@@ -4774,8 +4933,13 @@ msgid "performance.colMonth"
 msgstr "Mês"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:423
+#: src/components/income-tax/report-sections.tsx:535
 msgid "incomeTax.monthly.month"
+msgstr "Mês"
+
+#. js-lingui-explicit-id
+#: src/components/dividends/charts.tsx:123
+msgid "dividends.tabMonth"
 msgstr "Mês"
 
 #. js-lingui-explicit-id
@@ -4792,6 +4956,11 @@ msgstr "Snapshots mensais avaliados no fechamento de cada período pelo custo m�
 #: src/routes/_app/performance.tsx:139
 msgid "performance.subtitle"
 msgstr "Histórico de fechamento mensal: quanto a carteira valia, quanto disso é resultado e de onde ele vem."
+
+#. js-lingui-explicit-id
+#: src/components/dividends/summary.tsx:59
+msgid "dividends.monthlyAverage"
+msgstr "Média mensal"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/sell-planner.tsx:186
@@ -4969,7 +5138,7 @@ msgid "performance.netInvested"
 msgstr "Aportes líquidos"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:738
+#: src/components/income-tax/report-sections.tsx:879
 msgid "incomeTax.foreign.net"
 msgstr "Resultado líquido"
 
@@ -5005,14 +5174,9 @@ msgid "dividends.nextMonth"
 msgstr "Próximo mês"
 
 #. js-lingui-explicit-id
-#: src/components/dividends/history-table.tsx:173
+#: src/components/dividends/history-table.tsx:193
 msgid "dividends.nextPage"
 msgstr "Próxima página"
-
-#. js-lingui-explicit-id
-#: src/components/dividends/summary.tsx:39
-msgid "dividends.nextDate"
-msgstr "Próxima data relevante"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/table/columns.ts:50
@@ -5075,7 +5239,7 @@ msgid "positions.teaserEmptyDown"
 msgstr "Nenhuma queda neste mês."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:687
+#: src/components/income-tax/report-sections.tsx:828
 msgid "incomeTax.foreign.empty"
 msgstr "Nenhuma venda no exterior neste ano."
 
@@ -5105,7 +5269,7 @@ msgid "deepFinder.noMatches"
 msgstr "Nenhuma posição corresponde a este filtro na janela selecionada."
 
 #. js-lingui-explicit-id
-#: src/components/dividends/content.tsx:22
+#: src/components/dividends/content.tsx:23
 msgid "dividends.emptyTitle"
 msgstr "Nenhum provento encontrado"
 
@@ -5125,7 +5289,7 @@ msgid "allocation.quoteMissing"
 msgstr "Sem cotação de mercado para este ticker"
 
 #. js-lingui-explicit-id
-#: src/components/positions/allocation-card.tsx:344
+#: src/components/positions/allocation-card.tsx:331
 msgid "positions.noQuotes"
 msgstr "Sem cotações de mercado para este snapshot ainda."
 
@@ -5198,7 +5362,7 @@ msgid "positions.teaserEmptyUp"
 msgstr "Nenhuma alta neste mês."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:610
+#: src/components/income-tax/report-sections.tsx:751
 msgid "incomeTax.sales.empty"
 msgstr "Nenhuma venda neste ano."
 
@@ -5248,11 +5412,6 @@ msgid "transactions.emptyFilters"
 msgstr "Nenhuma operação corresponde a estes filtros."
 
 #. js-lingui-explicit-id
-#: src/components/dividends/charts.tsx:95
-msgid "dividends.noUpcoming"
-msgstr "A fonte selecionada não publicou eventos futuros."
-
-#. js-lingui-explicit-id
 #. placeholder {0}: note.noteNumber
 #: src/components/transactions/broker-note-import.tsx:1054
 msgid "brokerNotes.noteNumber"
@@ -5279,7 +5438,7 @@ msgid "allocation.skill.wrong"
 msgstr "Não antecipa retornos"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:575
+#: src/components/income-tax/report-sections.tsx:716
 msgid "incomeTax.kind.uncovered"
 msgstr "Não coberto"
 
@@ -5294,7 +5453,7 @@ msgid "performance.noReturnYet"
 msgstr "Histórico insuficiente: a rentabilidade precisa de um mês que comece com posição."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:385
+#: src/components/income-tax/report-sections.tsx:447
 msgid "incomeTax.darf.unpaid"
 msgstr "Não registrado"
 
@@ -5329,7 +5488,12 @@ msgid "brokerNotes.notesTitle"
 msgstr "Notas encontradas"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1189
+#: src/components/dividends/summary.tsx:86
+msgid "dividends.noneAnnounced"
+msgstr "Nada anunciado ainda."
+
+#. js-lingui-explicit-id
+#: src/components/income-tax/report-sections.tsx:1396
 msgid "incomeTax.holdings.empty"
 msgstr "Nenhuma posição no fim de nenhum dos dois anos."
 
@@ -5354,7 +5518,7 @@ msgid "splits.from"
 msgstr "Ações antigas"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:344
+#: src/components/income-tax/report-sections.tsx:406
 msgid "incomeTax.darf.paidOnShort"
 msgstr "em {paidOn}"
 
@@ -5438,7 +5602,7 @@ msgid "incomeTax.opening.title"
 msgstr "Saldos iniciais"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:188
+#: src/components/income-tax/report-sections.tsx:210
 msgid "incomeTax.warning.notConfigured.title"
 msgstr "Saldos iniciais não informados"
 
@@ -5458,12 +5622,12 @@ msgid "transactions.notesHint"
 msgstr "Opcional"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:429
+#: src/components/income-tax/report-sections.tsx:541
 msgid "incomeTax.monthly.ordinary"
 msgstr "Operações comuns"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:150
+#: src/components/income-tax/report-sections.tsx:169
 msgid "incomeTax.summary.ordinaryLoss"
 msgstr "Prejuízo comum a compensar"
 
@@ -5500,12 +5664,12 @@ msgstr "Ao longo do tempo"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: safePage + 1
-#: src/components/dividends/history-table.tsx:148
+#: src/components/dividends/history-table.tsx:168
 msgid "dividends.pageCount"
 msgstr "Página {0} de {pageCount}"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:455
+#: src/components/income-tax/report-sections.tsx:579
 msgid "incomeTax.monthly.darfPaid"
 msgstr "Pago"
 
@@ -5546,12 +5710,12 @@ msgstr "Cole um CSV/TXT ou escolha um arquivo. Colunas esperadas: ticker, quanti
 
 #. js-lingui-explicit-id
 #: src/components/dividends/calendar.tsx:154
-#: src/components/dividends/history-table.tsx:69
+#: src/components/dividends/history-table.tsx:76
 msgid "dividends.payment"
 msgstr "Pagamento"
 
 #. js-lingui-explicit-id
-#: src/components/dividends/charts.tsx:120
+#: src/components/dividends/charts.tsx:373
 #: src/components/dividends/details-dialog.tsx:80
 msgid "dividends.paymentDate"
 msgstr "Data de pagamento"
@@ -5562,13 +5726,8 @@ msgid "dividends.calendarDescription"
 msgstr "Data de pagamento quando conhecida; caso contrário, a data-ex."
 
 #. js-lingui-explicit-id
-#: src/components/dividends/summary.tsx:46
-msgid "dividends.paymentOrExDate"
-msgstr "Pagamento ou data-ex"
-
-#. js-lingui-explicit-id
 #: src/components/dividends/details-dialog.tsx:62
-#: src/components/dividends/history-table.tsx:75
+#: src/components/dividends/history-table.tsx:82
 msgid "dividends.perShare"
 msgstr "Por ação"
 
@@ -5750,7 +5909,7 @@ msgid "dividends.previousMonth"
 msgstr "Mês anterior"
 
 #. js-lingui-explicit-id
-#: src/components/dividends/history-table.tsx:159
+#: src/components/dividends/history-table.tsx:179
 msgid "dividends.previousPage"
 msgstr "Página anterior"
 
@@ -5820,7 +5979,7 @@ msgid "documentation.score.field.cooldownFloor"
 msgstr "Prioridade logo após uma compra"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:702
+#: src/components/income-tax/report-sections.tsx:843
 msgid "incomeTax.foreign.proceedsBrl"
 msgstr "Valor de venda (R$)"
 
@@ -5835,7 +5994,7 @@ msgid "validation.nameOrColor"
 msgstr "Informe um nome ou uma cor"
 
 #. js-lingui-explicit-id
-#: src/components/dividends/content.tsx:64
+#: src/components/dividends/content.tsx:75
 msgid "dividends.disclaimer"
 msgstr "Eventos do provedor não confirmam o crédito da corretora. Os valores não incluem impostos nem ajustes da corretora."
 
@@ -5872,7 +6031,7 @@ msgid "positions.colQuantity"
 msgstr "Quantidade"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:626
+#: src/components/income-tax/report-sections.tsx:767
 msgid "incomeTax.sales.quantity"
 msgstr "Quantidade"
 
@@ -6027,7 +6186,7 @@ msgid "splits.recordSuggestion"
 msgstr "Registrar"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:394
+#: src/components/income-tax/report-sections.tsx:456
 msgid "incomeTax.darf.record"
 msgstr "Registrar pagamento"
 
@@ -6042,7 +6201,7 @@ msgid "allocation.reviewFairValueRef"
 msgstr "Link de referência"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/dividends.tsx:111
+#: src/routes/_app/dividends.tsx:128
 msgid "dividends.refresh"
 msgstr "Atualizar"
 
@@ -6094,7 +6253,7 @@ msgid "performance.registerTrade"
 msgstr "Registrar operação"
 
 #. js-lingui-explicit-id
-#: src/components/dividends/content.tsx:33
+#: src/components/dividends/content.tsx:34
 msgid "dividends.addTrade"
 msgstr "Registrar operação"
 
@@ -6119,7 +6278,7 @@ msgid "transactions.registerFixedIncome"
 msgstr "Registrar renda fixa"
 
 #. js-lingui-explicit-id
-#: src/components/dividends/content.tsx:25
+#: src/components/dividends/content.tsx:26
 msgid "dividends.emptyDescription"
 msgstr "Registre operações de ações ou ETFs, ou tente um período maior."
 
@@ -6196,7 +6355,7 @@ msgid "splits.removeBonusLabel"
 msgstr "Remover a bonificação de {date}"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:365
+#: src/components/income-tax/report-sections.tsx:427
 msgid "incomeTax.darf.removeLabel"
 msgstr "Remover o pagamento do DARF"
 
@@ -6226,12 +6385,17 @@ msgid "categories.renameTitle"
 msgstr "Renomear categoria"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:411
+#: src/routes/_app/income-tax.tsx:168
+msgid "incomeTax.nav.monthly"
+msgstr "Renda Variável"
+
+#. js-lingui-explicit-id
+#: src/components/income-tax/report-sections.tsx:503
 msgid "incomeTax.monthly.description"
 msgstr "Ficha Renda Variável: operações comuns 15%, day trade 20%, FIIs 20%. Cada prejuízo só compensa ganhos do mesmo tipo; o IRRF abate o imposto do mês e dos meses seguintes do mesmo ano."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1250
+#: src/components/income-tax/report-sections.tsx:1457
 msgid "incomeTax.exempt.description"
 msgstr "Ficha Rendimentos Isentos e Não Tributáveis. Dividendos e outros proventos não estão incluídos aqui."
 
@@ -6255,6 +6419,11 @@ msgstr "Substituir os dados da conta?"
 #: src/components/settings-data.tsx:305
 msgid "settings.data.importConfirm"
 msgstr "Substituir e importar"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/income-tax.tsx:196
+msgid "incomeTax.nav.label"
+msgstr "Seções do relatório"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/allocation-toolbar.tsx:399
@@ -6293,12 +6462,12 @@ msgid "performance.monthResult"
 msgstr "Resultado"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:632
+#: src/components/income-tax/report-sections.tsx:773
 msgid "incomeTax.sales.result"
 msgstr "Resultado (R$)"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:710
+#: src/components/income-tax/report-sections.tsx:851
 msgid "incomeTax.foreign.result"
 msgstr "Resultado (R$)"
 
@@ -6345,6 +6514,11 @@ msgid "performance.windowReturn"
 msgstr "Rentabilidade no período"
 
 #. js-lingui-explicit-id
+#: src/components/income-tax/report-sections.tsx:332
+msgid "incomeTax.review.title"
+msgstr "Revisar antes de declarar"
+
+#. js-lingui-explicit-id
 #: src/components/transactions/transaction-history.tsx:508
 msgid "transactions.remove"
 msgstr "Revisar exclusão da operação de {ticker} em {date}"
@@ -6382,7 +6556,7 @@ msgid "allocation.plannerRemainder"
 msgstr "O arredondamento deixa {0} sem alocação."
 
 #. js-lingui-explicit-id
-#: src/components/dividends/history-table.tsx:127
+#: src/components/dividends/history-table.tsx:147
 msgid "dividends.rowsPerPage"
 msgstr "Linhas por página"
 
@@ -6412,9 +6586,14 @@ msgid "allocation.sales.title"
 msgstr "Sugestões de venda"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:629
+#: src/components/income-tax/report-sections.tsx:770
 msgid "incomeTax.sales.gross"
 msgstr "Valor de venda"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/income-tax.tsx:180
+msgid "incomeTax.nav.sales"
+msgstr "Vendas"
 
 #. js-lingui-explicit-id
 #: src/components/transactions/broker-note-import.tsx:1069
@@ -6423,7 +6602,7 @@ msgid "brokerNotes.sales"
 msgstr "Vendas"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:699
+#: src/components/income-tax/report-sections.tsx:840
 msgid "incomeTax.foreign.proceedsUsd"
 msgstr "Vendas (US$)"
 
@@ -6433,12 +6612,12 @@ msgid "documentation.positions.salesTitle"
 msgstr "Vendas e P&L realizado"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:238
+#: src/components/income-tax/report-sections.tsx:260
 msgid "incomeTax.warning.uncovered.title"
 msgstr "Vendas não apuradas aqui"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:597
+#: src/components/income-tax/report-sections.tsx:738
 msgid "incomeTax.sales.title"
 msgstr "Vendas do ano"
 
@@ -6593,11 +6772,6 @@ msgid "brokerNotes.importHint"
 msgstr "Selecione os PDFs das notas da sua corretora. Cada nota é conferida com os próprios totais antes de qualquer importação, e suas operações só podem ser removidas excluindo a nota."
 
 #. js-lingui-explicit-id
-#: src/components/dividends/summary.tsx:22
-msgid "dividends.selectedPeriod"
-msgstr "Período selecionado"
-
-#. js-lingui-explicit-id
 #: src/components/asset-labels.tsx:18
 #: src/routes/_app/transactions.tsx:231
 msgid "side.sell"
@@ -6655,6 +6829,11 @@ msgid "positions.colShare"
 msgstr "Participação"
 
 #. js-lingui-explicit-id
+#: src/components/dividends/by-asset-table.tsx:134
+msgid "dividends.shareOfIncome"
+msgstr "Participação"
+
+#. js-lingui-explicit-id
 #: src/components/allocation/contribution-planner.tsx:387
 msgid "allocation.plannerCappedShare"
 msgstr "Teto de fatia"
@@ -6665,13 +6844,13 @@ msgid "documentation.contribution.field.starterFractionHint"
 msgstr "Fração da meta que um ativo ainda fora da carteira pode atingir em um único aporte, para que posições novas sejam montadas ao longo de vários aportes."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1283
+#: src/components/income-tax/report-sections.tsx:1490
 msgid "incomeTax.exempt.bonusShares"
 msgstr "Ações"
 
 #. js-lingui-explicit-id
 #: src/components/dividends/details-dialog.tsx:58
-#: src/components/dividends/history-table.tsx:72
+#: src/components/dividends/history-table.tsx:79
 msgid "dividends.shares"
 msgstr "Ações"
 
@@ -6685,6 +6864,12 @@ msgstr "Qtd."
 #: src/components/allocation/asset-splits.tsx:347
 msgid "splits.bonusReceived"
 msgstr "Ações recebidas"
+
+#. js-lingui-explicit-id
+#. placeholder {0}: rows.length
+#: src/components/dividends/by-asset-table.tsx:247
+msgid "dividends.showAllAssets"
+msgstr "Mostrar todos os {0}"
 
 #. js-lingui-explicit-id
 #: src/components/settings-dialog-body.tsx:375
@@ -6701,6 +6886,11 @@ msgstr "Mostrar trimestres anteriores"
 #: src/components/positions/holdings-card.tsx:237
 msgid "positions.clearFilter"
 msgstr "Mostrar todas as posições, não só {0}"
+
+#. js-lingui-explicit-id
+#: src/components/dividends/by-asset-table.tsx:245
+msgid "dividends.showFewer"
+msgstr "Mostrar menos"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/allocation-toolbar.tsx:292
@@ -6726,7 +6916,7 @@ msgstr "Mostrar valores em"
 #. placeholder {0}: firstRow + 1
 #. placeholder {1}: Math.min(firstRow + pageSize, data.events.length)
 #. placeholder {2}: data.events.length
-#: src/components/dividends/history-table.tsx:119
+#: src/components/dividends/history-table.tsx:139
 msgid "dividends.rowsShown"
 msgstr "Exibindo {0}–{1} de {2}"
 
@@ -6832,7 +7022,17 @@ msgid "positions.month"
 msgstr "Mês do snapshot"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1053
+#: src/components/dividends/charts.tsx:223
+msgid "dividends.yearSoFar"
+msgstr "Até agora, com eventos anunciados."
+
+#. js-lingui-explicit-id
+#: src/components/dividends/by-asset-table.tsx:187
+msgid "dividends.sold"
+msgstr "vendido"
+
+#. js-lingui-explicit-id
+#: src/components/income-tax/report-sections.tsx:1238
 msgid "incomeTax.holdings.sold"
 msgstr "Vendido durante o ano."
 
@@ -6890,7 +7090,7 @@ msgstr "Ordenar por variação"
 
 #. js-lingui-explicit-id
 #: src/components/dividends/details-dialog.tsx:84
-#: src/components/dividends/history-table.tsx:84
+#: src/components/dividends/history-table.tsx:91
 msgid "dividends.source"
 msgstr "Fonte"
 
@@ -6973,7 +7173,7 @@ msgstr "Extrato"
 
 #. js-lingui-explicit-id
 #: src/components/dividends/details-dialog.tsx:54
-#: src/components/dividends/history-table.tsx:81
+#: src/components/dividends/history-table.tsx:88
 msgid "dividends.status"
 msgstr "Status"
 
@@ -6983,12 +7183,12 @@ msgid "allocation.sales.remaining"
 msgstr "Ainda isento"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:563
+#: src/components/income-tax/report-sections.tsx:704
 msgid "incomeTax.kind.stock"
 msgstr "Ação"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:426
+#: src/components/income-tax/report-sections.tsx:538
 msgid "incomeTax.monthly.stockSales"
 msgstr "Vendas de ações"
 
@@ -7004,7 +7204,7 @@ msgid "allocation.unfocusQuarter"
 msgstr "Deixar de marcar {0} como o trimestre em que você está trabalhando"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1128
+#: src/components/income-tax/report-sections.tsx:1335
 msgid "incomeTax.holdings.subtotal"
 msgstr "Subtotal"
 
@@ -7012,6 +7212,11 @@ msgstr "Subtotal"
 #: src/components/contribution-plan-documentation.tsx:480
 msgid "documentation.contribution.moneyAndUnits"
 msgstr "Sugerir valores e unidades"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/income-tax.tsx:164
+msgid "incomeTax.nav.summary"
+msgstr "Resumo"
 
 #. js-lingui-explicit-id
 #: src/components/theme-editor.tsx:42
@@ -7105,7 +7310,7 @@ msgid "allocation.subtitle"
 msgstr "Metas, notas trimestrais e o score de aporte em um só lugar. Edite qualquer célula da tabela; o score é recalculado ao salvar."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:762
+#: src/components/income-tax/report-sections.tsx:903
 msgid "incomeTax.foreign.tax"
 msgstr "Imposto de 15%"
 
@@ -7125,12 +7330,12 @@ msgid "incomeTax.profile.saved"
 msgstr "Dados fiscais salvos"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:443
+#: src/components/income-tax/report-sections.tsx:563
 msgid "incomeTax.monthly.taxDue"
 msgstr "Imposto devido"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:754
+#: src/components/income-tax/report-sections.tsx:895
 msgid "incomeTax.foreign.base"
 msgstr "Base de cálculo"
 
@@ -7193,6 +7398,11 @@ msgstr "O multiplicador da nota vezes a rampa de cooldown. A prioridade decide q
 #: src/components/contribution-plan-documentation.tsx:533
 msgid "documentation.contribution.exampleLargeDescription"
 msgstr "O impacto de carteira grande é {largeImpact}, então a fatia mínima é R$ 5.000. Dois mil reais ficam em um nome; N = 2 só a partir de cerca de R$ 7.500."
+
+#. js-lingui-explicit-id
+#: src/components/dividends/summary.tsx:62
+msgid "dividends.monthlyAverageHint"
+msgstr "Os últimos 12 meses divididos por 12."
 
 #. js-lingui-explicit-id
 #: src/components/transactions/broker-note-labels.tsx:151
@@ -7446,22 +7656,23 @@ msgid "positions.colTicker"
 msgstr "Ticker"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:620
+#: src/components/income-tax/report-sections.tsx:761
 msgid "incomeTax.sales.ticker"
 msgstr "Ticker"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:696
+#: src/components/income-tax/report-sections.tsx:837
 msgid "incomeTax.foreign.ticker"
 msgstr "Ticker"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1003
+#: src/components/income-tax/report-sections.tsx:1188
 msgid "incomeTax.holdings.ticker"
 msgstr "Ticker"
 
 #. js-lingui-explicit-id
-#: src/components/dividends/history-table.tsx:63
+#: src/components/dividends/by-asset-table.tsx:120
+#: src/components/dividends/history-table.tsx:70
 msgid "dividends.ticker"
 msgstr "Ticker"
 
@@ -7514,7 +7725,7 @@ msgid "brokerNotes.staleHint"
 msgstr "Os tickers mudaram. Verifique as notas de novo antes de importar."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:255
+#: src/components/income-tax/report-sections.tsx:277
 msgid "incomeTax.warning.units.title"
 msgstr "Tickers terminados em 11 tratados como units"
 
@@ -7564,17 +7775,17 @@ msgid "allocation.plannerTop"
 msgstr "Top {option} ativos"
 
 #. js-lingui-explicit-id
-#: src/components/positions/allocation-card.tsx:555
+#: src/components/positions/allocation-card.tsx:542
 msgid "positions.top10"
 msgstr "Top 10"
 
 #. js-lingui-explicit-id
-#: src/components/positions/allocation-card.tsx:551
+#: src/components/positions/allocation-card.tsx:538
 msgid "positions.top5"
 msgstr "Top 5"
 
 #. js-lingui-explicit-id
-#: src/components/positions/allocation-card.tsx:578
+#: src/components/positions/allocation-card.tsx:565
 msgid "positions.top5Short"
 msgstr "Top 5"
 
@@ -7611,6 +7822,11 @@ msgstr "Total"
 #: src/components/detailed-positions/positions-table.tsx:190
 #: src/components/positions/holdings-card.tsx:427
 msgid "positions.total"
+msgstr "Total"
+
+#. js-lingui-explicit-id
+#: src/components/dividends/charts.tsx:307
+msgid "dividends.tooltipTotal"
 msgstr "Total"
 
 #. js-lingui-explicit-id
@@ -7735,12 +7951,12 @@ msgid "settings.showLogosHint"
 msgstr "Desative para usar as iniciais dos tickers e não fazer requisições de imagem ao Logo.dev."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1272
+#: src/components/income-tax/report-sections.tsx:1479
 msgid "incomeTax.exempt.bonusSource"
 msgstr "Tipo 18 – bonificações: fonte pagadora"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1259
+#: src/components/income-tax/report-sections.tsx:1466
 msgid "incomeTax.exempt.stockGain"
 msgstr "Tipo 20 – vendas de ações até R$ 20.000 no mês"
 
@@ -7751,7 +7967,7 @@ msgstr "Digite DELETE abaixo para confirmar."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: data.provider.missing.join(", ")
-#: src/components/dividends/content.tsx:90
+#: src/components/dividends/content.tsx:101
 msgid "dividends.unavailable"
 msgstr "Tickers indisponíveis: {0}."
 
@@ -7765,7 +7981,7 @@ msgid "categories.uncategorized"
 msgstr "Sem categoria"
 
 #. js-lingui-explicit-id
-#: src/components/positions/allocation-card.tsx:104
+#: src/components/positions/allocation-card.tsx:91
 msgid "positions.allocUncategorized"
 msgstr "Sem categoria"
 
@@ -7785,7 +8001,7 @@ msgid "documentation.score.field.ungraded"
 msgstr "Multiplicador sem nota"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:565
+#: src/components/income-tax/report-sections.tsx:706
 msgid "incomeTax.kind.unit"
 msgstr "Unit"
 
@@ -7800,12 +8016,12 @@ msgid "validation.priceRequired"
 msgstr "O preço unitário é obrigatório"
 
 #. js-lingui-explicit-id
-#: src/components/dividends/summary.tsx:26
+#: src/components/dividends/summary.tsx:77
 msgid "dividends.upcoming"
 msgstr "A receber"
 
 #. js-lingui-explicit-id
-#: src/components/dividends/charts.tsx:84
+#: src/components/dividends/charts.tsx:337
 msgid "dividends.upcomingTitle"
 msgstr "Próximos eventos"
 
@@ -7842,7 +8058,7 @@ msgid "documentation.contribution.vetTitle"
 msgstr "Taxa de execução do dólar (VET)"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:221
+#: src/components/income-tax/report-sections.tsx:243
 msgid "incomeTax.warning.missingRates.title"
 msgstr "Operações em USD sem cotação da data"
 
@@ -8044,7 +8260,7 @@ msgid "performance.tabValue"
 msgstr "Patrimônio"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:1286
+#: src/components/income-tax/report-sections.tsx:1493
 msgid "incomeTax.exempt.bonusValue"
 msgstr "Valor"
 
@@ -8131,6 +8347,11 @@ msgstr "vs fechamento"
 #: src/components/deep-finder/types.tsx:35
 msgid "deepFinder.windowCost"
 msgstr "Vs custo"
+
+#. js-lingui-explicit-id
+#: src/components/dividends/summary.tsx:49
+msgid "dividends.vsPrevious"
+msgstr "em relação aos 12 meses anteriores"
 
 #. js-lingui-explicit-id
 #: src/components/allocation/asset-detail-page.tsx:344
@@ -8242,6 +8463,16 @@ msgid "documentation.score.pipelineDescriptionV2"
 msgstr "Para onde ir, quanto falta e com que urgência são calculados separadamente, para que cada entrada tenha uma única função."
 
 #. js-lingui-explicit-id
+#: src/components/dividends/by-asset-table.tsx:109
+msgid "dividends.byAssetHint"
+msgstr "Quem paga seus proventos. Yield on cost são os proventos de 12 meses de cada ativo sobre o quanto você pagou por ele, na moeda nativa."
+
+#. js-lingui-explicit-id
+#: src/components/dividends/by-asset-table.tsx:144
+msgid "dividends.windowTotal"
+msgstr "Janela inteira"
+
+#. js-lingui-explicit-id
 #: src/routes/_app/deep-finder.tsx:130
 msgid "deepFinder.window"
 msgstr "Janela"
@@ -8262,7 +8493,7 @@ msgid "documentation.contribution.shareCapDescriptionV2"
 msgstr "Com dois ou mais nomes, nenhum recebe mais que {shareCap} do aporte, e o nível é resolvido de novo com esse teto. No modo automático, um nome cuja fatia fica abaixo de uma fatia de impacto mínimo é liberado quando os outros conseguem absorver o dinheiro dele, mantendo pelo menos dois nomes."
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:130
+#: src/components/income-tax/report-sections.tsx:148
 msgid "incomeTax.summary.withheldLeftHint"
 msgstr "IRRF não usado até dezembro: ficha Imposto Pago/Retido, item 03."
 
@@ -8303,11 +8534,6 @@ msgid "splits.suggestion"
 msgstr "O Yahoo informa um desdobramento {ratio} a partir de {date} que ainda não foi registrado. Se foi uma bonificação, registre-a abaixo como bonificação, com o custo atribuído."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/dividends.tsx:76
-msgid "dividends.year"
-msgstr "ano"
-
-#. js-lingui-explicit-id
 #: src/routes/_app/income-tax.tsx:79
 msgid "incomeTax.year"
 msgstr "Ano"
@@ -8323,19 +8549,25 @@ msgid "performance.colYearTotal"
 msgstr "Ano"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:519
+#: src/components/income-tax/report-sections.tsx:659
 msgid "incomeTax.monthly.total"
 msgstr "Ano"
 
 #. js-lingui-explicit-id
-#: src/components/income-tax/report-sections.tsx:204
+#: src/components/dividends/charts.tsx:126
+msgid "dividends.tabYear"
+msgstr "Ano"
+
+#. js-lingui-explicit-id
+#: src/components/income-tax/report-sections.tsx:226
 msgid "incomeTax.warning.beforeStart.title"
 msgstr "Ano anterior à apuração"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/dividends.tsx:78
-msgid "dividends.years"
-msgstr "anos"
+#: src/components/dividends/by-asset-table.tsx:137
+#: src/components/dividends/summary.tsx:68
+msgid "dividends.yieldOnCost"
+msgstr "Yield on cost"
 
 #. js-lingui-explicit-id
 #: src/lib/trpcErrors.ts:39

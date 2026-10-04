@@ -1,3 +1,5 @@
+import { msg } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import {
   DIVIDEND_SOURCE_LABELS,
@@ -22,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { trpc } from "@/lib/api";
 import { useFxRequest } from "@/lib/fx";
 import { useSettings } from "@/lib/settings";
@@ -32,6 +35,7 @@ export const Route = createFileRoute("/_app/dividends")({
 });
 
 function DividendsPage() {
+  const { i18n } = useLingui();
   const { displayCurrency } = useSettings();
   const fxRequest = useFxRequest();
   const [source, setSource] = useState<DividendSource>("auto");
@@ -43,7 +47,12 @@ function DividendsPage() {
       displayCurrency,
       ...fxRequest,
     },
-    { staleTime: 6 * 60 * 60 * 1_000, gcTime: 6 * 60 * 60 * 1_000 },
+    {
+      staleTime: 6 * 60 * 60 * 1_000,
+      gcTime: 6 * 60 * 60 * 1_000,
+      // A new window keeps the last one on screen instead of a skeleton.
+      placeholderData: (previous) => previous,
+    },
   );
 
   return (
@@ -61,31 +70,39 @@ function DividendsPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Select
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            size="sm"
             value={String(years)}
-            onValueChange={(value) => setYears(Number(value) as DividendWindow)}
+            onValueChange={(value) =>
+              value && setYears(Number(value) as DividendWindow)
+            }
+            aria-label={i18n._(
+              msg({ id: "dividends.windowLabel", message: "History window" }),
+            )}
           >
-            <SelectTrigger size="sm" className="w-[116px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {DIVIDEND_WINDOWS.map((window) => (
-                <SelectItem key={window} value={String(window)}>
-                  {window}{" "}
-                  {window === 1 ? (
-                    <Trans id="dividends.year">year</Trans>
-                  ) : (
-                    <Trans id="dividends.years">years</Trans>
-                  )}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            {DIVIDEND_WINDOWS.map((window) => (
+              <ToggleGroupItem
+                key={window}
+                value={String(window)}
+                className="px-3 data-[state=on]:bg-primary data-[state=on]:text-primary-foreground"
+              >
+                <Trans id="dividends.windowShort">{window}Y</Trans>
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
           <Select
             value={source}
             onValueChange={(value) => setSource(value as DividendSource)}
           >
-            <SelectTrigger size="sm" className="w-[245px]">
+            <SelectTrigger
+              size="sm"
+              className="w-auto min-w-[200px]"
+              aria-label={i18n._(
+                msg({ id: "dividends.sourceLabel", message: "Income source" }),
+              )}
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

@@ -23,6 +23,7 @@ import {
 import { ChartContainer } from "@/components/ui/chart";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { type RouterOutputs, trpc } from "@/lib/api";
+import { ASSET_CLASS_COLORS } from "@/lib/asset-class-colors";
 import {
   formatCompactMoney,
   formatMoney,
@@ -40,20 +41,6 @@ type AllocationGroupBy = "class" | "currency" | "category";
 
 /** Bucket holding every asset the user has not filed under a category. */
 const UNCATEGORIZED = "uncategorized";
-
-/** Stable theme colors keep each built-in bucket recognizable across views. */
-const CLASS_GROUP_COLORS: Record<AssetClass, string> = {
-  stock_br: "var(--chart-1)",
-  stock_us: "var(--chart-2)",
-  reit: "var(--chart-3)",
-  etf: "var(--chart-4)",
-  bdr: "var(--chart-5)",
-  // Not `--chart-6`: its orange sits next to the REIT one on the donut.
-  crypto: "var(--chart-8)",
-  fixed_income: "var(--chart-7)",
-  cash: "var(--chart-10)",
-  other: "var(--chart-9)",
-};
 
 const CURRENCY_GROUP_COLORS: Record<Currency, string> = {
   BRL: "var(--chart-1)",
@@ -80,7 +67,7 @@ function builtInGroupColor(
   key: string,
 ): string {
   return groupBy === "class"
-    ? CLASS_GROUP_COLORS[key as AssetClass]
+    ? ASSET_CLASS_COLORS[key as AssetClass]
     : CURRENCY_GROUP_COLORS[key as Currency];
 }
 

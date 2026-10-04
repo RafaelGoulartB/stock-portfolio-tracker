@@ -6,6 +6,7 @@ import {
 import {
   attachDividendEntitlements,
   nativeDividendTotals,
+  summarizeIncome,
 } from "../../domain/dividends";
 import { convertMoney } from "../../domain/positions";
 import { add, formatDecimal, toDecimal, ZERO } from "../../lib/decimal";
@@ -130,18 +131,17 @@ export const dividendsRouter = router({
         return { ...event, convertedGrossAmount };
       });
 
-      const byMonth = new Map<string, bigint>();
-
-      for (const event of enriched) {
-        if (event.convertedGrossAmount == null) {
-          continue;
-        }
-        const month = (event.paymentDate ?? event.exDate).slice(0, 7);
-        byMonth.set(
-          month,
-          (byMonth.get(month) ?? ZERO) + toDecimal(event.convertedGrossAmount),
-        );
-      }
+      const income = summarizeIncome({
+        events: enriched,
+        assetClasses: new Map(
+          [...assets.entries()].map(([key, asset]) => [key, asset.assetClass]),
+        ),
+        transactions,
+        today,
+        windowYears: input.years,
+        displayCurrency: input.displayCurrency,
+        usdBrlRate: usdBrlRate ?? null,
+      });
 
       const upcoming = enriched
         .filter((event) => event.status !== "estimated_paid")
@@ -151,12 +151,16 @@ export const dividendsRouter = router({
 
       return {
         events: enriched,
-        monthly: [...byMonth.entries()]
-          .map(([month, amount]) => ({
-            month,
-            amount: formatDecimal(amount, 2),
-          }))
-          .sort((a, b) => a.month.localeCompare(b.month)),
+        monthly: income.monthly,
+        income: {
+          trailing12m: income.trailing12m,
+          previous12m: income.previous12m,
+          trailing12mChange: income.trailing12mChange,
+          monthlyAverage: income.monthlyAverage,
+          yieldOnCost: income.yieldOnCost,
+          byYear: income.byYear,
+          byAsset: income.byAsset,
+        },
         summary: {
           displayCurrency: input.displayCurrency,
           convertedTotal: formatDecimal(convertedTotal, 2),

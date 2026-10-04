@@ -2,7 +2,7 @@ import { t } from "@lingui/core/macro";
 import { Trans } from "@lingui/react/macro";
 import { createFileRoute } from "@tanstack/react-router";
 import { Printer } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { OpeningBalances } from "@/components/income-tax/opening-balances";
 import {
   ExemptIncomeCard,
@@ -121,19 +121,93 @@ function IncomeTaxPage() {
               : "space-y-5"
           }
         >
+          <SectionNav assessed={report.data.assessed} />
           <Warnings warnings={report.data.warnings} />
           {report.data.assessed ? (
             <>
-              <SummaryStats report={report.data} />
-              <MonthlyTable report={report.data} />
-              <ExemptIncomeCard report={report.data} />
-              <ForeignSection report={report.data} />
-              <SalesTable report={report.data} />
+              <section id="ir-summary" className="scroll-mt-32">
+                <SummaryStats report={report.data} />
+              </section>
+              <section id="ir-monthly" className="scroll-mt-32">
+                <MonthlyTable report={report.data} />
+              </section>
+              <section id="ir-exempt" className="scroll-mt-32">
+                <ExemptIncomeCard report={report.data} />
+              </section>
+              <section id="ir-foreign" className="scroll-mt-32">
+                <ForeignSection report={report.data} />
+              </section>
+              <section id="ir-sales" className="scroll-mt-32">
+                <SalesTable report={report.data} />
+              </section>
             </>
           ) : null}
-          <HoldingsTable report={report.data} />
+          <section id="ir-holdings" className="scroll-mt-32">
+            <HoldingsTable report={report.data} />
+          </section>
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Jump links to the report's sections, pinned under the app header. The
+ * report is long and the IRPF program asks for it sheet by sheet.
+ */
+function SectionNav({ assessed }: { assessed: boolean }) {
+  const sections: { id: string; label: ReactNode }[] = [
+    ...(assessed
+      ? [
+          {
+            id: "ir-summary",
+            label: <Trans id="incomeTax.nav.summary">Summary</Trans>,
+          },
+          {
+            id: "ir-monthly",
+            label: <Trans id="incomeTax.nav.monthly">Renda Variável</Trans>,
+          },
+          {
+            id: "ir-exempt",
+            label: <Trans id="incomeTax.nav.exempt">Exempt income</Trans>,
+          },
+          {
+            id: "ir-foreign",
+            label: <Trans id="incomeTax.nav.foreign">Foreign assets</Trans>,
+          },
+          {
+            id: "ir-sales",
+            label: <Trans id="incomeTax.nav.sales">Sales</Trans>,
+          },
+        ]
+      : []),
+    {
+      id: "ir-holdings",
+      label: <Trans id="incomeTax.nav.holdings">Bens e Direitos</Trans>,
+    },
+  ];
+
+  if (sections.length < 2) {
+    return null;
+  }
+
+  return (
+    <nav
+      aria-label={t({ id: "incomeTax.nav.label", message: "Report sections" })}
+      className="sticky top-0 z-30 -mx-1 overflow-x-auto bg-background/95 px-1 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/80 lg:top-14 print:hidden"
+    >
+      <ul className="flex w-max gap-1.5">
+        {sections.map((section) => (
+          <li key={section.id}>
+            <a
+              href={`#${section.id}`}
+              className="inline-flex h-8 items-center rounded-full border px-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              {section.label}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </nav>
   );
 }

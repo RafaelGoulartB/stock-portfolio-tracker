@@ -9,15 +9,14 @@ import type {
   IncomeTaxWarning,
   TaxKind,
 } from "@portifolio-tracker/shared";
-import { AlertTriangle, Info, Pencil, Trash2 } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { AlertTriangle, Check, Copy, Info, Pencil, Trash2 } from "lucide-react";
+import { type ReactNode, useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
   AssetProfileDialog,
   DarfPaymentDialog,
   ForeignCashDialog,
 } from "@/components/income-tax/record-dialogs";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -27,6 +26,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -82,15 +83,24 @@ function Stat({
   label,
   value,
   hint,
+  emphasis = false,
 }: {
   label: ReactNode;
   value: ReactNode;
   hint?: ReactNode;
+  emphasis?: boolean;
 }) {
   return (
-    <div className="space-y-1 rounded-lg border bg-card p-4">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="text-lg font-semibold tabular-nums">{value}</div>
+    <div className="space-y-1 bg-card px-5 py-4">
+      <div className="text-xs font-medium text-muted-foreground">{label}</div>
+      <div
+        className={cn(
+          "font-semibold tracking-tight",
+          emphasis ? "text-xl" : "text-lg",
+        )}
+      >
+        {value}
+      </div>
       {hint ? (
         <div className="text-xs text-muted-foreground">{hint}</div>
       ) : null}
@@ -103,75 +113,87 @@ export function SummaryStats({ report }: { report: IncomeTaxReport }) {
   const darfPaid = brl(totals.darfPaid);
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      <Stat
-        label={<Trans id="incomeTax.summary.darf">DARFs of the year</Trans>}
-        value={brl(totals.darf)}
-        hint={
-          <Trans id="incomeTax.summary.darfHint">
-            Code 6015, due by the last business day of the following month.
-            Recorded as paid: {darfPaid}.
-          </Trans>
-        }
-      />
-      <Stat
-        label={<Trans id="incomeTax.summary.exempt">Exempt stock gains</Trans>}
-        value={brl(totals.exemptGain)}
-        hint={
-          <Trans id="incomeTax.summary.exemptHint">
-            Exempt income, type 20: months with stock sales up to R$ 20,000.
-          </Trans>
-        }
-      />
-      <Stat
-        label={<Trans id="incomeTax.summary.withheldLeft">IRRF to claim</Trans>}
-        value={brl(totals.withheldLeft)}
-        hint={
-          <Trans id="incomeTax.summary.withheldLeftHint">
-            Withheld tax not used by December: Imposto Pago/Retido, item 03.
-          </Trans>
-        }
-      />
-      <Stat
-        label={
-          <Trans id="incomeTax.summary.foreignTax">
-            Foreign tax (estimate)
-          </Trans>
-        }
-        value={brl(foreign.estimatedTax)}
-        hint={
-          <Trans id="incomeTax.summary.foreignTaxHint">
-            15% of the year's foreign sales result, before foreign income.
-          </Trans>
-        }
-      />
-      <Stat
-        label={
-          <Trans id="incomeTax.summary.ordinaryLoss">
-            Ordinary loss carried
-          </Trans>
-        }
-        value={brl(totals.ordinaryLoss)}
-      />
-      <Stat
-        label={
-          <Trans id="incomeTax.summary.dayTradeLoss">
-            Day-trade loss carried
-          </Trans>
-        }
-        value={brl(totals.dayTradeLoss)}
-      />
-      <Stat
-        label={<Trans id="incomeTax.summary.fiiLoss">FII loss carried</Trans>}
-        value={brl(totals.fiiLoss)}
-      />
-      <Stat
-        label={
-          <Trans id="incomeTax.summary.foreignLoss">Foreign loss carried</Trans>
-        }
-        value={brl(foreign.lossAfter)}
-      />
-    </div>
+    <Card className="gap-0 overflow-hidden py-0">
+      <div className="grid gap-px bg-border sm:grid-cols-2 lg:grid-cols-4">
+        <Stat
+          emphasis
+          label={<Trans id="incomeTax.summary.darf">DARFs of the year</Trans>}
+          value={brl(totals.darf)}
+          hint={
+            <Trans id="incomeTax.summary.darfHint">
+              Code 6015, due by the last business day of the following month.
+              Recorded as paid: {darfPaid}.
+            </Trans>
+          }
+        />
+        <Stat
+          emphasis
+          label={
+            <Trans id="incomeTax.summary.exempt">Exempt stock gains</Trans>
+          }
+          value={brl(totals.exemptGain)}
+          hint={
+            <Trans id="incomeTax.summary.exemptHint">
+              Exempt income, type 20: months with stock sales up to R$ 20,000.
+            </Trans>
+          }
+        />
+        <Stat
+          emphasis
+          label={
+            <Trans id="incomeTax.summary.withheldLeft">IRRF to claim</Trans>
+          }
+          value={brl(totals.withheldLeft)}
+          hint={
+            <Trans id="incomeTax.summary.withheldLeftHint">
+              Withheld tax not used by December: Imposto Pago/Retido, item 03.
+            </Trans>
+          }
+        />
+        <Stat
+          emphasis
+          label={
+            <Trans id="incomeTax.summary.foreignTax">
+              Foreign tax (estimate)
+            </Trans>
+          }
+          value={brl(foreign.estimatedTax)}
+          hint={
+            <Trans id="incomeTax.summary.foreignTaxHint">
+              15% of the year's foreign sales result, before foreign income.
+            </Trans>
+          }
+        />
+        <Stat
+          label={
+            <Trans id="incomeTax.summary.ordinaryLoss">
+              Ordinary loss carried
+            </Trans>
+          }
+          value={brl(totals.ordinaryLoss)}
+        />
+        <Stat
+          label={
+            <Trans id="incomeTax.summary.dayTradeLoss">
+              Day-trade loss carried
+            </Trans>
+          }
+          value={brl(totals.dayTradeLoss)}
+        />
+        <Stat
+          label={<Trans id="incomeTax.summary.fiiLoss">FII loss carried</Trans>}
+          value={brl(totals.fiiLoss)}
+        />
+        <Stat
+          label={
+            <Trans id="incomeTax.summary.foreignLoss">
+              Foreign loss carried
+            </Trans>
+          }
+          value={brl(foreign.lossAfter)}
+        />
+      </div>
+    </Card>
   );
 }
 
@@ -282,30 +304,70 @@ function warningContent(warning: IncomeTaxWarning): {
   }
 }
 
+/** Everything to check before filing, in one card, the serious ones first. */
 export function Warnings({ warnings }: { warnings: IncomeTaxWarning[] }) {
   if (warnings.length === 0) return null;
 
-  return (
-    <div className="space-y-3">
-      {warnings.map((warning) => {
-        const { title, body, severe } = warningContent(warning);
-        const Icon = severe ? AlertTriangle : Info;
+  const items = warnings
+    .map((warning) => ({ code: warning.code, ...warningContent(warning) }))
+    .sort((a, b) => Number(b.severe) - Number(a.severe));
+  const severe = items.filter((item) => item.severe).length;
 
-        return (
-          <Alert
-            key={warning.code}
-            className={cn(severe && "border-caution/50 bg-caution/10")}
-          >
-            <Icon
-              aria-hidden="true"
-              className={cn(severe ? "text-caution" : "text-muted-foreground")}
-            />
-            <AlertTitle>{title}</AlertTitle>
-            <AlertDescription>{body}</AlertDescription>
-          </Alert>
-        );
+  return (
+    <Card
+      className={cn("gap-4", severe > 0 && "border-caution/50")}
+      role="region"
+      aria-label={t({
+        id: "incomeTax.review.label",
+        message: "Before filing",
       })}
-    </div>
+    >
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          {severe > 0 ? (
+            <AlertTriangle className="size-4 text-caution" aria-hidden="true" />
+          ) : (
+            <Info className="size-4 text-muted-foreground" aria-hidden="true" />
+          )}
+          <Trans id="incomeTax.review.title">Review before filing</Trans>
+        </CardTitle>
+        <CardDescription>
+          <Plural
+            id="incomeTax.review.count"
+            value={severe}
+            _0="Nothing blocks the figures below; the notes explain how they were assessed."
+            one="# item can change the figures below."
+            other="# items can change the figures below."
+          />
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ul className="divide-y">
+          {items.map((item) => {
+            const Icon = item.severe ? AlertTriangle : Info;
+
+            return (
+              <li
+                key={item.code}
+                className="flex gap-3 py-3 first:pt-0 last:pb-0"
+              >
+                <Icon
+                  aria-hidden="true"
+                  className={cn(
+                    "mt-0.5 size-4 shrink-0",
+                    item.severe ? "text-caution" : "text-muted-foreground",
+                  )}
+                />
+                <div className="min-w-0 space-y-0.5 text-sm">
+                  <p className="font-medium">{item.title}</p>
+                  <p className="text-muted-foreground">{item.body}</p>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -397,9 +459,39 @@ function DarfPaymentCell({
   );
 }
 
+/**
+ * A month with nothing to declare: no stock sales, no result of any kind,
+ * no tax, no withholding and no recorded payment. A sub-minimum tax carried
+ * through it does not count: it shows where it arises and where it is paid.
+ */
+function isQuietMonth(month: IncomeTaxMonth): boolean {
+  const zero = (value: string) => Number(value) === 0;
+
+  return (
+    zero(month.stockSales) &&
+    zero(month.ordinaryResult) &&
+    zero(month.dayTradeResult) &&
+    zero(month.fiiResult) &&
+    zero(month.taxDue) &&
+    zero(month.withheld) &&
+    zero(month.withheldDayTrade) &&
+    zero(month.darf) &&
+    month.darfPaid === null
+  );
+}
+
 export function MonthlyTable({ report }: { report: IncomeTaxReport }) {
   const monthLabel = useMonthLabel();
   const [paying, setPaying] = useState<IncomeTaxMonth | null>(null);
+  const [showQuiet, setShowQuiet] = useState(false);
+  const quiet = report.months.filter(isQuietMonth).length;
+  // Day-trade columns only appear in a year that has day trades.
+  const hasDayTrade = report.months.some(
+    (month) =>
+      Number(month.dayTradeResult) !== 0 ||
+      Number(month.dayTradeLoss) !== 0 ||
+      Number(month.withheldDayTrade) !== 0,
+  );
 
   return (
     <Card>
@@ -414,9 +506,29 @@ export function MonthlyTable({ report }: { report: IncomeTaxReport }) {
             the month and later months of the same year.
           </Trans>
         </CardDescription>
+        {quiet > 0 ? (
+          <div className="flex items-center gap-2 pt-1 print:hidden">
+            <Switch
+              id="income-tax-quiet-months"
+              checked={showQuiet}
+              onCheckedChange={setShowQuiet}
+            />
+            <Label
+              htmlFor="income-tax-quiet-months"
+              className="text-xs font-normal text-muted-foreground"
+            >
+              <Plural
+                id="incomeTax.monthly.showQuiet"
+                value={quiet}
+                one="Show the # month without activity"
+                other="Show the # months without activity"
+              />
+            </Label>
+          </div>
+        ) : null}
       </CardHeader>
       <CardContent className="overflow-x-auto">
-        <Table className="min-w-[1200px] text-xs">
+        <Table className={cn("text-xs", hasDayTrade && "min-w-[1100px]")}>
           <TableHeader>
             <TableRow>
               <TableHead>
@@ -428,22 +540,36 @@ export function MonthlyTable({ report }: { report: IncomeTaxReport }) {
               <TableHead className="text-right">
                 <Trans id="incomeTax.monthly.ordinary">Ordinary</Trans>
               </TableHead>
-              <TableHead className="text-right">
-                <Trans id="incomeTax.monthly.dayTrade">Day trade</Trans>
-              </TableHead>
+              {hasDayTrade ? (
+                <TableHead className="text-right">
+                  <Trans id="incomeTax.monthly.dayTrade">Day trade</Trans>
+                </TableHead>
+              ) : null}
               <TableHead className="text-right">
                 <Trans id="incomeTax.monthly.fii">FII</Trans>
               </TableHead>
               <TableHead className="text-right">
-                <Trans id="incomeTax.monthly.losses">
-                  Losses left (ord. / DT / FII)
-                </Trans>
+                {hasDayTrade ? (
+                  <Trans id="incomeTax.monthly.losses">
+                    Losses left (ord. / DT / FII)
+                  </Trans>
+                ) : (
+                  <Trans id="incomeTax.monthly.lossesNoDayTrade">
+                    Losses left (ord. / FII)
+                  </Trans>
+                )}
               </TableHead>
               <TableHead className="text-right">
                 <Trans id="incomeTax.monthly.taxDue">Tax due</Trans>
               </TableHead>
               <TableHead className="text-right">
-                <Trans id="incomeTax.monthly.withheld">IRRF (sales / DT)</Trans>
+                {hasDayTrade ? (
+                  <Trans id="incomeTax.monthly.withheld">
+                    IRRF (sales / DT)
+                  </Trans>
+                ) : (
+                  <Trans id="incomeTax.monthly.withheldSales">IRRF</Trans>
+                )}
               </TableHead>
               <TableHead className="text-right">
                 <Trans id="incomeTax.monthly.withheldUsed">IRRF used</Trans>
@@ -458,7 +584,18 @@ export function MonthlyTable({ report }: { report: IncomeTaxReport }) {
           </TableHeader>
           <TableBody>
             {report.months.map((month) => (
-              <TableRow key={month.month}>
+              <TableRow
+                key={month.month}
+                className={cn(
+                  // Quiet months stay in print, where the sheet is complete.
+                  isQuietMonth(month) &&
+                    (showQuiet
+                      ? "text-muted-foreground"
+                      : "hidden print:table-row"),
+                  month.darf !== "0.00" &&
+                    "bg-caution/5 shadow-[inset_3px_0_0_var(--caution)]",
+                )}
+              >
                 <TableCell className="font-medium capitalize">
                   {monthLabel(month.month)}
                 </TableCell>
@@ -475,21 +612,26 @@ export function MonthlyTable({ report }: { report: IncomeTaxReport }) {
                 <TableCell className="text-right">
                   <Amount value={month.ordinaryResult} signed />
                 </TableCell>
-                <TableCell className="text-right">
-                  <Amount value={month.dayTradeResult} signed />
-                </TableCell>
+                {hasDayTrade ? (
+                  <TableCell className="text-right">
+                    <Amount value={month.dayTradeResult} signed />
+                  </TableCell>
+                ) : null}
                 <TableCell className="text-right">
                   <Amount value={month.fiiResult} signed />
                 </TableCell>
                 <TableCell className="text-right tabular-nums text-muted-foreground">
-                  {brl(month.ordinaryLoss)} / {brl(month.dayTradeLoss)} /{" "}
-                  {brl(month.fiiLoss)}
+                  {hasDayTrade
+                    ? `${brl(month.ordinaryLoss)} / ${brl(month.dayTradeLoss)} / ${brl(month.fiiLoss)}`
+                    : `${brl(month.ordinaryLoss)} / ${brl(month.fiiLoss)}`}
                 </TableCell>
                 <TableCell className="text-right">
                   <Amount value={month.taxDue} />
                 </TableCell>
                 <TableCell className="text-right tabular-nums">
-                  {brl(month.withheld)} / {brl(month.withheldDayTrade)}
+                  {hasDayTrade
+                    ? `${brl(month.withheld)} / ${brl(month.withheldDayTrade)}`
+                    : brl(month.withheld)}
                 </TableCell>
                 <TableCell className="text-right">
                   <Amount value={month.withheldUsed} />
@@ -520,15 +662,16 @@ export function MonthlyTable({ report }: { report: IncomeTaxReport }) {
               </TableCell>
               <TableCell />
               <TableCell />
-              <TableCell />
+              {hasDayTrade ? <TableCell /> : null}
               <TableCell />
               <TableCell />
               <TableCell className="text-right">
                 <Amount value={report.totals.taxDue} />
               </TableCell>
               <TableCell className="text-right tabular-nums">
-                {brl(report.totals.withheld)} /{" "}
-                {brl(report.totals.withheldDayTrade)}
+                {hasDayTrade
+                  ? `${brl(report.totals.withheld)} / ${brl(report.totals.withheldDayTrade)}`
+                  : brl(report.totals.withheld)}
               </TableCell>
               <TableCell />
               <TableCell className="text-right font-semibold">
@@ -901,6 +1044,50 @@ const KIND_ORDER: TaxKind[] = [
 ];
 
 /** Exact sum of two-decimal amounts; `null` if any amount is unknown. */
+/**
+ * Copies one Bens e Direitos text so it can be pasted into the IRPF
+ * program as it is. Confirms in place for a moment instead of a toast.
+ */
+function CopyButton({ text, label }: { text: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => setCopied(false), 1600);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
+
+  return (
+    <Button
+      type="button"
+      size="icon-sm"
+      variant="ghost"
+      className="shrink-0 text-muted-foreground print:hidden"
+      aria-label={label}
+      title={label}
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(text);
+          setCopied(true);
+        } catch {
+          toast.error(
+            t({
+              id: "incomeTax.copy.failed",
+              message: "Could not copy. Select the text instead.",
+            }),
+          );
+        }
+      }}
+    >
+      {copied ? (
+        <Check className="text-gain" aria-hidden="true" />
+      ) : (
+        <Copy aria-hidden="true" />
+      )}
+    </Button>
+  );
+}
+
 function sumCents(values: readonly (string | null)[]): string | null {
   let total = 0n;
 
@@ -1055,7 +1242,18 @@ function HoldingsGroup({
                         </Trans>
                       </span>
                     ) : (
-                      holdingDescription(holding)
+                      <div className="flex items-start gap-1">
+                        <span className="min-w-0 flex-1">
+                          {holdingDescription(holding)}
+                        </span>
+                        <CopyButton
+                          text={holdingDescription(holding)}
+                          label={t({
+                            id: "incomeTax.holdings.copyLabel",
+                            message: `Copy the description of ${ticker}`,
+                          })}
+                        />
+                      </div>
                     )}
                   </TableCell>
                   <TableCell className="text-right">
@@ -1089,7 +1287,18 @@ function HoldingsGroup({
                 <TableCell className="tabular-nums">06 / 01</TableCell>
                 <TableCell className="whitespace-normal">
                   {cashBalance ? (
-                    cashDescription(cashBalance)
+                    <div className="flex items-start gap-1">
+                      <span className="min-w-0 flex-1">
+                        {cashDescription(cashBalance)}
+                      </span>
+                      <CopyButton
+                        text={cashDescription(cashBalance)}
+                        label={t({
+                          id: "incomeTax.holdings.copyCashLabel",
+                          message: "Copy the description of the dollar balance",
+                        })}
+                      />
+                    </div>
                   ) : (
                     <Button
                       type="button"
