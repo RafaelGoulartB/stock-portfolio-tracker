@@ -15,6 +15,7 @@ import {
   oversellAfterReplacement,
   pendingSplitSuggestions,
   portfolioReturnContribution,
+  positionConcentration,
   type SplitEvent,
   summarizePositions,
   type TickerLedgerEntry,
@@ -719,6 +720,71 @@ describe("valuePositions", () => {
       quotedPositions: 0,
       unquotedPositions: 1,
     });
+  });
+});
+
+describe("positionConcentration", () => {
+  function book(values: Record<string, string>, cash = "0") {
+    const native = consolidatePositions(
+      Object.keys(values).map((ticker) =>
+        tx({ ticker, side: "buy", quantity: "1", price: "1" }),
+      ),
+    );
+    const valued = valuePositions(
+      convertPositions(native, "BRL", null),
+      new Map(
+        Object.entries(values).map(([ticker, price]) => [
+          ticker,
+          { ticker, price, asOf: "2024-06-28" },
+        ]),
+      ),
+      "BRL",
+      null,
+    );
+
+    return withCashPosition(valued, cash, "BRL", null);
+  }
+
+  it("counts equal weights as that many effective positions", () => {
+    const result = positionConcentration(
+      book({ AAAA3: "25", BBBB3: "25", CCCC3: "25", DDDD3: "25" }),
+    );
+
+    expect(result).toMatchObject({
+      positions: 4,
+      top5Weight: "1.00000000",
+      effectivePositions: "4.00",
+      halfOfValueIn: 2,
+    });
+  });
+
+  it("shrinks the effective count when one position dominates", () => {
+    const result = positionConcentration(
+      book({ AAAA3: "70", BBBB3: "10", CCCC3: "10", DDDD3: "10" }),
+    );
+
+    // 1 / (0.49 + 3 × 0.01) = 1.923…
+    expect(result).toMatchObject({
+      largest: { ticker: "AAAA3", weight: "0.70000000" },
+      effectivePositions: "1.92",
+      halfOfValueIn: 1,
+    });
+  });
+
+  it("leaves cash out of the invested weights", () => {
+    const result = positionConcentration(
+      book({ AAAA3: "50", BBBB3: "50" }, "900"),
+    );
+
+    expect(result).toMatchObject({
+      positions: 2,
+      largest: { weight: "0.50000000" },
+      effectivePositions: "2.00",
+    });
+  });
+
+  it("has nothing to measure without an invested position", () => {
+    expect(positionConcentration(book({}, "100"))).toBeNull();
   });
 });
 

@@ -1167,6 +1167,92 @@ export function valuePositions(
   return valued;
 }
 
+/**
+ * How concentrated the invested book is. Cash is left out: it is a balance
+ * waiting to be invested, not a position that can dominate the result.
+ * Weights here are shares of the invested (non-cash, quoted) value.
+ */
+export type PortfolioConcentration = {
+  positions: number;
+  largest: { ticker: string; weight: string };
+  /** Combined weight of the five and ten largest positions. */
+  top5Weight: string;
+  top10Weight: string;
+  /**
+   * `1 / Σ w²`: the number of equal-weight positions with the same
+   * concentration. 20 holdings with an effective count of 8 behave like 8.
+   */
+  effectivePositions: string;
+  /** Fewest largest positions that together hold at least half the value. */
+  halfOfValueIn: number;
+};
+
+export function positionConcentration(
+  positions: readonly ValuedPosition[],
+): PortfolioConcentration | null {
+  const invested = positions
+    .filter(
+      (position) =>
+        position.assetClass !== "cash" &&
+        position.convertedMarketValue != null &&
+        toDecimal(position.convertedMarketValue) > ZERO,
+    )
+    .map((position) => ({
+      ticker: position.ticker,
+      value: toDecimal(position.convertedMarketValue ?? "0"),
+    }))
+    .sort((a, b) => (a.value === b.value ? 0 : a.value > b.value ? -1 : 1));
+
+  let total = ZERO;
+
+  for (const entry of invested) {
+    total = add(total, entry.value);
+  }
+
+  const [first] = invested;
+
+  if (!first || isZero(total)) {
+    return null;
+  }
+
+  const weights = invested.map((entry) => div(entry.value, total));
+  const half = toDecimal("0.5");
+  let squares = ZERO;
+  let cumulative = ZERO;
+  let halfOfValueIn = 0;
+  let top5 = ZERO;
+  let top10 = ZERO;
+
+  for (const [index, weight] of weights.entries()) {
+    squares = add(squares, mul(weight, weight));
+    cumulative = add(cumulative, weight);
+
+    if (index < 5) {
+      top5 = cumulative;
+    }
+
+    if (index < 10) {
+      top10 = cumulative;
+    }
+
+    if (halfOfValueIn === 0 && cumulative >= half) {
+      halfOfValueIn = index + 1;
+    }
+  }
+
+  return {
+    positions: invested.length,
+    largest: {
+      ticker: first.ticker,
+      weight: formatDecimal(weights[0], WEIGHT_PLACES),
+    },
+    top5Weight: formatDecimal(top5, WEIGHT_PLACES),
+    top10Weight: formatDecimal(top10, WEIGHT_PLACES),
+    effectivePositions: formatDecimal(div(toDecimal("1"), squares), 2),
+    halfOfValueIn,
+  };
+}
+
 /** Quantity available to sell for a ticker, as a decimal string. */
 export function availableQuantity(
   input: readonly ConsolidationInput[],

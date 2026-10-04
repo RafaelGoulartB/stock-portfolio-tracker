@@ -98,7 +98,7 @@ export function DeepFinderTeaser({
     <Card className={cn("h-full", className)}>
       <CardHeader>
         <CardTitle>
-          <Trans id="positions.teaserTitle">Summary</Trans>
+          <Trans id="positions.teaserMonthTitle">Last month's movers</Trans>
         </CardTitle>
         <CardDescription>
           <Trans id="positions.teaserHint">

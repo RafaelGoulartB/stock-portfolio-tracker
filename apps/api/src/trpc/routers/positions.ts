@@ -10,6 +10,7 @@ import {
 import {
   isOpenQuantity,
   portfolioReturnContribution,
+  positionConcentration,
   summarizePositions,
 } from "../../domain/positions";
 import { resolvePreviousUsdBrlRate } from "../fx-rate";
@@ -51,6 +52,7 @@ export const positionsRouter = router({
           };
         }),
         summary,
+        concentration: positionConcentration(positions),
         fx: {
           displayCurrency: input.displayCurrency,
           usdBrlRate,

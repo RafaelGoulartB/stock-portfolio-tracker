@@ -354,6 +354,14 @@ export const transactionsRouter = router({
         filters.push(ilike(transactions.ticker, likeContains(input.ticker)));
       }
 
+      if (input.side) {
+        filters.push(eq(transactions.side, input.side));
+      }
+
+      if (input.assetClass) {
+        filters.push(eq(transactions.assetClass, input.assetClass));
+      }
+
       const where = and(...filters);
       const [rows, totals] = await Promise.all([
         db
@@ -372,8 +380,17 @@ export const transactionsRouter = router({
           )
           .limit(input.pageSize)
           .offset(input.page * input.pageSize),
-        db.select({ value: count() }).from(transactions).where(where),
+        db
+          .select({ side: transactions.side, value: count() })
+          .from(transactions)
+          .where(where)
+          .groupBy(transactions.side),
       ]);
+      const sides = { buy: 0, sell: 0 };
+
+      for (const entry of totals) {
+        sides[entry.side] = Number(entry.value);
+      }
 
       return {
         items: rows.map(({ brokerNoteFormat, brokerNoteNumber, ...row }) =>
@@ -384,7 +401,8 @@ export const transactionsRouter = router({
               : null,
           ),
         ),
-        total: Number(totals[0]?.value ?? 0),
+        total: sides.buy + sides.sell,
+        sides,
         page: input.page,
         pageSize: input.pageSize,
       };

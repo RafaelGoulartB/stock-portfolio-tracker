@@ -234,11 +234,19 @@ export const transactionListInput = z.object({
   pageSize: z.number().int().min(1).max(100).default(100),
   /** Case-insensitive ticker substring; blank lists every trade. */
   ticker: z.string().trim().toUpperCase().max(120).optional(),
+  /** Only buys or only sells; omitted lists both. */
+  side: transactionSideSchema.optional(),
+  assetClass: assetClassSchema.optional(),
 });
 
 export const transactionListSchema = z.object({
   items: z.array(transactionSchema),
   total: z.number().int().nonnegative(),
+  /** Buys and sells among the filtered trades, across every page. */
+  sides: z.object({
+    buy: z.number().int().nonnegative(),
+    sell: z.number().int().nonnegative(),
+  }),
   page: z.number().int().nonnegative(),
   pageSize: z.number().int().positive(),
 });

@@ -11,7 +11,6 @@ import {
   finderSeriesStart,
   holdingBaselineDay,
   seriesLookbackStart,
-  windowStartDay,
 } from "../../domain/deep-finder";
 import { createSeriesLookup } from "../../domain/performance";
 import { convertMoney, isOpenQuantity } from "../../domain/positions";

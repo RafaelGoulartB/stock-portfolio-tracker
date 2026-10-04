@@ -5,7 +5,10 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Plus, RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { AllocationCard } from "@/components/positions/allocation-card";
+import {
+  AllocationCard,
+  type AllocationFilter,
+} from "@/components/positions/allocation-card";
 import {
   DeepFinderTeaser,
   useMonthMovers,
@@ -47,6 +50,7 @@ function PositionsPage() {
   const { quoteSource } = useSettings();
   const months = useMemo(() => lastTwelveMonths(), []);
   const [monthKey, setMonthKey] = useState(months[0]?.key ?? "");
+  const [filter, setFilter] = useState<AllocationFilter | null>(null);
   const selected = months.find((month) => month.key === monthKey) ?? months[0];
 
   const fx = useFxQuote(selected?.asOf);
@@ -126,7 +130,10 @@ function PositionsPage() {
           <MonthSelector
             months={months}
             selectedKey={selected?.key ?? ""}
-            onSelect={setMonthKey}
+            onSelect={(key) => {
+              setMonthKey(key);
+              setFilter(null);
+            }}
             locale={i18n.locale}
           />
           <Button
@@ -192,18 +199,27 @@ function PositionsPage() {
           ) : (
             <>
               <AllocationCard
+                // A new snapshot rebuilds the buckets, so a filter on the old
+                // ones is dropped with it.
+                key={selected?.key}
                 positions={open}
                 summary={data.summary}
                 snapshotLabel={snapshotLabel}
+                concentration={data.concentration}
+                filter={filter}
+                onFilterChange={setFilter}
               />
 
-              <DeepFinderTeaser positions={open} summary={data.summary} />
-
               <HoldingsCard
+                key={`holdings-${selected?.key}`}
                 positions={open}
                 summary={data.summary}
                 missing={data.quotes.missing}
+                filter={filter}
+                onClearFilter={() => setFilter(null)}
               />
+
+              <DeepFinderTeaser positions={open} summary={data.summary} />
             </>
           )}
 
