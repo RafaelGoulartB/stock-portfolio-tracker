@@ -1,5 +1,7 @@
+import { msg } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react";
 import { Filter, Search, X } from "lucide-react";
-import type { ChangeEventHandler, ReactNode } from "react";
+import { type ReactNode, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,31 +60,53 @@ export function TableFilterTrigger({
   );
 }
 
-/** Standard compact search field used by data-table toolbars. */
+/** Standard compact search field with a clear button once it has a value. */
 export function TableSearch({
   value,
-  onChange,
+  onValueChange,
   placeholder,
   ariaLabel,
+  className,
 }: {
   value: string;
-  onChange: ChangeEventHandler<HTMLInputElement>;
+  onValueChange: (value: string) => void;
   placeholder: string;
   ariaLabel: string;
+  className?: string;
 }) {
+  const { i18n } = useLingui();
+  const inputRef = useRef<HTMLInputElement>(null);
   return (
-    <div className="relative min-w-48 flex-1 sm:max-w-xs">
+    <div className={cn("relative min-w-48 flex-1 sm:max-w-xs", className)}>
       <Search
         className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
         aria-hidden="true"
       />
       <Input
+        ref={inputRef}
         value={value}
-        onChange={onChange}
+        onChange={(event) => onValueChange(event.target.value)}
         aria-label={ariaLabel}
         placeholder={placeholder}
-        className="h-8 pl-8"
+        className="h-8 pr-8 pl-8"
       />
+      {value ? (
+        <Button
+          type="button"
+          size="icon-xs"
+          variant="ghost"
+          onClick={() => {
+            onValueChange("");
+            inputRef.current?.focus();
+          }}
+          aria-label={i18n._(
+            msg({ id: "tableSearch.clear", message: "Clear search" }),
+          )}
+          className="absolute top-1/2 right-1 -translate-y-1/2 text-muted-foreground"
+        >
+          <X aria-hidden="true" />
+        </Button>
+      ) : null}
     </div>
   );
 }

@@ -137,7 +137,7 @@ export function TransactionHistory({
           <div className="flex flex-wrap items-center gap-2">
             <TableSearch
               value={tickerFilter}
-              onChange={(event) => onTickerFilterChange(event.target.value)}
+              onValueChange={onTickerFilterChange}
               placeholder={i18n._(
                 msg({
                   id: "transactions.filterPlaceholder",

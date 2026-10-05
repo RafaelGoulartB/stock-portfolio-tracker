@@ -569,7 +569,7 @@ function CategoriesPage() {
           <TableToolbar>
             <TableSearch
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onValueChange={setQuery}
               placeholder={i18n._(
                 msg({
                   id: "categories.searchPlaceholder",

@@ -15,13 +15,13 @@ import {
   MoreVertical,
   RefreshCw,
   ScanSearch,
-  Search,
   X,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { AssetLink } from "@/components/asset-link";
 import { AssetLogo } from "@/components/asset-logo";
+import { TableSearch } from "@/components/table-toolbar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -39,7 +39,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -325,23 +324,17 @@ export function AllocationDeepFinderButton({
                 ))}
               </SelectContent>
             </Select>
-            <div className="relative min-w-40 flex-1 sm:max-w-56">
-              <Search
-                className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
-                aria-hidden="true"
-              />
-              <Input
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                className="h-8 pl-8"
-                placeholder={i18n._(
-                  t({ id: "allocation.search", message: "Search ticker…" }),
-                )}
-                aria-label={i18n._(
-                  t({ id: "allocation.searchLabel", message: "Search assets" }),
-                )}
-              />
-            </div>
+            <TableSearch
+              value={search}
+              onValueChange={setSearch}
+              className="min-w-40 sm:max-w-56"
+              placeholder={i18n._(
+                t({ id: "allocation.search", message: "Search ticker…" }),
+              )}
+              ariaLabel={i18n._(
+                t({ id: "allocation.searchLabel", message: "Search assets" }),
+              )}
+            />
             <div className="ml-auto flex shrink-0 flex-col items-center">
               <Button
                 type="button"

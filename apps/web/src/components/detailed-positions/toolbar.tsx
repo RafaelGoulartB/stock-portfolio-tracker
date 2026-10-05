@@ -72,7 +72,7 @@ export function DetailedPositionsToolbar({
     <TableToolbar>
       <TableSearch
         value={search}
-        onChange={(event) => onSearchChange(event.target.value)}
+        onValueChange={onSearchChange}
         ariaLabel={i18n._(
           t({
             id: "detailedPositions.searchLabel",
