@@ -9,13 +9,7 @@ import {
 import { AssetClassLabel } from "@/components/asset-labels";
 import { AssetLink } from "@/components/asset-link";
 import { AssetLogo } from "@/components/asset-logo";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -105,9 +99,6 @@ export function DailyTable({ data }: { data: DailyData }) {
       Math.abs(portfolioImpact(position, summary.previousComparableValue) ?? 0),
     ),
   );
-  const previousDay = positions.find(
-    (position) => position.previousCloseAsOf,
-  )?.previousCloseAsOf;
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
@@ -131,20 +122,6 @@ export function DailyTable({ data }: { data: DailyData }) {
             <Trans id="daily.assets">Assets</Trans>
           )}
         </CardTitle>
-        <CardDescription>
-          {previousDay ? (
-            <Trans id="daily.assetsVsPrevious">
-              Change from the {formatTradeDate(previousDay)} close in{" "}
-              {summary.displayCurrency}, FX included. Impact is the share of
-              yesterday's portfolio each move represents.
-            </Trans>
-          ) : (
-            <Trans id="daily.assetsHint">
-              Change from the previous close in the display currency, including
-              FX, and each asset's impact on yesterday's portfolio value.
-            </Trans>
-          )}
-        </CardDescription>
       </CardHeader>
       <CardContent className="px-0 sm:px-6">
         <Table className="[&_tbody_td]:h-12 [&_tfoot_td]:h-11">

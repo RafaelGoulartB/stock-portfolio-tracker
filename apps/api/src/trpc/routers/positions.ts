@@ -2,6 +2,9 @@ import {
   dailyTrackingInput,
   positionsListInput,
 } from "@portifolio-tracker/shared";
+import { eq } from "drizzle-orm";
+import { db } from "../../db";
+import { assetCategories } from "../../db/schema";
 import {
   buildDailyTracking,
   dailyPreviousFxDay,
@@ -68,23 +71,28 @@ export const positionsRouter = router({
     .input(dailyTrackingInput)
     .query(async ({ ctx, input }) => {
       const snapshotDate = dailySnapshotDate();
-      const {
-        positions: valued,
-        missing,
-        usdBrlRate,
-        quotes,
-      } = await loadValuedPortfolio({
-        userId: ctx.user.id,
-        displayCurrency: input.displayCurrency,
-        usdBrlRate: input.usdBrlRate,
-        fxSource: input.fxSource,
-        manualRate: input.manualRate,
-        quoteSource: input.quoteSource,
-        manualPrices: input.manualPrices,
-        asOf: snapshotDate,
-        includeCash: true,
-        forceRefresh: input.forceRefresh,
-      });
+      const [{ positions: valued, missing, usdBrlRate, quotes }, assignments] =
+        await Promise.all([
+          loadValuedPortfolio({
+            userId: ctx.user.id,
+            displayCurrency: input.displayCurrency,
+            usdBrlRate: input.usdBrlRate,
+            fxSource: input.fxSource,
+            manualRate: input.manualRate,
+            quoteSource: input.quoteSource,
+            manualPrices: input.manualPrices,
+            asOf: snapshotDate,
+            includeCash: true,
+            forceRefresh: input.forceRefresh,
+          }),
+          db
+            .select({
+              ticker: assetCategories.ticker,
+              categoryId: assetCategories.categoryId,
+            })
+            .from(assetCategories)
+            .where(eq(assetCategories.userId, ctx.user.id)),
+        ]);
       const quoteDates = [...quotes.values()].map((quote) => quote.asOf).sort();
       const previousUsdBrlRate = usdBrlRate
         ? await resolvePreviousUsdBrlRate({
@@ -104,6 +112,9 @@ export const positionsRouter = router({
         displayCurrency: input.displayCurrency,
         usdBrlRate: usdBrlRate ?? null,
         previousUsdBrlRate,
+        categoryByTicker: new Map(
+          assignments.map((row) => [row.ticker, row.categoryId]),
+        ),
       });
 
       return {

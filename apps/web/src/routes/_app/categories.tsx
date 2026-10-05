@@ -117,8 +117,10 @@ function CategoriesPage() {
 
   function sync(data: CategoryList) {
     utils.categories.list.setData(undefined, data);
-    // The allocation watchlist finder filters by category on the server.
+    // The allocation watchlist finder filters by category on the server, and
+    // the daily breakdown sums the day per category there too.
     void utils.allocation.finder.invalidate();
+    void utils.positions.daily.invalidate();
   }
 
   const create = trpc.categories.create.useMutation({

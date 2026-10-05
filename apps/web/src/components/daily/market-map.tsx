@@ -1,17 +1,24 @@
+import { t } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
 import { useNavigate } from "@tanstack/react-router";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Tooltip, Treemap, type TreemapNode } from "recharts";
 import { HeatLegend } from "@/components/analysis/primitives";
 import { AssetClassLabel } from "@/components/asset-labels";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer } from "@/components/ui/chart";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { trpc } from "@/lib/api";
+import { CATEGORY_NONE, matchesCategory } from "@/lib/category-filter";
 import {
   formatMoney,
   formatSignedPercentPrecise,
@@ -26,6 +33,19 @@ import {
   marketPositions,
   signedOrZero,
 } from "./types";
+
+/** Map filter values: every holding, one asset class, or one category. */
+const FILTER_ALL = "all";
+const CLASS_PREFIX = "class:";
+const CATEGORY_PREFIX = "category:";
+
+function classFilter(assetClass: DailyPosition["assetClass"]): string {
+  return `${CLASS_PREFIX}${assetClass}`;
+}
+
+function categoryFilter(category: string): string {
+  return `${CATEGORY_PREFIX}${category}`;
+}
 
 type Tile = {
   name: string;
@@ -45,10 +65,60 @@ export function MarketMap({
   data: DailyData;
   className?: string;
 }) {
+  const { i18n } = useLingui();
   const navigate = useNavigate();
+  const [selectedFilter, setSelectedFilter] = useState(FILTER_ALL);
+  const positions = useMemo(() => marketPositions(data), [data]);
+
+  // Asset classes come from the book itself; categories are the user's own
+  // buckets and only join the list once at least one exists.
+  const assetClasses = useMemo(
+    () => [...new Set(positions.map((position) => position.assetClass))],
+    [positions],
+  );
+  const categoryList = trpc.categories.list.useQuery();
+  const categories = categoryList.data?.categories ?? [];
+  const categoryByTicker = useMemo(
+    () =>
+      new Map(
+        (categoryList.data?.assets ?? []).map((asset) => [
+          asset.ticker,
+          asset.categoryId,
+        ]),
+      ),
+    [categoryList.data?.assets],
+  );
+  const filterValues = new Set([
+    FILTER_ALL,
+    ...assetClasses.map(classFilter),
+    ...(categories.length > 0
+      ? [
+          categoryFilter(CATEGORY_NONE),
+          ...categories.map((item) => categoryFilter(item.id)),
+        ]
+      : []),
+  ]);
+  // Falls back to the whole book when the selection disappears, e.g. its
+  // category was deleted elsewhere or its last holding was sold.
+  const filter = filterValues.has(selectedFilter) ? selectedFilter : FILTER_ALL;
+
   const tiles = useMemo<Tile[]>(
     () =>
-      marketPositions(data)
+      positions
+        .filter((position) => {
+          if (filter.startsWith(CLASS_PREFIX)) {
+            return position.assetClass === filter.slice(CLASS_PREFIX.length);
+          }
+
+          if (filter.startsWith(CATEGORY_PREFIX)) {
+            return matchesCategory(
+              filter.slice(CATEGORY_PREFIX.length),
+              categoryByTicker.get(position.ticker) ?? null,
+            );
+          }
+
+          return true;
+        })
         .map((position) => ({
           name: position.ticker,
           size: Number(position.convertedMarketValue),
@@ -59,7 +129,7 @@ export function MarketMap({
           position,
         }))
         .sort((a, b) => b.size - a.size),
-    [data],
+    [positions, filter, categoryByTicker],
   );
   const byTicker = useMemo(
     () => new Map(tiles.map((tile) => [tile.name, tile])),
@@ -68,31 +138,87 @@ export function MarketMap({
 
   return (
     <Card className={className}>
-      <CardHeader className="flex flex-wrap items-start justify-between gap-x-4 gap-y-3">
-        <div className="min-w-0 flex-1 basis-64 space-y-1.5">
-          <CardTitle>
-            <Trans id="daily.mapTitle">Market map</Trans>
-          </CardTitle>
-          <CardDescription>
-            <Trans id="daily.mapHint">
-              Each tile is a holding sized by its value and colored by today's
-              move. Select one to open the asset.
-            </Trans>
-          </CardDescription>
-        </div>
-        <div className="shrink-0 hidden sm:block">
-          <HeatLegend cap={DAILY_HEAT_CAP} />
+      <CardHeader className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <CardTitle>
+          <Trans id="daily.mapTitle">Market map</Trans>
+        </CardTitle>
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:block">
+            <HeatLegend cap={DAILY_HEAT_CAP} />
+          </div>
+          {positions.length > 0 ? (
+            <Select value={filter} onValueChange={setSelectedFilter}>
+              <SelectTrigger
+                size="sm"
+                className="w-36 px-2.5 text-xs data-[size=sm]:h-7"
+                aria-label={i18n._(
+                  t({
+                    id: "daily.mapFilter",
+                    message: "Filter the market map",
+                  }),
+                )}
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={FILTER_ALL}>
+                  <Trans id="daily.mapFilterAll">All holdings</Trans>
+                </SelectItem>
+                <SelectGroup>
+                  <SelectLabel>
+                    <Trans id="daily.mapFilterClasses">Asset class</Trans>
+                  </SelectLabel>
+                  {assetClasses.map((assetClass) => (
+                    <SelectItem
+                      key={assetClass}
+                      value={classFilter(assetClass)}
+                    >
+                      <AssetClassLabel assetClass={assetClass} />
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+                {categories.length > 0 ? (
+                  <SelectGroup>
+                    <SelectLabel>
+                      <Trans id="daily.mapFilterCategories">
+                        My categories
+                      </Trans>
+                    </SelectLabel>
+                    {categories.map((item) => (
+                      <SelectItem key={item.id} value={categoryFilter(item.id)}>
+                        <span
+                          aria-hidden="true"
+                          className="size-2 shrink-0 rounded-full"
+                          style={{ backgroundColor: `var(--${item.color})` }}
+                        />
+                        {item.name}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value={categoryFilter(CATEGORY_NONE)}>
+                      <Trans id="allocation.categoryNone">Uncategorized</Trans>
+                    </SelectItem>
+                  </SelectGroup>
+                ) : null}
+              </SelectContent>
+            </Select>
+          ) : null}
         </div>
       </CardHeader>
       <CardContent className="flex-1">
         {tiles.length === 0 ? (
           <p className="py-16 text-center text-sm text-muted-foreground">
-            <Trans id="daily.mapEmpty">No quoted holdings to map yet.</Trans>
+            {filter === FILTER_ALL ? (
+              <Trans id="daily.mapEmpty">No quoted holdings to map yet.</Trans>
+            ) : (
+              <Trans id="daily.mapEmptyFilter">
+                No quoted holdings match this filter.
+              </Trans>
+            )}
           </p>
         ) : (
           <ChartContainer
             config={{}}
-            className="aspect-auto h-[300px] w-full lg:h-full lg:min-h-[340px]"
+            className="aspect-auto h-[300px] w-full lg:h-[520px]"
           >
             <Treemap
               data={tiles}

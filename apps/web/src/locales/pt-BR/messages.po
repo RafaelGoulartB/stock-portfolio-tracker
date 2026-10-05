@@ -804,6 +804,43 @@ msgstr ""
 #~ msgstr "anos"
 
 #. js-lingui-explicit-id
+#: src/components/daily/breakdown.tsx:49
+#~ msgid "daily.byClassTitle"
+#~ msgstr "Por categoria"
+
+#. js-lingui-explicit-id
+#: src/components/daily/breakdown.tsx:52
+#~ msgid "daily.byClassHint"
+#~ msgstr "Quanto cada categoria somou à variação de hoje."
+
+#. placeholder {0}: formatTradeDate(previousDay)
+#. placeholder {1}: summary.displayCurrency
+#. js-lingui-explicit-id
+#: src/components/daily/daily-table.tsx:136
+#~ msgid "daily.assetsVsPrevious"
+#~ msgstr "Variação desde o fechamento de {0} em {1}, com câmbio. Impacto é a fatia da carteira de ontem que cada movimento representa."
+
+#. js-lingui-explicit-id
+#: src/components/daily/daily-table.tsx:142
+#~ msgid "daily.assetsHint"
+#~ msgstr "Variação desde o fechamento anterior na moeda de exibição, incluindo o câmbio, e o impacto de cada ativo sobre o patrimônio de ontem."
+
+#. js-lingui-explicit-id
+#: src/components/daily/market-map.tsx:153
+#~ msgid "daily.mapHint"
+#~ msgstr "Cada bloco é um ativo, com tamanho pelo valor e cor pela variação de hoje. Selecione um para abrir o ativo."
+
+#. js-lingui-explicit-id
+#: src/components/daily/breakdown.tsx:299
+#~ msgid "daily.moversHint"
+#~ msgstr "Os ativos que mais movimentaram a carteira hoje, em dinheiro."
+
+#. js-lingui-explicit-id
+#: src/components/daily/breakdown.tsx:240
+#~ msgid "daily.splitHint"
+#~ msgstr "O movimento do dólar é o que o USD/BRL sozinho fez com ativos no exterior e com o caixa; o restante veio dos preços."
+
+#. js-lingui-explicit-id
 #. placeholder {0}: filter.label
 #. placeholder {1}: positions.length
 #: src/components/positions/holdings-card.tsx:423
@@ -890,13 +927,13 @@ msgstr "{0} posições adicionadas à lista"
 #. placeholder {2}: visibleSummary.candidates
 #. placeholder {3}: visibleSummary.blocked
 #. placeholder {4}: visibleSummary.scoreVersion
-#: src/routes/_app/allocation.index.tsx:761
+#: src/routes/_app/allocation.index.tsx:764
 msgid "allocation.footnote"
 msgstr "{0} investidos · {1} em acompanhamento · {2} recebendo aporte · {3} bloqueados · regras de score {4}"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: values.ticker
-#: src/routes/_app/allocation.index.tsx:589
+#: src/routes/_app/allocation.index.tsx:592
 msgid "allocation.added"
 msgstr "{0} agora está na tabela"
 
@@ -1043,7 +1080,7 @@ msgstr "{amount} em conta corrente não remunerada na {institution}."
 
 #. js-lingui-explicit-id
 #. placeholder {0}: assets.length
-#: src/routes/_app/categories.tsx:364
+#: src/routes/_app/categories.tsx:366
 msgid "categories.coverage"
 msgstr "{categorizedCount} de {0} tickers com categoria"
 
@@ -1123,18 +1160,18 @@ msgid "brokerNotes.unmappedCount"
 msgstr "{count, plural, one {# ativo ainda precisa de ticker.} other {# ativos ainda precisam de ticker.}}"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:618
+#: src/routes/_app/categories.tsx:620
 msgid "categories.selectedCount"
 msgstr "{count, plural, one {# selecionado} other {# selecionados}}"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:166
+#: src/routes/_app/categories.tsx:168
 msgid "categories.moved"
 msgstr "{count, plural, one {# ticker movido} other {# tickers movidos}}"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:466
-#: src/routes/_app/categories.tsx:540
+#: src/routes/_app/categories.tsx:468
+#: src/routes/_app/categories.tsx:542
 msgid "categories.assetCount"
 msgstr "{count, plural, one {# ticker} other {# tickers}}"
 
@@ -1650,7 +1687,7 @@ msgid "transactions.bookEmpty"
 msgstr "Adicione ao menos um ativo com ticker, quantidade e preço."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:396
+#: src/routes/_app/categories.tsx:398
 msgid "categories.add"
 msgstr "Adicionar categoria"
 
@@ -1752,17 +1789,22 @@ msgid "allocation.finderRefreshSuccess"
 msgstr "Todos os preços do Deep Finder foram atualizados."
 
 #. js-lingui-explicit-id
+#: src/components/daily/market-map.tsx:165
+msgid "daily.mapFilterAll"
+msgstr "Todas as posições"
+
+#. js-lingui-explicit-id
 #: src/components/settings-data.tsx:77
 msgid "settings.data.deleteSuccess"
 msgstr "Todos os dados de investimentos foram excluídos. Sua conta foi mantida."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:913
+#: src/routes/_app/categories.tsx:915
 msgid "categories.filterAll"
 msgstr "Todos os tickers"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:602
+#: src/routes/_app/allocation.index.tsx:605
 msgid "allocation.title"
 msgstr "Alocação"
 
@@ -1888,12 +1930,17 @@ msgid "allocation.colTicker"
 msgstr "Ativo"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:330
+#: src/components/daily/market-map.tsx:169
+msgid "daily.mapFilterClasses"
+msgstr "Classe de ativo"
+
+#. js-lingui-explicit-id
+#: src/routes/_app/allocation.index.tsx:333
 msgid "allocation.removed"
 msgstr "Ativo removido da tabela"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:559
+#: src/routes/_app/categories.tsx:561
 msgid "categories.assetsTitle"
 msgstr "Ativos"
 
@@ -1903,13 +1950,13 @@ msgid "performance.colAssets"
 msgstr "Ativos"
 
 #. js-lingui-explicit-id
-#: src/components/daily/daily-table.tsx:131
+#: src/components/daily/daily-table.tsx:122
 msgid "daily.assets"
 msgstr "Ativos"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: formatTradeDate(summary.asOf)
-#: src/components/daily/daily-table.tsx:127
+#: src/components/daily/daily-table.tsx:118
 msgid "daily.assetsAsOf"
 msgstr "Ativos · {0}"
 
@@ -2135,7 +2182,7 @@ msgid "goals.notReached"
 msgstr "Mais de 60 anos"
 
 #. js-lingui-explicit-id
-#: src/components/daily/breakdown.tsx:177
+#: src/components/daily/breakdown.tsx:271
 msgid "daily.moversTitle"
 msgstr "Maior impacto"
 
@@ -2317,8 +2364,13 @@ msgid "documentation.performance.cashFlowsDescription"
 msgstr "Compras são caixa investido positivo, incluindo taxas. Vendas são caixa investido negativo, usando o valor recebido após as taxas. Cada fluxo é ponderado pela fração de dias restantes no mês, então um aporte no último dia quase não afeta a base de retorno do mês."
 
 #. js-lingui-explicit-id
-#: src/components/daily/breakdown.tsx:49
-msgid "daily.byClassTitle"
+#: src/components/daily/breakdown.tsx:121
+msgid "daily.breakdownClassTitle"
+msgstr "Por classe de ativo"
+
+#. js-lingui-explicit-id
+#: src/components/daily/breakdown.tsx:123
+msgid "daily.breakdownCategoryTitle"
 msgstr "Por categoria"
 
 #. js-lingui-explicit-id
@@ -2332,8 +2384,8 @@ msgid "performance.tabCalendar"
 msgstr "Calendário"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:812
-#: src/routes/_app/categories.tsx:851
+#: src/routes/_app/categories.tsx:814
+#: src/routes/_app/categories.tsx:853
 msgid "categories.cancel"
 msgstr "Cancelar"
 
@@ -2424,7 +2476,7 @@ msgid "validation.cashFromAllocation"
 msgstr "O caixa é mantido pela Alocação"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:353
+#: src/routes/_app/categories.tsx:355
 msgid "categories.listTitle"
 msgstr "Categorias"
 
@@ -2434,16 +2486,17 @@ msgid "performance.categoriesTitle"
 msgstr "Categorias"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:720
+#: src/routes/_app/categories.tsx:722
 msgid "categories.colCategory"
 msgstr "Categoria"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:895
+#: src/routes/_app/categories.tsx:897
 msgid "categories.filterCategory"
 msgstr "Categoria"
 
 #. js-lingui-explicit-id
+#: src/components/daily/breakdown.tsx:142
 #: src/components/positions/allocation-card.tsx:264
 msgid "positions.allocByCategory"
 msgstr "Categoria"
@@ -2470,19 +2523,19 @@ msgid "allocation.addCategory"
 msgstr "Categoria"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:127
+#: src/routes/_app/categories.tsx:129
 msgid "categories.created"
 msgstr "Categoria criada"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: asset.ticker
-#: src/routes/_app/categories.tsx:1006
+#: src/routes/_app/categories.tsx:1008
 msgid "categories.assignTicker"
 msgstr "Categoria de {0}"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:391
-#: src/routes/_app/categories.tsx:797
+#: src/routes/_app/categories.tsx:393
+#: src/routes/_app/categories.tsx:799
 msgid "categories.name"
 msgstr "Nome da categoria"
 
@@ -2492,12 +2545,12 @@ msgid "categories.notFound"
 msgstr "Categoria não encontrada."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:149
+#: src/routes/_app/categories.tsx:151
 msgid "categories.removed"
 msgstr "Categoria removida"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:138
+#: src/routes/_app/categories.tsx:140
 msgid "categories.updated"
 msgstr "Categoria atualizada"
 
@@ -2507,21 +2560,9 @@ msgid "documentation.score.group.limits"
 msgstr "Tetos e reduções"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:428
+#: src/routes/_app/categories.tsx:430
 msgid "categories.changeColor"
 msgstr "Alterar cor"
-
-#. js-lingui-explicit-id
-#. placeholder {0}: formatTradeDate(previousDay)
-#. placeholder {1}: summary.displayCurrency
-#: src/components/daily/daily-table.tsx:136
-msgid "daily.assetsVsPrevious"
-msgstr "Variação desde o fechamento de {0} em {1}, com câmbio. Impacto é a fatia da carteira de ontem que cada movimento representa."
-
-#. js-lingui-explicit-id
-#: src/components/daily/daily-table.tsx:142
-msgid "daily.assetsHint"
-msgstr "Variação desde o fechamento anterior na moeda de exibição, incluindo o câmbio, e o impacto de cada ativo sobre o patrimônio de ontem."
 
 #. js-lingui-explicit-id
 #: src/components/documentation-dialog-body.tsx:611
@@ -2592,6 +2633,7 @@ msgid "transactions.classFilter"
 msgstr "Classe"
 
 #. js-lingui-explicit-id
+#: src/components/daily/breakdown.tsx:145
 #: src/components/positions/allocation-card.tsx:255
 msgid "positions.allocByClass"
 msgstr "Classe"
@@ -2612,7 +2654,7 @@ msgid "brokerNotes.classOf"
 msgstr "Classe de {ticker}"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:673
+#: src/routes/_app/categories.tsx:675
 msgid "categories.clearSelection"
 msgstr "Limpar"
 
@@ -3020,7 +3062,7 @@ msgid "settings.data.deleteError"
 msgstr "Não foi possível excluir os dados da aplicação."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:705
+#: src/routes/_app/allocation.index.tsx:708
 #: src/routes/_app/detailed-positions.tsx:227
 #: src/routes/_app/positions.tsx:177
 msgid "positions.fxFailed"
@@ -3117,7 +3159,7 @@ msgid "theme.editor.createTitle"
 msgstr "Criar tema"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:337
+#: src/routes/_app/categories.tsx:339
 msgid "categories.subtitle"
 msgstr "Crie seus próprios rótulos e atribua-os aos tickers, um a um ou em lote."
 
@@ -3313,13 +3355,13 @@ msgid "incomeTax.sales.date"
 msgstr "Data"
 
 #. js-lingui-explicit-id
-#: src/components/daily/daily-table.tsx:164
+#: src/components/daily/daily-table.tsx:141
 msgid "daily.colDayPercent"
 msgstr "Dia %"
 
 #. js-lingui-explicit-id
-#: src/components/daily/daily-table.tsx:171
-#: src/components/daily/market-map.tsx:206
+#: src/components/daily/daily-table.tsx:148
+#: src/components/daily/market-map.tsx:332
 msgid "daily.colDayChange"
 msgstr "Variação no dia"
 
@@ -3416,8 +3458,8 @@ msgid "documentation.contribution.examplesDescription"
 msgstr "Padrões: {smallImpact} em carteiras até {smallBook}, {largeImpact} a partir de {largeBook}, teto de fatia {shareCap}, no máximo {0} nomes."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:505
-#: src/routes/_app/categories.tsx:863
+#: src/routes/_app/categories.tsx:507
+#: src/routes/_app/categories.tsx:865
 msgid "categories.delete"
 msgstr "Excluir"
 
@@ -3448,7 +3490,7 @@ msgid "brokerNotes.removeTitle"
 msgstr "Excluir nota de corretagem?"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:836
+#: src/routes/_app/categories.tsx:838
 msgid "categories.deleteTitle"
 msgstr "Excluir categoria?"
 
@@ -3582,7 +3624,7 @@ msgid "daily.usdBrl"
 msgstr "Dólar (USD/BRL)"
 
 #. js-lingui-explicit-id
-#: src/components/daily/breakdown.tsx:116
+#: src/components/daily/breakdown.tsx:216
 msgid "daily.fxEffectLabel"
 msgstr "Movimento do dólar"
 
@@ -3627,7 +3669,7 @@ msgid "validation.importDuplicate"
 msgstr "Ticker duplicado {0}"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:385
+#: src/routes/_app/categories.tsx:387
 msgid "categories.namePlaceholder"
 msgstr "ex.: Crescimento, Renda, Satélite"
 
@@ -3642,11 +3684,6 @@ msgstr "Cada fatia em dinheiro é arredondada separadamente para centavos. Qualq
 #: src/components/score-documentation.tsx:827
 msgid "documentation.score.gradeCurveDescription"
 msgstr "Cada linha é um ponto da curva; notas entre dois pontos são interpoladas, então um décimo de ponto nunca faz o score saltar. A média pesa mais os trimestres recentes e é combinada com ×{0} por {1} trimestre(s) de evidência prévia. Revisões só com anotações são ignoradas. Os pontos devem estar em ordem crescente de nota."
-
-#. js-lingui-explicit-id
-#: src/components/daily/market-map.tsx:77
-msgid "daily.mapHint"
-msgstr "Cada bloco é um ativo, com tamanho pelo valor e cor pela variação de hoje. Selecione um para abrir o ativo."
 
 #. js-lingui-explicit-id
 #: src/components/settings-appearance.tsx:353
@@ -3733,12 +3770,12 @@ msgid "allocation.plannerAutoEmpty"
 msgstr "Carteira vazia — espalhando em {0} ativos, até {1}."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:534
+#: src/routes/_app/allocation.index.tsx:537
 msgid "allocation.invalidCashValue"
 msgstr "Informe um valor de caixa igual ou maior que zero."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:567
+#: src/routes/_app/allocation.index.tsx:570
 msgid "allocation.invalidValue"
 msgstr "Informe um valor de mercado, ex.: 50000"
 
@@ -3748,7 +3785,7 @@ msgid "theme.editor.nameRequired"
 msgstr "Informe um nome para este tema."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:513
+#: src/routes/_app/allocation.index.tsx:516
 msgid "allocation.invalidPercent"
 msgstr "Informe uma porcentagem, ex.: 1,5 ou -20"
 
@@ -4103,7 +4140,7 @@ msgid "transactions.fxFilled"
 msgstr "PTAX da data preenchida em {updated} operações"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:903
+#: src/routes/_app/categories.tsx:905
 msgid "categories.filter"
 msgstr "Filtrar por categoria"
 
@@ -4123,6 +4160,11 @@ msgid "allocation.finderCategory"
 msgstr "Filtrar o Deep Finder por categoria"
 
 #. js-lingui-explicit-id
+#: src/components/daily/market-map.tsx:155
+msgid "daily.mapFilter"
+msgstr "Filtrar o mapa de mercado"
+
+#. js-lingui-explicit-id
 #: src/components/transactions/transaction-history.tsx:148
 msgid "transactions.filterLabel"
 msgstr "Filtrar operações por ticker"
@@ -4130,7 +4172,7 @@ msgstr "Filtrar operações por ticker"
 #. js-lingui-explicit-id
 #: src/components/allocation/allocation-filters.tsx:113
 #: src/components/detailed-positions/toolbar.tsx:134
-#: src/routes/_app/categories.tsx:887
+#: src/routes/_app/categories.tsx:889
 msgid "allocation.filters"
 msgstr "Filtros"
 
@@ -4269,8 +4311,8 @@ msgid "settings.section.general"
 msgstr "Geral"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:318
-#: src/routes/_app/categories.tsx:783
+#: src/routes/_app/categories.tsx:320
+#: src/routes/_app/categories.tsx:785
 msgid "categories.nameRequired"
 msgstr "Dê um nome à categoria."
 
@@ -4380,6 +4422,7 @@ msgid "incomeTax.holdings.code"
 msgstr "Grupo / código"
 
 #. js-lingui-explicit-id
+#: src/components/daily/breakdown.tsx:138
 #: src/components/positions/allocation-card.tsx:313
 msgid "positions.allocGroupBy"
 msgstr "Agrupar por"
@@ -4844,7 +4887,7 @@ msgid "positions.teaserMonthTitle"
 msgstr "Destaques do último mês"
 
 #. js-lingui-explicit-id
-#: src/components/daily/daily-table.tsx:161
+#: src/components/daily/daily-table.tsx:138
 msgid "daily.colLastPrice"
 msgstr "Último preço"
 
@@ -4964,7 +5007,7 @@ msgid "allocation.skill.manualQuotes"
 msgstr "Cotações manuais não têm histórico de preços, então o histórico do valuation, a tendência de 12 meses e os avisos de revisão ficam desligados. O valuation mantém a força inicial."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:794
+#: src/routes/_app/allocation.index.tsx:797
 msgid "allocation.signalsManual"
 msgstr "Cotações manuais não têm histórico de preços: a tendência de 12 meses, os avisos de revisão e o histórico do valuation ficam desligados."
 
@@ -5007,7 +5050,7 @@ msgid "daily.marketBreadth"
 msgstr "Amplitude do mercado"
 
 #. js-lingui-explicit-id
-#: src/components/daily/market-map.tsx:74
+#: src/components/daily/market-map.tsx:143
 msgid "daily.mapTitle"
 msgstr "Mapa da carteira"
 
@@ -5042,8 +5085,8 @@ msgid "detailedPositions.colValue"
 msgstr "Valor de mercado"
 
 #. js-lingui-explicit-id
-#: src/components/daily/daily-table.tsx:181
-#: src/components/daily/market-map.tsx:224
+#: src/components/daily/daily-table.tsx:158
+#: src/components/daily/market-map.tsx:350
 msgid "daily.colMarketValue"
 msgstr "Valor de mercado"
 
@@ -5220,7 +5263,7 @@ msgid "transactions.historyHint"
 msgstr "Operações mais recentes primeiro."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:666
+#: src/routes/_app/categories.tsx:668
 msgid "categories.move"
 msgstr "Mover"
 
@@ -5230,8 +5273,8 @@ msgid "allocation.moveDown"
 msgstr "Mover para baixo"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:630
-#: src/routes/_app/categories.tsx:638
+#: src/routes/_app/categories.tsx:632
+#: src/routes/_app/categories.tsx:640
 msgid "categories.moveTo"
 msgstr "Mover para…"
 
@@ -5286,7 +5329,7 @@ msgid "theme.editor.muted"
 msgstr "Suave"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:334
+#: src/routes/_app/categories.tsx:336
 msgid "categories.title"
 msgstr "Minhas categorias"
 
@@ -5298,6 +5341,11 @@ msgstr "Minhas categorias"
 #. js-lingui-explicit-id
 #: src/components/document-title.tsx:80
 msgid "document.categories"
+msgstr "Minhas categorias"
+
+#. js-lingui-explicit-id
+#: src/components/daily/market-map.tsx:183
+msgid "daily.mapFilterCategories"
 msgstr "Minhas categorias"
 
 #. js-lingui-explicit-id
@@ -5322,7 +5370,7 @@ msgid "documentation.contribution.unit.assets"
 msgstr "nomes"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:356
+#: src/routes/_app/categories.tsx:358
 msgid "categories.listHint"
 msgstr "Os nomes são seus. Excluir uma categoria deixa os tickers sem categoria."
 
@@ -5430,7 +5478,7 @@ msgid "allocation.colNextResult"
 msgstr "Próximo resultado"
 
 #. js-lingui-explicit-id
-#: src/components/daily/breakdown.tsx:193
+#: src/components/daily/breakdown.tsx:282
 msgid "daily.noFallers"
 msgstr "Nenhum ativo caiu hoje."
 
@@ -5440,7 +5488,7 @@ msgid "allocation.plannerNoCandidatesV2"
 msgstr "Nenhum ativo está abaixo da meta agora. Defina ou aumente uma meta, ou revise um fair value."
 
 #. js-lingui-explicit-id
-#: src/components/daily/breakdown.tsx:188
+#: src/components/daily/breakdown.tsx:277
 msgid "daily.noRisers"
 msgstr "Nenhum ativo subiu hoje."
 
@@ -5460,7 +5508,7 @@ msgid "allocation.detailMovementsEmpty"
 msgstr "Ainda não há compras ou vendas neste ticker."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:408
+#: src/routes/_app/categories.tsx:410
 msgid "categories.empty"
 msgstr "Nenhuma categoria ainda. Adicione uma para começar a agrupar tickers."
 
@@ -5562,7 +5610,7 @@ msgstr "Sem histórico de preço para {0}. Esses ativos ficam avaliados a custo,
 
 #. js-lingui-explicit-id
 #. placeholder {0}: count > 5 ? "…" : ""
-#: src/routes/_app/allocation.index.tsx:799
+#: src/routes/_app/allocation.index.tsx:802
 msgid "allocation.signalsUnavailable"
 msgstr "Sem histórico de preços para {count} ativos ({shown}{0}): eles ficam sem tendência e sem aviso de revisão, e os fair values que já completaram 12 meses ficam fora do histórico do valuation."
 
@@ -5603,7 +5651,12 @@ msgid "positions.missingQuotes"
 msgstr "Sem cotação para {0}. Valores e participações cobrem apenas ativos cotados."
 
 #. js-lingui-explicit-id
-#: src/components/daily/market-map.tsx:90
+#: src/components/daily/market-map.tsx:213
+msgid "daily.mapEmptyFilter"
+msgstr "Nenhuma posição cotada corresponde a este filtro."
+
+#. js-lingui-explicit-id
+#: src/components/daily/market-map.tsx:211
 msgid "daily.mapEmpty"
 msgstr "Ainda não há ativos cotados para mostrar no mapa."
 
@@ -5643,12 +5696,12 @@ msgid "allocation.adjustedTargetNone"
 msgstr "Sem meta, então não há o que ajustar."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:690
+#: src/routes/_app/categories.tsx:692
 msgid "categories.noMatches"
 msgstr "Nenhum ticker corresponde a este filtro."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:683
+#: src/routes/_app/categories.tsx:685
 msgid "categories.noAssets"
 msgstr "Nenhum ticker ainda. Registre uma operação ou adicione um ativo só de acompanhamento em Alocação."
 
@@ -6113,7 +6166,7 @@ msgid "theme.customDefaultName"
 msgstr "Personalizado do portfólio"
 
 #. js-lingui-explicit-id
-#: src/components/daily/daily-table.tsx:178
+#: src/components/daily/daily-table.tsx:155
 msgid "daily.colPortfolioImpact"
 msgstr "Impacto no portfólio"
 
@@ -6128,7 +6181,7 @@ msgid "goals.today"
 msgstr "Carteira hoje"
 
 #. js-lingui-explicit-id
-#: src/components/daily/daily-table.tsx:209
+#: src/components/daily/daily-table.tsx:186
 msgid "daily.total"
 msgstr "Total da carteira"
 
@@ -6192,7 +6245,7 @@ msgstr "Possível duplicata de uma operação manual"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: formatMoney(position.previousClose, position.currency)
-#: src/components/daily/daily-table.tsx:280
+#: src/components/daily/daily-table.tsx:257
 msgid "daily.previousShort"
 msgstr "ant. {0}"
 
@@ -6225,7 +6278,7 @@ msgid "positions.colPrice"
 msgstr "Preço"
 
 #. js-lingui-explicit-id
-#: src/components/daily/breakdown.tsx:111
+#: src/components/daily/breakdown.tsx:211
 msgid "daily.priceEffect"
 msgstr "Movimento dos preços"
 
@@ -6561,7 +6614,7 @@ msgid "allocation.finderRefreshAll"
 msgstr "Atualizar tudo"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:623
+#: src/routes/_app/allocation.index.tsx:626
 #: src/routes/_app/daily.tsx:82
 #: src/routes/_app/deep-finder.tsx:117
 #: src/routes/_app/detailed-positions.tsx:202
@@ -6665,7 +6718,7 @@ msgid "brokerNotes.removeFile"
 msgstr "Remover {name}"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:605
+#: src/routes/_app/categories.tsx:607
 msgid "categories.removeFilter"
 msgstr "Remover filtro de categoria"
 
@@ -6726,12 +6779,12 @@ msgid "transactions.removeOversells"
 msgstr "Remover esta operação deixaria uma venda posterior sem quantidade suficiente. Remova ou ajuste essa venda primeiro."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:491
+#: src/routes/_app/categories.tsx:493
 msgid "categories.rename"
 msgstr "Renomear"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:760
+#: src/routes/_app/categories.tsx:762
 msgid "categories.renameTitle"
 msgstr "Renomear categoria"
 
@@ -6978,7 +7031,7 @@ msgid "documentation.contribution.exampleFillTitle"
 msgstr "Mesma lacuna, metas diferentes"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:815
+#: src/routes/_app/categories.tsx:817
 msgid "categories.save"
 msgstr "Salvar"
 
@@ -7070,12 +7123,12 @@ msgid "detailedPositions.searchLabel"
 msgstr "Buscar nas posições detalhadas"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:574
+#: src/routes/_app/categories.tsx:576
 msgid "categories.searchPlaceholder"
 msgstr "Buscar ticker"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:580
+#: src/routes/_app/categories.tsx:582
 msgid "categories.search"
 msgstr "Buscar ticker"
 
@@ -7098,7 +7151,7 @@ msgstr "Ativo"
 
 #. js-lingui-explicit-id
 #. placeholder {0}: asset.ticker
-#: src/routes/_app/categories.tsx:957
+#: src/routes/_app/categories.tsx:959
 msgid "categories.selectTicker"
 msgstr "Selecionar {0}"
 
@@ -7108,7 +7161,7 @@ msgid "brokerNotes.selectAllReady"
 msgstr "Selecionar todas as prontas"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:703
+#: src/routes/_app/categories.tsx:705
 msgid "categories.selectAll"
 msgstr "Selecionar todos os tickers visíveis"
 
@@ -7128,7 +7181,7 @@ msgid "brokerNotes.filesInvalid"
 msgstr "Selecione PDFs de até 5 MB cada, no máximo 500 por vez."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:562
+#: src/routes/_app/categories.tsx:564
 msgid "categories.assetsHint"
 msgstr "Selecione vários tickers e mova-os juntos quando a lista for longa."
 
@@ -7201,7 +7254,7 @@ msgid "brokerNotes.settlement"
 msgstr "Liquidação"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:717
+#: src/routes/_app/categories.tsx:719
 msgid "categories.colShare"
 msgstr "Participação"
 
@@ -7285,7 +7338,7 @@ msgid "allocation.quartersForward"
 msgstr "Mostrar trimestres seguintes"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:443
+#: src/routes/_app/categories.tsx:445
 msgid "categories.showOnly"
 msgstr "Mostrar só estes tickers"
 
@@ -7697,7 +7750,7 @@ msgid "documentation.score.targetCap"
 msgstr "Limite relativo ao target"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/allocation.index.tsx:605
+#: src/routes/_app/allocation.index.tsx:608
 msgid "allocation.subtitle"
 msgstr "Metas, notas trimestrais e o score de aporte em um só lugar. Edite qualquer célula da tabela; o score é recalculado ao salvar."
 
@@ -7757,11 +7810,6 @@ msgid "documentation.comparisons.periodViewsDescription"
 msgstr "A aplicação compara a quantidade aberta hoje ao preço de hoje com essa mesma quantidade no fechamento do baseline. Isso isola a variação de preço e não representa a performance realizada das operações feitas durante o período."
 
 #. js-lingui-explicit-id
-#: src/components/daily/breakdown.tsx:180
-msgid "daily.moversHint"
-msgstr "Os ativos que mais movimentaram a carteira hoje, em dinheiro."
-
-#. js-lingui-explicit-id
 #: src/components/documentation-dialog-body.tsx:636
 msgid "documentation.comparisons.baselineDescription"
 msgstr "O baseline é o último fechamento disponível na data nominal de início da janela ou antes dela. O acumulado no ano começa em 31 de dezembro do ano anterior. O percentual do resumo é ponderado por valor: variação total dividida pelo valor-base total, não uma média dos percentuais dos tickers."
@@ -7770,11 +7818,6 @@ msgstr "O baseline é o último fechamento disponível na data nominal de iníci
 #: src/components/documentation-dialog-body.tsx:537
 msgid "documentation.performance.contributionDescription"
 msgstr "A contribuição exibida para um ativo ou classe é seu P&L não realizado dividido pelo custo investido de todo o portfólio. Ela responde quantos pontos percentuais aquele item acrescenta ao resultado aberto do portfólio; não é o percentual de retorno do próprio item."
-
-#. js-lingui-explicit-id
-#: src/components/daily/breakdown.tsx:121
-msgid "daily.splitHint"
-msgstr "O movimento do dólar é o que o USD/BRL sozinho fez com ativos no exterior e com o caixa; o restante veio dos preços."
 
 #. js-lingui-explicit-id
 #: src/components/performance/evolution-card.tsx:44
@@ -8048,7 +8091,7 @@ msgid "splits.oversells"
 msgstr "Isso deixaria uma venda posterior sem quantidade suficiente na nova unidade."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:711
+#: src/routes/_app/categories.tsx:713
 msgid "categories.colTicker"
 msgstr "Ticker"
 
@@ -8105,7 +8148,7 @@ msgid "deepFinder.colTicker"
 msgstr "Ticker"
 
 #. js-lingui-explicit-id
-#: src/components/daily/daily-table.tsx:154
+#: src/components/daily/daily-table.tsx:131
 msgid "daily.colTicker"
 msgstr "Ticker"
 
@@ -8132,7 +8175,7 @@ msgid "transactions.bookTickerAria"
 msgstr "Ticker da linha {0}"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:763
+#: src/routes/_app/categories.tsx:765
 msgid "categories.renameHint"
 msgstr "Os tickers desta categoria mantêm a atribuição."
 
@@ -8147,7 +8190,7 @@ msgid "incomeTax.warning.units.title"
 msgstr "Tickers terminados em 11 tratados como units"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:839
+#: src/routes/_app/categories.tsx:841
 msgid "categories.deleteHint"
 msgstr "Os tickers desta categoria ficam sem categoria. A categoria em si é removida."
 
@@ -8389,15 +8432,16 @@ msgid "dividends.unavailable"
 msgstr "Tickers indisponíveis: {0}."
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:529
-#: src/routes/_app/categories.tsx:596
-#: src/routes/_app/categories.tsx:647
-#: src/routes/_app/categories.tsx:916
-#: src/routes/_app/categories.tsx:1015
+#: src/routes/_app/categories.tsx:531
+#: src/routes/_app/categories.tsx:598
+#: src/routes/_app/categories.tsx:649
+#: src/routes/_app/categories.tsx:918
+#: src/routes/_app/categories.tsx:1017
 msgid "categories.uncategorized"
 msgstr "Sem categoria"
 
 #. js-lingui-explicit-id
+#: src/components/daily/breakdown.tsx:59
 #: src/components/positions/allocation-card.tsx:91
 msgid "positions.allocUncategorized"
 msgstr "Sem categoria"
@@ -8407,6 +8451,7 @@ msgstr "Sem categoria"
 #: src/components/allocation/allocation-deep-finder.tsx:317
 #: src/components/allocation/allocation-filters.tsx:139
 #: src/components/allocation/allocation-filters.tsx:208
+#: src/components/daily/market-map.tsx:198
 #: src/components/detailed-positions/toolbar.tsx:68
 #: src/components/detailed-positions/toolbar.tsx:166
 msgid "allocation.categoryNone"
@@ -8662,7 +8707,7 @@ msgid "documentation.score.tiltedTarget"
 msgstr "Meta ajustada pelo valuation"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:714
+#: src/routes/_app/categories.tsx:716
 msgid "categories.colValue"
 msgstr "Valor"
 
@@ -8804,7 +8849,7 @@ msgid "allocation.reviewWatchNextHint"
 msgstr "Acompanhar no próximo trimestre"
 
 #. js-lingui-explicit-id
-#: src/routes/_app/categories.tsx:980
+#: src/routes/_app/categories.tsx:982
 msgid "categories.watchOnly"
 msgstr "só acompanhamento"
 
@@ -8834,7 +8879,7 @@ msgid "deepFinder.colWeight"
 msgstr "Peso"
 
 #. js-lingui-explicit-id
-#: src/components/daily/daily-table.tsx:189
+#: src/components/daily/daily-table.tsx:166
 msgid "daily.colWeight"
 msgstr "Peso"
 
@@ -8842,11 +8887,6 @@ msgstr "Peso"
 #: src/components/score-documentation.tsx:551
 msgid "documentation.score.field.icPriorPairs"
 msgstr "Peso do IC inicial"
-
-#. js-lingui-explicit-id
-#: src/components/daily/breakdown.tsx:52
-msgid "daily.byClassHint"
-msgstr "Quanto cada categoria somou à variação de hoje."
 
 #. js-lingui-explicit-id
 #: src/components/allocation/review-editor-form.tsx:239

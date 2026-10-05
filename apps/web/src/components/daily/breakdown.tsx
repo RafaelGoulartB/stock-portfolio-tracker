@@ -1,17 +1,17 @@
+import type { I18n } from "@lingui/core";
+import { t } from "@lingui/core/macro";
+import { useLingui } from "@lingui/react";
 import { Trans } from "@lingui/react/macro";
-import type { ReactNode } from "react";
+import type { Category } from "@portifolio-tracker/shared";
+import { type ReactNode, useState } from "react";
 import { DivergingBar } from "@/components/analysis/primitives";
 import { AssetClassLabel } from "@/components/asset-labels";
 import { AssetLink } from "@/components/asset-link";
 import { AssetLogo } from "@/components/asset-logo";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { trpc } from "@/lib/api";
 import {
   formatCompactMoney,
   formatMoney,
@@ -28,39 +28,139 @@ import {
 
 const MOVER_LIMIT = 3;
 
-/** Day move per asset class, and how much of it the dollar explains. */
+/** Category rows in the user's order; uncategorized holdings come last. */
+function categoryRows(
+  entries: DailyData["summary"]["byCategory"],
+  categories: readonly Category[],
+  i18n: I18n,
+): BreakdownRow[] {
+  const byId = new Map(entries.map((entry) => [entry.categoryId, entry]));
+  const rows: BreakdownRow[] = categories.flatMap((category) => {
+    const entry = byId.get(category.id);
+
+    return entry
+      ? [
+          {
+            ...entry,
+            key: category.id,
+            label: category.name,
+            color: `var(--${category.color})`,
+          },
+        ]
+      : [];
+  });
+  const uncategorized = byId.get(null);
+
+  if (uncategorized) {
+    rows.push({
+      ...uncategorized,
+      key: "uncategorized",
+      label: i18n._(
+        t({ id: "positions.allocUncategorized", message: "Uncategorized" }),
+      ),
+      color: "var(--muted-foreground)",
+    });
+  }
+
+  return rows;
+}
+
+type BreakdownGroupBy = "class" | "category";
+
+type BreakdownRow = {
+  key: string;
+  label: ReactNode;
+  /** CSS color of a category's dot; classes have none. */
+  color?: string;
+  marketValue: string;
+  dailyChange: string | null;
+  dailyChangePercent: string | null;
+};
+
+/**
+ * Day move per asset class or per user category, and how much of it the
+ * dollar explains.
+ */
 export function ClassBreakdown({ data }: { data: DailyData }) {
+  const { i18n } = useLingui();
   const { summary } = data;
   const currency = summary.displayCurrency;
-  const classes = summary.byAssetClass.filter(
-    (entry) => entry.assetClass !== "cash" || Number(entry.marketValue) !== 0,
-  );
+  // Categories are the user's own buckets; they become the default as soon
+  // as one exists, and the toggle only shows up then.
+  const categoryList = trpc.categories.list.useQuery();
+  const categories = categoryList.data?.categories ?? [];
+  const [groupBy, setGroupBy] = useState<BreakdownGroupBy | null>(null);
+  const activeGroupBy: BreakdownGroupBy =
+    categories.length === 0 ? "class" : (groupBy ?? "category");
+
+  const rows: BreakdownRow[] =
+    activeGroupBy === "class"
+      ? summary.byAssetClass
+          .filter(
+            (entry) =>
+              entry.assetClass !== "cash" || Number(entry.marketValue) !== 0,
+          )
+          .map((entry) => ({
+            ...entry,
+            key: entry.assetClass,
+            label: <AssetClassLabel assetClass={entry.assetClass} />,
+          }))
+      : categoryRows(summary.byCategory, categories, i18n);
   const largest = Math.max(
     0,
-    ...classes.map((entry) => Math.abs(Number(entry.dailyChange ?? 0))),
+    ...rows.map((entry) => Math.abs(Number(entry.dailyChange ?? 0))),
   );
   const showSplit =
     summary.dailyFxChange != null && summary.dailyPriceChange != null;
 
   return (
     <Card className="gap-4">
-      <CardHeader>
+      <CardHeader className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
         <CardTitle>
-          <Trans id="daily.byClassTitle">By category</Trans>
+          {activeGroupBy === "class" ? (
+            <Trans id="daily.breakdownClassTitle">By asset class</Trans>
+          ) : (
+            <Trans id="daily.breakdownCategoryTitle">By category</Trans>
+          )}
         </CardTitle>
-        <CardDescription>
-          <Trans id="daily.byClassHint">
-            What each category added to today's change.
-          </Trans>
-        </CardDescription>
+        {categories.length > 0 ? (
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            size="sm"
+            value={activeGroupBy}
+            onValueChange={(value) => {
+              if (value) {
+                setGroupBy(value as BreakdownGroupBy);
+              }
+            }}
+            aria-label={i18n._(
+              t({ id: "positions.allocGroupBy", message: "Group by" }),
+            )}
+          >
+            <ToggleGroupItem value="category" className="h-7 px-2 text-xs">
+              <Trans id="positions.allocByCategory">Category</Trans>
+            </ToggleGroupItem>
+            <ToggleGroupItem value="class" className="h-7 px-2 text-xs">
+              <Trans id="positions.allocByClass">Class</Trans>
+            </ToggleGroupItem>
+          </ToggleGroup>
+        ) : null}
       </CardHeader>
       <CardContent className="space-y-4">
         <ul className="space-y-3">
-          {classes.map((entry) => (
-            <li key={entry.assetClass} className="space-y-1.5">
+          {rows.map((entry) => (
+            <li key={entry.key} className="space-y-1.5">
               <div className="flex items-baseline gap-2 text-sm">
+                {entry.color ? (
+                  <span
+                    aria-hidden="true"
+                    className="size-2 shrink-0 self-center rounded-full"
+                    style={{ backgroundColor: entry.color }}
+                  />
+                ) : null}
                 <span className="min-w-0 truncate font-medium">
-                  <AssetClassLabel assetClass={entry.assetClass} />
+                  {entry.label}
                 </span>
                 <span
                   className="shrink-0 text-xs text-muted-foreground tabular-nums"
@@ -117,12 +217,6 @@ export function ClassBreakdown({ data }: { data: DailyData }) {
                 value={summary.dailyFxChange ?? "0"}
                 currency={currency}
               />
-              <p className="pt-1 text-xs text-muted-foreground">
-                <Trans id="daily.splitHint">
-                  The dollar move is what USD/BRL alone did to foreign assets
-                  and cash; the rest came from prices.
-                </Trans>
-              </p>
             </dl>
           </>
         ) : null}
@@ -151,7 +245,13 @@ function SplitRow({
 }
 
 /** The few assets that moved the portfolio most, in money, each way. */
-export function BiggestMovers({ data }: { data: DailyData }) {
+export function BiggestMovers({
+  data,
+  className,
+}: {
+  data: DailyData;
+  className?: string;
+}) {
   const compared = marketPositions(data).filter(
     (position) => position.dailyChange != null,
   );
@@ -171,16 +271,11 @@ export function BiggestMovers({ data }: { data: DailyData }) {
   }
 
   return (
-    <Card className="gap-4">
+    <Card className={cn("gap-4", className)}>
       <CardHeader>
         <CardTitle>
           <Trans id="daily.moversTitle">Biggest impact</Trans>
         </CardTitle>
-        <CardDescription>
-          <Trans id="daily.moversHint">
-            The assets that moved the portfolio most today, in money.
-          </Trans>
-        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
         <MoverList

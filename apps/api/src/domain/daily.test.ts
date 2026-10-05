@@ -314,6 +314,93 @@ describe("buildDailyTracking", () => {
     expect(result.summary.dailyFxChange).toBe("0.00");
   });
 
+  it("breaks the day down by the user's categories", () => {
+    const uber = valued({
+      ticker: "UBER",
+      assetClass: "stock_us",
+      currency: "USD",
+      quantity: "10",
+      cost: "100",
+      price: "110",
+      display: "BRL",
+      rate: "5",
+    });
+    const petr = valued({
+      ticker: "PETR4",
+      quantity: "100",
+      cost: "10",
+      price: "9",
+      display: "BRL",
+      rate: "5",
+    });
+    const vale = valued({
+      ticker: "VALE3",
+      quantity: "100",
+      cost: "10",
+      price: "11",
+      display: "BRL",
+      rate: "5",
+    });
+    const itsa = valued({
+      ticker: "ITSA4",
+      quantity: "10",
+      cost: "10",
+      price: "12",
+      display: "BRL",
+      rate: "5",
+    });
+    const result = buildDailyTracking({
+      positions: [uber, petr, vale, itsa],
+      quotes: new Map([
+        ["UBER", quote("UBER", "110", "100")],
+        ["PETR4", quote("PETR4", "9", "10")],
+        ["VALE3", quote("VALE3", "11", "10")],
+      ]),
+      displayCurrency: "BRL",
+      usdBrlRate: "5",
+      previousUsdBrlRate: "5",
+      // A category spans asset classes; ITSA4 has no previous close.
+      categoryByTicker: new Map([
+        ["UBER", "growth"],
+        ["PETR4", "growth"],
+        ["ITSA4", "income"],
+      ]),
+    });
+
+    expect(result.summary.byCategory).toEqual([
+      {
+        categoryId: "growth",
+        marketValue: "6400.00",
+        dailyChange: "400.00",
+        dailyChangePercent: "0.06666667",
+        comparablePositions: 2,
+      },
+      {
+        categoryId: null,
+        marketValue: "1100.00",
+        dailyChange: "100.00",
+        dailyChangePercent: "0.10000000",
+        comparablePositions: 1,
+      },
+      {
+        categoryId: "income",
+        marketValue: "120.00",
+        dailyChange: null,
+        dailyChangePercent: null,
+        comparablePositions: 0,
+      },
+    ]);
+    // Categories partition the same book the asset classes do.
+    const sum = (entries: { dailyChange: string | null }[]) =>
+      entries.reduce(
+        (total, entry) => total + Number(entry.dailyChange ?? 0),
+        0,
+      );
+    expect(sum(result.summary.byCategory)).toBe(
+      sum(result.summary.byAssetClass),
+    );
+  });
+
   it("ignores FX for a BRL asset shown in BRL", () => {
     const petr = valued({
       ticker: "PETR4",

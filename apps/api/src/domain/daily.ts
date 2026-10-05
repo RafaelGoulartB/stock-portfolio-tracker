@@ -46,6 +46,11 @@ export type DailyClassChange = {
   comparablePositions: number;
 };
 
+/** Day move of one user category; `null` collects uncategorized holdings. */
+export type DailyCategoryChange = Omit<DailyClassChange, "assetClass"> & {
+  categoryId: string | null;
+};
+
 export type DailyTrackingSummary = {
   displayCurrency: Currency;
   marketValue: string;
@@ -68,6 +73,8 @@ export type DailyTrackingSummary = {
   usdBrlChangePercent: string | null;
   /** Largest class first. */
   byAssetClass: DailyClassChange[];
+  /** Largest category first; same totals as {@link byAssetClass}. */
+  byCategory: DailyCategoryChange[];
   /** Breadth and coverage count quoted assets only; cash is excluded. */
   advancing: number;
   declining: number;
@@ -95,7 +102,56 @@ export type DailyTrackingInput = {
    * When omitted, the current rate is reused and the FX day-move is zero.
    */
   previousUsdBrlRate: string | null;
+  /** The user's category per ticker; absent tickers are uncategorized. */
+  categoryByTicker?: ReadonlyMap<string, string>;
 };
+
+type GroupTotals = {
+  marketValue: Decimal;
+  previous: Decimal;
+  change: Decimal;
+  comparable: number;
+};
+
+function groupTotals<K>(groups: Map<K, GroupTotals>, key: K): GroupTotals {
+  const existing = groups.get(key);
+
+  if (existing) {
+    return existing;
+  }
+
+  const created = {
+    marketValue: ZERO,
+    previous: ZERO,
+    change: ZERO,
+    comparable: 0,
+  };
+  groups.set(key, created);
+
+  return created;
+}
+
+/** Groups with value or a comparison, largest first. */
+function groupChanges<K>(
+  groups: ReadonlyMap<K, GroupTotals>,
+): Array<{ key: K } & Omit<DailyClassChange, "assetClass">> {
+  return [...groups.entries()]
+    .filter(
+      ([, totals]) => !isZero(totals.marketValue) || totals.comparable > 0,
+    )
+    .map(([key, totals]) => ({
+      key,
+      marketValue: formatDecimal(totals.marketValue, MONEY_PLACES),
+      dailyChange:
+        totals.comparable > 0
+          ? formatDecimal(totals.change, MONEY_PLACES)
+          : null,
+      dailyChangePercent:
+        totals.comparable > 0 ? ratio(totals.change, totals.previous) : null,
+      comparablePositions: totals.comparable,
+    }))
+    .sort((a, b) => Number(b.marketValue) - Number(a.marketValue));
+}
 
 function isUtcWeekend(day: Date): boolean {
   const weekday = day.getUTCDay();
@@ -202,33 +258,16 @@ export function buildDailyTracking(input: DailyTrackingInput): DailyTracking {
   let totalMarketValue = ZERO;
   let fxChange = ZERO;
   let comparedForeign = false;
-  const classes = new Map<
-    AssetClass,
-    {
-      marketValue: Decimal;
-      previous: Decimal;
-      change: Decimal;
-      comparable: number;
-    }
-  >();
-
-  const classTotals = (assetClass: AssetClass) => {
-    const existing = classes.get(assetClass);
-
-    if (existing) {
-      return existing;
-    }
-
-    const created = {
-      marketValue: ZERO,
-      previous: ZERO,
-      change: ZERO,
-      comparable: 0,
-    };
-    classes.set(assetClass, created);
-
-    return created;
-  };
+  const classes = new Map<AssetClass, GroupTotals>();
+  const categories = new Map<string | null, GroupTotals>();
+  /** Every bucket one position adds to: its class and its category. */
+  const totalsFor = (position: ValuedPosition): GroupTotals[] => [
+    groupTotals(classes, position.assetClass),
+    groupTotals(
+      categories,
+      input.categoryByTicker?.get(position.ticker) ?? null,
+    ),
+  ];
 
   /** FX share of a compared position, accumulated into the summary. */
   const fxPart = (
@@ -264,11 +303,11 @@ export function buildDailyTracking(input: DailyTrackingInput): DailyTracking {
     previousValue: Decimal,
     change: Decimal,
   ) => {
-    const totals = classTotals(position.assetClass);
-
-    totals.previous = add(totals.previous, previousValue);
-    totals.change = add(totals.change, change);
-    totals.comparable += 1;
+    for (const totals of totalsFor(position)) {
+      totals.previous = add(totals.previous, previousValue);
+      totals.change = add(totals.change, change);
+      totals.comparable += 1;
+    }
   };
 
   const positions = open.map((position): DailyTrackedPosition => {
@@ -277,11 +316,12 @@ export function buildDailyTracking(input: DailyTrackingInput): DailyTracking {
         totalMarketValue,
         toDecimal(position.convertedMarketValue),
       );
-      const totals = classTotals(position.assetClass);
-      totals.marketValue = add(
-        totals.marketValue,
-        toDecimal(position.convertedMarketValue),
-      );
+      for (const totals of totalsFor(position)) {
+        totals.marketValue = add(
+          totals.marketValue,
+          toDecimal(position.convertedMarketValue),
+        );
+      }
     }
 
     if (isCashPosition(position) && position.convertedMarketValue != null) {
@@ -416,24 +456,14 @@ export function buildDailyTracking(input: DailyTrackingInput): DailyTracking {
               toDecimal(previousRate),
             )
           : null,
-      byAssetClass: [...classes.entries()]
-        .filter(
-          ([, totals]) => !isZero(totals.marketValue) || totals.comparable > 0,
-        )
-        .map(([assetClass, totals]) => ({
-          assetClass,
-          marketValue: formatDecimal(totals.marketValue, MONEY_PLACES),
-          dailyChange:
-            totals.comparable > 0
-              ? formatDecimal(totals.change, MONEY_PLACES)
-              : null,
-          dailyChangePercent:
-            totals.comparable > 0
-              ? ratio(totals.change, totals.previous)
-              : null,
-          comparablePositions: totals.comparable,
-        }))
-        .sort((a, b) => Number(b.marketValue) - Number(a.marketValue)),
+      byAssetClass: groupChanges(classes).map(({ key, ...change }) => ({
+        assetClass: key,
+        ...change,
+      })),
+      byCategory: groupChanges(categories).map(({ key, ...change }) => ({
+        categoryId: key,
+        ...change,
+      })),
       advancing,
       declining,
       unchanged,

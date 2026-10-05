@@ -280,6 +280,9 @@ function AllocationPage() {
       if (input.assetClass !== undefined) {
         await utils.allocation.nextResults.invalidate();
       }
+      if (input.categoryId !== undefined) {
+        await utils.positions.daily.invalidate();
+      }
     },
     onError: reportError,
   });

@@ -117,10 +117,12 @@ function DailyPage() {
           ) : (
             <>
               <div className="grid gap-5 lg:grid-cols-3">
+                {/* The map keeps a fixed height; the side column fills the
+                    row instead, so toggling its grouping never resizes it. */}
                 <MarketMap data={daily.data} className="lg:col-span-2" />
-                <div className="space-y-5">
+                <div className="flex flex-col gap-5">
                   <ClassBreakdown data={daily.data} />
-                  <BiggestMovers data={daily.data} />
+                  <BiggestMovers data={daily.data} className="flex-1" />
                 </div>
               </div>
               <DailyTable data={daily.data} />
