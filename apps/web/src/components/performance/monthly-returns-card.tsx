@@ -150,7 +150,7 @@ function ReturnCalendar({
           </TableHead>
         </TableRow>
       </TableHeader>
-      <TableBody>
+      <TableBody data-striped="false">
         {ordered.map((year) => (
           <TableRow key={year.year} className="hover:bg-transparent">
             <TableCell className="font-medium tabular-nums">

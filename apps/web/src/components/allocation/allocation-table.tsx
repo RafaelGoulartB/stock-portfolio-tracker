@@ -380,7 +380,7 @@ export function AllocationTable({
                         "sticky left-0 z-10 w-52 max-w-52 px-2.5 py-2.5",
                         row.markColor
                           ? MARK_STICKY[row.markColor]
-                          : "bg-card group-hover:bg-[color-mix(in_oklab,var(--muted)_50%,var(--card))]",
+                          : "bg-card group-hover:bg-[color-mix(in_oklab,var(--muted)_70%,var(--card))]",
                       )}
                     >
                       <div className="flex min-w-0 items-center gap-2">

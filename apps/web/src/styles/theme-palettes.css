@@ -36,6 +36,7 @@
   --input: oklch(0.882 0.014 345);
   --ring: oklch(0.66 0.16 352);
   --chart-primary: oklch(0.6 0.19 350);
+  --table-stripe: oklch(0.2 0.022 345 / 3%);
 }
 
 :root.dark[data-theme-palette="bloom"],
@@ -59,6 +60,7 @@
   --input: oklch(0.33 0.022 345);
   --ring: oklch(0.66 0.15 352);
   --chart-primary: oklch(0.74 0.155 350);
+  --table-stripe: oklch(0.965 0.005 345 / 4%);
 }
 
 :root[data-theme-palette="grove"],
@@ -82,6 +84,7 @@
   --input: oklch(0.882 0.014 160);
   --ring: oklch(0.62 0.11 78);
   --chart-primary: oklch(0.6 0.12 78);
+  --table-stripe: oklch(0.2 0.022 160 / 3%);
 }
 
 :root.dark[data-theme-palette="grove"],
@@ -105,6 +108,7 @@
   --input: oklch(0.33 0.022 160);
   --ring: oklch(0.68 0.11 82);
   --chart-primary: oklch(0.8 0.13 84);
+  --table-stripe: oklch(0.965 0.005 160 / 4%);
 }
 
 /* Ocean dark mode reproduces a reference palette: canvas and surface share
@@ -133,6 +137,7 @@
   --input: oklch(0.87 0.02 244);
   --ring: oklch(0.62 0.11 242);
   --chart-primary: oklch(0.58 0.13 242);
+  --table-stripe: oklch(0.22 0.03 249 / 3%);
 }
 
 :root.dark[data-theme-palette="ocean"],
@@ -156,6 +161,7 @@
   --input: oklch(0.502 0.043 243.9);
   --ring: oklch(0.759 0.106 241.6);
   --chart-primary: oklch(0.759 0.106 241.6);
+  --table-stripe: oklch(0.99 0.008 325.6 / 4%);
 }
 
 :root[data-theme-palette="ember"],
@@ -179,6 +185,7 @@
   --input: oklch(0.882 0.014 50);
   --ring: oklch(0.67 0.14 45);
   --chart-primary: oklch(0.65 0.16 50);
+  --table-stripe: oklch(0.2 0.022 50 / 3%);
 }
 
 :root.dark[data-theme-palette="ember"],
@@ -202,6 +209,7 @@
   --input: oklch(0.33 0.022 50);
   --ring: oklch(0.68 0.13 48);
   --chart-primary: oklch(0.76 0.14 55);
+  --table-stripe: oklch(0.965 0.005 50 / 4%);
 }
 
 :root[data-theme-palette="iris"],
@@ -225,6 +233,7 @@
   --input: oklch(0.882 0.014 290);
   --ring: oklch(0.64 0.15 292);
   --chart-primary: oklch(0.58 0.18 292);
+  --table-stripe: oklch(0.2 0.022 290 / 3%);
 }
 
 :root.dark[data-theme-palette="iris"],
@@ -248,4 +257,5 @@
   --input: oklch(0.33 0.022 290);
   --ring: oklch(0.64 0.14 292);
   --chart-primary: oklch(0.74 0.14 292);
+  --table-stripe: oklch(0.965 0.005 290 / 4%);
 }

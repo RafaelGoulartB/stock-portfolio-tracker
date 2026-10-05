@@ -44,6 +44,9 @@
   /* Single-series charts follow the palette; the default keeps the first
      categorical hue. */
   --chart-primary: var(--chart-1);
+  /* Zebra tint for alternate table rows: the foreground at low alpha, so it
+     darkens light surfaces, lightens dark ones, and works over any surface. */
+  --table-stripe: oklch(0.2 0.007 264 / 3%);
 }
 
 .dark,
@@ -80,6 +83,7 @@
   --chart-9: oklch(0.79 0.14 95);
   --chart-10: oklch(0.7 0.03 264);
   --chart-primary: var(--chart-1);
+  --table-stripe: oklch(0.965 0.002 264 / 4%);
 }
 
 @theme inline {
@@ -136,4 +140,17 @@
 [data-slot="dialog-content"]
 :is([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"]) {
   background-color: color-mix(in oklch, var(--background) 60%, var(--popover));
+}
+
+/* Zebra rows. The tint is a translucent layer painted over each body cell's
+   own background, so opaque sticky cells stay in step with their row and
+   hovered or selected rows keep their state color. A body opts out with
+   `data-striped="false"` (e.g. heatmap grids, where the tint would bias the
+   scale). */
+@layer base {
+  [data-slot="table-body"]:not([data-striped="false"])
+    > [data-slot="table-row"]:nth-child(even)
+    > [data-slot="table-cell"] {
+    background-image: linear-gradient(var(--table-stripe), var(--table-stripe));
+  }
 }
